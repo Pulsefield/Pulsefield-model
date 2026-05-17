@@ -16,15 +16,22 @@ from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
 
 
 class ModelRuntimeTests(unittest.TestCase):
-    def test_config_defaults_to_mps(self) -> None:
+    def test_config_defaults_to_auto_and_beatthis_cpu(self) -> None:
         config = ModelRuntimeConfig(
             mapper_checkpoint_path="mapper.pt",
             control_checkpoint_path="control.pt",
         )
 
-        self.assertEqual(config.device, "mps")
-        self.assertIsNone(config.beatthis_device)
+        self.assertEqual(config.device, "auto")
+        self.assertEqual(config.beatthis_device, "cpu")
+        self.assertEqual(model_runtime_module._resolve_beatthis_device(config.beatthis_device), "cpu")
         self.assertTrue(config.eager_load_beatthis)
+
+    def test_none_beatthis_device_resolves_to_cpu_for_legacy_callers(self) -> None:
+        self.assertEqual(model_runtime_module._resolve_beatthis_device(None), "cpu")
+
+    def test_explicit_beatthis_device_is_preserved(self) -> None:
+        self.assertEqual(model_runtime_module._resolve_beatthis_device("cuda"), "cuda")
 
     def test_loads_models_for_cpu_test_freezes_eval_and_filters_embedded_control_encoder(self) -> None:
         mapper_path = Path("mapper.pt")

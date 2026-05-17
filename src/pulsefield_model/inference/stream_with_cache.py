@@ -39,6 +39,7 @@ from pulsefield_model.models.mapper.shared.generation import (
 from pulsefield_model.models.mapper.shared.replay import LNCarryState, empty_ln_carry_state, ln_carry_state_tensors
 from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_WRITE_MS
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
+from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -63,8 +64,8 @@ class StreamWithCacheConfig:
     token_send_interval_s: float = 0.02
     mapper_checkpoint_path: str | Path = DEFAULT_MAPPER_CHECKPOINT_PATH
     control_checkpoint_path: str | Path = DEFAULT_CONTROL_CHECKPOINT_PATH
-    device: str = "mps"
-    beatthis_device: str | None = None
+    device: str = "auto"
+    beatthis_device: str | None = DEFAULT_BEATTHIS_DEVICE
     beatthis_float16: bool = False
     eager_load_beatthis: bool = True
     default_difficulty: float = 4.0
@@ -1062,8 +1063,8 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--mapper-checkpoint-path", type=Path, default=DEFAULT_MAPPER_CHECKPOINT_PATH)
     parser.add_argument("--control-checkpoint-path", type=Path, default=DEFAULT_CONTROL_CHECKPOINT_PATH)
-    parser.add_argument("--device", default="mps")
-    parser.add_argument("--beatthis-device", default=None)
+    parser.add_argument("--device", default="auto")
+    parser.add_argument("--beatthis-device", default=DEFAULT_BEATTHIS_DEVICE)
     parser.add_argument("--beatthis-float16", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--eager-load-beatthis", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--min-duration-s", type=float, default=45.0)

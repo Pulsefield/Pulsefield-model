@@ -24,6 +24,7 @@ from pulsefield_model.inference.ws_endpoint import (
     WsEndpointConfig,
     _is_expected_socket_disconnect,
 )
+from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
 
 
 async def serve_forever(endpoint: InferenceEndpoint | None = None) -> None:
@@ -211,8 +212,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=f"Run Mapper V2 local WS server at {PULSEFIELD_WS_URL}.")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--device", default="mps")
-    parser.add_argument("--beatthis-device", default=None)
+    parser.add_argument("--device", default="auto")
+    parser.add_argument("--beatthis-device", default=DEFAULT_BEATTHIS_DEVICE)
     parser.add_argument("--difficulty", type=float, default=4.0)
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--mapper-checkpoint-path", type=Path, default=DEFAULT_MAPPER_CHECKPOINT_PATH)

@@ -704,7 +704,7 @@ def _resolve_session_device(model_runtime: ModelRuntime, requested: str | torch.
         return torch.device(requested)
     runtime_device = getattr(model_runtime, "device", None)
     if runtime_device is None:
-        return torch.device("mps")
+        return torch.device("cpu")
     return torch.device(runtime_device)
 
 

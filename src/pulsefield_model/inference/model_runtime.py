@@ -13,7 +13,11 @@ from torch import nn
 from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
 from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
-from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_CHECKPOINT, BeatThisTimingProvider
+from pulsefield_model.timing.providers.beatthis import (
+    DEFAULT_BEATTHIS_CHECKPOINT,
+    DEFAULT_BEATTHIS_DEVICE,
+    BeatThisTimingProvider,
+)
 
 
 CONTROL_ENCODER_STATE_PREFIX = "control_encoder."
@@ -24,8 +28,8 @@ class ModelRuntimeConfig:
     mapper_checkpoint_path: str | Path
     control_checkpoint_path: str | Path
     beatthis_checkpoint: str | Path = DEFAULT_BEATTHIS_CHECKPOINT
-    beatthis_device: str | None = None
-    device: str = "mps"
+    beatthis_device: str | torch.device | None = DEFAULT_BEATTHIS_DEVICE
+    device: str = "auto"
     beatthis_float16: bool = False
     eager_load_beatthis: bool = True
 
@@ -46,7 +50,7 @@ class ModelRuntime:
 
 def load_model_runtime(config: ModelRuntimeConfig) -> ModelRuntime:
     device = _resolve_runtime_device(config.device)
-    beatthis_device = str(device) if config.beatthis_device is None else str(config.beatthis_device)
+    beatthis_device = _resolve_beatthis_device(config.beatthis_device)
     beatthis_provider = BeatThisTimingProvider(
         checkpoint_path=str(config.beatthis_checkpoint),
         device=beatthis_device,
@@ -153,6 +157,12 @@ def _resolve_runtime_device(device: str | torch.device) -> torch.device:
             return torch.device("mps")
         return torch.device("cpu")
     return torch.device(requested)
+
+
+def _resolve_beatthis_device(device: str | torch.device | None) -> str:
+    if device is None:
+        return DEFAULT_BEATTHIS_DEVICE
+    return str(device)
 
 
 def _mps_is_available() -> bool:
