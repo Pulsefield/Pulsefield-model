@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pulsefield-model"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.3.3",
+    "PyYAML==6.0.3",
+    "pyarrow==22.0.0",
+    "pydub==0.25.1",
+    "matplotlib==3.10.8",
+    "mutagen==1.47.0",
+    "flask==3.1.2",
+    "audioop-lts; python_version >= '3.13'",
+]
+
+[project.optional-dependencies]
+mps = [
+    "torch==2.11.0; platform_system == 'Darwin'",
+    "torchaudio==2.11.0; platform_system == 'Darwin'",
+    "nnAudio==0.3.4; platform_system == 'Darwin'",
+    "beat-this==1.1.0; platform_system == 'Darwin'",
+    "soundfile==0.13.1; platform_system == 'Darwin'",
+]
+cuda = [
+    "torch==2.11.0; platform_system == 'Linux'",
+    "torchaudio==2.11.0; platform_system == 'Linux'",
+    "nnAudio==0.3.4; platform_system == 'Linux'",
+    "beat-this==1.1.0; platform_system == 'Linux'",
+    "soundfile==0.13.1; platform_system == 'Linux'",
+]
+render = [
+    "reamber==1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel==7.2.0",
+    "jupyterlab==4.5.6",
+    "nbformat==5.10.4",
+]
+
+[tool.uv]
+default-groups = []
+conflicts = [[{ extra = "mps" }, { extra = "cuda" }]]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu128", extra = "cuda", marker = "platform_system == 'Linux'" }]
+torchaudio = [{ index = "pytorch-cu128", extra = "cuda", marker = "platform_system == 'Linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

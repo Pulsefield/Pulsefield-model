@@ -1,0 +1,6 @@
+[submodule "ref-proj/Mapperatorinator"]
+	path = ref-proj/Mapperatorinator
+	url = https://github.com/OliBomby/Mapperatorinator
+[submodule "ref-proj/Mug-Diffusion"]
+	path = ref-proj/Mug-Diffusion
+	url = https://github.com/Keytoyze/Mug-Diffusion
