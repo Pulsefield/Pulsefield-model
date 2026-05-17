@@ -1,0 +1,85 @@
+dataset_root: dataset
+index_path: artifacts/indexes/stage2_control_windows_4k_2to6_dense_local_bpm_norm_unique_le3.parquet
+control_v3_timeseries_path: artifacts/features/control_v3_timeseries_4k_no_timing_anomalies_2to6_dense_local_bpm_norm_unique_le3.parquet
+
+output_dir: artifacts/runs/stage2_mapper_v2/stage2_mapper_v2_phase_b_global_d384_l4_b2
+run_name: stage2_mapper_v2_phase_b_global_d384_l4_b2
+
+init_from_control_checkpoint: artifacts/runs/stage2_control_demo/stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt
+
+max_steps: 12000
+eval_every: 500
+skip_first_eval_pass: true
+save_every: 250
+log_every: 10
+
+batch_size: 2
+
+learning_rate: 0.0002
+weight_decay: 0.01
+seed: 1337
+device: mps
+
+eval_fraction: 0.01
+eval_size: 512
+final_train_eval_size: 512
+
+num_workers: 0
+max_cached_maps: 8
+mapper_record_cache_path: artifacts/cache/stage2_mapper_v2/window_records/stage2_mapper_v2_phase_b_global_mps_plus_end.parquet
+include_full_song_context: true
+length_bucketed_batches: true
+length_bucket_size_multiplier: 32
+
+control_teacher_cache_dir: artifacts/cache/stage2_mapper_v2/control_teacher_d384_l3_stride16_step002000
+precompute_control_teacher_cache: true
+precompute_control_teacher_cache_only: false
+control_teacher_precompute_batch_size: 12
+require_control_teacher_cache: true
+control_teacher_cache_overwrite: false
+
+control_model:
+  d_model: 384
+  heads: 8
+  layers: 3
+  ffn_dim: 1536
+  dropout: 0.1
+  conv_blocks: 2
+  conv_kernel_size: 5
+
+  use_global_memory: true
+  global_stride: 16
+  global_layers: 2
+  global_ffn_dim: 1536
+  global_conv_blocks: 1
+  global_fusion_start_layer: 1
+  global_gate_init: -2.94
+
+model:
+  control_dim: 384
+  d_model: 384
+  heads: 8
+  layers: 4
+  ffn_dim: 1536
+  dropout: 0.1
+  max_seq_len: 512
+
+  use_global_context: true
+  global_stride: 16
+  global_layers: 1
+  global_ffn_dim: 1536
+  global_conv_blocks: 1
+  global_conv_kernel_size: 5
+  global_gate_init: -2.94
+
+  state_prior_adapter_scale: 0.03
+  state_prior_max_bias: 1.5
+  close_scale: 0.05
+  skip_scale: 0.0
+
+loss:
+  lambda_ln_close: 0.05
+  lambda_adapter_reg: 0.00001
+  lambda_density: 0.05
+  lambda_density_teacher: 0.0
+  close_pos_weight_max: 20.0

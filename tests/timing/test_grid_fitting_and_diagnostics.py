@@ -8,7 +8,7 @@ from pulsefield_model.timing.grid_fitting import GridFitter, GridFitterConfig
 from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
 
 
-def _synthetic_prediction(
+def _sample_prediction(
     *,
     frame_count: int = 1000,
     frame_rate_hz: float = 50.0,
@@ -24,7 +24,7 @@ def _synthetic_prediction(
     beat_prob = np.maximum(0.0, 1.0 - distance_ms / pulse_width_ms)
     beat_prob = np.maximum(beat_prob, baseline).astype(np.float32)
     return FrameTimingPrediction(
-        provider="synthetic",
+        provider="unit-test",
         beat_prob=beat_prob,
         downbeat_prob=np.zeros_like(beat_prob),
         frame_rate_hz=frame_rate_hz,
@@ -45,8 +45,8 @@ class GridFittingDiagnosticsTests(unittest.TestCase):
         self.assertTrue(np.any(np.isclose(candidates, 222.0 + 1.0 / 3.0)))
         self.assertTrue(np.any(np.isclose(candidates, 222.0 + 2.0 / 3.0)))
 
-    def test_grid_fitter_recovers_single_synthetic_tempo(self) -> None:
-        prediction = _synthetic_prediction(offset_ms=120.0, beat_length_ms=500.0)
+    def test_grid_fitter_recovers_single_tempo(self) -> None:
+        prediction = _sample_prediction(offset_ms=120.0, beat_length_ms=500.0)
 
         result = GridFitter(GridFitterConfig(min_bpm=100.0, max_bpm=140.0)).fit(prediction)
 

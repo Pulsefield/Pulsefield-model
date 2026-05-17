@@ -26,6 +26,7 @@ from pulsefield_model.osu_core.hitobjects import (
     ManiaHitObjectKind,
     parse_mania_hit_objects,
 )
+from pulsefield_model.osu_core.export import format_hitobjects
 from pulsefield_model.osu_core.metadata import OsuBeatmapMetadata, parse_osu_metadata
 from pulsefield_model.osu_core.timing import (
     MAX_VALID_RED_BEAT_LENGTH_MS,
@@ -69,6 +70,7 @@ __all__ = [
     "compute_mania_star_rating_20241007",
     "create_difficulty_hit_objects",
     "definitely_bigger",
+    "format_hitobjects",
     "individual_strain_evaluate",
     "is_plausible_red_beat_length_ms",
     "legacy_sort_in_place",

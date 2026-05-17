@@ -1,0 +1,1549 @@
+{
+  "manifest_type": "mapper_tuple_event_token_lane_actions",
+  "version": 1,
+  "description": "Complete mapper tuple EVENT token_id to four-lane LaneAction manifest. WebSocket hitobject_tokens send token: [token_id, ms_in_ref_audio].",
+  "key_count": 4,
+  "event_token_id_range": [
+    25,
+    279
+  ],
+  "event_token_count": 255,
+  "lane_action_values": [
+    "NONE",
+    "TAP",
+    "HOLD_START",
+    "HOLD_END"
+  ],
+  "event_token_id_to_lane_action": {
+    "25": [
+      "TAP",
+      "NONE",
+      "NONE",
+      "NONE"
+    ],
+    "26": [
+      "HOLD_START",
+      "NONE",
+      "NONE",
+      "NONE"
+    ],
+    "27": [
+      "HOLD_END",
+      "NONE",
+      "NONE",
+      "NONE"
+    ],
+    "28": [
+      "NONE",
+      "TAP",
+      "NONE",
+      "NONE"
+    ],
+    "29": [
+      "TAP",
+      "TAP",
+      "NONE",
+      "NONE"
+    ],
+    "30": [
+      "HOLD_START",
+      "TAP",
+      "NONE",
+      "NONE"
+    ],
+    "31": [
+      "HOLD_END",
+      "TAP",
+      "NONE",
+      "NONE"
+    ],
+    "32": [
+      "NONE",
+      "HOLD_START",
+      "NONE",
+      "NONE"
+    ],
+    "33": [
+      "TAP",
+      "HOLD_START",
+      "NONE",
+      "NONE"
+    ],
+    "34": [
+      "HOLD_START",
+      "HOLD_START",
+      "NONE",
+      "NONE"
+    ],
+    "35": [
+      "HOLD_END",
+      "HOLD_START",
+      "NONE",
+      "NONE"
+    ],
+    "36": [
+      "NONE",
+      "HOLD_END",
+      "NONE",
+      "NONE"
+    ],
+    "37": [
+      "TAP",
+      "HOLD_END",
+      "NONE",
+      "NONE"
+    ],
+    "38": [
+      "HOLD_START",
+      "HOLD_END",
+      "NONE",
+      "NONE"
+    ],
+    "39": [
+      "HOLD_END",
+      "HOLD_END",
+      "NONE",
+      "NONE"
+    ],
+    "40": [
+      "NONE",
+      "NONE",
+      "TAP",
+      "NONE"
+    ],
+    "41": [
+      "TAP",
+      "NONE",
+      "TAP",
+      "NONE"
+    ],
+    "42": [
+      "HOLD_START",
+      "NONE",
+      "TAP",
+      "NONE"
+    ],
+    "43": [
+      "HOLD_END",
+      "NONE",
+      "TAP",
+      "NONE"
+    ],
+    "44": [
+      "NONE",
+      "TAP",
+      "TAP",
+      "NONE"
+    ],
+    "45": [
+      "TAP",
+      "TAP",
+      "TAP",
+      "NONE"
+    ],
+    "46": [
+      "HOLD_START",
+      "TAP",
+      "TAP",
+      "NONE"
+    ],
+    "47": [
+      "HOLD_END",
+      "TAP",
+      "TAP",
+      "NONE"
+    ],
+    "48": [
+      "NONE",
+      "HOLD_START",
+      "TAP",
+      "NONE"
+    ],
+    "49": [
+      "TAP",
+      "HOLD_START",
+      "TAP",
+      "NONE"
+    ],
+    "50": [
+      "HOLD_START",
+      "HOLD_START",
+      "TAP",
+      "NONE"
+    ],
+    "51": [
+      "HOLD_END",
+      "HOLD_START",
+      "TAP",
+      "NONE"
+    ],
+    "52": [
+      "NONE",
+      "HOLD_END",
+      "TAP",
+      "NONE"
+    ],
+    "53": [
+      "TAP",
+      "HOLD_END",
+      "TAP",
+      "NONE"
+    ],
+    "54": [
+      "HOLD_START",
+      "HOLD_END",
+      "TAP",
+      "NONE"
+    ],
+    "55": [
+      "HOLD_END",
+      "HOLD_END",
+      "TAP",
+      "NONE"
+    ],
+    "56": [
+      "NONE",
+      "NONE",
+      "HOLD_START",
+      "NONE"
+    ],
+    "57": [
+      "TAP",
+      "NONE",
+      "HOLD_START",
+      "NONE"
+    ],
+    "58": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_START",
+      "NONE"
+    ],
+    "59": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_START",
+      "NONE"
+    ],
+    "60": [
+      "NONE",
+      "TAP",
+      "HOLD_START",
+      "NONE"
+    ],
+    "61": [
+      "TAP",
+      "TAP",
+      "HOLD_START",
+      "NONE"
+    ],
+    "62": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_START",
+      "NONE"
+    ],
+    "63": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_START",
+      "NONE"
+    ],
+    "64": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_START",
+      "NONE"
+    ],
+    "65": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_START",
+      "NONE"
+    ],
+    "66": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START",
+      "NONE"
+    ],
+    "67": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START",
+      "NONE"
+    ],
+    "68": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_START",
+      "NONE"
+    ],
+    "69": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_START",
+      "NONE"
+    ],
+    "70": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START",
+      "NONE"
+    ],
+    "71": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START",
+      "NONE"
+    ],
+    "72": [
+      "NONE",
+      "NONE",
+      "HOLD_END",
+      "NONE"
+    ],
+    "73": [
+      "TAP",
+      "NONE",
+      "HOLD_END",
+      "NONE"
+    ],
+    "74": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_END",
+      "NONE"
+    ],
+    "75": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_END",
+      "NONE"
+    ],
+    "76": [
+      "NONE",
+      "TAP",
+      "HOLD_END",
+      "NONE"
+    ],
+    "77": [
+      "TAP",
+      "TAP",
+      "HOLD_END",
+      "NONE"
+    ],
+    "78": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_END",
+      "NONE"
+    ],
+    "79": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_END",
+      "NONE"
+    ],
+    "80": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_END",
+      "NONE"
+    ],
+    "81": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_END",
+      "NONE"
+    ],
+    "82": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END",
+      "NONE"
+    ],
+    "83": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END",
+      "NONE"
+    ],
+    "84": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_END",
+      "NONE"
+    ],
+    "85": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_END",
+      "NONE"
+    ],
+    "86": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END",
+      "NONE"
+    ],
+    "87": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END",
+      "NONE"
+    ],
+    "88": [
+      "NONE",
+      "NONE",
+      "NONE",
+      "TAP"
+    ],
+    "89": [
+      "TAP",
+      "NONE",
+      "NONE",
+      "TAP"
+    ],
+    "90": [
+      "HOLD_START",
+      "NONE",
+      "NONE",
+      "TAP"
+    ],
+    "91": [
+      "HOLD_END",
+      "NONE",
+      "NONE",
+      "TAP"
+    ],
+    "92": [
+      "NONE",
+      "TAP",
+      "NONE",
+      "TAP"
+    ],
+    "93": [
+      "TAP",
+      "TAP",
+      "NONE",
+      "TAP"
+    ],
+    "94": [
+      "HOLD_START",
+      "TAP",
+      "NONE",
+      "TAP"
+    ],
+    "95": [
+      "HOLD_END",
+      "TAP",
+      "NONE",
+      "TAP"
+    ],
+    "96": [
+      "NONE",
+      "HOLD_START",
+      "NONE",
+      "TAP"
+    ],
+    "97": [
+      "TAP",
+      "HOLD_START",
+      "NONE",
+      "TAP"
+    ],
+    "98": [
+      "HOLD_START",
+      "HOLD_START",
+      "NONE",
+      "TAP"
+    ],
+    "99": [
+      "HOLD_END",
+      "HOLD_START",
+      "NONE",
+      "TAP"
+    ],
+    "100": [
+      "NONE",
+      "HOLD_END",
+      "NONE",
+      "TAP"
+    ],
+    "101": [
+      "TAP",
+      "HOLD_END",
+      "NONE",
+      "TAP"
+    ],
+    "102": [
+      "HOLD_START",
+      "HOLD_END",
+      "NONE",
+      "TAP"
+    ],
+    "103": [
+      "HOLD_END",
+      "HOLD_END",
+      "NONE",
+      "TAP"
+    ],
+    "104": [
+      "NONE",
+      "NONE",
+      "TAP",
+      "TAP"
+    ],
+    "105": [
+      "TAP",
+      "NONE",
+      "TAP",
+      "TAP"
+    ],
+    "106": [
+      "HOLD_START",
+      "NONE",
+      "TAP",
+      "TAP"
+    ],
+    "107": [
+      "HOLD_END",
+      "NONE",
+      "TAP",
+      "TAP"
+    ],
+    "108": [
+      "NONE",
+      "TAP",
+      "TAP",
+      "TAP"
+    ],
+    "109": [
+      "TAP",
+      "TAP",
+      "TAP",
+      "TAP"
+    ],
+    "110": [
+      "HOLD_START",
+      "TAP",
+      "TAP",
+      "TAP"
+    ],
+    "111": [
+      "HOLD_END",
+      "TAP",
+      "TAP",
+      "TAP"
+    ],
+    "112": [
+      "NONE",
+      "HOLD_START",
+      "TAP",
+      "TAP"
+    ],
+    "113": [
+      "TAP",
+      "HOLD_START",
+      "TAP",
+      "TAP"
+    ],
+    "114": [
+      "HOLD_START",
+      "HOLD_START",
+      "TAP",
+      "TAP"
+    ],
+    "115": [
+      "HOLD_END",
+      "HOLD_START",
+      "TAP",
+      "TAP"
+    ],
+    "116": [
+      "NONE",
+      "HOLD_END",
+      "TAP",
+      "TAP"
+    ],
+    "117": [
+      "TAP",
+      "HOLD_END",
+      "TAP",
+      "TAP"
+    ],
+    "118": [
+      "HOLD_START",
+      "HOLD_END",
+      "TAP",
+      "TAP"
+    ],
+    "119": [
+      "HOLD_END",
+      "HOLD_END",
+      "TAP",
+      "TAP"
+    ],
+    "120": [
+      "NONE",
+      "NONE",
+      "HOLD_START",
+      "TAP"
+    ],
+    "121": [
+      "TAP",
+      "NONE",
+      "HOLD_START",
+      "TAP"
+    ],
+    "122": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_START",
+      "TAP"
+    ],
+    "123": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_START",
+      "TAP"
+    ],
+    "124": [
+      "NONE",
+      "TAP",
+      "HOLD_START",
+      "TAP"
+    ],
+    "125": [
+      "TAP",
+      "TAP",
+      "HOLD_START",
+      "TAP"
+    ],
+    "126": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_START",
+      "TAP"
+    ],
+    "127": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_START",
+      "TAP"
+    ],
+    "128": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_START",
+      "TAP"
+    ],
+    "129": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_START",
+      "TAP"
+    ],
+    "130": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START",
+      "TAP"
+    ],
+    "131": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START",
+      "TAP"
+    ],
+    "132": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_START",
+      "TAP"
+    ],
+    "133": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_START",
+      "TAP"
+    ],
+    "134": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START",
+      "TAP"
+    ],
+    "135": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START",
+      "TAP"
+    ],
+    "136": [
+      "NONE",
+      "NONE",
+      "HOLD_END",
+      "TAP"
+    ],
+    "137": [
+      "TAP",
+      "NONE",
+      "HOLD_END",
+      "TAP"
+    ],
+    "138": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_END",
+      "TAP"
+    ],
+    "139": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_END",
+      "TAP"
+    ],
+    "140": [
+      "NONE",
+      "TAP",
+      "HOLD_END",
+      "TAP"
+    ],
+    "141": [
+      "TAP",
+      "TAP",
+      "HOLD_END",
+      "TAP"
+    ],
+    "142": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_END",
+      "TAP"
+    ],
+    "143": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_END",
+      "TAP"
+    ],
+    "144": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_END",
+      "TAP"
+    ],
+    "145": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_END",
+      "TAP"
+    ],
+    "146": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END",
+      "TAP"
+    ],
+    "147": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END",
+      "TAP"
+    ],
+    "148": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_END",
+      "TAP"
+    ],
+    "149": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_END",
+      "TAP"
+    ],
+    "150": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END",
+      "TAP"
+    ],
+    "151": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END",
+      "TAP"
+    ],
+    "152": [
+      "NONE",
+      "NONE",
+      "NONE",
+      "HOLD_START"
+    ],
+    "153": [
+      "TAP",
+      "NONE",
+      "NONE",
+      "HOLD_START"
+    ],
+    "154": [
+      "HOLD_START",
+      "NONE",
+      "NONE",
+      "HOLD_START"
+    ],
+    "155": [
+      "HOLD_END",
+      "NONE",
+      "NONE",
+      "HOLD_START"
+    ],
+    "156": [
+      "NONE",
+      "TAP",
+      "NONE",
+      "HOLD_START"
+    ],
+    "157": [
+      "TAP",
+      "TAP",
+      "NONE",
+      "HOLD_START"
+    ],
+    "158": [
+      "HOLD_START",
+      "TAP",
+      "NONE",
+      "HOLD_START"
+    ],
+    "159": [
+      "HOLD_END",
+      "TAP",
+      "NONE",
+      "HOLD_START"
+    ],
+    "160": [
+      "NONE",
+      "HOLD_START",
+      "NONE",
+      "HOLD_START"
+    ],
+    "161": [
+      "TAP",
+      "HOLD_START",
+      "NONE",
+      "HOLD_START"
+    ],
+    "162": [
+      "HOLD_START",
+      "HOLD_START",
+      "NONE",
+      "HOLD_START"
+    ],
+    "163": [
+      "HOLD_END",
+      "HOLD_START",
+      "NONE",
+      "HOLD_START"
+    ],
+    "164": [
+      "NONE",
+      "HOLD_END",
+      "NONE",
+      "HOLD_START"
+    ],
+    "165": [
+      "TAP",
+      "HOLD_END",
+      "NONE",
+      "HOLD_START"
+    ],
+    "166": [
+      "HOLD_START",
+      "HOLD_END",
+      "NONE",
+      "HOLD_START"
+    ],
+    "167": [
+      "HOLD_END",
+      "HOLD_END",
+      "NONE",
+      "HOLD_START"
+    ],
+    "168": [
+      "NONE",
+      "NONE",
+      "TAP",
+      "HOLD_START"
+    ],
+    "169": [
+      "TAP",
+      "NONE",
+      "TAP",
+      "HOLD_START"
+    ],
+    "170": [
+      "HOLD_START",
+      "NONE",
+      "TAP",
+      "HOLD_START"
+    ],
+    "171": [
+      "HOLD_END",
+      "NONE",
+      "TAP",
+      "HOLD_START"
+    ],
+    "172": [
+      "NONE",
+      "TAP",
+      "TAP",
+      "HOLD_START"
+    ],
+    "173": [
+      "TAP",
+      "TAP",
+      "TAP",
+      "HOLD_START"
+    ],
+    "174": [
+      "HOLD_START",
+      "TAP",
+      "TAP",
+      "HOLD_START"
+    ],
+    "175": [
+      "HOLD_END",
+      "TAP",
+      "TAP",
+      "HOLD_START"
+    ],
+    "176": [
+      "NONE",
+      "HOLD_START",
+      "TAP",
+      "HOLD_START"
+    ],
+    "177": [
+      "TAP",
+      "HOLD_START",
+      "TAP",
+      "HOLD_START"
+    ],
+    "178": [
+      "HOLD_START",
+      "HOLD_START",
+      "TAP",
+      "HOLD_START"
+    ],
+    "179": [
+      "HOLD_END",
+      "HOLD_START",
+      "TAP",
+      "HOLD_START"
+    ],
+    "180": [
+      "NONE",
+      "HOLD_END",
+      "TAP",
+      "HOLD_START"
+    ],
+    "181": [
+      "TAP",
+      "HOLD_END",
+      "TAP",
+      "HOLD_START"
+    ],
+    "182": [
+      "HOLD_START",
+      "HOLD_END",
+      "TAP",
+      "HOLD_START"
+    ],
+    "183": [
+      "HOLD_END",
+      "HOLD_END",
+      "TAP",
+      "HOLD_START"
+    ],
+    "184": [
+      "NONE",
+      "NONE",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "185": [
+      "TAP",
+      "NONE",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "186": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "187": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "188": [
+      "NONE",
+      "TAP",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "189": [
+      "TAP",
+      "TAP",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "190": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "191": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "192": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "193": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "194": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "195": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "196": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "197": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "198": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "199": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START"
+    ],
+    "200": [
+      "NONE",
+      "NONE",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "201": [
+      "TAP",
+      "NONE",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "202": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "203": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "204": [
+      "NONE",
+      "TAP",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "205": [
+      "TAP",
+      "TAP",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "206": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "207": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "208": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "209": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "210": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "211": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "212": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "213": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "214": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "215": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START"
+    ],
+    "216": [
+      "NONE",
+      "NONE",
+      "NONE",
+      "HOLD_END"
+    ],
+    "217": [
+      "TAP",
+      "NONE",
+      "NONE",
+      "HOLD_END"
+    ],
+    "218": [
+      "HOLD_START",
+      "NONE",
+      "NONE",
+      "HOLD_END"
+    ],
+    "219": [
+      "HOLD_END",
+      "NONE",
+      "NONE",
+      "HOLD_END"
+    ],
+    "220": [
+      "NONE",
+      "TAP",
+      "NONE",
+      "HOLD_END"
+    ],
+    "221": [
+      "TAP",
+      "TAP",
+      "NONE",
+      "HOLD_END"
+    ],
+    "222": [
+      "HOLD_START",
+      "TAP",
+      "NONE",
+      "HOLD_END"
+    ],
+    "223": [
+      "HOLD_END",
+      "TAP",
+      "NONE",
+      "HOLD_END"
+    ],
+    "224": [
+      "NONE",
+      "HOLD_START",
+      "NONE",
+      "HOLD_END"
+    ],
+    "225": [
+      "TAP",
+      "HOLD_START",
+      "NONE",
+      "HOLD_END"
+    ],
+    "226": [
+      "HOLD_START",
+      "HOLD_START",
+      "NONE",
+      "HOLD_END"
+    ],
+    "227": [
+      "HOLD_END",
+      "HOLD_START",
+      "NONE",
+      "HOLD_END"
+    ],
+    "228": [
+      "NONE",
+      "HOLD_END",
+      "NONE",
+      "HOLD_END"
+    ],
+    "229": [
+      "TAP",
+      "HOLD_END",
+      "NONE",
+      "HOLD_END"
+    ],
+    "230": [
+      "HOLD_START",
+      "HOLD_END",
+      "NONE",
+      "HOLD_END"
+    ],
+    "231": [
+      "HOLD_END",
+      "HOLD_END",
+      "NONE",
+      "HOLD_END"
+    ],
+    "232": [
+      "NONE",
+      "NONE",
+      "TAP",
+      "HOLD_END"
+    ],
+    "233": [
+      "TAP",
+      "NONE",
+      "TAP",
+      "HOLD_END"
+    ],
+    "234": [
+      "HOLD_START",
+      "NONE",
+      "TAP",
+      "HOLD_END"
+    ],
+    "235": [
+      "HOLD_END",
+      "NONE",
+      "TAP",
+      "HOLD_END"
+    ],
+    "236": [
+      "NONE",
+      "TAP",
+      "TAP",
+      "HOLD_END"
+    ],
+    "237": [
+      "TAP",
+      "TAP",
+      "TAP",
+      "HOLD_END"
+    ],
+    "238": [
+      "HOLD_START",
+      "TAP",
+      "TAP",
+      "HOLD_END"
+    ],
+    "239": [
+      "HOLD_END",
+      "TAP",
+      "TAP",
+      "HOLD_END"
+    ],
+    "240": [
+      "NONE",
+      "HOLD_START",
+      "TAP",
+      "HOLD_END"
+    ],
+    "241": [
+      "TAP",
+      "HOLD_START",
+      "TAP",
+      "HOLD_END"
+    ],
+    "242": [
+      "HOLD_START",
+      "HOLD_START",
+      "TAP",
+      "HOLD_END"
+    ],
+    "243": [
+      "HOLD_END",
+      "HOLD_START",
+      "TAP",
+      "HOLD_END"
+    ],
+    "244": [
+      "NONE",
+      "HOLD_END",
+      "TAP",
+      "HOLD_END"
+    ],
+    "245": [
+      "TAP",
+      "HOLD_END",
+      "TAP",
+      "HOLD_END"
+    ],
+    "246": [
+      "HOLD_START",
+      "HOLD_END",
+      "TAP",
+      "HOLD_END"
+    ],
+    "247": [
+      "HOLD_END",
+      "HOLD_END",
+      "TAP",
+      "HOLD_END"
+    ],
+    "248": [
+      "NONE",
+      "NONE",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "249": [
+      "TAP",
+      "NONE",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "250": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "251": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "252": [
+      "NONE",
+      "TAP",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "253": [
+      "TAP",
+      "TAP",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "254": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "255": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "256": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "257": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "258": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "259": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "260": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "261": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "262": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "263": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END"
+    ],
+    "264": [
+      "NONE",
+      "NONE",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "265": [
+      "TAP",
+      "NONE",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "266": [
+      "HOLD_START",
+      "NONE",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "267": [
+      "HOLD_END",
+      "NONE",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "268": [
+      "NONE",
+      "TAP",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "269": [
+      "TAP",
+      "TAP",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "270": [
+      "HOLD_START",
+      "TAP",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "271": [
+      "HOLD_END",
+      "TAP",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "272": [
+      "NONE",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "273": [
+      "TAP",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "274": [
+      "HOLD_START",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "275": [
+      "HOLD_END",
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "276": [
+      "NONE",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "277": [
+      "TAP",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "278": [
+      "HOLD_START",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END"
+    ],
+    "279": [
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END",
+      "HOLD_END"
+    ]
+  }
+}

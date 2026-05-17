@@ -1,4 +1,4 @@
-"""Smoke tests for the source package layout."""
+"""Import tests for the source package layout."""
 
 import importlib
 import unittest
@@ -14,7 +14,7 @@ class PackageLayoutTest(unittest.TestCase):
             "pulsefield_model.events",
             "pulsefield_model.timing",
             "pulsefield_model.models.control",
-            "pulsefield_model.models.mapper.v1",
+            "pulsefield_model.models.mapper.shared",
             "pulsefield_model.models.mapper.v2",
             "pulsefield_model.models.mapper.v2_1",
             "pulsefield_model.training",

@@ -42,7 +42,7 @@ def _fake_load_audio(path: str | Path) -> tuple[np.ndarray, int]:
     return np.asarray([0.25, -0.25, 0.0], dtype=np.float32), 44100
 
 
-def _synthetic_prediction() -> FrameTimingPrediction:
+def _sample_prediction() -> FrameTimingPrediction:
     frame_count = 1000
     frame_rate_hz = 50.0
     frame_times_ms = np.arange(frame_count, dtype=np.float64) / frame_rate_hz * 1000.0
@@ -69,7 +69,7 @@ class _FakeBeatThisTimingProvider:
 
     def predict_file(self, audio_path: Path) -> FrameTimingPrediction:
         self.audio_path = audio_path
-        return _synthetic_prediction()
+        return _sample_prediction()
 
 
 class TimingProviderCliTests(unittest.TestCase):
