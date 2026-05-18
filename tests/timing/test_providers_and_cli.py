@@ -16,7 +16,11 @@ from pulsefield_model.timing.providers.beatthis import (
     DEFAULT_BEATTHIS_DEVICE,
     BeatThisTimingProvider,
 )
-from pulsefield_model.timing.providers.oracle import oracle_timing_grid_from_beatmap, render_oracle_dense_timing_v2
+from pulsefield_model.timing.providers.oracle import OracleDenseTimingCacheConfig
+from pulsefield_model.timing.providers.oracle import load_or_create_oracle_dense_timing_v2_cache
+from pulsefield_model.timing.providers.oracle import oracle_dense_timing_v2_cache_path
+from pulsefield_model.timing.providers.oracle import oracle_timing_grid_from_beatmap
+from pulsefield_model.timing.providers.oracle import render_oracle_dense_timing_v2
 from pulsefield_model.timing.schema import FrameTimingPrediction
 
 
@@ -117,6 +121,34 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual([segment.offset_ms for segment in grid.segments], [0.0, 1000.0])
         self.assertEqual(track.shape, (4, 4))
         self.assertEqual(track.dtype, np.dtype("float32"))
+
+    def test_oracle_dense_timing_cache_hits_existing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            osu_path = root / "map.osu"
+            cache_config = OracleDenseTimingCacheConfig(cache_root=root / "cache")
+            _write_timing_osu(osu_path, ["0,500,4,2,0,80,1,0"])
+
+            created = load_or_create_oracle_dense_timing_v2_cache(
+                osu_path,
+                frame_count=4,
+                cache_config=cache_config,
+            )
+            cache_path = oracle_dense_timing_v2_cache_path(
+                osu_path,
+                frame_count=4,
+                cache_config=cache_config,
+            )
+
+            self.assertTrue(cache_path.exists())
+            _write_timing_osu(osu_path, ["0,250,4,2,0,80,1,0"])
+            cached = load_or_create_oracle_dense_timing_v2_cache(
+                osu_path,
+                frame_count=4,
+                cache_config=cache_config,
+            )
+
+        np.testing.assert_array_equal(cached, created)
 
     def test_fit_audio_main_can_emit_json(self) -> None:
         from pulsefield_model.timing import fit_audio

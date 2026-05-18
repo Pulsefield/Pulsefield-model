@@ -80,7 +80,7 @@ def load_or_create_log_mel_cache(
     audio_cache_key: str,
     config: MelCacheConfig = DEFAULT_MEL_CACHE_CONFIG,
 ) -> LogMel:
-    cache_path = config.cache_dir / f"{_cache_key(audio_cache_key)}.npy"
+    cache_path = log_mel_cache_path(audio_cache_key, config=config)
     if cache_path.exists():
         return np.load(cache_path).astype(np.float32, copy=False)
 
@@ -88,6 +88,14 @@ def load_or_create_log_mel_cache(
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(cache_path, mel)
     return mel
+
+
+def log_mel_cache_path(
+    audio_cache_key: str,
+    *,
+    config: MelCacheConfig = DEFAULT_MEL_CACHE_CONFIG,
+) -> Path:
+    return config.cache_dir / f"{_cache_key(audio_cache_key)}.npy"
 
 
 def pack_mel_20ms_window(

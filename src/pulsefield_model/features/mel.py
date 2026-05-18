@@ -12,6 +12,7 @@ from pulsefield_model.features.audio import load_audio_file
 from pulsefield_model.features.mel_base import DEFAULT_MEL_CACHE_CONFIG
 from pulsefield_model.features.mel_base import MelCacheConfig
 from pulsefield_model.features.mel_base import compute_log_mel_10ms
+from pulsefield_model.features.mel_base import log_mel_cache_path
 from pulsefield_model.features.mel_base import load_or_create_log_mel_cache
 from pulsefield_model.features.mel_base import pack_mel_20ms_window
 
@@ -61,6 +62,11 @@ def load_full_song_packed_mel_20ms(
     config: Stage2MelConfig = DEFAULT_STAGE2_MEL_CONFIG,
 ) -> PackedMel20msTrack:
     audio_path = Path(audio_path)
+    resolved_audio_cache_key = audio_cache_key or _default_audio_cache_key(audio_path, config)
+    cache_path = log_mel_cache_path(resolved_audio_cache_key, config=config.mel_cache_config)
+    if cache_path.exists():
+        return pack_full_song_mel_20ms(np.load(cache_path).astype(np.float32, copy=False))
+
     waveform = load_audio_file(
         audio_path,
         sample_rate=config.sample_rate,
@@ -70,8 +76,21 @@ def load_full_song_packed_mel_20ms(
     return full_song_packed_mel_20ms_from_waveform(
         waveform,
         sample_rate=config.sample_rate,
-        audio_cache_key=audio_cache_key or _default_audio_cache_key(audio_path, config),
+        audio_cache_key=resolved_audio_cache_key,
         config=config,
+    )
+
+
+def stage2_log_mel_cache_path(
+    audio_path: str | Path,
+    *,
+    audio_cache_key: str | None = None,
+    config: Stage2MelConfig = DEFAULT_STAGE2_MEL_CONFIG,
+) -> Path:
+    audio_path = Path(audio_path)
+    return log_mel_cache_path(
+        audio_cache_key or _default_audio_cache_key(audio_path, config),
+        config=config.mel_cache_config,
     )
 
 

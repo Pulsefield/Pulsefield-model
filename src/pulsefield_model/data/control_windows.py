@@ -1009,9 +1009,9 @@ def _default_load_full_song_packed_mel(audio_path: Path) -> Any:
 
 
 def _default_load_oracle_dense_timing_v2(beatmap_path: Path, frame_count: int) -> Any:
-    from pulsefield_model.timing.providers.oracle import render_oracle_dense_timing_v2
+    from pulsefield_model.timing.providers.oracle import load_or_create_oracle_dense_timing_v2_cache
 
-    return render_oracle_dense_timing_v2(beatmap_path, frame_count=frame_count)
+    return load_or_create_oracle_dense_timing_v2_cache(beatmap_path, frame_count=frame_count)
 
 
 def _full_support_ln_change_n_eff_target(_record: ControlWindowRecord) -> torch.Tensor:
