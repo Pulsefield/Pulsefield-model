@@ -8,7 +8,7 @@ run_name: stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2
 init_from_control_checkpoint: artifacts/runs/stage2_control_demo/stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt
 
 max_steps: 12000
-eval_every: 500
+eval_every: 1250
 skip_first_eval_pass: true
 save_every: 250
 log_every: 10
@@ -29,7 +29,7 @@ num_workers: 0
 max_cached_maps: 8
 mapper_record_cache_path: artifacts/cache/stage2_mapper_v2_1/window_records/stage2_mapper_v2_1_phase_b_sparse_global_mps_plus_end.parquet
 control_teacher_cache_dir: artifacts/cache/stage2_mapper_v2_1/control_teacher_d384_l3_stride16_step002000
-precompute_control_teacher_cache: true
+precompute_control_teacher_cache: false
 precompute_control_teacher_cache_only: false
 control_teacher_precompute_batch_size: 12
 control_teacher_cache_overwrite: false

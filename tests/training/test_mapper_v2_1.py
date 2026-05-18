@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 import importlib.util
@@ -7,6 +8,8 @@ if importlib.util.find_spec("torch") is None:
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+import yaml
 
 from pulsefield_model.models.control import ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
@@ -29,7 +32,7 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
         self.assertEqual(config["model"]["max_seq_len"], 1024)
         self.assertTrue(config["model"]["use_global_context"])
         self.assertEqual(config["loss"]["lambda_density"], 0.05)
-        self.assertTrue(config["precompute_control_teacher_cache"])
+        self.assertFalse(config["precompute_control_teacher_cache"])
         self.assertFalse(config["precompute_control_teacher_cache_only"])
         self.assertEqual(config["control_teacher_precompute_batch_size"], 12)
         self.assertFalse(config["control_teacher_cache_overwrite"])
@@ -53,6 +56,26 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
         ControlDemoGlobalEncoderConfig(**config["control_model"])
         MapperV21LossConfig(**config["loss"])
 
+    def test_run_config_accepts_resume_from(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "mapper_v2_1_child.yaml"
+            config_path.write_text(
+                yaml.safe_dump(
+                    {
+                        "resume_from": "artifacts/runs/stage2_mapper_v2_1/example/checkpoint.pt",
+                        "model": {},
+                        "control_model": {},
+                        "loss": {},
+                    },
+                    sort_keys=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_run_config(config_path)
+
+        self.assertEqual(config["resume_from"], "artifacts/runs/stage2_mapper_v2_1/example/checkpoint.pt")
+
     def test_main_forwards_v2_1_training_options(self) -> None:
         train_result = SimpleNamespace(
             report_path=Path("report.json"),
@@ -72,6 +95,8 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
                     "configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml",
                     "--max-steps",
                     "1",
+                    "--resume-from",
+                    "artifacts/runs/stage2_mapper_v2_1/example/checkpoint.pt",
                 ],
             )
 
@@ -79,10 +104,11 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
         kwargs = train.call_args.kwargs
         self.assertTrue(kwargs["include_full_song_context"])
         self.assertTrue(kwargs["skip_first_eval_pass"])
-        self.assertTrue(kwargs["precompute_control_teacher_cache"])
+        self.assertFalse(kwargs["precompute_control_teacher_cache"])
         self.assertEqual(kwargs["mps_cleanup_every"], 20)
         self.assertTrue(kwargs["require_control_teacher_cache"])
         self.assertEqual(kwargs["batch_size"], 2)
+        self.assertEqual(kwargs["resume_from"], Path("artifacts/runs/stage2_mapper_v2_1/example/checkpoint.pt"))
         self.assertEqual(kwargs["model_config_overrides"]["max_seq_len"], 1024)
         self.assertEqual(kwargs["loss_config_overrides"]["lambda_density"], 0.05)
 
