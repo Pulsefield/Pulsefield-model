@@ -22,7 +22,7 @@ seed: 1337
 device: mps
 
 eval_fraction: 0.01
-eval_size: 512
+eval_size: null
 final_train_eval_size: 512
 
 num_workers: 0

@@ -86,6 +86,12 @@ class ControlTrainingResult:
     completed_steps: int
 
 
+@dataclass(frozen=True)
+class _MapIndexGroup:
+    indices: tuple[int, ...]
+    difficulty_bucket: float | None
+
+
 def select_torch_device(device_name: str = "auto") -> torch.device:
     if device_name == "auto":
         if torch.cuda.is_available():
@@ -307,7 +313,7 @@ def _split_indices_by_window(count: int, eval_size: int, seed: int) -> tuple[lis
 
 
 def _split_indices_by_map_group(
-    grouped_indices: list[list[int]],
+    grouped_indices: list[_MapIndexGroup],
     *,
     count: int,
     eval_size: int,
@@ -316,13 +322,15 @@ def _split_indices_by_map_group(
     if eval_size == 0 or len(grouped_indices) <= 1:
         return list(range(count)), []
 
-    shuffled_groups = [list(group) for group in grouped_indices]
-    random.Random(seed).shuffle(shuffled_groups)
-    eval_indices: list[int] = []
-    for group in shuffled_groups[:-1]:
-        if len(eval_indices) >= eval_size:
-            break
-        eval_indices.extend(group)
+    if any(group.difficulty_bucket is not None for group in grouped_indices):
+        eval_indices = _split_indices_by_stratified_map_group(
+            grouped_indices,
+            count=count,
+            eval_size=eval_size,
+            seed=seed,
+        )
+    else:
+        eval_indices = _random_map_group_eval_indices(grouped_indices, eval_size=eval_size, seed=seed)
 
     eval_index_set = set(eval_indices)
     train_indices = [index for index in range(count) if index not in eval_index_set]
@@ -331,8 +339,118 @@ def _split_indices_by_map_group(
     return sorted(train_indices), sorted(eval_indices)
 
 
-def _map_identity_index_groups(dataset: Dataset[Any], count: int) -> list[list[int]] | None:
+def _random_map_group_eval_indices(
+    grouped_indices: list[_MapIndexGroup],
+    *,
+    eval_size: int,
+    seed: int,
+) -> list[int]:
+    shuffled_groups = list(grouped_indices)
+    random.Random(seed).shuffle(shuffled_groups)
+    eval_indices: list[int] = []
+    for group in shuffled_groups[:-1]:
+        if len(eval_indices) >= eval_size:
+            break
+        eval_indices.extend(group.indices)
+    return eval_indices
+
+
+def _split_indices_by_stratified_map_group(
+    grouped_indices: list[_MapIndexGroup],
+    *,
+    count: int,
+    eval_size: int,
+    seed: int,
+) -> list[int]:
+    bucket_group_indexes: dict[float | None, list[int]] = {}
+    for group_index, group in enumerate(grouped_indices):
+        bucket_group_indexes.setdefault(group.difficulty_bucket, []).append(group_index)
+
+    bucket_window_counts = {
+        bucket: sum(len(grouped_indices[group_index].indices) for group_index in group_indexes)
+        for bucket, group_indexes in bucket_group_indexes.items()
+    }
+    bucket_targets = _allocate_bucket_eval_sizes(
+        bucket_window_counts,
+        total_count=count,
+        eval_size=eval_size,
+    )
+    rng = random.Random(seed)
+    selected_group_indexes: set[int] = set()
+    selected_windows_by_bucket = {bucket: 0 for bucket in bucket_group_indexes}
+
+    for bucket in sorted(bucket_group_indexes, key=_difficulty_bucket_sort_key):
+        target = bucket_targets[bucket]
+        if target <= 0:
+            continue
+        candidates = list(bucket_group_indexes[bucket])
+        rng.shuffle(candidates)
+        for group_index in candidates:
+            if len(selected_group_indexes) + 1 >= len(grouped_indices):
+                break
+            if selected_windows_by_bucket[bucket] >= target:
+                break
+            selected_group_indexes.add(group_index)
+            selected_windows_by_bucket[bucket] += len(grouped_indices[group_index].indices)
+
+    while _selected_window_count(grouped_indices, selected_group_indexes) < eval_size:
+        if len(selected_group_indexes) + 1 >= len(grouped_indices):
+            break
+        remaining = [index for index in range(len(grouped_indices)) if index not in selected_group_indexes]
+        if not remaining:
+            break
+        tie_breakers = {index: rng.random() for index in remaining}
+        next_group_index = max(
+            remaining,
+            key=lambda index: (
+                bucket_targets[grouped_indices[index].difficulty_bucket]
+                - selected_windows_by_bucket[grouped_indices[index].difficulty_bucket],
+                tie_breakers[index],
+            ),
+        )
+        selected_group_indexes.add(next_group_index)
+        next_bucket = grouped_indices[next_group_index].difficulty_bucket
+        selected_windows_by_bucket[next_bucket] += len(grouped_indices[next_group_index].indices)
+
+    eval_indices: list[int] = []
+    for group_index in sorted(selected_group_indexes):
+        eval_indices.extend(grouped_indices[group_index].indices)
+    return eval_indices
+
+
+def _allocate_bucket_eval_sizes(
+    bucket_window_counts: Mapping[float | None, int],
+    *,
+    total_count: int,
+    eval_size: int,
+) -> dict[float | None, int]:
+    raw_targets = {
+        bucket: float(eval_size) * float(bucket_count) / max(float(total_count), 1.0)
+        for bucket, bucket_count in bucket_window_counts.items()
+    }
+    targets = {bucket: int(math.floor(target)) for bucket, target in raw_targets.items()}
+    remaining = int(eval_size) - sum(targets.values())
+    buckets_by_remainder = sorted(
+        raw_targets,
+        key=lambda bucket: (raw_targets[bucket] - math.floor(raw_targets[bucket]), bucket_window_counts[bucket]),
+        reverse=True,
+    )
+    for bucket in buckets_by_remainder[:remaining]:
+        targets[bucket] += 1
+    return targets
+
+
+def _selected_window_count(grouped_indices: Sequence[_MapIndexGroup], selected_group_indexes: set[int]) -> int:
+    return sum(len(grouped_indices[group_index].indices) for group_index in selected_group_indexes)
+
+
+def _difficulty_bucket_sort_key(bucket: float | None) -> tuple[int, float]:
+    return (1, 0.0) if bucket is None else (0, bucket)
+
+
+def _map_identity_index_groups(dataset: Dataset[Any], count: int) -> list[_MapIndexGroup] | None:
     groups: dict[tuple[tuple[str, object], ...], list[int]] = {}
+    difficulty_buckets: dict[tuple[tuple[str, object], ...], float | None] = {}
     saw_map_identity = False
     for index in range(count):
         identity = _map_identity_for_dataset_index(dataset, index)
@@ -341,9 +459,14 @@ def _map_identity_index_groups(dataset: Dataset[Any], count: int) -> list[list[i
         else:
             saw_map_identity = True
         groups.setdefault(identity, []).append(index)
+        if identity not in difficulty_buckets or difficulty_buckets[identity] is None:
+            difficulty_buckets[identity] = _map_difficulty_bucket_for_dataset_index(dataset, index)
     if not saw_map_identity:
         return None
-    return list(groups.values())
+    return [
+        _MapIndexGroup(indices=tuple(indices), difficulty_bucket=difficulty_buckets.get(identity))
+        for identity, indices in groups.items()
+    ]
 
 
 def _map_identity_for_dataset_index(dataset: Dataset[Any], index: int) -> tuple[tuple[str, object], ...] | None:
@@ -365,16 +488,73 @@ def _map_identity_for_dataset_index(dataset: Dataset[Any], index: int) -> tuple[
 
 
 def _map_identity_from_metadata(metadata: object) -> tuple[tuple[str, object], ...] | None:
-    if isinstance(metadata, Mapping) and isinstance(metadata.get("metadata"), Mapping):
-        nested_identity = _map_identity_from_metadata(metadata["metadata"])
-        if nested_identity is not None:
-            return nested_identity
+    for nested_field in ("metadata", "control_record"):
+        nested_metadata = _metadata_field_value(metadata, nested_field)
+        if nested_metadata is not None and nested_metadata is not metadata:
+            nested_identity = _map_identity_from_metadata(nested_metadata)
+            if nested_identity is not None:
+                return nested_identity
 
     for field in ("beatmap_path", "map_path", "beatmap_id", "map_id", "filtered_index", "source_index"):
         value = _metadata_field_value(metadata, field)
         normalized = _normalize_map_identity_value(value, numeric=field not in {"beatmap_path", "map_path"})
         if normalized is not None:
             return ((field, normalized),)
+    return None
+
+
+def _map_difficulty_bucket_for_dataset_index(dataset: Dataset[Any], index: int) -> float | None:
+    if isinstance(dataset, Subset):
+        return _map_difficulty_bucket_for_dataset_index(dataset.dataset, int(dataset.indices[index]))
+
+    records = getattr(dataset, "records", None)
+    if records is not None:
+        try:
+            bucket = _difficulty_bucket_from_metadata(records[index])
+        except (IndexError, KeyError, TypeError):
+            bucket = None
+        if bucket is not None:
+            return bucket
+
+    if isinstance(dataset, (list, tuple)):
+        return _difficulty_bucket_from_metadata(dataset[index])
+    return None
+
+
+def _difficulty_bucket_from_metadata(metadata: object) -> float | None:
+    difficulty = _difficulty_from_metadata(metadata)
+    if difficulty is None:
+        return None
+    return math.floor(difficulty * 2.0) / 2.0
+
+
+def _difficulty_from_metadata(metadata: object) -> float | None:
+    for field in ("difficulty", "star_rating", "stars"):
+        normalized = _normalize_difficulty_value(_metadata_field_value(metadata, field))
+        if normalized is not None:
+            return normalized
+
+    for nested_field in ("metadata", "control_record"):
+        nested_metadata = _metadata_field_value(metadata, nested_field)
+        if nested_metadata is not None and nested_metadata is not metadata:
+            nested_difficulty = _difficulty_from_metadata(nested_metadata)
+            if nested_difficulty is not None:
+                return nested_difficulty
+    return None
+
+
+def _normalize_difficulty_value(value: object) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, torch.Tensor):
+        if value.numel() != 1:
+            return None
+        value = value.item()
+    if isinstance(value, (bool, np.bool_)):
+        return None
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        difficulty = float(value)
+        return difficulty if math.isfinite(difficulty) else None
     return None
 
 
