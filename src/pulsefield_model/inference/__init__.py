@@ -21,6 +21,12 @@ _EXPORTS = {
     "OsuExportMetadata": "osu_export",
     "decode_mapper_tokens_to_timepoints": "osu_export",
     "format_osu_export": "osu_export",
+    "MapperV21FullRollout": "mapper_v2_1_rollout",
+    "MapperV21GeneratedWindow": "mapper_v2_1_rollout",
+    "generate_full_song_rollout_v2_1": "mapper_v2_1_rollout",
+    "rollout_to_timepoints_v2_1": "mapper_v2_1_rollout",
+    "session_window_batch_provider_v2_1": "mapper_v2_1_rollout",
+    "zero_control_batch_provider_v2_1": "mapper_v2_1_rollout",
     "SessionRuntime": "session_runtime",
     "SessionRuntimeConfig": "session_runtime",
 }

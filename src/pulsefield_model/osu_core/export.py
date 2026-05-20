@@ -1,28 +1,27 @@
 from __future__ import annotations
 
-from typing import Sequence
-
-from pulsefield_model.events.canonical import CanonicalTimepoint, LaneAction
+from typing import Any, Sequence
 
 
-def format_hitobjects(timepoints: Sequence[CanonicalTimepoint], *, key_count: int = 4) -> list[str]:
+def format_hitobjects(timepoints: Sequence[Any], *, key_count: int = 4) -> list[str]:
     open_holds: dict[int, int] = {}
     lines: list[str] = []
     for timepoint in sorted(timepoints, key=lambda item: item.time_ms):
         if len(timepoint.lane_actions) != key_count:
             raise ValueError(f"timepoint must contain {key_count} lane actions: {timepoint}")
         for lane, action in enumerate(timepoint.lane_actions):
-            if action == LaneAction.NONE:
+            action_name = _lane_action_name(action)
+            if action_name == "NONE":
                 continue
-            if action == LaneAction.TAP:
+            if action_name == "TAP":
                 if lane in open_holds:
                     raise ValueError(f"TAP while hold is open at {timepoint.time_ms}ms lane {lane}")
                 lines.append(_format_tap(lane, timepoint.time_ms, key_count=key_count))
-            elif action == LaneAction.HOLD_START:
+            elif action_name == "HOLD_START":
                 if lane in open_holds:
                     raise ValueError(f"HOLD_START while hold is open at {timepoint.time_ms}ms lane {lane}")
                 open_holds[lane] = timepoint.time_ms
-            elif action == LaneAction.HOLD_END:
+            elif action_name == "HOLD_END":
                 if lane not in open_holds:
                     raise ValueError(f"HOLD_END without open hold at {timepoint.time_ms}ms lane {lane}")
                 lines.append(
@@ -40,6 +39,14 @@ def format_hitobjects(timepoints: Sequence[CanonicalTimepoint], *, key_count: in
         lanes = ", ".join(str(lane) for lane in sorted(open_holds))
         raise ValueError(f"unclosed hold lane(s): {lanes}")
     return sorted(lines, key=_hitobject_sort_key)
+
+
+def _lane_action_name(action: Any) -> str:
+    name = getattr(action, "name", None)
+    if isinstance(name, str):
+        return name
+    value = getattr(action, "value", action)
+    return str(value)
 
 
 def _format_tap(lane: int, time_ms: int, *, key_count: int) -> str:

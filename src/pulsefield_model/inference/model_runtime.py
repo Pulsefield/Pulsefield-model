@@ -13,6 +13,7 @@ from torch import nn
 from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
 from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
+from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21Model, MapperV21Vocab
 from pulsefield_model.timing.providers.beatthis import (
     DEFAULT_BEATTHIS_CHECKPOINT,
     DEFAULT_BEATTHIS_DEVICE,
@@ -39,8 +40,8 @@ class ModelRuntime:
     device: torch.device
     beatthis_provider: BeatThisTimingProvider
     control_model: ControlDemoGlobalEncoder
-    mapper_model: MapperV2Model
-    vocab: MapperTupleVocab
+    mapper_model: nn.Module
+    vocab: MapperTupleVocab | MapperV21Vocab
     checkpoint_metadata: Mapping[str, Any]
 
     @classmethod
@@ -87,23 +88,31 @@ def load_model_runtime(config: ModelRuntimeConfig) -> ModelRuntime:
     if mapper_control_config_raw != control_config_raw:
         raise ValueError("mapper checkpoint control_model_config does not match control checkpoint model_config")
 
-    mapper_config = MapperV2Config(**mapper_config_raw)
+    mapper_state_raw = _required_state_dict(mapper_checkpoint, checkpoint_kind="mapper")
+    mapper_state, filtered_control_encoder_keys = _mapper_tensor_state_dict(mapper_state_raw)
+    mapper_version = _detect_mapper_checkpoint_version(mapper_checkpoint, mapper_state=mapper_state)
+    if mapper_version == "v2_1":
+        mapper_config = MapperV21Config(**mapper_config_raw)
+        vocab = MapperV21Vocab()
+        mapper_model = MapperV21Model(mapper_config, vocab=vocab)
+    else:
+        mapper_config = MapperV2Config(**mapper_config_raw)
+        vocab = MapperTupleVocab()
+        mapper_model = MapperV2Model(mapper_config, vocab=vocab)
+
     if int(mapper_config.control_dim) != int(control_config.d_model):
         raise ValueError(
             "mapper checkpoint model_config.control_dim must match control checkpoint model_config.d_model"
         )
-    vocab = MapperTupleVocab()
-    mapper_model = MapperV2Model(mapper_config, vocab=vocab)
     if mapper_model.control_encoder is not None:
         raise RuntimeError("mapper runtime must not embed a control_encoder")
 
-    mapper_state_raw = _required_state_dict(mapper_checkpoint, checkpoint_kind="mapper")
-    mapper_state, filtered_control_encoder_keys = _mapper_tensor_state_dict(mapper_state_raw)
     mapper_load_result = mapper_model.load_state_dict(mapper_state, strict=True)
     _freeze_for_inference(mapper_model)
     mapper_model.to(device)
     mapper_metadata = {
         "checkpoint_path": mapper_path.as_posix(),
+        "version": mapper_version,
         "checkpoint_schema_version": mapper_checkpoint.get("checkpoint_schema_version"),
         "loaded_keys": len(mapper_state),
         "filtered_control_encoder_keys": tuple(filtered_control_encoder_keys),
@@ -247,6 +256,29 @@ def _mapper_tensor_state_dict(state: Mapping[Any, Any]) -> tuple[dict[str, torch
     if non_tensor_keys:
         raise ValueError(f"mapper checkpoint model_state_dict contains non-tensor values: {non_tensor_keys}")
     return mapper_state, tuple(sorted(filtered_control_encoder_keys))
+
+
+def _detect_mapper_checkpoint_version(
+    checkpoint: Mapping[str, Any],
+    *,
+    mapper_state: Mapping[str, torch.Tensor],
+) -> str:
+    raw_version = checkpoint.get("model_version")
+    if isinstance(raw_version, str) and raw_version.strip():
+        normalized = raw_version.strip().lower().replace(".", "_")
+        if normalized in {"v2_1", "mapper_v2_1", "2_1"}:
+            return "v2_1"
+        if normalized in {"v2", "mapper_v2", "2"}:
+            return "v2"
+
+    run_name = str(checkpoint.get("run_name", "")).lower()
+    if "v2_1" in run_name or "v2.1" in run_name:
+        return "v2_1"
+
+    output_head = mapper_state.get("output_head.weight")
+    if isinstance(output_head, torch.Tensor) and int(output_head.shape[0]) == MapperV21Vocab().size:
+        return "v2_1"
+    return "v2"
 
 
 def _freeze_for_inference(model: nn.Module) -> None:
