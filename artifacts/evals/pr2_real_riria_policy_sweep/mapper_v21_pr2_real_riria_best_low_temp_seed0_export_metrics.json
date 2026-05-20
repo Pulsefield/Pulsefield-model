@@ -1,0 +1,35 @@
+{
+  "completed": true,
+  "dead_end": false,
+  "events_per_window": [
+    52,
+    52,
+    53,
+    54,
+    66,
+    64,
+    72,
+    107,
+    68,
+    69,
+    65
+  ],
+  "lane_action_count": 722,
+  "max_tokens_exceeded": false,
+  "osu_path": "/Users/l/projects/Pulsefield-model/artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_best_low_temp_seed0.osu",
+  "timepoint_count": 555,
+  "tokens_per_window": [
+    156,
+    153,
+    154,
+    161,
+    166,
+    159,
+    179,
+    214,
+    169,
+    170,
+    163
+  ],
+  "window_count": 11
+}
