@@ -300,25 +300,29 @@ class MapperV21Model(MapperV2Model):
                 open_age_ms=open_age_ms,
                 remaining_ms=remaining_ms,
             )
-        positions = torch.arange(decoder_input.shape[1], dtype=torch.long, device=decoder_input.device).reshape(1, -1)
-        with torch.profiler.record_function("mapper_v21.grammar_mask"):
-            grammar_mask = build_grammar_mask(
-                current_ms=current_ms,
-                open_mask=open_mask,
-                open_start_ms=open_start_ms,
-                open_age_ms=open_age_ms,
-                emitted_lane_mask=emitted_lane_mask,
-                last_lane_index=last_lane_index,
-                write_start_ms=write_start_ms,
-                write_end_ms=write_end_ms,
-                chart_end_ms=chart_end_ms,
-                ln_carry_in=ln_carry_in,
-                ln_carry_out=ln_carry_out,
-                is_full_chart_start=is_full_chart_start,
-                is_full_chart_end=is_full_chart_end,
-                vocab=self.vocab,
-                positions=positions.expand(decoder_input.shape[0], -1),
-            ).to(dtype=base_logits.dtype)
+        apply_grammar_mask = _batch_bool_flag(batch, key="apply_grammar_mask", default=True)
+        if apply_grammar_mask:
+            positions = torch.arange(decoder_input.shape[1], dtype=torch.long, device=decoder_input.device).reshape(1, -1)
+            with torch.profiler.record_function("mapper_v21.grammar_mask"):
+                grammar_mask = build_grammar_mask(
+                    current_ms=current_ms,
+                    open_mask=open_mask,
+                    open_start_ms=open_start_ms,
+                    open_age_ms=open_age_ms,
+                    emitted_lane_mask=emitted_lane_mask,
+                    last_lane_index=last_lane_index,
+                    write_start_ms=write_start_ms,
+                    write_end_ms=write_end_ms,
+                    chart_end_ms=chart_end_ms,
+                    ln_carry_in=ln_carry_in,
+                    ln_carry_out=ln_carry_out,
+                    is_full_chart_start=is_full_chart_start,
+                    is_full_chart_end=is_full_chart_end,
+                    vocab=self.vocab,
+                    positions=positions.expand(decoder_input.shape[0], -1),
+                ).to(dtype=base_logits.dtype)
+        else:
+            grammar_mask = torch.zeros_like(base_logits)
         with torch.profiler.record_function("mapper_v21.logits_final"):
             logits_final = (
                 base_logits
@@ -356,6 +360,15 @@ class MapperV21Model(MapperV2Model):
     @property
     def incremental_decode_next_token(self) -> Any:
         raise AttributeError("MapperV21Model does not expose incremental decoding")
+
+
+def _batch_bool_flag(batch: Mapping[str, Any], *, key: str, default: bool) -> bool:
+    value = batch.get(key, default)
+    if isinstance(value, torch.Tensor):
+        if int(value.numel()) != 1:
+            raise ValueError(f"{key} must be a scalar bool flag")
+        return bool(value.detach().cpu().item())
+    return bool(value)
 
 
 def _validate_v21_fragment_contract(

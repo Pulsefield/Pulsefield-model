@@ -374,6 +374,7 @@ def mapper_v2_1_logits_fn(
     is_full_chart_start: bool,
     is_full_chart_end: bool,
     time_shift_length_penalty_alpha: float,
+    apply_grammar_mask: bool = False,
 ) -> MapperV21LogitsFn:
     time_shift_penalty = _time_shift_length_penalty_tensors_v2_1(
         vocab,
@@ -418,6 +419,8 @@ def mapper_v2_1_logits_fn(
             "is_full_chart_start": full_start_tensor,
             "is_full_chart_end": full_end_tensor,
             "normalized_difficulty": difficulty_tensor,
+            # Rollout applies step.valid_token_mask before selection; avoid the model's full-prefix mask here.
+            "apply_grammar_mask": bool(apply_grammar_mask),
         }
         with torch.inference_mode():
             output = model(batch)

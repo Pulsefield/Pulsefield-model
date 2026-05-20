@@ -39,6 +39,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Comma-separated prefix lengths for the mapper v2.1 decoder prefix sweep.",
     )
     group.addoption(
+        "--mapper-v21-decoder-eval-skip-internal-grammar-mask",
+        action="store_true",
+        default=False,
+        help="Run the mapper v2.1 prefix sweep with the model-internal grammar mask disabled.",
+    )
+    group.addoption(
         "--mapper-v21-decoder-eval-no-profiler",
         action="store_true",
         default=False,

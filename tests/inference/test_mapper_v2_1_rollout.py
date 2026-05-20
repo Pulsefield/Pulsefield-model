@@ -5,6 +5,7 @@ import torch
 from pulsefield_model.inference.mapper_v2_1_rollout import (
     MapperV21FullRollout,
     grammar_constrained_window_generation_v2_1,
+    mapper_v2_1_logits_fn,
     rollout_to_timepoints_v2_1,
     zero_control_batch_provider_v2_1,
 )
@@ -80,3 +81,68 @@ def test_zero_control_batch_provider_matches_mapper_v2_1_shapes() -> None:
     assert tuple(batch["projected_control_memory_8s"].shape) == (1, 400, 16)
     assert tuple(batch["density_teacher_8s"].shape) == (1, 400, 1)
     assert tuple(batch["global_memory"].shape) == (1, 4, 16)
+
+
+def test_autoregressive_logits_skip_internal_grammar_mask_matches_greedy_tokens() -> None:
+    torch.manual_seed(20260520)
+    vocab = MapperV21Vocab()
+    model = MapperV21Model(
+        MapperV21Config(
+            control_dim=8,
+            d_model=16,
+            heads=4,
+            layers=1,
+            ffn_dim=32,
+            dropout=0.0,
+            max_seq_len=32,
+            use_global_context=False,
+            global_conv_blocks=0,
+        ),
+        vocab=vocab,
+    )
+    model.eval()
+    provider = zero_control_batch_provider_v2_1(model=model, device="cpu")
+
+    def generate(*, apply_grammar_mask: bool):
+        chart_end_ms = 500
+        carry_in = empty_ln_carry_state(0)
+        carry_out = empty_ln_carry_state(chart_end_ms)
+        logits_fn = mapper_v2_1_logits_fn(
+            model=model,
+            vocab=vocab,
+            device=torch.device("cpu"),
+            normalized_difficulty=0.0,
+            control_batch=dict(provider(0, 8_000)),
+            ln_carry_in=carry_in,
+            ln_carry_out=carry_out,
+            write_start_ms=0,
+            write_end_ms=8_000,
+            chart_end_ms=chart_end_ms,
+            is_full_chart_start=True,
+            is_full_chart_end=True,
+            time_shift_length_penalty_alpha=0.0,
+            apply_grammar_mask=apply_grammar_mask,
+        )
+        return grammar_constrained_window_generation_v2_1(
+            vocab=vocab,
+            write_start_ms=0,
+            write_end_ms=8_000,
+            chart_end_ms=chart_end_ms,
+            ln_carry_in=carry_in,
+            ln_carry_out=carry_out,
+            logits_fn=logits_fn,
+            is_full_chart_start=True,
+            is_full_chart_end=True,
+            max_tokens=16,
+            temperature=0.0,
+            top_p=None,
+        )
+
+    with_internal_mask = generate(apply_grammar_mask=True)
+    without_internal_mask = generate(apply_grammar_mask=False)
+
+    assert without_internal_mask.tokens
+    assert without_internal_mask.tokens == with_internal_mask.tokens
+    assert without_internal_mask.completed == with_internal_mask.completed
+    assert without_internal_mask.dead_end == with_internal_mask.dead_end
+    assert without_internal_mask.max_tokens_exceeded == with_internal_mask.max_tokens_exceeded

@@ -1,6 +1,7 @@
 import unittest
 
 import importlib.util
+from unittest.mock import patch
 
 if importlib.util.find_spec("torch") is None:
     raise unittest.SkipTest("requires torch")
@@ -121,6 +122,40 @@ class MapperV21ModelTests(unittest.TestCase):
         self.assertTrue(torch.isfinite(loss.total_loss).item())
         self.assertIsNotNone(model.token_embedding.weight.grad)
         self.assertGreater(float(model.token_embedding.weight.grad.abs().sum().item()), 0.0)
+
+    def test_forward_can_skip_grammar_mask_without_changing_valid_logits(self) -> None:
+        torch.manual_seed(20260520)
+        vocab = MapperV21Vocab()
+        tokenized = encode_mapper_window(
+            [
+                MapperTimepoint(100, _actions(LaneAction.TAP, LaneAction.NONE, LaneAction.NONE)),
+                MapperTimepoint(200, _actions(LaneAction.NONE, LaneAction.TAP, LaneAction.NONE)),
+            ],
+            vocab=vocab,
+            write_start_ms=0,
+            write_end_ms=8000,
+            chart_end_ms=300,
+        )
+        batch = _batch_for_window(tokenized)
+        model = MapperV21Model(_small_config(), vocab=vocab)
+        model.eval()
+
+        with torch.no_grad():
+            masked = model(batch)
+            unmasked = model({**batch, "apply_grammar_mask": False})
+            with patch(
+                "pulsefield_model.models.mapper.v2_1.model.build_grammar_mask",
+                side_effect=AssertionError("build_grammar_mask should be skipped"),
+            ):
+                skipped = model({**batch, "apply_grammar_mask": False})
+
+        valid = torch.isfinite(masked.grammar_mask)
+        invalid = ~valid
+        self.assertTrue(bool(invalid.any().item()))
+        self.assertTrue(torch.equal(unmasked.grammar_mask, torch.zeros_like(unmasked.grammar_mask)))
+        self.assertTrue(torch.equal(skipped.grammar_mask, torch.zeros_like(skipped.grammar_mask)))
+        self.assertTrue(torch.allclose(masked.logits_final[valid], unmasked.logits_final[valid]))
+        self.assertTrue(torch.isneginf(masked.logits_final[invalid]).all().item())
 
 
 if __name__ == "__main__":

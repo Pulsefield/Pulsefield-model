@@ -189,6 +189,7 @@ def run_prefix_length_sweep(
     prefix_lengths: Sequence[int],
     run_config: ProfileRunConfig,
     device: torch.device | str = "cpu",
+    apply_grammar_mask: bool = True,
 ) -> dict[str, Any]:
     resolved_device = torch.device(device)
     _prepare_model(model, resolved_device)
@@ -223,6 +224,7 @@ def run_prefix_length_sweep(
             )
             continue
         batch = batch_for_tokenized_window(tokenized, config=model.config, prefix_len=prefix_len, device=resolved_device)
+        batch["apply_grammar_mask"] = bool(apply_grammar_mask)
 
         def forward_once() -> Any:
             with torch.no_grad():
@@ -253,6 +255,7 @@ def run_prefix_length_sweep(
         status="ok",
         repeat=run_config.repeat,
         profiler_enabled=run_config.use_profiler,
+        apply_grammar_mask=bool(apply_grammar_mask),
         rows=rows,
     )
 

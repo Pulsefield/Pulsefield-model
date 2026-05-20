@@ -22,6 +22,9 @@ def mapper_v21_decoder_eval_options(request: pytest.FixtureRequest) -> dict[str,
         "repeat": int(request.config.getoption("--mapper-v21-decoder-eval-repeat")),
         "warmup": int(request.config.getoption("--mapper-v21-decoder-eval-warmup")),
         "prefix_lengths": _parse_int_csv(request.config.getoption("--mapper-v21-decoder-eval-prefix-lengths")),
+        "prefix_sweep_apply_grammar_mask": not bool(
+            request.config.getoption("--mapper-v21-decoder-eval-skip-internal-grammar-mask"),
+        ),
         "use_profiler": not bool(request.config.getoption("--mapper-v21-decoder-eval-no-profiler")),
         "rollout_ms": int(request.config.getoption("--mapper-v21-decoder-eval-rollout-ms")),
         "rollout_max_tokens_per_window": int(

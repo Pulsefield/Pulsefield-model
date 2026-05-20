@@ -37,14 +37,18 @@ def test_prefix_length_sweep_writes_aggregate_json(
         prefix_lengths=mapper_v21_decoder_eval_options["prefix_lengths"],
         run_config=run_config,
         device=mapper_v21_decoder_eval_options["device"],
+        apply_grammar_mask=mapper_v21_decoder_eval_options["prefix_sweep_apply_grammar_mask"],
     )
     path = write_json_summary(summary, mapper_v21_decoder_eval_output_dir / "mapper_v21_prefix_length_sweep.json")
 
     payload = _read_json(path)
     assert payload["experiment"] == "prefix_length_sweep"
     assert payload["status"] == "ok"
+    assert payload["apply_grammar_mask"] == mapper_v21_decoder_eval_options["prefix_sweep_apply_grammar_mask"]
     assert any(row["status"] == "ok" for row in payload["rows"])
     assert _has_record_function_event(payload)
+    if not payload["apply_grammar_mask"]:
+        assert not _has_profiler_event(payload, "mapper_v21.grammar_mask")
     assert not list(mapper_v21_decoder_eval_output_dir.glob("*.jsonl"))
 
 
@@ -164,5 +168,16 @@ def _has_record_function_event(payload: dict[str, Any]) -> bool:
                 return True
     for event in payload.get("profiler_events", []):
         if str(event.get("key", "")).startswith("mapper_v21."):
+            return True
+    return False
+
+
+def _has_profiler_event(payload: dict[str, Any], key: str) -> bool:
+    for row in payload.get("rows", []):
+        for event in row.get("profiler_events", []):
+            if event.get("key") == key:
+                return True
+    for event in payload.get("profiler_events", []):
+        if event.get("key") == key:
             return True
     return False
