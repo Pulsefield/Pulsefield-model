@@ -24,6 +24,7 @@ from pulsefield_model.models.mapper.v2_1 import (
 from pulsefield_model.training.common import (
     CHECKPOINT_SCHEMA_VERSION,
     DEFAULT_FINAL_TRAIN_EVAL_SIZE,
+    ResumableRandomBatchSampler,
     ControlTrainingResult,
     _atomic_torch_save,
     _advance_training_iterator,
@@ -39,6 +40,7 @@ from pulsefield_model.training.common import (
     _validate_training_args,
     _write_report,
     limit_final_train_eval_dataset,
+    set_resumable_loader_batch_cursor,
     select_torch_device,
     split_train_eval_dataset,
 )
@@ -250,12 +252,13 @@ def run_mapper_v2_1_phase_b_training(
     if len(eval_dataset) == 0:
         eval_dataset = train_dataset
 
-    generator = torch.Generator().manual_seed(seed)
     loader = DataLoader(
         train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        generator=generator,
+        batch_sampler=ResumableRandomBatchSampler(
+            train_dataset,
+            batch_size=batch_size,
+            seed=seed,
+        ),
         num_workers=num_workers,
         collate_fn=collate_mapper_v2_1_windows,
     )
@@ -429,7 +432,8 @@ def _run_training(
         raw_initialization = checkpoint.get("initialization")
         initialization_report = dict(raw_initialization) if isinstance(raw_initialization, Mapping) else None
         _restore_rng_state(training_state["rng_state"])
-        iterator = _advance_training_iterator(iterator, completed_step)
+        if not set_resumable_loader_batch_cursor(loader, completed_step):
+            iterator = _advance_training_iterator(iterator, completed_step)
         print(f"{progress_label}_resume checkpoint={resume_from} step={completed_step}/{max_steps}", flush=True)
 
     log_start_time = time.monotonic()

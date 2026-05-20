@@ -9,11 +9,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import torch
 import yaml
+from torch.utils.data import DataLoader, Dataset
 
 from pulsefield_model.models.control import ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
 from pulsefield_model.training import mapper_v2_1 as mapper_v2_1_training
+from pulsefield_model.training.common import ResumableRandomBatchSampler, _infinite_loader
 from pulsefield_model.training.mapper_v2_1 import load_run_config
 
 _STALE_ROOT = "train" + "/"
@@ -147,12 +150,70 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
         self.assertFalse(kwargs["control_teacher_cache_overwrite"])
         self.assertIn("max_seq_len", load_run_config("configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml")["model"])
 
+    def test_resumable_random_sampler_jumps_without_loading_skipped_batches(self) -> None:
+        dataset_size = 7
+        batch_size = 3
+        seed = 923
+        completed_batches = 5
+        next_batch_count = 6
+
+        baseline_generator = torch.Generator().manual_seed(seed)
+        baseline_loader = DataLoader(
+            _IndexDataset(dataset_size),
+            batch_size=batch_size,
+            shuffle=True,
+            generator=baseline_generator,
+            num_workers=0,
+        )
+        baseline_iterator = _infinite_loader(baseline_loader)
+        for _ in range(completed_batches):
+            next(baseline_iterator)
+        expected = _take_index_batches(baseline_iterator, next_batch_count)
+
+        resume_dataset = _IndexDataset(dataset_size)
+        resume_loader = DataLoader(
+            resume_dataset,
+            batch_sampler=ResumableRandomBatchSampler(
+                resume_dataset,
+                batch_size=batch_size,
+                seed=seed,
+                completed_batches=completed_batches,
+            ),
+            num_workers=0,
+        )
+
+        actual = _take_index_batches(_infinite_loader(resume_loader), next_batch_count)
+
+        self.assertEqual(actual, expected)
+        self.assertEqual(len(resume_dataset.loaded_indexes), sum(len(batch) for batch in actual))
+
 
 def _assert_artifacts_paths(test: unittest.TestCase, config: dict[str, object], keys: tuple[str, ...]) -> None:
     for key in keys:
         value = str(config[key])
         test.assertTrue(value.startswith("artifacts/"), msg=f"{key}={value}")
         test.assertNotIn(_STALE_ROOT, value, msg=f"{key}={value}")
+
+
+class _IndexDataset(Dataset):
+    def __init__(self, size: int) -> None:
+        self.size = int(size)
+        self.loaded_indexes: list[int] = []
+
+    def __len__(self) -> int:
+        return self.size
+
+    def __getitem__(self, index: int) -> torch.Tensor:
+        self.loaded_indexes.append(int(index))
+        return torch.tensor(int(index), dtype=torch.long)
+
+
+def _take_index_batches(iterator: object, count: int) -> list[list[int]]:
+    batches: list[list[int]] = []
+    for _ in range(count):
+        batch = next(iterator)  # type: ignore[arg-type]
+        batches.append([int(value) for value in batch.tolist()])
+    return batches
 
 
 if __name__ == "__main__":

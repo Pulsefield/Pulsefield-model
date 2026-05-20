@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 import torch
 import yaml
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import DataLoader, Dataset, Sampler, Subset
 
 from pulsefield_model.data.control_windows import (
     ControlWindowDataset,
@@ -778,6 +778,91 @@ def _run_training(
 def _infinite_loader(loader: DataLoader):
     while True:
         yield from loader
+
+
+class ResumableRandomBatchSampler(Sampler[list[int]]):
+    """Random batch sampler that can resume from a completed-batch cursor.
+
+    This matches DataLoader(shuffle=True, generator=Generator(seed)) ordering for
+    finite shuffled epochs, but it jumps to a batch offset by skipping indices in
+    the epoch permutation instead of materializing earlier dataset samples.
+    """
+
+    def __init__(
+        self,
+        dataset: Dataset[Any],
+        *,
+        batch_size: int,
+        seed: int,
+        completed_batches: int = 0,
+        drop_last: bool = False,
+    ) -> None:
+        dataset_length = len(dataset)
+        if dataset_length <= 0:
+            raise ValueError("ResumableRandomBatchSampler requires a non-empty dataset")
+        if batch_size <= 0:
+            raise ValueError(f"batch_size must be positive, got {batch_size}")
+        completed_batches = int(completed_batches)
+        if completed_batches < 0:
+            raise ValueError(f"completed_batches must be non-negative, got {completed_batches}")
+        self.dataset_length = int(dataset_length)
+        self.batch_size = int(batch_size)
+        self.seed = int(seed)
+        self.drop_last = bool(drop_last)
+        self.batches_per_epoch = (
+            self.dataset_length // self.batch_size
+            if self.drop_last
+            else math.ceil(self.dataset_length / self.batch_size)
+        )
+        if self.batches_per_epoch <= 0:
+            raise ValueError(
+                "ResumableRandomBatchSampler would produce no batches; "
+                f"dataset_length={self.dataset_length} batch_size={self.batch_size} drop_last={self.drop_last}"
+            )
+        self._generator = torch.Generator()
+        self._batch_offset = 0
+        self.set_completed_batches(completed_batches)
+
+    def set_completed_batches(self, completed_batches: int) -> None:
+        completed_batches = int(completed_batches)
+        if completed_batches < 0:
+            raise ValueError(f"completed_batches must be non-negative, got {completed_batches}")
+        epoch = completed_batches // self.batches_per_epoch
+        self._batch_offset = completed_batches % self.batches_per_epoch
+        self._generator = torch.Generator()
+        self._generator.manual_seed(self.seed)
+        for _ in range(epoch):
+            torch.empty((), dtype=torch.int64).random_(generator=self._generator)
+            torch.randperm(self.dataset_length, generator=self._generator)
+            torch.randperm(self.dataset_length, generator=self._generator)
+
+    def __iter__(self):
+        torch.empty((), dtype=torch.int64).random_(generator=self._generator)
+        indices = torch.randperm(self.dataset_length, generator=self._generator).tolist()
+        torch.randperm(self.dataset_length, generator=self._generator)
+        start = self._batch_offset * self.batch_size
+        self._batch_offset = 0
+        stop = (
+            self.dataset_length - (self.dataset_length % self.batch_size)
+            if self.drop_last
+            else self.dataset_length
+        )
+        for batch_start in range(start, stop, self.batch_size):
+            batch = indices[batch_start : batch_start + self.batch_size]
+            if len(batch) == self.batch_size or (batch and not self.drop_last):
+                yield batch
+
+    def __len__(self) -> int:
+        return self.batches_per_epoch - self._batch_offset
+
+
+def set_resumable_loader_batch_cursor(loader: DataLoader, completed_batches: int) -> bool:
+    batch_sampler = getattr(loader, "batch_sampler", None)
+    set_completed_batches = getattr(batch_sampler, "set_completed_batches", None)
+    if not callable(set_completed_batches):
+        return False
+    set_completed_batches(completed_batches)
+    return True
 
 
 @torch.no_grad()
