@@ -265,63 +265,68 @@ class MapperV21Model(MapperV2Model):
             config=self.config,
         )
 
-        decoder_hidden, base_logits = self._decode_with_global_context(
-            tokens=decoder_input,
-            current_ms=current_ms,
-            write_start_ms=write_start_ms,
-            write_end_ms=target_end_ms,
-            difficulty=_difficulty_tensor(batch, device=decoder_input.device, dim=self.config.difficulty_dim),
-            control_memory=control_memory,
-            input_padding_mask=input_padding_mask,
-            global_memory=global_memory,
-            global_memory_padding_mask=global_memory_padding_mask,
-            global_position_features=global_position_features,
-            global_attention_kv_cache=global_attention_kv_cache,
-        )
+        with torch.profiler.record_function("mapper_v21.decode_with_global_context"):
+            decoder_hidden, base_logits = self._decode_with_global_context(
+                tokens=decoder_input,
+                current_ms=current_ms,
+                write_start_ms=write_start_ms,
+                write_end_ms=target_end_ms,
+                difficulty=_difficulty_tensor(batch, device=decoder_input.device, dim=self.config.difficulty_dim),
+                control_memory=control_memory,
+                input_padding_mask=input_padding_mask,
+                global_memory=global_memory,
+                global_memory_padding_mask=global_memory_padding_mask,
+                global_position_features=global_position_features,
+                global_attention_kv_cache=global_attention_kv_cache,
+            )
         remaining_ms = (target_end_ms.reshape(-1, 1) - current_ms).clamp_min(0)
-        state_prior = self.state_prior_adapter(
-            open_mask=open_mask,
-            open_start_ms=open_start_ms,
-            open_age_ms=open_age_ms,
-            remaining_ms=remaining_ms,
-            write_start_ms=write_start_ms,
-        )
-        ln_close = self.ln_close_adapter(
-            decoder_hidden=decoder_hidden,
-            control_memory_8s=control_memory,
-            density_teacher_8s=density_teacher_8s,
-            current_ms=current_ms,
-            write_start_ms=write_start_ms,
-            open_mask=open_mask,
-            open_start_ms=open_start_ms,
-            open_age_ms=open_age_ms,
-            remaining_ms=remaining_ms,
-        )
+        with torch.profiler.record_function("mapper_v21.state_prior_adapter"):
+            state_prior = self.state_prior_adapter(
+                open_mask=open_mask,
+                open_start_ms=open_start_ms,
+                open_age_ms=open_age_ms,
+                remaining_ms=remaining_ms,
+                write_start_ms=write_start_ms,
+            )
+        with torch.profiler.record_function("mapper_v21.ln_close_adapter"):
+            ln_close = self.ln_close_adapter(
+                decoder_hidden=decoder_hidden,
+                control_memory_8s=control_memory,
+                density_teacher_8s=density_teacher_8s,
+                current_ms=current_ms,
+                write_start_ms=write_start_ms,
+                open_mask=open_mask,
+                open_start_ms=open_start_ms,
+                open_age_ms=open_age_ms,
+                remaining_ms=remaining_ms,
+            )
         positions = torch.arange(decoder_input.shape[1], dtype=torch.long, device=decoder_input.device).reshape(1, -1)
-        grammar_mask = build_grammar_mask(
-            current_ms=current_ms,
-            open_mask=open_mask,
-            open_start_ms=open_start_ms,
-            open_age_ms=open_age_ms,
-            emitted_lane_mask=emitted_lane_mask,
-            last_lane_index=last_lane_index,
-            write_start_ms=write_start_ms,
-            write_end_ms=write_end_ms,
-            chart_end_ms=chart_end_ms,
-            ln_carry_in=ln_carry_in,
-            ln_carry_out=ln_carry_out,
-            is_full_chart_start=is_full_chart_start,
-            is_full_chart_end=is_full_chart_end,
-            vocab=self.vocab,
-            positions=positions.expand(decoder_input.shape[0], -1),
-        ).to(dtype=base_logits.dtype)
-        logits_final = (
-            base_logits
-            + state_prior.vocab_bias
-            + ln_close.event_bias
-            + ln_close.time_shift_bias
-            + grammar_mask
-        )
+        with torch.profiler.record_function("mapper_v21.grammar_mask"):
+            grammar_mask = build_grammar_mask(
+                current_ms=current_ms,
+                open_mask=open_mask,
+                open_start_ms=open_start_ms,
+                open_age_ms=open_age_ms,
+                emitted_lane_mask=emitted_lane_mask,
+                last_lane_index=last_lane_index,
+                write_start_ms=write_start_ms,
+                write_end_ms=write_end_ms,
+                chart_end_ms=chart_end_ms,
+                ln_carry_in=ln_carry_in,
+                ln_carry_out=ln_carry_out,
+                is_full_chart_start=is_full_chart_start,
+                is_full_chart_end=is_full_chart_end,
+                vocab=self.vocab,
+                positions=positions.expand(decoder_input.shape[0], -1),
+            ).to(dtype=base_logits.dtype)
+        with torch.profiler.record_function("mapper_v21.logits_final"):
+            logits_final = (
+                base_logits
+                + state_prior.vocab_bias
+                + ln_close.event_bias
+                + ln_close.time_shift_bias
+                + grammar_mask
+            )
         return MapperV21ForwardOutput(
             decoder_input_tokens=decoder_input,
             loss_target_tokens=loss_target_tokens,
