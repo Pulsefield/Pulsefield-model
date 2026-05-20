@@ -62,6 +62,26 @@ class ProfiledCallResult:
         return _wall_time_summary(self.wall_ms)
 
 
+@dataclass(frozen=True)
+class DecodePolicy:
+    time_shift_length_penalty_alpha: float = 0.0
+    time_shift_delta_penalty_alpha: float = 0.0
+    temperature: float = 0.0
+    top_p: float | None = None
+    seed: int | None = None
+    candidate_index: int | None = None
+
+    def to_dict(self) -> dict[str, float | int | None]:
+        return {
+            "time_shift_length_penalty_alpha": float(self.time_shift_length_penalty_alpha),
+            "time_shift_delta_penalty_alpha": float(self.time_shift_delta_penalty_alpha),
+            "temperature": float(self.temperature),
+            "top_p": None if self.top_p is None else float(self.top_p),
+            "seed": None if self.seed is None else int(self.seed),
+            "candidate_index": None if self.candidate_index is None else int(self.candidate_index),
+        }
+
+
 def tiny_mapper_v21_config(**overrides: Any) -> MapperV21Config:
     values: dict[str, Any] = {
         "control_dim": 16,
@@ -457,6 +477,7 @@ def run_no_ts_full_rollout_metrics(
                 "section": "rollout",
                 "status": "ok",
                 "token_count": len(tokens),
+                "time_shift_token_count": sum(1 for token_id in tokens if vocab.is_time_shift_token(token_id)),
                 "no_ts_token_count": len(no_ts_tokens),
                 "eos_count": sum(1 for token_id in tokens if token_id == vocab.eos_id),
                 "lane_action_count": sum(1 for token_id in no_ts_tokens if vocab.is_lane_action_token(token_id)),
@@ -473,11 +494,143 @@ def run_no_ts_full_rollout_metrics(
                 "completed": bool(getattr(rollout, "completed", False)),
                 "dead_end": bool(getattr(rollout, "dead_end", False)),
                 "max_tokens_exceeded": bool(getattr(rollout, "max_tokens_exceeded", False)),
+                "selected_time_shift_delta_histogram_ms": _selected_time_shift_delta_histogram_ms(tokens, vocab),
                 **export_paths,
                 "wall_ms": profiled.wall_summary(),
                 "profiler_events": list(profiled.profiler_events),
             }
         ],
+    )
+
+
+def run_decode_policy_sweep(
+    *,
+    model: MapperV21Model,
+    vocab: MapperV21Vocab,
+    run_config: ProfileRunConfig,
+    device: torch.device | str = "cpu",
+    chart_end_ms: int = 16_000,
+    max_tokens_per_window: int | None = None,
+    time_shift_length_penalty_alphas: Sequence[float] = (0.0, 0.02, 0.05, 0.10, 0.20, 0.40),
+    time_shift_delta_penalty_alphas: Sequence[float] = (0.0,),
+    temperatures: Sequence[float] = (0.0,),
+    top_ps: Sequence[float | None] = (None,),
+    seeds: Sequence[int | None] = (0,),
+    candidate_indices: Sequence[int | None] = (None,),
+    window_batch_provider: Callable[[int, int], Mapping[str, Any]] | None = None,
+    normalized_difficulty: float = 0.0,
+) -> dict[str, Any]:
+    resolved_device = torch.device(device)
+    _prepare_model(model, resolved_device)
+    policies = tuple(
+        DecodePolicy(
+            time_shift_length_penalty_alpha=alpha,
+            time_shift_delta_penalty_alpha=delta_alpha,
+            temperature=temperature,
+            top_p=top_p,
+            seed=seed,
+            candidate_index=candidate_index,
+        )
+        for alpha in _validated_float_values(
+            time_shift_length_penalty_alphas,
+            name="time_shift_length_penalty_alphas",
+            minimum=0.0,
+        )
+        for delta_alpha in _validated_float_values(
+            time_shift_delta_penalty_alphas,
+            name="time_shift_delta_penalty_alphas",
+            minimum=0.0,
+        )
+        for temperature in _validated_float_values(temperatures, name="temperatures", minimum=0.0)
+        for top_p in _validated_top_p_values(top_ps)
+        for seed in _validated_seed_values(seeds)
+        for candidate_index in _validated_candidate_indices(candidate_indices)
+    )
+    if not policies:
+        raise ValueError("decode policy sweep must include at least one policy")
+    provider = (
+        zero_control_batch_provider_v2_1(model=model, device=resolved_device)
+        if window_batch_provider is None
+        else window_batch_provider
+    )
+
+    rows: list[dict[str, Any]] = []
+    for policy_index, policy in enumerate(policies):
+        last_margin_recorder: _DecodePolicyMarginRecorder | None = None
+
+        def rollout_once() -> Any:
+            nonlocal last_margin_recorder
+            last_margin_recorder = _DecodePolicyMarginRecorder(vocab)
+            return generate_full_song_rollout_v2_1(
+                model=model,
+                vocab=vocab,
+                chart_end_ms=int(chart_end_ms),
+                window_batch_provider=provider,
+                device=resolved_device,
+                normalized_difficulty=float(normalized_difficulty),
+                max_tokens_per_window=max_tokens_per_window,
+                temperature=float(policy.temperature),
+                top_p=policy.top_p,
+                time_shift_length_penalty_alpha=float(policy.time_shift_length_penalty_alpha),
+                time_shift_delta_penalty_alpha=float(policy.time_shift_delta_penalty_alpha),
+                generator=_make_torch_generator(policy.seed, device=resolved_device),
+                logits_observer=last_margin_recorder.observe,
+            )
+
+        policy_payload = {"policy_index": policy_index, **policy.to_dict()}
+        try:
+            profiled = profiled_call(
+                rollout_once,
+                scope_name=f"mapper_v21.decode_policy_sweep.rollout.policy_{policy_index}",
+                config=run_config,
+                device=resolved_device,
+            )
+        except Exception as exc:
+            rows.append(
+                {
+                    **policy_payload,
+                    "status": "error",
+                    "error": str(exc),
+                }
+            )
+            continue
+
+        rollout = profiled.output
+        timepoints = rollout_to_timepoints_v2_1(rollout, vocab) if hasattr(rollout, "windows") else []
+        margin_recorder = last_margin_recorder or _DecodePolicyMarginRecorder(vocab)
+        rows.append(
+            {
+                **policy_payload,
+                "section": "rollout",
+                "status": "ok",
+                **_rollout_metric_fields_v2_1(
+                    rollout,
+                    vocab,
+                    timepoints=timepoints,
+                    chart_end_ms=int(chart_end_ms),
+                ),
+                "selected_time_shift_delta_histogram_ms": _selected_time_shift_delta_histogram_ms(
+                    _rollout_tokens(rollout),
+                    vocab,
+                ),
+                "best_ts_minus_best_lane_action_logit_percentiles": margin_recorder.percentile_summary(),
+                "observed_logit_step_count": margin_recorder.observed_step_count,
+                "wall_ms": profiled.wall_summary(),
+                "profiler_events": list(profiled.profiler_events),
+            }
+        )
+
+    return _summary(
+        experiment="decode_policy_sweep",
+        model=model,
+        device=device,
+        status="ok" if all(row.get("status") == "ok" for row in rows) else "error",
+        repeat=run_config.repeat,
+        profiler_enabled=run_config.use_profiler,
+        chart_end_ms=int(chart_end_ms),
+        max_tokens_per_window=None if max_tokens_per_window is None else int(max_tokens_per_window),
+        policy_count=len(policies),
+        rows=rows,
     )
 
 
@@ -583,6 +736,195 @@ def _export_rollout_outputs_v2_1(
         result["reamber_render_status"] = "ok"
         result["reamber_paths"] = {name: path.as_posix() for name, path in rendered.items()}
     return result
+
+
+def _rollout_metric_fields_v2_1(
+    rollout: Any,
+    vocab: MapperV21Vocab,
+    *,
+    timepoints: Sequence[Any],
+    chart_end_ms: int,
+) -> dict[str, Any]:
+    tokens = _rollout_tokens(rollout)
+    time_shift_token_count = sum(1 for token_id in tokens if vocab.is_time_shift_token(token_id))
+    no_ts_tokens = [token_id for token_id in tokens if not vocab.is_time_shift_token(token_id)]
+    return {
+        "token_count": len(tokens),
+        "time_shift_token_count": time_shift_token_count,
+        "no_ts_token_count": len(no_ts_tokens),
+        "eos_count": sum(1 for token_id in tokens if token_id == vocab.eos_id),
+        "lane_action_count": sum(1 for token_id in no_ts_tokens if vocab.is_lane_action_token(token_id)),
+        "timepoint_count": len(timepoints),
+        "window_count": _rollout_window_count(rollout),
+        "completed_window_count": _rollout_completed_window_count(rollout),
+        "empty_window_count": _rollout_empty_window_count(rollout, vocab),
+        "completion_rate": _rollout_completion_rate(rollout),
+        "longest_event_gap_ms": _longest_event_gap_ms(timepoints, chart_end_ms=int(chart_end_ms)),
+        "tokens_per_window": _rollout_tokens_per_window(rollout),
+        "events_per_window": _rollout_events_per_window(rollout, vocab),
+        "dead_end_window_count": _rollout_dead_end_window_count(rollout),
+        "max_token_hit_window_count": _rollout_max_token_hit_window_count(rollout),
+        "completed": bool(getattr(rollout, "completed", False)),
+        "dead_end": bool(getattr(rollout, "dead_end", False)),
+        "max_tokens_exceeded": bool(getattr(rollout, "max_tokens_exceeded", False)),
+        **_generated_pattern_metric_fields_v2_1(timepoints),
+    }
+
+
+def _selected_time_shift_delta_histogram_ms(tokens: Sequence[int], vocab: MapperV21Vocab) -> dict[str, int]:
+    counts: dict[int, int] = {}
+    for token_id in tokens:
+        if not vocab.is_time_shift_token(int(token_id)):
+            continue
+        delta_ms = int(vocab.time_shift_value(int(token_id)))
+        counts[delta_ms] = counts.get(delta_ms, 0) + 1
+    return {str(delta_ms): counts[delta_ms] for delta_ms in sorted(counts)}
+
+
+def _generated_pattern_metric_fields_v2_1(timepoints: Sequence[Any]) -> dict[str, float | int]:
+    signatures = [_timepoint_pattern_signature_v2_1(timepoint) for timepoint in timepoints]
+    if not signatures:
+        return {
+            "generated_adjacent_same_pattern_ratio": 0.0,
+            "generated_max_same_pattern_run": 0,
+            "generated_unique_pattern_count": 0,
+            "generated_dominant_pattern_fraction": 0.0,
+        }
+
+    adjacent_same_count = sum(1 for left, right in zip(signatures, signatures[1:]) if left == right)
+    max_run = 0
+    current_run = 0
+    previous: tuple[str, ...] | None = None
+    pattern_counts: dict[tuple[str, ...], int] = {}
+    for signature in signatures:
+        pattern_counts[signature] = pattern_counts.get(signature, 0) + 1
+        if signature == previous:
+            current_run += 1
+        else:
+            current_run = 1
+            previous = signature
+        max_run = max(max_run, current_run)
+
+    return {
+        "generated_adjacent_same_pattern_ratio": (
+            0.0 if len(signatures) < 2 else float(adjacent_same_count / (len(signatures) - 1))
+        ),
+        "generated_max_same_pattern_run": max_run,
+        "generated_unique_pattern_count": len(pattern_counts),
+        "generated_dominant_pattern_fraction": float(max(pattern_counts.values()) / len(signatures)),
+    }
+
+
+def _timepoint_pattern_signature_v2_1(timepoint: Any) -> tuple[str, ...]:
+    return tuple(str(getattr(action, "value", action)) for action in getattr(timepoint, "lane_actions", ()))
+
+
+class _DecodePolicyMarginRecorder:
+    def __init__(self, vocab: MapperV21Vocab) -> None:
+        self.vocab = vocab
+        self.observed_step_count = 0
+        self._margins: list[float] = []
+
+    def observe(self, step: Any, logits: torch.Tensor) -> None:
+        self.observed_step_count += 1
+        flat_logits = torch.as_tensor(logits, dtype=torch.float32).detach().cpu().reshape(-1)
+        valid_mask = step.valid_token_mask.detach().cpu().to(dtype=torch.bool).reshape(-1)
+        if int(flat_logits.numel()) != int(valid_mask.numel()):
+            raise ValueError("logits and valid_token_mask must have the same vocabulary size")
+        valid_ts_ids = [token_id for token_id in self.vocab.time_shift_token_ids if bool(valid_mask[token_id].item())]
+        valid_lane_ids = [token_id for token_id in self.vocab.lane_action_token_ids if bool(valid_mask[token_id].item())]
+        if not valid_ts_ids or not valid_lane_ids:
+            return
+        ts_logits = flat_logits[torch.tensor(valid_ts_ids, dtype=torch.long)]
+        lane_logits = flat_logits[torch.tensor(valid_lane_ids, dtype=torch.long)]
+        best_ts = ts_logits.max()
+        best_lane = lane_logits.max()
+        if bool(torch.isfinite(best_ts).item()) and bool(torch.isfinite(best_lane).item()):
+            self._margins.append(float((best_ts - best_lane).item()))
+
+    def percentile_summary(self) -> dict[str, float | int]:
+        return _percentile_summary(self._margins)
+
+
+def _percentile_summary(values: Sequence[float]) -> dict[str, float | int]:
+    if not values:
+        return {"count": 0}
+    ordered = sorted(float(value) for value in values)
+    return {
+        "count": len(ordered),
+        "mean": float(sum(ordered) / len(ordered)),
+        "min": ordered[0],
+        "p25": _percentile(ordered, 0.25),
+        "p50": _percentile(ordered, 0.50),
+        "p75": _percentile(ordered, 0.75),
+        "p90": _percentile(ordered, 0.90),
+        "p95": _percentile(ordered, 0.95),
+        "max": ordered[-1],
+    }
+
+
+def _percentile(ordered_values: Sequence[float], q: float) -> float:
+    if not ordered_values:
+        return math.nan
+    if len(ordered_values) == 1:
+        return float(ordered_values[0])
+    position = (len(ordered_values) - 1) * float(q)
+    lower = int(math.floor(position))
+    upper = int(math.ceil(position))
+    if lower == upper:
+        return float(ordered_values[lower])
+    fraction = position - lower
+    return float(ordered_values[lower] * (1.0 - fraction) + ordered_values[upper] * fraction)
+
+
+def _validated_float_values(
+    values: Sequence[float],
+    *,
+    name: str,
+    minimum: float | None = None,
+) -> tuple[float, ...]:
+    parsed = tuple(float(value) for value in values)
+    if not parsed:
+        raise ValueError(f"{name} must include at least one value")
+    if any(not math.isfinite(value) for value in parsed):
+        raise ValueError(f"{name} values must be finite")
+    if minimum is not None and any(value < float(minimum) for value in parsed):
+        raise ValueError(f"{name} values must be >= {minimum}")
+    return parsed
+
+
+def _validated_top_p_values(values: Sequence[float | None]) -> tuple[float | None, ...]:
+    parsed = tuple(None if value is None else float(value) for value in values)
+    if not parsed:
+        raise ValueError("top_ps must include at least one value")
+    for value in parsed:
+        if value is not None and not 0.0 < value <= 1.0:
+            raise ValueError(f"top_p values must be in (0, 1], got {value}")
+    return parsed
+
+
+def _validated_seed_values(values: Sequence[int | None]) -> tuple[int | None, ...]:
+    parsed = tuple(None if value is None else int(value) for value in values)
+    if not parsed:
+        raise ValueError("seeds must include at least one value")
+    return parsed
+
+
+def _validated_candidate_indices(values: Sequence[int | None]) -> tuple[int | None, ...]:
+    parsed = tuple(None if value is None else int(value) for value in values)
+    if not parsed:
+        raise ValueError("candidate_indices must include at least one value")
+    if any(value is not None and value < 0 for value in parsed):
+        raise ValueError("candidate_indices values must be non-negative")
+    return parsed
+
+
+def _make_torch_generator(seed: int | None, *, device: torch.device) -> torch.Generator | None:
+    if seed is None:
+        return None
+    generator = torch.Generator(device=device)
+    generator.manual_seed(int(seed))
+    return generator
 
 
 def _rollout_windows(rollout: Any) -> list[Any]:

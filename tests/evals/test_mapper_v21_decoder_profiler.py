@@ -13,6 +13,7 @@ if importlib.util.find_spec("torch") is None:
 from pulsefield_model.evals.mapper_v21_decoder_profiler import (
     ProfileRunConfig,
     run_constraint_sampling_split,
+    run_decode_policy_sweep,
     run_eos_probe,
     run_kernel_overhead_probe,
     run_no_ts_full_rollout_metrics,
@@ -121,6 +122,137 @@ def test_no_ts_full_rollout_metrics_writes_sparse_rollout_outputs(
     assert row["osu_export_status"] in {"ok", "error"}
     if row["osu_export_status"] == "ok":
         assert osu_path.exists()
+
+
+def test_decode_policy_sweep_writes_aggregate_json(
+    mapper_v21_decoder_model: Any,
+    mapper_v21_decoder_model_state: dict[str, Any],
+    mapper_v21_decoder_eval_options: dict[str, Any],
+    mapper_v21_decoder_eval_output_dir: Path,
+) -> None:
+    summary = run_decode_policy_sweep(
+        model=mapper_v21_decoder_model,
+        vocab=mapper_v21_decoder_model_state["vocab"],
+        run_config=_run_config(mapper_v21_decoder_eval_options),
+        device=mapper_v21_decoder_eval_options["device"],
+        chart_end_ms=mapper_v21_decoder_eval_options["rollout_ms"],
+        max_tokens_per_window=mapper_v21_decoder_eval_options["rollout_max_tokens_per_window"],
+        time_shift_length_penalty_alphas=mapper_v21_decoder_eval_options["policy_alphas"],
+        time_shift_delta_penalty_alphas=mapper_v21_decoder_eval_options["policy_delta_alphas"],
+        temperatures=mapper_v21_decoder_eval_options["policy_temperatures"],
+        top_ps=mapper_v21_decoder_eval_options["policy_top_ps"],
+        seeds=mapper_v21_decoder_eval_options["policy_seeds"],
+        candidate_indices=mapper_v21_decoder_eval_options["policy_candidate_indices"],
+    )
+    path = write_json_summary(summary, mapper_v21_decoder_eval_output_dir / "mapper_v21_decode_policy_sweep.json")
+
+    payload = _read_json(path)
+    assert payload["experiment"] == "decode_policy_sweep"
+    assert payload["policy_count"] == (
+        len(mapper_v21_decoder_eval_options["policy_alphas"])
+        * len(mapper_v21_decoder_eval_options["policy_delta_alphas"])
+        * len(mapper_v21_decoder_eval_options["policy_temperatures"])
+        * len(mapper_v21_decoder_eval_options["policy_top_ps"])
+        * len(mapper_v21_decoder_eval_options["policy_seeds"])
+        * len(mapper_v21_decoder_eval_options["policy_candidate_indices"])
+    )
+    assert len(payload["rows"]) == payload["policy_count"]
+    assert all(row["status"] == "ok" for row in payload["rows"])
+    row = payload["rows"][0]
+    assert {
+        "time_shift_length_penalty_alpha",
+        "time_shift_delta_penalty_alpha",
+        "temperature",
+        "top_p",
+        "seed",
+        "candidate_index",
+        "empty_window_count",
+        "lane_action_count",
+        "timepoint_count",
+        "longest_event_gap_ms",
+        "tokens_per_window",
+        "events_per_window",
+        "selected_time_shift_delta_histogram_ms",
+        "best_ts_minus_best_lane_action_logit_percentiles",
+        "generated_adjacent_same_pattern_ratio",
+        "generated_max_same_pattern_run",
+        "generated_unique_pattern_count",
+        "generated_dominant_pattern_fraction",
+    } <= set(row)
+    assert isinstance(row["selected_time_shift_delta_histogram_ms"], dict)
+    assert row["best_ts_minus_best_lane_action_logit_percentiles"]["count"] >= 0
+    assert not list(mapper_v21_decoder_eval_output_dir.glob("*.jsonl"))
+
+
+def test_decode_policy_sweep_supports_stochastic_top_p_seed_grid(
+    mapper_v21_decoder_model: Any,
+    mapper_v21_decoder_model_state: dict[str, Any],
+    mapper_v21_decoder_eval_options: dict[str, Any],
+) -> None:
+    summary = run_decode_policy_sweep(
+        model=mapper_v21_decoder_model,
+        vocab=mapper_v21_decoder_model_state["vocab"],
+        run_config=ProfileRunConfig(repeat=1, warmup=0, use_profiler=False),
+        device=mapper_v21_decoder_eval_options["device"],
+        chart_end_ms=200,
+        max_tokens_per_window=8,
+        time_shift_length_penalty_alphas=(0.05,),
+        time_shift_delta_penalty_alphas=(0.0,),
+        temperatures=(0.8,),
+        top_ps=(0.9,),
+        seeds=(0, 1),
+        candidate_indices=(None,),
+    )
+
+    assert summary["experiment"] == "decode_policy_sweep"
+    assert summary["policy_count"] == 2
+    assert summary["status"] == "ok"
+    assert {row["temperature"] for row in summary["rows"]} == {0.8}
+    assert {row["top_p"] for row in summary["rows"]} == {0.9}
+    assert {row["seed"] for row in summary["rows"]} == {0, 1}
+    assert all(row["observed_logit_step_count"] > 0 for row in summary["rows"])
+
+
+def test_decode_policy_sweep_includes_delta_penalty_grid(
+    mapper_v21_decoder_model: Any,
+    mapper_v21_decoder_model_state: dict[str, Any],
+    mapper_v21_decoder_eval_options: dict[str, Any],
+) -> None:
+    summary = run_decode_policy_sweep(
+        model=mapper_v21_decoder_model,
+        vocab=mapper_v21_decoder_model_state["vocab"],
+        run_config=ProfileRunConfig(repeat=1, warmup=0, use_profiler=False),
+        device=mapper_v21_decoder_eval_options["device"],
+        chart_end_ms=200,
+        max_tokens_per_window=8,
+        time_shift_length_penalty_alphas=(0.0, 0.5),
+        time_shift_delta_penalty_alphas=(0.0, 1.0),
+        temperatures=(0.0,),
+        top_ps=(None,),
+        seeds=(0,),
+        candidate_indices=(0, 1),
+    )
+
+    assert summary["experiment"] == "decode_policy_sweep"
+    assert summary["policy_count"] == 8
+    assert summary["status"] == "ok"
+    assert {
+        (
+            row["time_shift_length_penalty_alpha"],
+            row["time_shift_delta_penalty_alpha"],
+            row["candidate_index"],
+        )
+        for row in summary["rows"]
+    } == {
+        (0.0, 0.0, 0),
+        (0.0, 0.0, 1),
+        (0.0, 1.0, 0),
+        (0.0, 1.0, 1),
+        (0.5, 0.0, 0),
+        (0.5, 0.0, 1),
+        (0.5, 1.0, 0),
+        (0.5, 1.0, 1),
+    }
 
 
 def test_eos_probe_writes_aggregate_json(

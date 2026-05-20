@@ -63,6 +63,36 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Maximum generated sparse tokens per 8s window for mapper v2.1 rollout eval.",
     )
     group.addoption(
+        "--mapper-v21-decoder-policy-alphas",
+        default="0.0,0.02,0.05,0.10,0.20,0.40",
+        help="Comma-separated TS penalty alphas for the mapper v2.1 decode policy sweep.",
+    )
+    group.addoption(
+        "--mapper-v21-decoder-policy-delta-alphas",
+        default="0.0",
+        help="Comma-separated TS delta-scaled penalty alphas for the mapper v2.1 decode policy sweep.",
+    )
+    group.addoption(
+        "--mapper-v21-decoder-policy-temperatures",
+        default="0.0",
+        help="Comma-separated temperatures for the mapper v2.1 decode policy sweep.",
+    )
+    group.addoption(
+        "--mapper-v21-decoder-policy-top-ps",
+        default="none",
+        help="Comma-separated top-p values for the mapper v2.1 decode policy sweep; use 'none' for disabled.",
+    )
+    group.addoption(
+        "--mapper-v21-decoder-policy-seeds",
+        default="0",
+        help="Comma-separated integer seeds for the mapper v2.1 decode policy sweep; use 'none' for unseeded.",
+    )
+    group.addoption(
+        "--mapper-v21-decoder-policy-candidate-indices",
+        default="none",
+        help="Comma-separated candidate indices for mapper v2.1 best-of-N policy sweeps; use 'none' for disabled.",
+    )
+    group.addoption(
         "--mapper-v21-decoder-eval-render-reamber",
         action="store_true",
         default=False,

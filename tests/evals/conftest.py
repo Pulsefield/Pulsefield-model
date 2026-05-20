@@ -30,6 +30,18 @@ def mapper_v21_decoder_eval_options(request: pytest.FixtureRequest) -> dict[str,
         "rollout_max_tokens_per_window": int(
             request.config.getoption("--mapper-v21-decoder-eval-rollout-max-tokens-per-window"),
         ),
+        "policy_alphas": _parse_float_csv(request.config.getoption("--mapper-v21-decoder-policy-alphas")),
+        "policy_delta_alphas": _parse_float_csv(
+            request.config.getoption("--mapper-v21-decoder-policy-delta-alphas"),
+        ),
+        "policy_temperatures": _parse_float_csv(
+            request.config.getoption("--mapper-v21-decoder-policy-temperatures"),
+        ),
+        "policy_top_ps": _parse_optional_float_csv(request.config.getoption("--mapper-v21-decoder-policy-top-ps")),
+        "policy_seeds": _parse_optional_int_csv(request.config.getoption("--mapper-v21-decoder-policy-seeds")),
+        "policy_candidate_indices": _parse_optional_int_csv(
+            request.config.getoption("--mapper-v21-decoder-policy-candidate-indices"),
+        ),
         "render_reamber": bool(request.config.getoption("--mapper-v21-decoder-eval-render-reamber")),
     }
 
@@ -83,6 +95,43 @@ def _parse_int_csv(value: str) -> tuple[int, ...]:
     if any(length <= 0 for length in lengths):
         raise pytest.UsageError("--mapper-v21-decoder-eval-prefix-lengths values must be positive")
     return lengths
+
+
+def _parse_float_csv(value: str) -> tuple[float, ...]:
+    values = tuple(float(item.strip()) for item in str(value).split(",") if item.strip())
+    if not values:
+        raise pytest.UsageError("mapper v2.1 decoder float CSV option must include at least one value")
+    return values
+
+
+def _parse_optional_float_csv(value: str) -> tuple[float | None, ...]:
+    values: list[float | None] = []
+    for item in str(value).split(","):
+        cleaned = item.strip().lower()
+        if not cleaned:
+            continue
+        if cleaned in {"none", "null"}:
+            values.append(None)
+        else:
+            values.append(float(cleaned))
+    if not values:
+        raise pytest.UsageError("--mapper-v21-decoder-policy-top-ps must include at least one value")
+    return tuple(values)
+
+
+def _parse_optional_int_csv(value: str) -> tuple[int | None, ...]:
+    values: list[int | None] = []
+    for item in str(value).split(","):
+        cleaned = item.strip().lower()
+        if not cleaned:
+            continue
+        if cleaned in {"none", "null"}:
+            values.append(None)
+        else:
+            values.append(int(cleaned))
+    if not values:
+        raise pytest.UsageError("--mapper-v21-decoder-policy-seeds must include at least one value")
+    return tuple(values)
 
 
 def _checkpoint_state_dict(checkpoint: Any) -> dict[str, Any]:

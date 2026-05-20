@@ -4,6 +4,8 @@ import torch
 
 from pulsefield_model.inference.mapper_v2_1_rollout import (
     MapperV21FullRollout,
+    _apply_time_shift_length_penalty_v2_1,
+    _time_shift_length_penalty_tensors_v2_1,
     grammar_constrained_window_generation_v2_1,
     mapper_v2_1_logits_fn,
     rollout_to_timepoints_v2_1,
@@ -81,6 +83,70 @@ def test_zero_control_batch_provider_matches_mapper_v2_1_shapes() -> None:
     assert tuple(batch["projected_control_memory_8s"].shape) == (1, 400, 16)
     assert tuple(batch["density_teacher_8s"].shape) == (1, 400, 1)
     assert tuple(batch["global_memory"].shape) == (1, 4, 16)
+
+
+def test_time_shift_delta_penalty_scales_by_shift_seconds() -> None:
+    vocab = MapperV21Vocab()
+    base_logits = torch.zeros(vocab.size, dtype=torch.float32)
+    flat_only = _time_shift_length_penalty_tensors_v2_1(
+        vocab,
+        alpha=0.5,
+        delta_alpha=0.0,
+        device=torch.device("cpu"),
+    )
+    scaled = _time_shift_length_penalty_tensors_v2_1(
+        vocab,
+        alpha=0.5,
+        delta_alpha=2.0,
+        device=torch.device("cpu"),
+    )
+
+    flat_adjusted = _apply_time_shift_length_penalty_v2_1(base_logits, time_shift_penalty=flat_only)
+    scaled_adjusted = _apply_time_shift_length_penalty_v2_1(base_logits, time_shift_penalty=scaled)
+
+    ts_10 = vocab.time_shift_token_id(10)
+    ts_4000 = vocab.time_shift_token_id(4000)
+    lane_token = vocab.lane_action_token_id(0, "TAP")
+    assert flat_adjusted[ts_10].item() == -0.5
+    assert flat_adjusted[ts_4000].item() == -0.5
+    assert torch.isclose(scaled_adjusted[ts_10], torch.tensor(-0.52))
+    assert scaled_adjusted[ts_4000].item() == -8.5
+    assert scaled_adjusted[lane_token].item() == 0.0
+
+
+def test_logits_observer_cannot_mutate_generation_decision() -> None:
+    vocab = MapperV21Vocab()
+    chosen_ts = vocab.time_shift_token_id(100)
+    alternate_ts = vocab.time_shift_token_id(10)
+    expected_tokens = [chosen_ts, vocab.eos_id]
+
+    def logits_fn(step):
+        logits = torch.full((vocab.size,), -1000.0)
+        logits[expected_tokens[step.token_index]] = 1000.0
+        return logits
+
+    def mutating_observer(step, logits):
+        if step.token_index != 0:
+            return
+        logits[chosen_ts] = -1000.0
+        logits[alternate_ts] = 2000.0
+        step.valid_token_mask[chosen_ts] = False
+
+    window = grammar_constrained_window_generation_v2_1(
+        vocab=vocab,
+        write_start_ms=0,
+        write_end_ms=100,
+        chart_end_ms=100,
+        ln_carry_in=empty_ln_carry_state(0),
+        ln_carry_out=empty_ln_carry_state(100),
+        logits_fn=logits_fn,
+        logits_observer=mutating_observer,
+        is_full_chart_start=True,
+        is_full_chart_end=True,
+        max_tokens=4,
+    )
+
+    assert window.tokens == expected_tokens
 
 
 def test_autoregressive_logits_skip_internal_grammar_mask_matches_greedy_tokens() -> None:

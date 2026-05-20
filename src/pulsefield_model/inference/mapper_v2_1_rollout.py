@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import torch
@@ -92,6 +92,7 @@ class MapperV21FullRollout:
 
 
 MapperV21LogitsFn = Callable[[MapperV21GenerationStep], torch.Tensor]
+MapperV21LogitsObserver = Callable[[MapperV21GenerationStep, torch.Tensor], None]
 MapperV21WindowBatchProvider = Callable[[int, int], Mapping[str, Any]]
 
 
@@ -111,6 +112,7 @@ def grammar_constrained_window_generation_v2_1(
     temperature: float = 0.0,
     top_p: float | None = None,
     generator: torch.Generator | None = None,
+    logits_observer: MapperV21LogitsObserver | None = None,
 ) -> MapperV21GeneratedWindow:
     write_start_ms = int(write_start_ms)
     write_end_ms = int(write_end_ms)
@@ -159,6 +161,7 @@ def grammar_constrained_window_generation_v2_1(
                     is_full_chart_end=bool(is_full_chart_end),
                 )
                 logits = _default_generation_logits_v2_1(eos_only_mask, vocab=vocab) if logits_fn is None else logits_fn(step)
+                _observe_logits_v2_1(logits_observer, step, logits)
                 token_id = _select_token_v2_1(
                     logits,
                     valid_mask=eos_only_mask.to(device=logits.device if isinstance(logits, torch.Tensor) else "cpu"),
@@ -229,6 +232,7 @@ def grammar_constrained_window_generation_v2_1(
             is_full_chart_end=bool(is_full_chart_end),
         )
         logits = _default_generation_logits_v2_1(mask, vocab=vocab) if logits_fn is None else logits_fn(step)
+        _observe_logits_v2_1(logits_observer, step, logits)
         token_id = _select_token_v2_1(
             logits,
             valid_mask=mask.to(device=logits.device if isinstance(logits, torch.Tensor) else "cpu"),
@@ -281,7 +285,9 @@ def generate_full_song_rollout_v2_1(
     temperature: float = 0.0,
     top_p: float | None = None,
     time_shift_length_penalty_alpha: float = 0.0,
+    time_shift_delta_penalty_alpha: float = 0.0,
     generator: torch.Generator | None = None,
+    logits_observer: MapperV21LogitsObserver | None = None,
 ) -> MapperV21FullRollout:
     chart_end_ms = int(chart_end_ms)
     if chart_end_ms <= 0:
@@ -324,6 +330,7 @@ def generate_full_song_rollout_v2_1(
             is_full_chart_start=is_full_chart_start,
             is_full_chart_end=is_full_chart_end,
             time_shift_length_penalty_alpha=float(time_shift_length_penalty_alpha),
+            time_shift_delta_penalty_alpha=float(time_shift_delta_penalty_alpha),
         )
         generated = grammar_constrained_window_generation_v2_1(
             vocab=vocab,
@@ -340,6 +347,7 @@ def generate_full_song_rollout_v2_1(
             temperature=float(temperature),
             top_p=top_p,
             generator=generator,
+            logits_observer=logits_observer,
         )
         windows.append(generated)
         tokens.extend(generated.tokens)
@@ -374,11 +382,13 @@ def mapper_v2_1_logits_fn(
     is_full_chart_start: bool,
     is_full_chart_end: bool,
     time_shift_length_penalty_alpha: float,
+    time_shift_delta_penalty_alpha: float = 0.0,
     apply_grammar_mask: bool = False,
 ) -> MapperV21LogitsFn:
     time_shift_penalty = _time_shift_length_penalty_tensors_v2_1(
         vocab,
         alpha=float(time_shift_length_penalty_alpha),
+        delta_alpha=float(time_shift_delta_penalty_alpha),
         device=device,
     )
     write_start_tensor = torch.tensor([int(write_start_ms)], dtype=torch.long, device=device)
@@ -603,19 +613,27 @@ def _time_shift_length_penalty_tensors_v2_1(
     vocab: MapperV21Vocab,
     *,
     alpha: float,
+    delta_alpha: float = 0.0,
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor] | None:
     alpha = float(alpha)
     if alpha < 0.0:
         raise ValueError(f"time_shift_length_penalty_alpha must be non-negative, got {alpha}")
-    if alpha == 0.0:
+    delta_alpha = float(delta_alpha)
+    if delta_alpha < 0.0:
+        raise ValueError(f"time_shift_delta_penalty_alpha must be non-negative, got {delta_alpha}")
+    if alpha == 0.0 and delta_alpha == 0.0:
         return None
     token_ids = [int(token_id) for token_id in vocab.time_shift_token_ids]
     if not token_ids:
         return None
+    penalties = [
+        alpha + delta_alpha * (float(vocab.time_shift_value(token_id)) / 1000.0)
+        for token_id in token_ids
+    ]
     return (
         torch.tensor(token_ids, dtype=torch.long, device=device),
-        torch.full((len(token_ids),), alpha, dtype=torch.float32, device=device),
+        torch.tensor(penalties, dtype=torch.float32, device=device),
     )
 
 
@@ -630,6 +648,21 @@ def _apply_time_shift_length_penalty_v2_1(
     adjusted = logits.clone()
     adjusted[token_ids] -= penalties.to(device=adjusted.device, dtype=adjusted.dtype)
     return adjusted
+
+
+def _observe_logits_v2_1(
+    observer: MapperV21LogitsObserver | None,
+    step: MapperV21GenerationStep,
+    logits: torch.Tensor,
+) -> None:
+    if observer is None:
+        return
+    snapshot_step = replace(
+        step,
+        decoder_input_tokens=step.decoder_input_tokens.detach().clone(),
+        valid_token_mask=step.valid_token_mask.detach().clone(),
+    )
+    observer(snapshot_step, logits.detach().clone())
 
 
 def _select_token_v2_1(
@@ -701,6 +734,7 @@ __all__ = [
     "MapperV21GeneratedWindow",
     "MapperV21GenerationError",
     "MapperV21GenerationStep",
+    "MapperV21LogitsObserver",
     "decoder_input_tokens_for_generation_v2_1",
     "generate_full_song_rollout_v2_1",
     "grammar_constrained_window_generation_v2_1",
