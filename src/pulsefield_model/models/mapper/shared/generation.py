@@ -7,6 +7,12 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from .generation_engine import (
+    apply_top_p,
+    default_generation_logits,
+    run_generation_engine,
+    select_next_token,
+)
 from .replay import CLOSED_OPEN_START_MS, LNCarryState
 from .vocab import KEY_COUNT, LaneAction, MapperTupleVocab, coerce_lane_action
 
@@ -388,88 +394,27 @@ def grammar_constrained_window_generation(
     max_tokens: int = 512,
     temperature: float = 0.0,
     top_p: float | None = None,
+    top_k: int | None = None,
     generator: torch.Generator | None = None,
 ) -> MapperGeneratedWindow:
     if ln_carry_in.current_ms != int(write_start_ms):
         raise ValueError("ln_carry_in.current_ms must equal write_start_ms")
     if ln_carry_out.current_ms != int(write_end_ms):
         raise ValueError("ln_carry_out.current_ms must equal write_end_ms")
-    state = ln_carry_in
-    generated: list[int] = []
-    states_before: list[LNCarryState] = []
-    states_after: list[LNCarryState] = []
-    max_tokens_exceeded = False
-    dead_end = False
 
-    while True:
-        if window_is_complete(state, write_end_ms=write_end_ms, ln_carry_out=ln_carry_out):
-            if bool(is_full_chart_end) and (not generated or generated[-1] != vocab.eos_id):
-                if len(generated) >= int(max_tokens):
-                    max_tokens_exceeded = True
-                    break
-                decoder_inputs = decoder_input_tokens_for_generation(
-                    vocab=vocab,
-                    left_context_tokens=left_context_tokens,
-                    generated_tokens=generated,
-                    is_full_chart_start=is_full_chart_start,
-                )
-                valid_mask = carry_aware_valid_token_mask(
-                    state=state,
-                    write_start_ms=write_start_ms,
-                    write_end_ms=write_end_ms,
-                    ln_carry_out=ln_carry_out,
-                    vocab=vocab,
-                    is_full_chart_start=is_full_chart_start,
-                    is_full_chart_end=is_full_chart_end,
-                    token_position=len(generated),
-                )
-                if not bool(valid_mask[vocab.eos_id].item()):
-                    dead_end = True
-                    break
-                eos_only_mask = torch.zeros_like(valid_mask)
-                eos_only_mask[vocab.eos_id] = True
-                step = MapperGenerationStep(
-                    decoder_input_tokens=torch.tensor(decoder_inputs, dtype=torch.long),
-                    generated_tokens=tuple(generated),
-                    state=state,
-                    valid_token_mask=eos_only_mask,
-                    token_index=len(generated),
-                    write_start_ms=int(write_start_ms),
-                    write_end_ms=int(write_end_ms),
-                    ln_carry_in=ln_carry_in,
-                    ln_carry_out=ln_carry_out,
-                )
-                logits = _default_generation_logits(eos_only_mask, vocab=vocab) if logits_fn is None else logits_fn(step)
-                token_id = _select_token(
-                    logits,
-                    valid_mask=eos_only_mask,
-                    temperature=float(temperature),
-                    top_p=top_p,
-                    generator=generator,
-                )
-                states_before.append(state)
-                generated.append(token_id)
-                state = transition_carry_state(
-                    state,
-                    token_id,
-                    vocab=vocab,
-                    write_start_ms=write_start_ms,
-                    write_end_ms=write_end_ms,
-                    allow_bos=False,
-                    allow_eos=True,
-                )
-                states_after.append(state)
-            break
-        if len(generated) >= int(max_tokens):
-            max_tokens_exceeded = True
-            break
-        decoder_inputs = decoder_input_tokens_for_generation(
+    def is_complete(state: LNCarryState) -> bool:
+        return window_is_complete(state, write_end_ms=write_end_ms, ln_carry_out=ln_carry_out)
+
+    def decoder_inputs(generated_tokens: tuple[int, ...]) -> list[int]:
+        return decoder_input_tokens_for_generation(
             vocab=vocab,
             left_context_tokens=left_context_tokens,
-            generated_tokens=generated,
+            generated_tokens=generated_tokens,
             is_full_chart_start=is_full_chart_start,
         )
-        valid_mask = carry_aware_valid_token_mask(
+
+    def ordinary_mask(state: LNCarryState, generated_tokens: tuple[int, ...]) -> torch.Tensor:
+        return carry_aware_valid_token_mask(
             state=state,
             write_start_ms=write_start_ms,
             write_end_ms=write_end_ms,
@@ -477,58 +422,78 @@ def grammar_constrained_window_generation(
             vocab=vocab,
             is_full_chart_start=is_full_chart_start,
             is_full_chart_end=is_full_chart_end,
-            token_position=len(generated),
+            token_position=len(generated_tokens),
         )
-        valid_mask[vocab.bos_id] = False
-        valid_mask[vocab.eos_id] = False
-        if not bool(valid_mask.any().item()):
-            dead_end = True
-            break
-        step = MapperGenerationStep(
-            decoder_input_tokens=torch.tensor(decoder_inputs, dtype=torch.long),
-            generated_tokens=tuple(generated),
+
+    def completion_mask(state: LNCarryState, generated_tokens: tuple[int, ...]) -> torch.Tensor | None:
+        if not bool(is_full_chart_end) or (generated_tokens and generated_tokens[-1] == vocab.eos_id):
+            return None
+        valid_mask = ordinary_mask(state, generated_tokens)
+        eos_only_mask = torch.zeros_like(valid_mask)
+        if bool(valid_mask[vocab.eos_id].item()):
+            eos_only_mask[vocab.eos_id] = True
+        return eos_only_mask
+
+    def make_step(
+        decoder_input_tensor: torch.Tensor,
+        generated_tokens: tuple[int, ...],
+        state: LNCarryState,
+        valid_mask: torch.Tensor,
+        token_index: int,
+    ) -> MapperGenerationStep:
+        return MapperGenerationStep(
+            decoder_input_tokens=decoder_input_tensor,
+            generated_tokens=generated_tokens,
             state=state,
             valid_token_mask=valid_mask,
-            token_index=len(generated),
+            token_index=token_index,
             write_start_ms=int(write_start_ms),
             write_end_ms=int(write_end_ms),
             ln_carry_in=ln_carry_in,
             ln_carry_out=ln_carry_out,
         )
-        logits = _default_generation_logits(valid_mask, vocab=vocab) if logits_fn is None else logits_fn(step)
-        token_id = _select_token(
-            logits,
-            valid_mask=valid_mask,
-            temperature=float(temperature),
-            top_p=top_p,
-            generator=generator,
-        )
-        states_before.append(state)
-        generated.append(token_id)
-        state = transition_carry_state(
+
+    def transition(state: LNCarryState, token_id: int, _position: int) -> LNCarryState:
+        return transition_carry_state(
             state,
             token_id,
             vocab=vocab,
             write_start_ms=write_start_ms,
             write_end_ms=write_end_ms,
             allow_bos=False,
-            allow_eos=False,
+            allow_eos=int(token_id) == vocab.eos_id and bool(is_full_chart_end),
         )
-        states_after.append(state)
 
-    completed = window_is_complete(state, write_end_ms=write_end_ms, ln_carry_out=ln_carry_out)
+    result = run_generation_engine(
+        initial_state=ln_carry_in,
+        is_complete=is_complete,
+        decoder_input_tokens=decoder_inputs,
+        valid_token_mask=ordinary_mask,
+        completion_token_mask=completion_mask,
+        make_step=make_step,
+        transition=transition,
+        default_logits=lambda valid_mask: _default_generation_logits(valid_mask, vocab=vocab),
+        logits_fn=logits_fn,
+        ordinary_block_token_ids=(vocab.bos_id, vocab.eos_id),
+        max_tokens=int(max_tokens),
+        temperature=float(temperature),
+        top_p=top_p,
+        top_k=top_k,
+        generator=generator,
+    )
+
     return MapperGeneratedWindow(
         write_start_ms=int(write_start_ms),
         write_end_ms=int(write_end_ms),
         ln_carry_in=ln_carry_in,
         ln_carry_out=ln_carry_out,
-        tokens=generated,
-        states_before=states_before,
-        states_after=states_after,
-        terminal_state=state,
-        completed=completed,
-        dead_end=dead_end,
-        max_tokens_exceeded=max_tokens_exceeded,
+        tokens=result.tokens,
+        states_before=result.states_before,
+        states_after=result.states_after,
+        terminal_state=result.terminal_state,
+        completed=result.completed,
+        dead_end=result.dead_end,
+        max_tokens_exceeded=result.max_tokens_exceeded,
     )
 
 
@@ -667,48 +632,26 @@ def _select_token(
     top_p: float | None,
     generator: torch.Generator | None,
 ) -> int:
-    flat_logits = torch.as_tensor(logits, dtype=torch.float32).reshape(-1)
-    if int(flat_logits.numel()) != int(valid_mask.numel()):
-        raise ValueError(f"logits must contain {valid_mask.numel()} values, got {flat_logits.numel()}")
-    masked = flat_logits.masked_fill(~valid_mask.to(device=flat_logits.device, dtype=torch.bool), -torch.inf)
-    if temperature <= 0.0:
-        return int(torch.argmax(masked).item())
-    scaled = masked / temperature
-    probs = torch.softmax(scaled, dim=-1)
-    if top_p is not None:
-        probs = _apply_top_p(probs, p=float(top_p))
-    return int(torch.multinomial(probs, num_samples=1, generator=generator).item())
+    return select_next_token(
+        logits,
+        valid_mask=valid_mask,
+        temperature=float(temperature),
+        top_p=top_p,
+        generator=generator,
+    )
 
 
 def _apply_top_p(probs: torch.Tensor, *, p: float) -> torch.Tensor:
-    if not 0.0 < p <= 1.0:
-        raise ValueError(f"top_p must be in (0, 1], got {p}")
-    sorted_probs, sorted_indices = torch.sort(probs, descending=True)
-    cumulative = torch.cumsum(sorted_probs, dim=-1)
-    keep_sorted = cumulative <= p
-    if keep_sorted.numel() > 0:
-        keep_sorted[0] = True
-    keep = torch.zeros_like(probs, dtype=torch.bool)
-    keep[sorted_indices[keep_sorted]] = True
-    filtered = torch.where(keep, probs, torch.zeros_like(probs))
-    total = filtered.sum()
-    if float(total.item()) <= 0.0:
-        return probs
-    return filtered / total
+    return apply_top_p(probs, p=float(p))
 
 
 def _default_generation_logits(valid_mask: torch.Tensor, *, vocab: MapperTupleVocab) -> torch.Tensor:
-    logits = torch.zeros(vocab.size, dtype=torch.float32)
-    logits[~valid_mask.cpu()] = -torch.inf
-    valid_time_shifts = [
-        token_id
-        for token_id in vocab.time_shift_token_ids
-        if bool(valid_mask[token_id].item())
-    ]
-    if valid_time_shifts:
-        best = max(valid_time_shifts, key=vocab.time_shift_value)
-        logits[best] = 1.0
-    return logits
+    return default_generation_logits(
+        valid_mask,
+        vocab_size=vocab.size,
+        time_shift_token_ids=vocab.time_shift_token_ids,
+        time_shift_value=vocab.time_shift_value,
+    )
 
 
 @dataclass(frozen=True)

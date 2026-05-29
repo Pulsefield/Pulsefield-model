@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 import torch
-import torch.nn.functional as F
 import yaml
 from torch.utils.data import DataLoader, Dataset, Sampler, Subset
 
@@ -36,31 +35,32 @@ from pulsefield_model.data.mapper_tuple_windows import (
 )
 from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.shared import MapperTupleConfig, TupleMapperBase, MapperTupleModelOutput, MapperTupleVocab
-from pulsefield_model.models.mapper.shared.loss import adapter_bias_regularization, density_auxiliary_loss, token_cross_entropy
+from pulsefield_model.models.mapper.shared.loss import (
+    MapperTupleLossConfig as CanonicalMapperTupleLossConfig,
+    MapperTupleModelLoss,
+    close_pos_weight,
+)
 from pulsefield_model.training.common import (
     CHECKPOINT_SCHEMA_VERSION,
     DEFAULT_FINAL_TRAIN_EVAL_SIZE,
     ControlTrainingResult,
-    _atomic_torch_save,
-    _advance_training_iterator,
-    _capture_rng_state,
-    _copy_file_atomically,
-    _infinite_loader,
-    _json_metrics,
     _json_safe,
     _metric_is_count,
     _move_batch_tensors,
-    _move_optimizer_state_to_device,
-    _restore_rng_state,
-    _safe_float_div,
     _set_deterministic_seed,
-    _validate_training_args,
-    _write_report,
     limit_final_train_eval_dataset,
     select_torch_device,
     split_train_eval_dataset,
 )
 from pulsefield_model.training.control_demo_global import initialize_global_control_demo_from_control_checkpoint
+from pulsefield_model.training.mapper_runner import (
+    MapperTrainingSpec,
+    default_mapper_metric_finalizer,
+    load_mapper_training_resume_checkpoint,
+    mapper_metrics_for_loader,
+    run_mapper_training,
+    write_mapper_checkpoint_and_report,
+)
 
 
 DEFAULT_RUNS_ROOT = Path("artifacts/runs/stage2_mapper_tuple")
@@ -189,6 +189,15 @@ class MapperTupleLossOutput:
     metrics: dict[str, float]
     metric_numerators: dict[str, float]
     metric_denominators: dict[str, float]
+
+
+@dataclass(frozen=True)
+class _CanonicalPhaseBOutput:
+    logits_final: torch.Tensor
+    ln_close_logits: torch.Tensor
+    state_prior_bias: torch.Tensor
+    ln_close_event_bias: torch.Tensor
+    ln_close_time_shift_bias: torch.Tensor
 
 
 @dataclass(frozen=True)
@@ -1084,55 +1093,55 @@ def compute_phase_b_loss(
     vocab: MapperTupleVocab,
     loss_config: MapperTuplePhaseBLossConfig = MapperTuplePhaseBLossConfig(),
 ) -> MapperTupleLossOutput:
-    loss_target = target_fragment_tokens.to(dtype=torch.long, device=model_output.logits_final.device)
-    if tuple(loss_target.shape) != tuple(model_output.logits_final.shape[:2]):
+    canonical_output = _canonical_phase_b_output(model_output)
+    loss_target = target_fragment_tokens.to(dtype=torch.long, device=canonical_output.logits_final.device)
+    if tuple(loss_target.shape) != tuple(canonical_output.logits_final.shape[:2]):
         raise ValueError("target_fragment_tokens must align with teacher-forced decoder output")
     if tuple(target_fragment_mask.shape) != tuple(target_fragment_tokens.shape):
         raise ValueError("target_fragment_mask must match target_fragment_tokens")
-    target_mask = target_fragment_mask.to(device=model_output.logits_final.device, dtype=torch.bool)
-    input_mask = target_mask
-    token_loss = token_cross_entropy(
-        model_output.logits_final,
-        loss_target,
-        pad_id=vocab.pad_id,
-        target_mask=target_mask,
+    target_mask = target_fragment_mask.to(device=canonical_output.logits_final.device, dtype=torch.bool)
+    close_mask = close_label_mask.to(device=canonical_output.ln_close_logits.device, dtype=torch.bool)
+    close_mask = close_mask & target_mask.to(device=canonical_output.ln_close_logits.device).unsqueeze(-1)
+    close_weight = close_pos_weight(
+        labels=close_labels.to(device=canonical_output.ln_close_logits.device),
+        mask=close_mask,
+        max_weight=loss_config.close_pos_weight_max,
     )
-    close_loss, close_metrics = _ln_close_loss(
-        close_logits=model_output.close_logits,
-        labels=close_labels.to(device=model_output.close_logits.device),
-        mask=(
-            close_label_mask.to(device=model_output.close_logits.device, dtype=torch.bool)
-            & target_mask.to(device=model_output.close_logits.device, dtype=torch.bool).unsqueeze(-1)
+    has_density_targets = density_target_8s is not None and density_confidence_8s is not None
+    canonical_loss = MapperTupleModelLoss(
+        _canonical_phase_b_loss_config(
+            loss_config,
+            close_weight=float(close_weight.detach().cpu()),
+            compute_density=has_density_targets,
         ),
-        max_pos_weight=loss_config.close_pos_weight_max,
+        vocab=vocab,
     )
-    adapter_reg = adapter_bias_regularization(
-        model_output.state_prior_bias,
-        model_output.ln_close_bias,
-        model_output.time_shift_bias,
-        mask=input_mask,
+    canonical_batch: dict[str, Any] = {
+        "target_fragment_tokens": target_fragment_tokens,
+        "target_fragment_mask": target_fragment_mask,
+        "target_fragment_states": target_fragment_states,
+        "close_labels": close_labels,
+        "close_label_mask": close_label_mask,
+        "write_start_ms": write_start_ms,
+    }
+    if density_target_8s is not None:
+        canonical_batch["density_target_8s"] = density_target_8s
+    if density_confidence_8s is not None:
+        canonical_batch["density_confidence_8s"] = density_confidence_8s
+    canonical_loss_output = canonical_loss(canonical_output, canonical_batch)
+    token_loss = canonical_loss_output.token_loss
+    close_loss = canonical_loss_output.ln_close_loss
+    adapter_reg = canonical_loss_output.adapter_reg_loss
+    density_loss = canonical_loss_output.density_loss
+    close_metrics = _phase_b_close_metrics(
+        close_labels=close_labels.to(device=canonical_output.ln_close_logits.device),
+        close_mask=close_mask,
+        pos_weight=float(close_weight.detach().cpu()),
     )
-    current_ms = target_fragment_states.get("current_ms") if isinstance(target_fragment_states, Mapping) else None
-    if density_target_8s is None or density_confidence_8s is None:
-        if loss_config.lambda_density > 0.0:
-            raise ValueError("density_target_8s and density_confidence_8s are required when lambda_density > 0")
-        density_loss = token_loss.new_zeros(())
-        density_weight = 0.0
-    else:
-        if not isinstance(current_ms, torch.Tensor):
-            raise ValueError("target_fragment_states.current_ms must be supplied for density loss")
-        density_loss = density_auxiliary_loss(
-            logits_final=model_output.logits_final,
-            current_ms=current_ms.to(device=model_output.logits_final.device),
-            write_start_ms=write_start_ms.to(device=model_output.logits_final.device),
-            target=density_target_8s.to(device=model_output.logits_final.device),
-            confidence=density_confidence_8s.to(device=model_output.logits_final.device),
-            vocab=vocab,
-            target_mask=target_mask,
-            calibration_scale=loss_config.density_calibration_scale,
-            calibration_bias=loss_config.density_calibration_bias,
-        )
-        density_weight = float(density_confidence_8s.detach().to(dtype=torch.float32).clamp_min(0.0).sum().cpu())
+    density_weight = _phase_b_density_weight(
+        density_target_8s=density_target_8s,
+        density_confidence_8s=density_confidence_8s,
+    )
     total_loss = (
         token_loss
         + float(loss_config.lambda_ln_close) * close_loss
@@ -1163,6 +1172,67 @@ def compute_phase_b_loss(
             "loss/density": max(density_weight, 1.0),
         },
     )
+
+
+def _canonical_phase_b_output(model_output: object) -> _CanonicalPhaseBOutput:
+    return _CanonicalPhaseBOutput(
+        logits_final=_phase_b_output_tensor(model_output, "logits_final"),
+        ln_close_logits=_phase_b_output_tensor(model_output, "ln_close_logits"),
+        state_prior_bias=_phase_b_output_tensor(model_output, "state_prior_bias"),
+        ln_close_event_bias=_phase_b_output_tensor(model_output, "ln_close_event_bias"),
+        ln_close_time_shift_bias=_phase_b_output_tensor(model_output, "ln_close_time_shift_bias"),
+    )
+
+
+def _phase_b_output_tensor(model_output: object, name: str) -> torch.Tensor:
+    value = getattr(model_output, name, None)
+    if isinstance(value, torch.Tensor):
+        return value
+    raise ValueError(f"model_output.{name} must be a torch.Tensor")
+
+
+def _canonical_phase_b_loss_config(
+    loss_config: MapperTuplePhaseBLossConfig,
+    *,
+    close_weight: float,
+    compute_density: bool,
+) -> CanonicalMapperTupleLossConfig:
+    density_lambda = 1.0 if compute_density else float(loss_config.lambda_density)
+    return CanonicalMapperTupleLossConfig(
+        lambda_density=density_lambda,
+        lambda_ln_close=1.0,
+        lambda_adapter_reg=1.0,
+        ln_close_pos_weight=close_weight,
+        ln_close_focal_gamma=0.0,
+        density_calibration_scale=loss_config.density_calibration_scale,
+        density_calibration_bias=loss_config.density_calibration_bias,
+    )
+
+
+def _phase_b_close_metrics(
+    *,
+    close_labels: torch.Tensor,
+    close_mask: torch.Tensor,
+    pos_weight: float,
+) -> dict[str, float]:
+    mask = close_mask.to(dtype=torch.bool)
+    labels_f = close_labels.to(device=mask.device, dtype=torch.float32)
+    positive_count = float((labels_f * mask.to(dtype=labels_f.dtype)).sum().detach().cpu())
+    return {
+        "ln_close/open_lane_count": float(mask.sum().detach().cpu()),
+        "ln_close/positive_count": positive_count,
+        "ln_close/pos_weight": float(pos_weight),
+    }
+
+
+def _phase_b_density_weight(
+    *,
+    density_target_8s: torch.Tensor | None,
+    density_confidence_8s: torch.Tensor | None,
+) -> float:
+    if density_target_8s is None or density_confidence_8s is None:
+        return 0.0
+    return float(density_confidence_8s.detach().to(dtype=torch.float32).clamp_min(0.0).sum().cpu())
 
 
 def _move_mapper_batch_tensors(raw_batch: Mapping[str, Any], device: torch.device) -> dict[str, Any]:
@@ -1242,6 +1312,77 @@ def _loss_for_raw_batch(
     )
 
 
+def _mapper_tuple_training_spec(
+    *,
+    model_config: Any,
+    control_model_config: ControlDemoGlobalEncoderConfig | None,
+    loss_config: MapperTuplePhaseBLossConfig,
+    model_factory: Callable[[Any, ControlDemoGlobalEncoder | None], TupleMapperBase] | None,
+    mapper_checkpoint_initializer: Callable[..., Mapping[str, Any]] | None,
+    progress_label: str,
+) -> MapperTrainingSpec:
+    resolved_model_factory = _mapper_tuple_model_factory if model_factory is None else model_factory
+    return MapperTrainingSpec(
+        model_config=model_config,
+        control_model_config=control_model_config,
+        loss_config=loss_config,
+        model_factory=resolved_model_factory,
+        loss_factory=lambda model, config: config,
+        batch_loss_adapter=_mapper_tuple_batch_loss_adapter,
+        optimizer_factory=lambda model, learning_rate, weight_decay: _build_mapper_tuple_optimizer(
+            model,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+        ),
+        training_config_factory=lambda context: _mapper_training_config(
+            seed=context.seed,
+            run_name=context.run_name,
+            learning_rate=context.learning_rate,
+            weight_decay=context.weight_decay,
+            eval_every=context.eval_every,
+            save_every=context.save_every,
+            skip_first_eval_pass=context.skip_first_eval_pass,
+            loss_config=loss_config,
+            dataset_report=context.dataset_report,
+            mps_cleanup_every=context.mps_cleanup_every,
+        ),
+        resume_checkpoint_loader=lambda path, context: _load_mapper_resume_checkpoint(
+            path,
+            expected_model_config=context.expected_model_config,
+            expected_control_model_config=context.expected_control_model_config,
+            expected_loss_config=context.expected_loss_config,
+            expected_training_config=context.expected_training_config,
+        ),
+        metric_count_predicate=_metric_is_count,
+        metric_fallback_weight_key="target/token_count",
+        metric_empty={"loss/total": math.nan, "loss/token": math.nan, "loss/density": 0.0},
+        metric_finalizer=default_mapper_metric_finalizer,
+        progress_label=progress_label,
+        mapper_checkpoint_initializer=mapper_checkpoint_initializer,
+        cleanup_device_memory=_cleanup_mps_training_memory,
+    )
+
+
+def _mapper_tuple_model_factory(
+    model_config: Any,
+    control_encoder: ControlDemoGlobalEncoder | None,
+) -> TupleMapperBase:
+    return TupleMapperBase(model_config, control_encoder=control_encoder)
+
+
+def _mapper_tuple_batch_loss_adapter(
+    model: torch.nn.Module,
+    loss_config: Any,
+    raw_batch: Mapping[str, Any],
+    device: torch.device,
+) -> MapperTupleLossOutput:
+    if not isinstance(model, TupleMapperBase):
+        raise TypeError("mapper tuple training requires a TupleMapperBase model")
+    if not isinstance(loss_config, MapperTuplePhaseBLossConfig):
+        raise TypeError("mapper tuple training requires MapperTuplePhaseBLossConfig")
+    return _loss_for_raw_batch(model, raw_batch, device=device, loss_config=loss_config)
+
+
 @torch.inference_mode()
 def metrics_for_loader(
     model: TupleMapperBase,
@@ -1250,41 +1391,15 @@ def metrics_for_loader(
     device: torch.device,
     loss_config: MapperTuplePhaseBLossConfig,
 ) -> dict[str, float]:
-    model.eval()
-    count_totals: dict[str, float] = {}
-    mean_numerators: dict[str, float] = {}
-    mean_denominators: dict[str, float] = {}
-    fallback_totals: dict[str, float] = {}
-    fallback_weights: dict[str, float] = {}
-    for raw_batch in loader:
-        loss_output = _loss_for_raw_batch(model, raw_batch, device=device, loss_config=loss_config)
-        for key, value in loss_output.metrics.items():
-            if _metric_is_count(key):
-                count_totals[key] = count_totals.get(key, 0.0) + float(value)
-        for key, numerator in loss_output.metric_numerators.items():
-            mean_numerators[key] = mean_numerators.get(key, 0.0) + float(numerator)
-        for key, denominator in loss_output.metric_denominators.items():
-            mean_denominators[key] = mean_denominators.get(key, 0.0) + float(denominator)
-        unresolved = set(loss_output.metrics) - set(loss_output.metric_numerators) - set(count_totals)
-        weight = max(float(loss_output.metrics.get("target/token_count", 0.0)), 1.0)
-        for key in unresolved:
-            fallback_totals[key] = fallback_totals.get(key, 0.0) + float(loss_output.metrics[key]) * weight
-            fallback_weights[key] = fallback_weights.get(key, 0.0) + weight
-        del loss_output
-    if not (count_totals or mean_numerators or fallback_totals):
-        return {"loss/total": math.nan, "loss/token": math.nan, "loss/density": 0.0}
-    metrics = dict(count_totals)
-    for key, numerator in mean_numerators.items():
-        metrics[key] = _safe_float_div(numerator, mean_denominators.get(key, 0.0))
-    for key, total in fallback_totals.items():
-        metrics[key] = _safe_float_div(total, fallback_weights[key])
-    metrics["loss/total"] = (
-        metrics.get("loss/token", 0.0)
-        + loss_config.lambda_ln_close * metrics.get("loss/ln_close", 0.0)
-        + loss_config.lambda_adapter_reg * metrics.get("loss/adapter_reg", 0.0)
-        + loss_config.lambda_density * metrics.get("loss/density", 0.0)
+    spec = _mapper_tuple_training_spec(
+        model_config=getattr(model, "config", MapperTupleConfig()),
+        control_model_config=None,
+        loss_config=loss_config,
+        model_factory=None,
+        mapper_checkpoint_initializer=None,
+        progress_label="mapper_tuple_phase_b",
     )
-    return metrics
+    return mapper_metrics_for_loader(model, loss_config, loader, device=device, spec=spec)
 
 
 def _run_training(
@@ -1316,7 +1431,22 @@ def _run_training(
     skip_first_eval_pass: bool = False,
     mps_cleanup_every: int | None = None,
 ) -> ControlTrainingResult:
-    _validate_training_args(
+    initializer = initialize_mapper_tuple_from_mapper_checkpoint
+    if mapper_checkpoint_initializer is not None:
+        initializer = mapper_checkpoint_initializer
+    return run_mapper_training(
+        loader=loader,
+        train_eval_loader=train_eval_loader,
+        eval_loader=eval_loader,
+        output_dir=output_dir,
+        spec=_mapper_tuple_training_spec(
+            model_config=model_config,
+            control_model_config=control_model_config,
+            loss_config=loss_config,
+            model_factory=model_factory,
+            mapper_checkpoint_initializer=initializer,
+            progress_label=progress_label,
+        ),
         max_steps=max_steps,
         eval_every=eval_every,
         save_every=save_every,
@@ -1324,180 +1454,15 @@ def _run_training(
         batch_size=batch_size,
         learning_rate=learning_rate,
         weight_decay=weight_decay,
-    )
-    if mps_cleanup_every is not None:
-        if isinstance(mps_cleanup_every, bool):
-            raise ValueError("mps_cleanup_every must be an integer step interval")
-        mps_cleanup_every = int(mps_cleanup_every)
-        if mps_cleanup_every < 0:
-            raise ValueError("mps_cleanup_every must be non-negative")
-        if mps_cleanup_every == 0:
-            mps_cleanup_every = None
-    if resume_from is not None and init_from_mapper_checkpoint is not None:
-        raise ValueError("resume_from and init_from_mapper_checkpoint cannot both be set")
-    _set_deterministic_seed(seed)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    device = select_torch_device(device_name)
-    save_every = eval_every if save_every is None else save_every
-    checkpoint_path = output_dir / "checkpoint.pt"
-    report_path = output_dir / "report.json"
-
-    control_encoder: ControlDemoGlobalEncoder | None = None
-    initialization_report: dict[str, Any] | None = None
-    if control_model_config is not None:
-        control_encoder = ControlDemoGlobalEncoder(control_model_config)
-        if init_from_control_checkpoint is not None and init_from_mapper_checkpoint is None and resume_from is None:
-            initialization_report = initialize_global_control_demo_from_control_checkpoint(
-                control_encoder,
-                init_from_control_checkpoint,
-            )
-    if model_factory is None:
-        model = TupleMapperBase(model_config, control_encoder=control_encoder)
-    else:
-        model = model_factory(model_config, control_encoder)
-    if init_from_mapper_checkpoint is not None:
-        initializer = initialize_mapper_tuple_from_mapper_checkpoint
-        if mapper_checkpoint_initializer is not None:
-            initializer = mapper_checkpoint_initializer
-        initialization_report = initializer(
-            model,
-            init_from_mapper_checkpoint,
-            expected_model_config=model_config,
-            expected_control_model_config=control_model_config,
-        )
-    model = model.to(device)
-    optimizer = _build_mapper_tuple_optimizer(model, learning_rate=learning_rate, weight_decay=weight_decay)
-    resume_config = _mapper_resume_training_config(
         seed=seed,
+        device_name=device_name,
         run_name=run_name,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-        eval_every=eval_every,
-        save_every=save_every,
-        skip_first_eval_pass=skip_first_eval_pass,
-        loss_config=loss_config,
         dataset_report=dataset_report,
+        init_from_control_checkpoint=init_from_control_checkpoint,
+        init_from_mapper_checkpoint=init_from_mapper_checkpoint,
+        resume_from=resume_from,
+        skip_first_eval_pass=skip_first_eval_pass,
         mps_cleanup_every=mps_cleanup_every,
-    )
-    iterator = _infinite_loader(loader)
-    history: list[dict[str, Any]] = []
-    completed_step = 0
-    last_train_metrics: dict[str, float] = {}
-    final_train_metrics: dict[str, float] = {}
-    final_eval_metrics: dict[str, float] = {}
-
-    if resume_from is not None:
-        checkpoint = _load_mapper_resume_checkpoint(
-            resume_from,
-            expected_model_config=model_config,
-            expected_control_model_config=control_model_config,
-            expected_loss_config=loss_config,
-            expected_training_config=resume_config,
-        )
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        _move_optimizer_state_to_device(optimizer, device)
-        training_state = checkpoint["training_state"]
-        completed_step = int(training_state["step"])
-        if completed_step > max_steps:
-            raise ValueError(f"resume checkpoint step {completed_step} exceeds requested max_steps {max_steps}")
-        history = [dict(entry) for entry in checkpoint["history"]]
-        last_train_metrics = dict(training_state.get("last_train_metrics", {}))
-        final_train_metrics = dict(training_state.get("final_train_metrics", {}))
-        final_eval_metrics = dict(training_state.get("final_eval_metrics", {}))
-        raw_initialization = checkpoint.get("initialization")
-        initialization_report = dict(raw_initialization) if isinstance(raw_initialization, Mapping) else None
-        _restore_rng_state(training_state["rng_state"])
-        iterator = _advance_training_iterator(iterator, completed_step)
-        print(f"{progress_label}_resume checkpoint={resume_from} step={completed_step}/{max_steps}", flush=True)
-
-    log_start_time = time.monotonic()
-    log_start_step = completed_step
-    for step in range(completed_step + 1, max_steps + 1):
-        model.train()
-        optimizer.zero_grad(set_to_none=True)
-        loss_output = _loss_for_raw_batch(model, next(iterator), device=device, loss_config=loss_config)
-        loss_output.total_loss.backward()
-        torch.nn.utils.clip_grad_norm_((parameter for parameter in model.parameters() if parameter.requires_grad), 1.0)
-        optimizer.step()
-        last_train_metrics = dict(loss_output.metrics)
-        del loss_output
-        completed_step = step
-        if mps_cleanup_every is not None and step % mps_cleanup_every == 0:
-            _cleanup_mps_training_memory(device)
-
-        should_eval = step == 1 or step % eval_every == 0 or step == max_steps
-        if skip_first_eval_pass and step == 1 and step != max_steps:
-            should_eval = False
-        should_save = step == 1 or step % save_every == 0 or step == max_steps
-        should_log = log_every is not None and (step == 1 or step % log_every == 0 or step == max_steps)
-        if should_log or should_eval or should_save:
-            elapsed_s = time.monotonic() - log_start_time
-            completed_since_start = max(step - log_start_step, 1)
-            steps_per_s = completed_since_start / max(elapsed_s, 1e-9)
-            print(
-                f"{progress_label}_progress step={step}/{max_steps} "
-                f"loss={last_train_metrics['loss/total']:.6f} "
-                f"elapsed_s={elapsed_s:.1f} steps_per_s={steps_per_s:.3f}",
-                flush=True,
-            )
-        if should_eval:
-            final_eval_metrics = metrics_for_loader(model, eval_loader, device=device, loss_config=loss_config)
-            history_entry: dict[str, Any] = {
-                "step": step,
-                "train": _json_metrics(last_train_metrics),
-                "eval": _json_metrics(final_eval_metrics),
-            }
-            if step == max_steps:
-                final_train_metrics = metrics_for_loader(model, train_eval_loader, device=device, loss_config=loss_config)
-                history_entry["train_eval"] = _json_metrics(final_train_metrics)
-            history.append(history_entry)
-            print(
-                f"{progress_label}_eval step={step}/{max_steps} "
-                f"loss={final_eval_metrics.get('loss/total', float('nan')):.6f}",
-                flush=True,
-            )
-            _cleanup_mps_training_memory(device)
-        if should_save:
-            _write_checkpoint_and_report(
-                output_dir=output_dir,
-                checkpoint_path=checkpoint_path,
-                report_path=report_path,
-                model=model,
-                optimizer=optimizer,
-                model_config=model_config,
-                control_model_config=control_model_config,
-                loss_config=loss_config,
-                seed=seed,
-                run_name=run_name,
-                max_steps=max_steps,
-                completed_steps=completed_step,
-                eval_every=eval_every,
-                save_every=save_every,
-                log_every=log_every,
-                learning_rate=learning_rate,
-                weight_decay=weight_decay,
-                device=device,
-                dataset_report=dataset_report,
-                history=history,
-                last_train_metrics=last_train_metrics,
-                final_train_metrics=final_train_metrics,
-                final_eval_metrics=final_eval_metrics,
-                initialization_report=initialization_report,
-                skip_first_eval_pass=skip_first_eval_pass,
-                mps_cleanup_every=mps_cleanup_every,
-                resume_from=resume_from,
-            )
-            _cleanup_mps_training_memory(device)
-
-    result_metrics = final_eval_metrics or last_train_metrics
-    return ControlTrainingResult(
-        report_path=report_path,
-        checkpoint_path=checkpoint_path,
-        final_loss=float(result_metrics.get("loss/total", float("nan"))),
-        final_value_loss=float(result_metrics.get("loss/token", float("nan"))),
-        final_confidence_loss=0.0,
-        completed_steps=completed_step,
     )
 
 
@@ -1592,6 +1557,34 @@ def _mapper_resume_training_config(
     }
 
 
+def _mapper_training_config(
+    *,
+    seed: int,
+    run_name: str,
+    learning_rate: float,
+    weight_decay: float,
+    eval_every: int,
+    save_every: int,
+    skip_first_eval_pass: bool,
+    loss_config: MapperTuplePhaseBLossConfig,
+    dataset_report: Mapping[str, Any],
+    mps_cleanup_every: int | None,
+) -> dict[str, Any]:
+    return {
+        "phase": "B",
+        "seed": seed,
+        "run_name": run_name,
+        "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
+        "eval_every": eval_every,
+        "skip_first_eval_pass": bool(skip_first_eval_pass),
+        "save_every": save_every,
+        "mps_cleanup_every": mps_cleanup_every,
+        "density_enabled": bool(loss_config.lambda_density > 0.0),
+        "dataset": _json_safe(dataset_report),
+    }
+
+
 def _load_mapper_resume_checkpoint(
     resume_from: Path,
     *,
@@ -1600,42 +1593,15 @@ def _load_mapper_resume_checkpoint(
     expected_loss_config: MapperTuplePhaseBLossConfig,
     expected_training_config: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    try:
-        checkpoint = torch.load(resume_from, map_location="cpu", weights_only=True)
-    except pickle.UnpicklingError as exc:
-        raise ValueError(
-            "mapper resume checkpoint could not be loaded safely with weights_only=True; "
-            "use a checkpoint written by the mapper trainer"
-        ) from exc
-    if not isinstance(checkpoint, Mapping):
-        raise ValueError(f"mapper resume checkpoint must contain a mapping: {resume_from}")
-    if checkpoint.get("checkpoint_schema_version") != CHECKPOINT_SCHEMA_VERSION:
-        raise ValueError("mapper resume checkpoint schema version mismatch")
-    if checkpoint.get("model_config") != asdict(expected_model_config):
-        raise ValueError("mapper resume checkpoint model_config does not match the requested run")
-    expected_control_config = None if expected_control_model_config is None else asdict(expected_control_model_config)
-    if checkpoint.get("control_model_config") != expected_control_config:
-        raise ValueError("mapper resume checkpoint control_model_config does not match the requested run")
-    if checkpoint.get("loss_config") != asdict(expected_loss_config):
-        raise ValueError("mapper resume checkpoint loss_config does not match the requested run")
-    if _normalized_mapper_resume_training_config(
-        checkpoint.get("training_config")
-    ) != _normalized_mapper_resume_training_config(expected_training_config):
-        raise ValueError("mapper resume checkpoint training_config does not match the requested run")
-    if not isinstance(checkpoint.get("model_state_dict"), Mapping):
-        raise ValueError("mapper resume checkpoint missing model_state_dict")
-    if "optimizer_state_dict" not in checkpoint:
-        raise ValueError("mapper resume checkpoint missing optimizer_state_dict")
-    if not isinstance(checkpoint.get("training_state"), Mapping):
-        raise ValueError("mapper resume checkpoint missing training_state")
-    if not isinstance(checkpoint.get("history"), list):
-        raise ValueError("mapper resume checkpoint history must be a list")
-    training_state = checkpoint["training_state"]
-    if not isinstance(training_state.get("step"), int) or training_state["step"] < 0:
-        raise ValueError("mapper resume checkpoint training_state.step must be a non-negative integer")
-    if "rng_state" not in training_state:
-        raise ValueError("mapper resume checkpoint missing training_state.rng_state")
-    return checkpoint
+    return load_mapper_training_resume_checkpoint(
+        resume_from,
+        expected_model_config=expected_model_config,
+        expected_control_model_config=expected_control_model_config,
+        expected_loss_config=expected_loss_config,
+        expected_training_config=expected_training_config,
+        normalize_training_config=_normalized_mapper_resume_training_config,
+        checkpoint_label="mapper resume",
+    )
 
 
 def _normalized_mapper_resume_training_config(config: object) -> dict[str, Any]:
@@ -1657,42 +1623,6 @@ def _strict_mapper_resume_dataset_report(dataset_report: Mapping[str, Any]) -> d
         key: value
         for key, value in dataset_report.items()
         if key not in MAPPER_RESUME_DATASET_RUNTIME_KEYS
-    }
-
-
-def _ln_close_loss(
-    *,
-    close_logits: torch.Tensor,
-    labels: torch.Tensor,
-    mask: torch.Tensor,
-    max_pos_weight: float,
-) -> tuple[torch.Tensor, dict[str, float]]:
-    if tuple(labels.shape) != tuple(close_logits.shape) or tuple(mask.shape) != tuple(close_logits.shape):
-        raise ValueError("close labels and mask must align with close_logits")
-    mask = mask.to(dtype=torch.bool)
-    open_count = int(mask.sum().detach().cpu().item())
-    if open_count == 0:
-        zero = close_logits.sum() * 0.0
-        return zero, {
-            "ln_close/open_lane_count": 0.0,
-            "ln_close/positive_count": 0.0,
-            "ln_close/pos_weight": 1.0,
-        }
-    labels_f = labels.to(dtype=close_logits.dtype)
-    positive_count = float((labels_f * mask.to(dtype=labels_f.dtype)).sum().detach().cpu().item())
-    negative_count = max(float(open_count) - positive_count, 0.0)
-    pos_weight = 1.0 if positive_count <= 0.0 else min(max(negative_count / positive_count, 1.0), max_pos_weight)
-    loss = F.binary_cross_entropy_with_logits(
-        close_logits,
-        labels_f,
-        pos_weight=close_logits.new_tensor(pos_weight),
-        reduction="none",
-    )
-    loss = (loss * mask.to(dtype=loss.dtype)).sum() / max(float(open_count), 1.0)
-    return loss, {
-        "ln_close/open_lane_count": float(open_count),
-        "ln_close/positive_count": positive_count,
-        "ln_close/pos_weight": float(pos_weight),
     }
 
 
@@ -1726,82 +1656,53 @@ def _write_checkpoint_and_report(
     mps_cleanup_every: int | None,
     resume_from: Path | None,
 ) -> None:
-    training_config = {
-        "phase": "B",
-        "seed": seed,
-        "run_name": run_name,
-        "learning_rate": learning_rate,
-        "weight_decay": weight_decay,
-        "eval_every": eval_every,
-        "skip_first_eval_pass": bool(skip_first_eval_pass),
-        "save_every": save_every,
-        "mps_cleanup_every": mps_cleanup_every,
-        "density_enabled": bool(loss_config.lambda_density > 0.0),
-        "dataset": _json_safe(dataset_report),
-    }
-    checkpoint_payload = {
-        "checkpoint_schema_version": CHECKPOINT_SCHEMA_VERSION,
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "model_config": asdict(model_config),
-        "control_model_config": None if control_model_config is None else asdict(control_model_config),
-        "loss_config": asdict(loss_config),
-        "training_config": training_config,
-        "seed": seed,
-        "run_name": run_name,
-        "history": history,
-        "initialization": None if initialization_report is None else dict(initialization_report),
-        "training_state": {
-            "step": completed_steps,
-            "max_steps": max_steps,
-            "is_complete": completed_steps >= max_steps,
-            "eval_every": eval_every,
-            "skip_first_eval_pass": bool(skip_first_eval_pass),
-            "save_every": save_every,
-            "log_every": log_every,
-            "mps_cleanup_every": mps_cleanup_every,
-            "learning_rate": learning_rate,
-            "weight_decay": weight_decay,
-            "device": str(device),
-            "resume_from": resume_from.as_posix() if resume_from is not None else None,
-            "last_train_metrics": _json_metrics(last_train_metrics),
-            "final_train_metrics": _json_metrics(final_train_metrics),
-            "final_eval_metrics": _json_metrics(final_eval_metrics),
-            "rng_state": _capture_rng_state(),
-        },
-    }
-    archive_path = output_dir / "checkpoints" / f"checkpoint_step_{completed_steps:06d}.pt"
-    _atomic_torch_save(checkpoint_payload, archive_path)
-    _copy_file_atomically(archive_path, checkpoint_path)
-    report_payload = {
-        "run_name": run_name,
-        "phase": "B",
-        "seed": seed,
-        "max_steps": max_steps,
-        "completed_steps": completed_steps,
-        "is_complete": completed_steps >= max_steps,
-        "eval_every": eval_every,
-        "skip_first_eval_pass": bool(skip_first_eval_pass),
-        "save_every": save_every,
-        "log_every": log_every,
-        "mps_cleanup_every": mps_cleanup_every,
-        "learning_rate": learning_rate,
-        "weight_decay": weight_decay,
-        "resume_from": resume_from.as_posix() if resume_from is not None else None,
-        "model_config": asdict(model_config),
-        "control_model_config": None if control_model_config is None else asdict(control_model_config),
-        "loss_config": asdict(loss_config),
-        "training_config": training_config,
-        "device": str(device),
-        "parameter_count": model.parameter_count(),
-        "dataset": dict(dataset_report),
-        "initialization": None if initialization_report is None else dict(initialization_report),
-        "history": history,
-        "last_train_metrics": _json_metrics(last_train_metrics),
-        "final_train_metrics": _json_metrics(final_train_metrics),
-        "final_eval_metrics": _json_metrics(final_eval_metrics),
-    }
-    _write_report(report_path, report_payload)
+    training_config = _mapper_training_config(
+        seed=seed,
+        run_name=run_name,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        eval_every=eval_every,
+        save_every=save_every,
+        skip_first_eval_pass=skip_first_eval_pass,
+        loss_config=loss_config,
+        dataset_report=dataset_report,
+        mps_cleanup_every=mps_cleanup_every,
+    )
+    write_mapper_checkpoint_and_report(
+        output_dir=output_dir,
+        checkpoint_path=checkpoint_path,
+        report_path=report_path,
+        model=model,
+        optimizer=optimizer,
+        spec=_mapper_tuple_training_spec(
+            model_config=model_config,
+            control_model_config=control_model_config,
+            loss_config=loss_config,
+            model_factory=None,
+            mapper_checkpoint_initializer=None,
+            progress_label="mapper_tuple_phase_b",
+        ),
+        training_config=training_config,
+        seed=seed,
+        run_name=run_name,
+        max_steps=max_steps,
+        completed_steps=completed_steps,
+        eval_every=eval_every,
+        save_every=save_every,
+        log_every=log_every,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        device=device,
+        dataset_report=dataset_report,
+        history=history,
+        last_train_metrics=last_train_metrics,
+        final_train_metrics=final_train_metrics,
+        final_eval_metrics=final_eval_metrics,
+        initialization_report=initialization_report,
+        skip_first_eval_pass=skip_first_eval_pass,
+        mps_cleanup_every=mps_cleanup_every,
+        resume_from=resume_from,
+    )
 
 
 def _open_start_from_age(*, current_ms: torch.Tensor, open_mask: torch.Tensor, open_age_ms: torch.Tensor) -> torch.Tensor:

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import math
-import pickle
-import time
 from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -22,34 +19,29 @@ from pulsefield_model.models.mapper.v2_1 import (
     MapperV21ModelLoss,
 )
 from pulsefield_model.training.common import (
-    CHECKPOINT_SCHEMA_VERSION,
     DEFAULT_FINAL_TRAIN_EVAL_SIZE,
-    ResumableRandomBatchSampler,
     ControlTrainingResult,
-    _atomic_torch_save,
-    _advance_training_iterator,
-    _capture_rng_state,
-    _copy_file_atomically,
-    _infinite_loader,
-    _json_metrics,
+    ResumableRandomBatchSampler,
     _json_safe,
     _metric_is_count,
-    _move_optimizer_state_to_device,
-    _restore_rng_state,
     _set_deterministic_seed,
-    _validate_training_args,
-    _write_report,
     limit_final_train_eval_dataset,
-    set_resumable_loader_batch_cursor,
-    select_torch_device,
     split_train_eval_dataset,
 )
-from pulsefield_model.training.control_demo_global import initialize_global_control_demo_from_control_checkpoint
 from pulsefield_model.training.mapper_common import (
     _build_mapper_tuple_optimizer,
     _cleanup_mps_training_memory,
     _move_mapper_batch_tensors,
     precompute_mapper_tuple_phase_b_control_teacher_cache,
+)
+from pulsefield_model.training.mapper_runner import (
+    MapperTrainingSpec,
+    default_mapper_metric_finalizer,
+    load_mapper_training_resume_checkpoint,
+    mapper_metrics_for_loader,
+    resume_resumable_loader_cursor_or_advance,
+    run_mapper_training,
+    write_mapper_checkpoint_and_report,
 )
 
 
@@ -358,7 +350,17 @@ def _run_training(
     skip_first_eval_pass: bool = False,
     mps_cleanup_every: int | None = None,
 ) -> ControlTrainingResult:
-    _validate_training_args(
+    return run_mapper_training(
+        loader=loader,
+        train_eval_loader=train_eval_loader,
+        eval_loader=eval_loader,
+        output_dir=output_dir,
+        spec=_mapper_v2_1_training_spec(
+            model_config=model_config,
+            control_model_config=control_model_config,
+            loss_config=loss_config,
+            progress_label=progress_label,
+        ),
         max_steps=max_steps,
         eval_every=eval_every,
         save_every=save_every,
@@ -366,163 +368,14 @@ def _run_training(
         batch_size=batch_size,
         learning_rate=learning_rate,
         weight_decay=weight_decay,
-    )
-    if mps_cleanup_every is not None:
-        if isinstance(mps_cleanup_every, bool):
-            raise ValueError("mps_cleanup_every must be an integer step interval")
-        mps_cleanup_every = int(mps_cleanup_every)
-        if mps_cleanup_every < 0:
-            raise ValueError("mps_cleanup_every must be non-negative")
-        if mps_cleanup_every == 0:
-            mps_cleanup_every = None
-    _set_deterministic_seed(seed)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    device = select_torch_device(device_name)
-    save_every = eval_every if save_every is None else save_every
-    checkpoint_path = output_dir / "checkpoint.pt"
-    report_path = output_dir / "report.json"
-
-    initialization_report: dict[str, Any] | None = None
-    control_encoder = ControlDemoGlobalEncoder(control_model_config)
-    if resume_from is None and init_from_control_checkpoint is not None:
-        initialization_report = initialize_global_control_demo_from_control_checkpoint(
-            control_encoder,
-            init_from_control_checkpoint,
-        )
-    model = MapperV21Model(model_config, control_encoder=control_encoder).to(device)
-    loss_fn = MapperV21ModelLoss(loss_config, vocab=model.vocab).to(device)
-    optimizer = _build_mapper_tuple_optimizer(model, learning_rate=learning_rate, weight_decay=weight_decay)
-    resume_config = _mapper_v2_1_resume_training_config(
         seed=seed,
+        device_name=device_name,
         run_name=run_name,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-        eval_every=eval_every,
-        save_every=save_every,
-        skip_first_eval_pass=skip_first_eval_pass,
         dataset_report=dataset_report,
+        init_from_control_checkpoint=init_from_control_checkpoint,
+        resume_from=resume_from,
+        skip_first_eval_pass=skip_first_eval_pass,
         mps_cleanup_every=mps_cleanup_every,
-    )
-    iterator = _infinite_loader(loader)
-    history: list[dict[str, Any]] = []
-    completed_step = 0
-    last_train_metrics: dict[str, float] = {}
-    final_train_metrics: dict[str, float] = {}
-    final_eval_metrics: dict[str, float] = {}
-
-    if resume_from is not None:
-        checkpoint = _load_mapper_v2_1_resume_checkpoint(
-            resume_from,
-            expected_model_config=model_config,
-            expected_control_model_config=control_model_config,
-            expected_loss_config=loss_config,
-            expected_training_config=resume_config,
-        )
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        _move_optimizer_state_to_device(optimizer, device)
-        training_state = checkpoint["training_state"]
-        completed_step = int(training_state["step"])
-        if completed_step > max_steps:
-            raise ValueError(f"resume checkpoint step {completed_step} exceeds requested max_steps {max_steps}")
-        history = [dict(entry) for entry in checkpoint["history"]]
-        last_train_metrics = dict(training_state.get("last_train_metrics", {}))
-        final_train_metrics = dict(training_state.get("final_train_metrics", {}))
-        final_eval_metrics = dict(training_state.get("final_eval_metrics", {}))
-        raw_initialization = checkpoint.get("initialization")
-        initialization_report = dict(raw_initialization) if isinstance(raw_initialization, Mapping) else None
-        _restore_rng_state(training_state["rng_state"])
-        if not set_resumable_loader_batch_cursor(loader, completed_step):
-            iterator = _advance_training_iterator(iterator, completed_step)
-        print(f"{progress_label}_resume checkpoint={resume_from} step={completed_step}/{max_steps}", flush=True)
-
-    log_start_time = time.monotonic()
-    log_start_step = completed_step
-    for step in range(completed_step + 1, max_steps + 1):
-        model.train()
-        optimizer.zero_grad(set_to_none=True)
-        loss_output = _loss_for_raw_batch(model, loss_fn, next(iterator), device=device)
-        loss_output.total_loss.backward()
-        torch.nn.utils.clip_grad_norm_((parameter for parameter in model.parameters() if parameter.requires_grad), 1.0)
-        optimizer.step()
-        last_train_metrics = dict(loss_output.metrics)
-        del loss_output
-        completed_step = step
-        if mps_cleanup_every is not None and step % mps_cleanup_every == 0:
-            _cleanup_mps_training_memory(device)
-
-        should_eval = step == 1 or step % eval_every == 0 or step == max_steps
-        if skip_first_eval_pass and step == 1 and step != max_steps:
-            should_eval = False
-        should_save = step == 1 or step % save_every == 0 or step == max_steps
-        should_log = log_every is not None and (step == 1 or step % log_every == 0 or step == max_steps)
-        if should_log or should_eval or should_save:
-            elapsed_s = time.monotonic() - log_start_time
-            completed_since_start = max(step - log_start_step, 1)
-            steps_per_s = completed_since_start / max(elapsed_s, 1e-9)
-            print(
-                f"{progress_label}_progress step={step}/{max_steps} "
-                f"loss={last_train_metrics['loss/total']:.6f} "
-                f"elapsed_s={elapsed_s:.1f} steps_per_s={steps_per_s:.3f}",
-                flush=True,
-            )
-        if should_eval:
-            final_eval_metrics = metrics_for_loader(model, loss_fn, eval_loader, device=device)
-            history_entry: dict[str, Any] = {
-                "step": step,
-                "train": _json_metrics(last_train_metrics),
-                "eval": _json_metrics(final_eval_metrics),
-            }
-            if step == max_steps:
-                final_train_metrics = metrics_for_loader(model, loss_fn, train_eval_loader, device=device)
-                history_entry["train_eval"] = _json_metrics(final_train_metrics)
-            history.append(history_entry)
-            print(
-                f"{progress_label}_eval step={step}/{max_steps} "
-                f"loss={final_eval_metrics.get('loss/total', float('nan')):.6f}",
-                flush=True,
-            )
-            _cleanup_mps_training_memory(device)
-        if should_save:
-            _write_checkpoint_and_report(
-                output_dir=output_dir,
-                checkpoint_path=checkpoint_path,
-                report_path=report_path,
-                model=model,
-                optimizer=optimizer,
-                model_config=model_config,
-                control_model_config=control_model_config,
-                loss_config=loss_config,
-                seed=seed,
-                run_name=run_name,
-                max_steps=max_steps,
-                completed_steps=step,
-                eval_every=eval_every,
-                save_every=save_every,
-                log_every=log_every,
-                learning_rate=learning_rate,
-                weight_decay=weight_decay,
-                device=device,
-                dataset_report=dataset_report,
-                history=history,
-                last_train_metrics=last_train_metrics,
-                final_train_metrics=final_train_metrics,
-                final_eval_metrics=final_eval_metrics,
-                initialization_report=initialization_report,
-                skip_first_eval_pass=skip_first_eval_pass,
-                mps_cleanup_every=mps_cleanup_every,
-                resume_from=resume_from,
-            )
-            _cleanup_mps_training_memory(device)
-
-    result_metrics = final_eval_metrics or last_train_metrics
-    return ControlTrainingResult(
-        report_path=report_path,
-        checkpoint_path=checkpoint_path,
-        final_loss=float(result_metrics.get("loss/total", float("nan"))),
-        final_value_loss=float(result_metrics.get("loss/token", float("nan"))),
-        final_confidence_loss=0.0,
-        completed_steps=completed_step,
     )
 
 
@@ -538,6 +391,84 @@ def _loss_for_raw_batch(
     return loss_fn(output, batch)
 
 
+def _mapper_v2_1_training_spec(
+    *,
+    model_config: MapperV21Config,
+    control_model_config: ControlDemoGlobalEncoderConfig | None,
+    loss_config: MapperV21LossConfig,
+    progress_label: str,
+) -> MapperTrainingSpec:
+    return MapperTrainingSpec(
+        model_config=model_config,
+        control_model_config=control_model_config,
+        loss_config=loss_config,
+        model_factory=_mapper_v2_1_model_factory,
+        loss_factory=_mapper_v2_1_loss_factory,
+        batch_loss_adapter=_mapper_v2_1_batch_loss_adapter,
+        optimizer_factory=lambda model, learning_rate, weight_decay: _build_mapper_tuple_optimizer(
+            model,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+        ),
+        training_config_factory=lambda context: _mapper_v2_1_training_config(
+            seed=context.seed,
+            run_name=context.run_name,
+            learning_rate=context.learning_rate,
+            weight_decay=context.weight_decay,
+            eval_every=context.eval_every,
+            save_every=context.save_every,
+            skip_first_eval_pass=context.skip_first_eval_pass,
+            dataset_report=context.dataset_report,
+            mps_cleanup_every=context.mps_cleanup_every,
+        ),
+        resume_checkpoint_loader=lambda path, context: _load_mapper_v2_1_resume_checkpoint(
+            path,
+            expected_model_config=context.expected_model_config,
+            expected_control_model_config=context.expected_control_model_config,
+            expected_loss_config=context.expected_loss_config,
+            expected_training_config=context.expected_training_config,
+        ),
+        metric_count_predicate=lambda key: _metric_is_count(key) or key.endswith("_count"),
+        metric_fallback_weight_key="token/valid_count",
+        metric_empty={"loss/total": float("nan"), "loss/token": float("nan"), "loss/density": 0.0},
+        metric_finalizer=default_mapper_metric_finalizer,
+        progress_label=progress_label,
+        metric_divider=lambda numerator, denominator: numerator / max(denominator, 1e-12),
+        resume_loader_cursor=resume_resumable_loader_cursor_or_advance,
+        cleanup_device_memory=_cleanup_mps_training_memory,
+    )
+
+
+def _mapper_v2_1_model_factory(
+    model_config: Any,
+    control_encoder: ControlDemoGlobalEncoder | None,
+) -> MapperV21Model:
+    if not isinstance(model_config, MapperV21Config):
+        raise TypeError("mapper v2.1 training requires MapperV21Config")
+    return MapperV21Model(model_config, control_encoder=control_encoder)
+
+
+def _mapper_v2_1_loss_factory(model: torch.nn.Module, loss_config: Any) -> MapperV21ModelLoss:
+    if not isinstance(model, MapperV21Model):
+        raise TypeError("mapper v2.1 training requires MapperV21Model")
+    if not isinstance(loss_config, MapperV21LossConfig):
+        raise TypeError("mapper v2.1 training requires MapperV21LossConfig")
+    return MapperV21ModelLoss(loss_config, vocab=model.vocab)
+
+
+def _mapper_v2_1_batch_loss_adapter(
+    model: torch.nn.Module,
+    loss_fn: Any,
+    raw_batch: Mapping[str, Any],
+    device: torch.device,
+):
+    if not isinstance(model, MapperV21Model):
+        raise TypeError("mapper v2.1 training requires MapperV21Model")
+    if not isinstance(loss_fn, MapperV21ModelLoss):
+        raise TypeError("mapper v2.1 training requires MapperV21ModelLoss")
+    return _loss_for_raw_batch(model, loss_fn, raw_batch, device=device)
+
+
 @torch.inference_mode()
 def metrics_for_loader(
     model: MapperV21Model,
@@ -546,41 +477,13 @@ def metrics_for_loader(
     *,
     device: torch.device,
 ) -> dict[str, float]:
-    model.eval()
-    count_totals: dict[str, float] = {}
-    mean_numerators: dict[str, float] = {}
-    mean_denominators: dict[str, float] = {}
-    fallback_totals: dict[str, float] = {}
-    fallback_weights: dict[str, float] = {}
-    for raw_batch in loader:
-        loss_output = _loss_for_raw_batch(model, loss_fn, raw_batch, device=device)
-        for key, value in loss_output.metrics.items():
-            if _metric_is_count(key) or key.endswith("_count"):
-                count_totals[key] = count_totals.get(key, 0.0) + float(value)
-        for key, numerator in loss_output.metric_numerators.items():
-            mean_numerators[key] = mean_numerators.get(key, 0.0) + float(numerator)
-        for key, denominator in loss_output.metric_denominators.items():
-            mean_denominators[key] = mean_denominators.get(key, 0.0) + float(denominator)
-        unresolved = set(loss_output.metrics) - set(loss_output.metric_numerators) - set(count_totals)
-        weight = max(float(loss_output.metrics.get("token/valid_count", 0.0)), 1.0)
-        for key in unresolved:
-            fallback_totals[key] = fallback_totals.get(key, 0.0) + float(loss_output.metrics[key]) * weight
-            fallback_weights[key] = fallback_weights.get(key, 0.0) + weight
-        del loss_output
-    if not (count_totals or mean_numerators or fallback_totals):
-        return {"loss/total": math.nan, "loss/token": math.nan, "loss/density": 0.0}
-    metrics = dict(count_totals)
-    for key, numerator in mean_numerators.items():
-        metrics[key] = numerator / max(mean_denominators.get(key, 0.0), 1e-12)
-    for key, total in fallback_totals.items():
-        metrics[key] = total / max(fallback_weights[key], 1e-12)
-    metrics["loss/total"] = (
-        metrics.get("loss/token", 0.0)
-        + loss_fn.config.lambda_ln_close * metrics.get("loss/ln_close", 0.0)
-        + loss_fn.config.lambda_density * metrics.get("loss/density", 0.0)
-        + loss_fn.config.lambda_adapter_reg * metrics.get("loss/adapter_reg", 0.0)
+    spec = _mapper_v2_1_training_spec(
+        model_config=getattr(model, "config", MapperV21Config()),
+        control_model_config=None,
+        loss_config=loss_fn.config,
+        progress_label="mapper_v2_1_phase_b",
     )
-    return metrics
+    return mapper_metrics_for_loader(model, loss_fn, loader, device=device, spec=spec)
 
 
 def _mapper_v2_1_resume_training_config(
@@ -610,49 +513,50 @@ def _mapper_v2_1_resume_training_config(
     }
 
 
+def _mapper_v2_1_training_config(
+    *,
+    seed: int,
+    run_name: str,
+    learning_rate: float,
+    weight_decay: float,
+    eval_every: int,
+    save_every: int,
+    skip_first_eval_pass: bool,
+    dataset_report: Mapping[str, Any],
+    mps_cleanup_every: int | None,
+) -> dict[str, Any]:
+    return {
+        "phase": "B",
+        "seed": seed,
+        "run_name": run_name,
+        "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
+        "eval_every": eval_every,
+        "skip_first_eval_pass": bool(skip_first_eval_pass),
+        "save_every": save_every,
+        "mps_cleanup_every": mps_cleanup_every,
+        "mapper_token_contract": "v2.1_sparse_lane_actions",
+        "dataset": _json_safe(dataset_report),
+    }
+
+
 def _load_mapper_v2_1_resume_checkpoint(
     resume_from: Path,
     *,
     expected_model_config: MapperV21Config,
-    expected_control_model_config: ControlDemoGlobalEncoderConfig,
+    expected_control_model_config: ControlDemoGlobalEncoderConfig | None,
     expected_loss_config: MapperV21LossConfig,
     expected_training_config: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    try:
-        checkpoint = torch.load(resume_from, map_location="cpu", weights_only=True)
-    except pickle.UnpicklingError as exc:
-        raise ValueError(
-            "mapper v2.1 resume checkpoint could not be loaded safely with weights_only=True; "
-            "use a checkpoint written by the mapper v2.1 trainer"
-        ) from exc
-    if not isinstance(checkpoint, Mapping):
-        raise ValueError(f"mapper v2.1 resume checkpoint must contain a mapping: {resume_from}")
-    if checkpoint.get("checkpoint_schema_version") != CHECKPOINT_SCHEMA_VERSION:
-        raise ValueError("mapper v2.1 resume checkpoint schema version mismatch")
-    if checkpoint.get("model_config") != asdict(expected_model_config):
-        raise ValueError("mapper v2.1 resume checkpoint model_config does not match the requested run")
-    if checkpoint.get("control_model_config") != asdict(expected_control_model_config):
-        raise ValueError("mapper v2.1 resume checkpoint control_model_config does not match the requested run")
-    if checkpoint.get("loss_config") != asdict(expected_loss_config):
-        raise ValueError("mapper v2.1 resume checkpoint loss_config does not match the requested run")
-    if _normalized_mapper_v2_1_resume_training_config(
-        checkpoint.get("training_config")
-    ) != _normalized_mapper_v2_1_resume_training_config(expected_training_config):
-        raise ValueError("mapper v2.1 resume checkpoint training_config does not match the requested run")
-    if not isinstance(checkpoint.get("model_state_dict"), Mapping):
-        raise ValueError("mapper v2.1 resume checkpoint missing model_state_dict")
-    if "optimizer_state_dict" not in checkpoint:
-        raise ValueError("mapper v2.1 resume checkpoint missing optimizer_state_dict")
-    if not isinstance(checkpoint.get("training_state"), Mapping):
-        raise ValueError("mapper v2.1 resume checkpoint missing training_state")
-    if not isinstance(checkpoint.get("history"), list):
-        raise ValueError("mapper v2.1 resume checkpoint history must be a list")
-    training_state = checkpoint["training_state"]
-    if not isinstance(training_state.get("step"), int) or training_state["step"] < 0:
-        raise ValueError("mapper v2.1 resume checkpoint training_state.step must be a non-negative integer")
-    if "rng_state" not in training_state:
-        raise ValueError("mapper v2.1 resume checkpoint missing training_state.rng_state")
-    return checkpoint
+    return load_mapper_training_resume_checkpoint(
+        resume_from,
+        expected_model_config=expected_model_config,
+        expected_control_model_config=expected_control_model_config,
+        expected_loss_config=expected_loss_config,
+        expected_training_config=expected_training_config,
+        normalize_training_config=_normalized_mapper_v2_1_resume_training_config,
+        checkpoint_label="mapper v2.1 resume",
+    )
 
 
 def _normalized_mapper_v2_1_resume_training_config(config: object) -> dict[str, Any]:
@@ -707,82 +611,50 @@ def _write_checkpoint_and_report(
     mps_cleanup_every: int | None,
     resume_from: Path | None,
 ) -> None:
-    training_config = {
-        "phase": "B",
-        "seed": seed,
-        "run_name": run_name,
-        "learning_rate": learning_rate,
-        "weight_decay": weight_decay,
-        "eval_every": eval_every,
-        "skip_first_eval_pass": bool(skip_first_eval_pass),
-        "save_every": save_every,
-        "mps_cleanup_every": mps_cleanup_every,
-        "mapper_token_contract": "v2.1_sparse_lane_actions",
-        "dataset": _json_safe(dataset_report),
-    }
-    checkpoint_payload = {
-        "checkpoint_schema_version": CHECKPOINT_SCHEMA_VERSION,
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "model_config": asdict(model_config),
-        "control_model_config": asdict(control_model_config),
-        "loss_config": asdict(loss_config),
-        "training_config": training_config,
-        "seed": seed,
-        "run_name": run_name,
-        "history": history,
-        "initialization": None if initialization_report is None else dict(initialization_report),
-        "training_state": {
-            "step": completed_steps,
-            "max_steps": max_steps,
-            "is_complete": completed_steps >= max_steps,
-            "eval_every": eval_every,
-            "save_every": save_every,
-            "log_every": log_every,
-            "skip_first_eval_pass": bool(skip_first_eval_pass),
-            "mps_cleanup_every": mps_cleanup_every,
-            "learning_rate": learning_rate,
-            "weight_decay": weight_decay,
-            "device": str(device),
-            "resume_from": resume_from.as_posix() if resume_from is not None else None,
-            "last_train_metrics": _json_metrics(last_train_metrics),
-            "final_train_metrics": _json_metrics(final_train_metrics),
-            "final_eval_metrics": _json_metrics(final_eval_metrics),
-            "rng_state": _capture_rng_state(),
-        },
-    }
-    archive_path = output_dir / "checkpoints" / f"checkpoint_step_{completed_steps:06d}.pt"
-    _atomic_torch_save(checkpoint_payload, archive_path)
-    _copy_file_atomically(archive_path, checkpoint_path)
-    report_payload = {
-        "run_name": run_name,
-        "phase": "B",
-        "seed": seed,
-        "max_steps": max_steps,
-        "completed_steps": completed_steps,
-        "is_complete": completed_steps >= max_steps,
-        "eval_every": eval_every,
-        "save_every": save_every,
-        "log_every": log_every,
-        "skip_first_eval_pass": bool(skip_first_eval_pass),
-        "mps_cleanup_every": mps_cleanup_every,
-        "learning_rate": learning_rate,
-        "weight_decay": weight_decay,
-        "resume_from": resume_from.as_posix() if resume_from is not None else None,
-        "model_config": asdict(model_config),
-        "control_model_config": asdict(control_model_config),
-        "loss_config": asdict(loss_config),
-        "training_config": training_config,
-        "device": str(device),
-        "parameter_count": model.parameter_count(),
-        "dataset": dict(dataset_report),
-        "initialization": None if initialization_report is None else dict(initialization_report),
-        "history": history,
-        "last_train_metrics": _json_metrics(last_train_metrics),
-        "final_train_metrics": _json_metrics(final_train_metrics),
-        "final_eval_metrics": _json_metrics(final_eval_metrics),
-    }
-    _write_report(report_path, report_payload)
+    training_config = _mapper_v2_1_training_config(
+        seed=seed,
+        run_name=run_name,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        eval_every=eval_every,
+        save_every=save_every,
+        skip_first_eval_pass=skip_first_eval_pass,
+        dataset_report=dataset_report,
+        mps_cleanup_every=mps_cleanup_every,
+    )
+    write_mapper_checkpoint_and_report(
+        output_dir=output_dir,
+        checkpoint_path=checkpoint_path,
+        report_path=report_path,
+        model=model,
+        optimizer=optimizer,
+        spec=_mapper_v2_1_training_spec(
+            model_config=model_config,
+            control_model_config=control_model_config,
+            loss_config=loss_config,
+            progress_label="mapper_v2_1_phase_b",
+        ),
+        training_config=training_config,
+        seed=seed,
+        run_name=run_name,
+        max_steps=max_steps,
+        completed_steps=completed_steps,
+        eval_every=eval_every,
+        save_every=save_every,
+        log_every=log_every,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        device=device,
+        dataset_report=dataset_report,
+        history=history,
+        last_train_metrics=last_train_metrics,
+        final_train_metrics=final_train_metrics,
+        final_eval_metrics=final_eval_metrics,
+        initialization_report=initialization_report,
+        skip_first_eval_pass=skip_first_eval_pass,
+        mps_cleanup_every=mps_cleanup_every,
+        resume_from=resume_from,
+    )
 
 
 def _normalized_section(source: object, *, allowed: set[str], name: str) -> dict[str, Any]:

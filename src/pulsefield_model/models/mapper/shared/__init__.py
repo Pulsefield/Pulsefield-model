@@ -5,6 +5,10 @@ from typing import Any
 
 
 _EXPORTS = {
+    "MapperBatch": "batch",
+    "MapperCarryStateBatch": "batch",
+    "MapperFragmentState": "batch",
+    "MapperTokenContract": "batch",
     "LaneAction": "vocab",
     "MapperTupleVocab": "vocab",
     "MapperTupleConfig": "model",
@@ -14,6 +18,7 @@ _EXPORTS = {
     "MapperTupleLossConfig": "loss",
     "MapperTupleLossOutput": "loss",
     "MapperTupleModelLoss": "loss",
+    "MapperLossTokenSpec": "loss",
     "LNCarryState": "generation",
     "MapperGeneratedWindow": "generation",
     "RecoveryCEReport": "generation",
