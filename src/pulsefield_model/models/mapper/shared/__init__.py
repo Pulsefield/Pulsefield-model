@@ -27,6 +27,20 @@ _EXPORTS = {
     "LNCloseAdapterOutput": "adapters",
     "StatePriorAdapter": "adapters",
     "StatePriorAdapterOutput": "adapters",
+    "AttentionKVCache": "incremental",
+    "IncrementalDecodeState": "incremental",
+    "IncrementalDecoderStepOutput": "incremental",
+    "IncrementalSelfAttentionKVCache": "incremental",
+    "attention_projection_to_heads": "incremental",
+    "as_decode_batch_vector": "incremental",
+    "as_decode_step_lane_tensor": "incremental",
+    "as_decode_step_tensor": "incremental",
+    "create_empty_incremental_decode_state": "incremental",
+    "decode_position_index": "incremental",
+    "incremental_decoder_step": "incremental",
+    "normalize_attention_kv_cache": "incremental",
+    "transformer_decoder_control_attention_kv_cache": "incremental",
+    "validate_incremental_decode_state": "incremental",
 }
 
 __all__ = sorted(_EXPORTS)

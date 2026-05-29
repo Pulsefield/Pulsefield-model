@@ -399,8 +399,19 @@ def mapper_v2_1_logits_fn(
     difficulty_tensor = torch.tensor([float(normalized_difficulty)], dtype=torch.float32, device=device)
     carry_in_batch = _carry_batch_v2_1(ln_carry_in, device=device)
     carry_out_batch = _carry_batch_v2_1(ln_carry_out, device=device)
+    create_empty_decode_state = getattr(model, "create_empty_decode_state", None)
+    incremental_decode_next_token = getattr(model, "incremental_decode_next_token", None)
+    if create_empty_decode_state is None or not callable(create_empty_decode_state):
+        raise TypeError("mapper v2.1 rollout requires model.create_empty_decode_state")
+    if incremental_decode_next_token is None or not callable(incremental_decode_next_token):
+        raise TypeError("mapper v2.1 rollout requires model.incremental_decode_next_token")
+    decode_state: Any | None = None
+    decoded_prefix_tokens: tuple[int, ...] = ()
+    last_incremental_logits: torch.Tensor | None = None
 
     def logits_fn(step: MapperV21GenerationStep) -> torch.Tensor:
+        nonlocal decode_state, decoded_prefix_tokens, last_incremental_logits
+
         decoder_input_tokens = step.decoder_input_tokens.to(device=device, dtype=torch.long).unsqueeze(0)
         states = _target_fragment_state_batch_v2_1(
             generated_tokens=step.generated_tokens,
@@ -414,28 +425,56 @@ def mapper_v2_1_logits_fn(
             is_full_chart_end=bool(is_full_chart_end),
             device=device,
         )
-        target_tokens = torch.full_like(decoder_input_tokens, vocab.pad_id)
-        batch: dict[str, Any] = {
-            **control_batch,
-            "decoder_input_tokens": decoder_input_tokens,
-            "target_fragment_tokens": target_tokens,
-            "target_fragment_mask": torch.ones_like(decoder_input_tokens, dtype=torch.bool),
-            "target_fragment_states": states,
-            "ln_carry_in": carry_in_batch,
-            "ln_carry_out": carry_out_batch,
-            "write_start_ms": write_start_tensor,
-            "write_end_ms": write_end_tensor,
-            "chart_end_ms": chart_end_tensor,
-            "is_full_chart_start": full_start_tensor,
-            "is_full_chart_end": full_end_tensor,
-            "normalized_difficulty": difficulty_tensor,
-            # Rollout applies step.valid_token_mask before selection; avoid the model's full-prefix mask here.
-            "apply_grammar_mask": bool(apply_grammar_mask),
-        }
-        with torch.inference_mode():
-            output = model(batch)
-        logits = output.logits_final[0, -1].detach()
-        return _apply_time_shift_length_penalty_v2_1(logits, time_shift_penalty=time_shift_penalty)
+        prefix_tokens = tuple(int(token_id) for token_id in step.decoder_input_tokens.reshape(-1).tolist())
+        if not prefix_tokens:
+            raise RuntimeError("mapper v2.1 decoder prefix cannot be empty")
+        if decode_state is None or prefix_tokens[: len(decoded_prefix_tokens)] != decoded_prefix_tokens:
+            decode_state = create_empty_decode_state(batch_size=1, device=device)
+            decoded_prefix_tokens = ()
+            last_incremental_logits = None
+        if len(prefix_tokens) < len(decoded_prefix_tokens):
+            decode_state = create_empty_decode_state(batch_size=1, device=device)
+            decoded_prefix_tokens = ()
+            last_incremental_logits = None
+        for position in range(len(decoded_prefix_tokens), len(prefix_tokens)):
+            with torch.inference_mode():
+                output = incremental_decode_next_token(
+                    decode_state=decode_state,
+                    decoder_input_token=decoder_input_tokens[:, position],
+                    current_ms=states["current_ms"][:, position],
+                    open_mask=states["open_mask"][:, position],
+                    open_start_ms=states["open_start_ms"][:, position],
+                    open_age_ms=states["open_age_ms"][:, position],
+                    emitted_lane_mask=states["emitted_lane_mask"][:, position],
+                    last_lane_index=states["last_lane_index"][:, position],
+                    write_start_ms=write_start_tensor,
+                    write_end_ms=write_end_tensor,
+                    chart_end_ms=chart_end_tensor,
+                    is_full_chart_start=full_start_tensor,
+                    is_full_chart_end=full_end_tensor,
+                    ln_carry_in=carry_in_batch,
+                    ln_carry_out=carry_out_batch,
+                    density_teacher_8s=control_batch["density_teacher_8s"],
+                    control_memory_8s=control_batch.get("control_memory_8s"),
+                    projected_control_memory_8s=control_batch.get("projected_control_memory_8s"),
+                    control_attention_kv_cache=control_batch.get("control_attention_kv_cache"),
+                    normalized_difficulty=difficulty_tensor,
+                    global_memory=control_batch.get("global_memory"),
+                    global_memory_padding_mask=control_batch.get("global_memory_padding_mask"),
+                    global_position_features=control_batch.get("global_position_features"),
+                    global_attention_kv_cache=control_batch.get("global_attention_kv_cache"),
+                    position=position,
+                    apply_grammar_mask=bool(apply_grammar_mask),
+                )
+            decode_state = output.decode_state
+            last_incremental_logits = output.logits_final[0].detach()
+        decoded_prefix_tokens = prefix_tokens
+        if last_incremental_logits is None:
+            raise RuntimeError("incremental mapper v2.1 decode did not produce logits")
+        return _apply_time_shift_length_penalty_v2_1(
+            last_incremental_logits,
+            time_shift_penalty=time_shift_penalty,
+        )
 
     return logits_fn
 

@@ -19,13 +19,27 @@ from pulsefield_model.models.mapper.shared.model import (
     _validate_carry_state_consistency,
     _validate_open_start_age_consistency,
 )
+from pulsefield_model.models.mapper.shared.incremental import (
+    IncrementalDecodeState,
+    as_decode_batch_vector,
+    as_decode_step_lane_tensor,
+    as_decode_step_tensor,
+    decode_position_index,
+    normalize_attention_kv_cache,
+    validate_incremental_decode_state,
+)
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2.model import MapperV2Config, MapperV2ForwardOutput, MapperV2Model
+from pulsefield_model.models.mapper.v2.model import (
+    GLOBAL_POSITION_FEATURES,
+    MapperV2Config,
+    MapperV2ForwardOutput,
+    MapperV2Model,
+)
 
 from .adapters import LNCloseAdapter, StatePriorAdapter
 from .grammar import build_grammar_mask
 from .tokenizer import MAPPER_DENSITY_FRAME_MS, MAPPER_DENSITY_FRAMES, MAPPER_WRITE_MS
-from .vocab import MapperV21Vocab
+from .vocab import KEY_COUNT, MapperV21Vocab
 
 
 @dataclass(frozen=True)
@@ -42,6 +56,28 @@ class MapperV21Config(MapperV2Config):
 
 @dataclass(frozen=True)
 class MapperV21ForwardOutput(MapperV2ForwardOutput):
+    state_emitted_lane_mask: torch.Tensor | None = None
+    state_last_lane_index: torch.Tensor | None = None
+
+
+MapperV21IncrementalDecodeState = IncrementalDecodeState
+
+
+@dataclass(frozen=True)
+class MapperV21IncrementalDecodeOutput:
+    decode_state: MapperV21IncrementalDecodeState
+    decoder_input_token: torch.Tensor
+    position: torch.Tensor
+    base_logits: torch.Tensor
+    logits_final: torch.Tensor
+    decoder_hidden: torch.Tensor
+    state_prior_bias: torch.Tensor
+    state_prior_lane_action_bias: torch.Tensor
+    ln_close_logits: torch.Tensor
+    ln_close_event_bias: torch.Tensor
+    ln_close_time_shift_bias: torch.Tensor
+    grammar_mask: torch.Tensor
+    global_attention_gates: torch.Tensor | None = None
     state_emitted_lane_mask: torch.Tensor | None = None
     state_last_lane_index: torch.Tensor | None = None
 
@@ -357,9 +393,313 @@ class MapperV21Model(MapperV2Model):
             state_last_lane_index=last_lane_index,
         )
 
-    @property
-    def incremental_decode_next_token(self) -> Any:
-        raise AttributeError("MapperV21Model does not expose incremental decoding")
+    @torch.no_grad()
+    def incremental_decode_next_token(
+        self,
+        *,
+        decode_state: MapperV21IncrementalDecodeState,
+        decoder_input_token: torch.Tensor,
+        current_ms: torch.Tensor,
+        open_mask: torch.Tensor,
+        open_start_ms: torch.Tensor,
+        open_age_ms: torch.Tensor,
+        emitted_lane_mask: torch.Tensor,
+        last_lane_index: torch.Tensor,
+        write_start_ms: torch.Tensor,
+        write_end_ms: torch.Tensor,
+        chart_end_ms: torch.Tensor,
+        is_full_chart_start: torch.Tensor,
+        is_full_chart_end: torch.Tensor,
+        ln_carry_in: Mapping[str, Any],
+        ln_carry_out: Mapping[str, Any],
+        density_teacher_8s: torch.Tensor,
+        control_memory_8s: torch.Tensor | None = None,
+        projected_control_memory_8s: torch.Tensor | None = None,
+        control_attention_kv_cache: tuple[tuple[torch.Tensor, torch.Tensor], ...] | None = None,
+        difficulty: torch.Tensor | None = None,
+        normalized_difficulty: torch.Tensor | None = None,
+        global_memory: torch.Tensor | None = None,
+        global_memory_padding_mask: torch.Tensor | None = None,
+        global_position_features: torch.Tensor | None = None,
+        global_attention_kv_cache: tuple[tuple[torch.Tensor, torch.Tensor], ...] | None = None,
+        position: int | torch.Tensor | None = None,
+        apply_grammar_mask: bool = True,
+    ) -> MapperV21IncrementalDecodeOutput:
+        if self.training:
+            raise ValueError("incremental decode is inference-only; call eval() before decoding")
+        if control_memory_8s is not None and projected_control_memory_8s is not None:
+            raise ValueError("projected_control_memory_8s cannot be supplied with control_memory_8s")
+
+        token = decoder_input_token.to(dtype=torch.long)
+        if token.ndim == 1:
+            token = token.unsqueeze(1)
+        if token.ndim != 2 or int(token.shape[1]) != 1:
+            raise ValueError(f"decoder_input_token must have shape [B] or [B,1], got {tuple(token.shape)}")
+        batch_size = int(token.shape[0])
+        device = token.device
+        cache_steps = validate_incremental_decode_state(
+            decode_state,
+            batch_size=batch_size,
+            layers=self.config.layers,
+            heads=self.config.heads,
+            head_dim=self.config.d_model // self.config.heads,
+        )
+        position_index = decode_position_index(position, default=cache_steps)
+        if cache_steps != position_index:
+            raise ValueError(f"decode cache length {cache_steps} does not match next position {position_index}")
+        if position_index >= self.config.max_seq_len:
+            raise ValueError(f"decode position {position_index} exceeds max_seq_len={self.config.max_seq_len}")
+
+        current_ms_step = as_decode_step_tensor(
+            current_ms,
+            name="current_ms",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.long,
+        )
+        open_mask_step = as_decode_step_lane_tensor(
+            open_mask,
+            name="open_mask",
+            batch_size=batch_size,
+            lanes=KEY_COUNT,
+            device=device,
+            dtype=torch.bool,
+        )
+        open_start_ms_step = as_decode_step_lane_tensor(
+            open_start_ms,
+            name="open_start_ms",
+            batch_size=batch_size,
+            lanes=KEY_COUNT,
+            device=device,
+            dtype=torch.long,
+        )
+        open_age_ms_step = as_decode_step_lane_tensor(
+            open_age_ms,
+            name="open_age_ms",
+            batch_size=batch_size,
+            lanes=KEY_COUNT,
+            device=device,
+            dtype=torch.long,
+        )
+        emitted_lane_mask_step = as_decode_step_lane_tensor(
+            emitted_lane_mask,
+            name="emitted_lane_mask",
+            batch_size=batch_size,
+            lanes=KEY_COUNT,
+            device=device,
+            dtype=torch.bool,
+        )
+        last_lane_index_step = as_decode_step_tensor(
+            last_lane_index,
+            name="last_lane_index",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.long,
+        )
+        write_start_ms_step = as_decode_batch_vector(
+            write_start_ms,
+            name="write_start_ms",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.long,
+        )
+        write_end_ms_step = as_decode_batch_vector(
+            write_end_ms,
+            name="write_end_ms",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.long,
+        )
+        chart_end_ms_step = as_decode_batch_vector(
+            chart_end_ms,
+            name="chart_end_ms",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.long,
+        )
+        is_full_chart_start_step = as_decode_batch_vector(
+            is_full_chart_start,
+            name="is_full_chart_start",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.bool,
+        )
+        is_full_chart_end_step = as_decode_batch_vector(
+            is_full_chart_end,
+            name="is_full_chart_end",
+            batch_size=batch_size,
+            device=device,
+            dtype=torch.bool,
+        )
+        target_end_ms_step = torch.where(is_full_chart_end_step, chart_end_ms_step, write_end_ms_step)
+
+        difficulty_source = {}
+        if normalized_difficulty is not None:
+            difficulty_source["normalized_difficulty"] = normalized_difficulty
+        elif difficulty is not None:
+            difficulty_source["difficulty"] = difficulty
+        difficulty_step = _difficulty_tensor(difficulty_source, device=device, dim=self.config.difficulty_dim)
+        if int(difficulty_step.shape[0]) != batch_size:
+            raise ValueError(f"difficulty batch must be {batch_size}, got {difficulty_step.shape[0]}")
+
+        density_teacher = density_teacher_8s.detach().to(device=device, dtype=torch.float32)
+        if tuple(density_teacher.shape) != (batch_size, MAPPER_DENSITY_FRAMES, 1):
+            raise ValueError(f"density_teacher_8s must have shape [B,{MAPPER_DENSITY_FRAMES},1]")
+        if projected_control_memory_8s is None:
+            if control_memory_8s is None:
+                raise ValueError("control_memory_8s or projected_control_memory_8s is required")
+            raw_control_memory = control_memory_8s.detach().to(device=device, dtype=torch.float32)
+            if raw_control_memory.ndim != 3 or int(raw_control_memory.shape[1]) != MAPPER_DENSITY_FRAMES:
+                raise ValueError(f"control_memory_8s must have shape [B,{MAPPER_DENSITY_FRAMES},D]")
+            if tuple(raw_control_memory.shape[:1]) != (batch_size,):
+                raise ValueError(f"control_memory_8s batch must be {batch_size}, got {raw_control_memory.shape[0]}")
+            if int(raw_control_memory.shape[-1]) != self.config.control_dim:
+                raise ValueError(
+                    f"control_memory_8s last dim must match config.control_dim={self.config.control_dim}, "
+                    f"got {raw_control_memory.shape[-1]}"
+                )
+            control_memory = self.control_projection(raw_control_memory)
+        else:
+            control_memory = projected_control_memory_8s.detach().to(device=device, dtype=torch.float32)
+            if control_memory.ndim != 3 or int(control_memory.shape[1]) != MAPPER_DENSITY_FRAMES:
+                raise ValueError(f"projected_control_memory_8s must have shape [B,{MAPPER_DENSITY_FRAMES},D]")
+            if tuple(control_memory.shape[:1]) != (batch_size,):
+                raise ValueError(f"projected_control_memory_8s batch must be {batch_size}, got {control_memory.shape[0]}")
+            if int(control_memory.shape[-1]) != self.config.d_model:
+                raise ValueError(
+                    f"projected_control_memory_8s last dim must match config.d_model={self.config.d_model}, "
+                    f"got {control_memory.shape[-1]}"
+                )
+
+        control_attention_kv = normalize_attention_kv_cache(
+            control_attention_kv_cache,
+            device=device,
+            batch_size=batch_size,
+            layers=self.config.layers,
+            heads=self.config.heads,
+            d_model=self.config.d_model,
+            source_steps=int(control_memory.shape[1]),
+            name="control_attention_kv_cache",
+        )
+
+        if global_position_features is not None:
+            if not isinstance(global_position_features, torch.Tensor):
+                raise ValueError("global_position_features must be a torch.Tensor")
+            global_position_features = global_position_features.detach().to(device=device, dtype=torch.float32)
+            if tuple(global_position_features.shape) != (batch_size, GLOBAL_POSITION_FEATURES):
+                raise ValueError(
+                    f"global_position_features must have shape [{batch_size},{GLOBAL_POSITION_FEATURES}], "
+                    f"got {tuple(global_position_features.shape)}"
+                )
+
+        global_attention_kv = None
+        if global_memory is not None:
+            if not self.config.use_global_context:
+                raise ValueError("global_memory cannot be supplied when global context is disabled")
+            global_memory = global_memory.detach().to(device=device, dtype=torch.float32)
+            if global_memory.ndim != 3 or tuple(global_memory.shape[:1]) != (batch_size,):
+                raise ValueError(f"global_memory must have shape [B,G,D], got {tuple(global_memory.shape)}")
+            if int(global_memory.shape[-1]) != self.config.d_model:
+                raise ValueError(f"global_memory last dim must be {self.config.d_model}, got {global_memory.shape[-1]}")
+            if global_memory_padding_mask is None:
+                raise ValueError("global_memory_padding_mask is required when global_memory is supplied")
+            global_memory_padding_mask = global_memory_padding_mask.detach().to(device=device, dtype=torch.bool)
+            if tuple(global_memory_padding_mask.shape) != tuple(global_memory.shape[:2]):
+                raise ValueError("global_memory_padding_mask must have shape [B,G]")
+            global_attention_kv = normalize_attention_kv_cache(
+                global_attention_kv_cache,
+                device=device,
+                batch_size=batch_size,
+                layers=self.config.layers,
+                heads=self.config.heads,
+                d_model=self.config.d_model,
+                source_steps=int(global_memory.shape[1]),
+                name="global_attention_kv_cache",
+            )
+        elif global_attention_kv_cache is not None:
+            raise ValueError("global_memory is required when global_attention_kv_cache is supplied")
+
+        hidden, next_layer_caches = self._incremental_decode_hidden_next_token(
+            token=token,
+            current_ms=current_ms_step,
+            write_start_ms=write_start_ms_step,
+            write_end_ms=target_end_ms_step,
+            difficulty=difficulty_step,
+            control_memory=control_memory,
+            decode_state=decode_state,
+            position_index=position_index,
+            global_memory=global_memory,
+            global_memory_padding_mask=global_memory_padding_mask,
+            global_position_features=global_position_features,
+            global_attention_kv_cache=global_attention_kv,
+            control_attention_kv_cache=control_attention_kv,
+        )
+        decoder_hidden = self.output_norm(hidden)
+        base_logits = self.output_head(decoder_hidden)
+        remaining_ms = (target_end_ms_step.reshape(-1, 1) - current_ms_step).clamp_min(0)
+        state_prior = self.state_prior_adapter(
+            open_mask=open_mask_step,
+            open_start_ms=open_start_ms_step,
+            open_age_ms=open_age_ms_step,
+            remaining_ms=remaining_ms,
+            write_start_ms=write_start_ms_step,
+        )
+        ln_close = self.ln_close_adapter(
+            decoder_hidden=decoder_hidden,
+            control_memory_8s=control_memory,
+            density_teacher_8s=density_teacher,
+            current_ms=current_ms_step,
+            write_start_ms=write_start_ms_step,
+            open_mask=open_mask_step,
+            open_start_ms=open_start_ms_step,
+            open_age_ms=open_age_ms_step,
+            remaining_ms=remaining_ms,
+        )
+        positions = torch.full((batch_size, 1), position_index, dtype=torch.long, device=device)
+        if bool(apply_grammar_mask):
+            grammar_mask = build_grammar_mask(
+                current_ms=current_ms_step,
+                open_mask=open_mask_step,
+                open_start_ms=open_start_ms_step,
+                open_age_ms=open_age_ms_step,
+                emitted_lane_mask=emitted_lane_mask_step,
+                last_lane_index=last_lane_index_step,
+                write_start_ms=write_start_ms_step,
+                write_end_ms=write_end_ms_step,
+                chart_end_ms=chart_end_ms_step,
+                ln_carry_in=ln_carry_in,
+                ln_carry_out=ln_carry_out,
+                is_full_chart_start=is_full_chart_start_step,
+                is_full_chart_end=is_full_chart_end_step,
+                vocab=self.vocab,
+                positions=positions,
+            ).to(dtype=base_logits.dtype)
+        else:
+            grammar_mask = torch.zeros_like(base_logits)
+        logits_final = (
+            base_logits
+            + state_prior.vocab_bias
+            + ln_close.event_bias
+            + ln_close.time_shift_bias
+            + grammar_mask
+        )
+        return MapperV21IncrementalDecodeOutput(
+            decode_state=MapperV21IncrementalDecodeState(self_attention_kv_cache=tuple(next_layer_caches)),
+            decoder_input_token=token[:, 0],
+            position=positions[:, 0],
+            base_logits=base_logits[:, 0],
+            logits_final=logits_final[:, 0],
+            decoder_hidden=decoder_hidden[:, 0],
+            state_prior_bias=state_prior.vocab_bias[:, 0],
+            state_prior_lane_action_bias=state_prior.lane_action_bias[:, 0],
+            ln_close_logits=ln_close.close_logits[:, 0],
+            ln_close_event_bias=ln_close.event_bias[:, 0],
+            ln_close_time_shift_bias=ln_close.time_shift_bias[:, 0],
+            grammar_mask=grammar_mask[:, 0],
+            global_attention_gates=self._global_attention_gates(device=device, enabled=global_memory is not None),
+            state_emitted_lane_mask=emitted_lane_mask_step[:, 0],
+            state_last_lane_index=last_lane_index_step[:, 0],
+        )
 
 
 def _batch_bool_flag(batch: Mapping[str, Any], *, key: str, default: bool) -> bool:
@@ -493,30 +833,18 @@ def _precomputed_global_attention_kv_cache(
     global_memory: torch.Tensor | None,
     config: ControlDemoGlobalEncoderConfig | MapperV2Config,
 ) -> tuple[tuple[torch.Tensor, torch.Tensor], ...] | None:
-    raw = batch.get("global_attention_kv_cache")
-    if raw is None:
+    raw_cache = batch.get("global_attention_kv_cache")
+    if raw_cache is None:
         return None
     if global_memory is None:
-        raise ValueError("global_attention_kv_cache requires global_memory")
-    if not isinstance(raw, tuple) or len(raw) != int(config.layers):
-        raise ValueError("global_attention_kv_cache must contain one key/value tuple per decoder layer")
-    expected = (
-        int(batch_size),
-        int(config.heads),
-        int(global_memory.shape[1]),
-        int(config.d_model) // int(config.heads),
+        raise ValueError("global_memory is required when global_attention_kv_cache is supplied")
+    return normalize_attention_kv_cache(
+        raw_cache,
+        device=device,
+        batch_size=batch_size,
+        layers=config.layers,
+        heads=config.heads,
+        d_model=config.d_model,
+        source_steps=int(global_memory.shape[1]),
+        name="global_attention_kv_cache",
     )
-    normalized: list[tuple[torch.Tensor, torch.Tensor]] = []
-    for layer_index, item in enumerate(raw):
-        if not isinstance(item, tuple) or len(item) != 2:
-            raise ValueError(f"global_attention_kv_cache[{layer_index}] must be a key/value tuple")
-        key, value = item
-        if not isinstance(key, torch.Tensor) or not isinstance(value, torch.Tensor):
-            raise ValueError(f"global_attention_kv_cache[{layer_index}] entries must be tensors")
-        if tuple(key.shape) != expected or tuple(value.shape) != expected:
-            raise ValueError(
-                f"global_attention_kv_cache[{layer_index}] tensors must have shape {expected}, "
-                f"got key={tuple(key.shape)} value={tuple(value.shape)}"
-            )
-        normalized.append((key.detach().to(device=device), value.detach().to(device=device)))
-    return tuple(normalized)

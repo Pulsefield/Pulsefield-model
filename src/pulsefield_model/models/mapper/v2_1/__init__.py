@@ -12,6 +12,8 @@ _EXPORTS = {
     "MapperV21Vocab": "vocab",
     "MapperV21Config": "model",
     "MapperV21ForwardOutput": "model",
+    "MapperV21IncrementalDecodeState": "model",
+    "MapperV21IncrementalDecodeOutput": "model",
     "MapperV21Model": "model",
     "MapperV21ModelOutput": "model",
     "MapperV21LossConfig": "loss",
