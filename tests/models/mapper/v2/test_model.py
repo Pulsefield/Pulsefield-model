@@ -1,6 +1,8 @@
 import unittest
 
 import importlib.util
+from types import SimpleNamespace
+from unittest.mock import patch
 
 if importlib.util.find_spec("torch") is None:
     raise unittest.SkipTest("requires torch")
@@ -238,6 +240,68 @@ class MapperV2ModelTests(unittest.TestCase):
 
         self.assertTrue(torch.isfinite(loss_output.total_loss))
         self.assertGreater(loss_output.metrics["target/token_count"], 0.0)
+
+    def test_phase_b_loss_delegates_to_canonical_shared_loss(self) -> None:
+        torch.manual_seed(15)
+        vocab = MapperTupleVocab()
+        model = MapperV2Model(_small_config(vocab), vocab=vocab)
+        batch = _batch(vocab)
+        output = model(**batch)
+        calls = []
+
+        class FakeCanonicalLoss:
+            def __init__(self, config, *, vocab):
+                self.config = config
+                self.vocab = vocab
+                calls.append(self)
+
+            def __call__(self, canonical_output, canonical_batch):
+                self.canonical_output = canonical_output
+                self.canonical_batch = canonical_batch
+                base = canonical_output.logits_final.new_zeros(())
+                return SimpleNamespace(
+                    token_loss=base + 2.0,
+                    ln_close_loss=base + 3.0,
+                    adapter_reg_loss=base + 5.0,
+                    density_loss=base + 7.0,
+                )
+
+        loss_config = MapperTuplePhaseBLossConfig(
+            lambda_ln_close=0.11,
+            lambda_adapter_reg=0.13,
+            lambda_density=0.17,
+        )
+        with patch("pulsefield_model.training.mapper_common.MapperTupleModelLoss", FakeCanonicalLoss):
+            loss_output = compute_phase_b_loss(
+                output,
+                target_fragment_tokens=batch["target_fragment_tokens"],
+                target_fragment_mask=batch["target_fragment_mask"],
+                target_fragment_states=batch["target_fragment_states"],
+                close_labels=batch["close_labels"],
+                close_label_mask=batch["close_label_mask"],
+                density_target_8s=batch["density_target_8s"],
+                density_confidence_8s=batch["density_confidence_8s"],
+                write_start_ms=batch["write_start_ms"],
+                vocab=vocab,
+                loss_config=loss_config,
+            )
+
+        self.assertEqual(len(calls), 1)
+        self.assertIs(calls[0].vocab, vocab)
+        self.assertEqual(calls[0].config.lambda_density, 1.0)
+        self.assertEqual(calls[0].config.lambda_ln_close, 1.0)
+        self.assertEqual(calls[0].config.lambda_adapter_reg, 1.0)
+        self.assertEqual(calls[0].config.ln_close_focal_gamma, 0.0)
+        self.assertIs(calls[0].canonical_output.logits_final, output.logits_final)
+        self.assertIs(calls[0].canonical_batch["target_fragment_tokens"], batch["target_fragment_tokens"])
+        expected_total = 2.0 + 0.11 * 3.0 + 0.13 * 5.0 + 0.17 * 7.0
+        self.assertAlmostEqual(float(loss_output.total_loss.detach().cpu()), expected_total, places=6)
+        self.assertEqual(loss_output.metrics["loss/token"], 2.0)
+        self.assertEqual(loss_output.metrics["loss/ln_close"], 3.0)
+        self.assertEqual(loss_output.metrics["loss/adapter_reg"], 5.0)
+        self.assertEqual(loss_output.metrics["loss/density"], 7.0)
+        self.assertIn("target/token_count", loss_output.metrics)
+        self.assertIn("density/frame_count", loss_output.metrics)
 
     def test_masked_full_song_tail_does_not_affect_output(self) -> None:
         torch.manual_seed(17)

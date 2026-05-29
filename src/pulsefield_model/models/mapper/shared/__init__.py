@@ -18,6 +18,7 @@ _EXPORTS = {
     "MapperTupleLossConfig": "loss",
     "MapperTupleLossOutput": "loss",
     "MapperTupleModelLoss": "loss",
+    "MapperLossTokenSpec": "loss",
     "LNCarryState": "generation",
     "MapperGeneratedWindow": "generation",
     "RecoveryCEReport": "generation",

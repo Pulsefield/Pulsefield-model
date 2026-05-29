@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from pulsefield_model.models.control import ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
+from pulsefield_model.training import common as training_common
 from pulsefield_model.training import mapper_v2_1 as mapper_v2_1_training
 from pulsefield_model.training.common import ResumableRandomBatchSampler, _infinite_loader
 from pulsefield_model.training.mapper_v2_1 import load_run_config
@@ -23,6 +24,12 @@ _STALE_ROOT = "train" + "/"
 
 
 class MapperV21PhaseBTrainingTests(unittest.TestCase):
+    def test_shared_training_helpers_stay_in_common(self) -> None:
+        self.assertFalse(hasattr(mapper_v2_1_training, "CHECKPOINT_SCHEMA_VERSION"))
+        self.assertFalse(hasattr(mapper_v2_1_training, "select_torch_device"))
+        self.assertEqual(training_common.CHECKPOINT_SCHEMA_VERSION, 1)
+        self.assertEqual(training_common.select_torch_device("cpu"), torch.device("cpu"))
+
     def test_phase_b_sparse_global_config_loads_v2_1_fields(self) -> None:
         config = load_run_config(
             "configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml",

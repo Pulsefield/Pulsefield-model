@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from .batch import MapperTokenContract
 from .tokenizer import MAPPER_DENSITY_FRAME_MS, MAPPER_DENSITY_FRAMES
 from .vocab import MapperTupleVocab
 
@@ -35,13 +36,70 @@ class MapperTupleLossOutput:
     metric_denominators: dict[str, float] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class MapperLossTokenSpec:
+    contract: MapperTokenContract
+    onset_token_ids: tuple[int, ...]
+    onset_weights: tuple[float, ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.contract, MapperTokenContract):
+            raise ValueError("contract must be a MapperTokenContract")
+        if len(self.onset_token_ids) != len(self.onset_weights):
+            raise ValueError("onset_token_ids and onset_weights must have the same length")
+        vocab_size = self.vocab_size
+        for token_id in self.onset_token_ids:
+            if not 0 <= int(token_id) < vocab_size:
+                raise ValueError(f"onset token id {token_id} outside vocab size {vocab_size}")
+
+    @classmethod
+    def from_contract(cls, contract: MapperTokenContract) -> "MapperLossTokenSpec":
+        onset_token_ids = _density_onset_token_ids(contract)
+        onset_weights = tuple(_density_onset_weight(contract, token_id) for token_id in onset_token_ids)
+        return cls(
+            contract=contract,
+            onset_token_ids=onset_token_ids,
+            onset_weights=onset_weights,
+        )
+
+    @classmethod
+    def from_vocab(cls, vocab: Any, *, name: str = "mapper") -> "MapperLossTokenSpec":
+        return cls.from_contract(MapperTokenContract(name=name, vocab=vocab))
+
+    @property
+    def pad_id(self) -> int:
+        return self.contract.pad_id
+
+    @property
+    def vocab_size(self) -> int:
+        return self.contract.vocab_size
+
+
 class MapperTupleModelLoss(nn.Module):
-    def __init__(self, config: MapperTupleLossConfig | None = None, *, vocab: MapperTupleVocab | None = None) -> None:
+    def __init__(
+        self,
+        config: MapperTupleLossConfig | None = None,
+        *,
+        vocab: Any | None = None,
+        token_contract: MapperTokenContract | None = None,
+        token_spec: MapperLossTokenSpec | None = None,
+    ) -> None:
         super().__init__()
         config = MapperTupleLossConfig() if config is None else config
         _validate_config(config)
         self.config = config
-        self.vocab = MapperTupleVocab() if vocab is None else vocab
+        if token_spec is not None and token_contract is not None:
+            raise ValueError("only one of token_spec or token_contract may be supplied")
+        if token_spec is None:
+            resolved_vocab = MapperTupleVocab() if vocab is None else vocab
+            token_contract = (
+                MapperTokenContract(name="tuple", vocab=resolved_vocab)
+                if token_contract is None
+                else token_contract
+            )
+            token_spec = MapperLossTokenSpec.from_contract(token_contract)
+        self.token_spec = token_spec
+        self.vocab = token_spec.contract.vocab
 
     def forward(self, output: Any, batch: Mapping[str, torch.Tensor]) -> MapperTupleLossOutput:
         logits_final = _require_tensor_attr(output, "logits_final")
@@ -56,11 +114,11 @@ class MapperTupleModelLoss(nn.Module):
             )
 
         target = target.to(device=logits_final.device, dtype=torch.long)
-        target_mask = _target_loss_mask(batch, target=target, pad_id=self.vocab.pad_id)
+        target_mask = _target_loss_mask(batch, target=target, pad_id=self.token_spec.pad_id)
         token_loss = token_cross_entropy(
             logits_final,
             target,
-            pad_id=self.vocab.pad_id,
+            pad_id=self.token_spec.pad_id,
             target_mask=target_mask,
         )
 
@@ -119,7 +177,7 @@ class MapperTupleModelLoss(nn.Module):
                 write_start_ms=_require_batch_tensor(batch, "write_start_ms").to(device=logits_final.device),
                 target=density_target.to(device=logits_final.device),
                 confidence=density_confidence.to(device=logits_final.device),
-                vocab=self.vocab,
+                token_spec=self.token_spec,
                 target_mask=target_mask,
                 calibration_scale=self.config.density_calibration_scale,
                 calibration_bias=self.config.density_calibration_bias,
@@ -315,7 +373,8 @@ def adapter_bias_regularization(*biases: torch.Tensor | None, mask: torch.Tensor
             mask_f = mask.to(device=bias.device, dtype=bias.dtype)
             while mask_f.ndim < bias.ndim:
                 mask_f = mask_f.unsqueeze(-1)
-            denom = mask_f.sum() * float(bias.shape[-1])
+            trailing_dims = math.prod(int(dim) for dim in bias.shape[2:]) if bias.ndim > 2 else 1
+            denom = mask_f.sum() * float(trailing_dims)
             total = total + (bias.square() * mask_f).sum() / denom.clamp_min(torch.finfo(bias.dtype).eps)
     return total
 
@@ -352,7 +411,8 @@ def density_auxiliary_loss(
     write_start_ms: torch.Tensor,
     target: torch.Tensor,
     confidence: torch.Tensor,
-    vocab: MapperTupleVocab,
+    vocab: Any | None = None,
+    token_spec: MapperLossTokenSpec | None = None,
     target_mask: torch.Tensor | None = None,
     calibration_scale: float = 1.0,
     calibration_bias: float = 0.0,
@@ -362,6 +422,7 @@ def density_auxiliary_loss(
         current_ms=current_ms,
         write_start_ms=write_start_ms,
         vocab=vocab,
+        token_spec=token_spec,
         target_mask=target_mask,
         calibration_scale=calibration_scale,
         calibration_bias=calibration_bias,
@@ -383,21 +444,23 @@ def expected_density_from_logits(
     logits_final: torch.Tensor,
     current_ms: torch.Tensor,
     write_start_ms: torch.Tensor,
-    vocab: MapperTupleVocab,
+    vocab: Any | None = None,
+    token_spec: MapperLossTokenSpec | None = None,
     target_mask: torch.Tensor | None = None,
     calibration_scale: float = 1.0,
     calibration_bias: float = 0.0,
     frame_count: int = MAPPER_DENSITY_FRAMES,
     frame_ms: int = MAPPER_DENSITY_FRAME_MS,
 ) -> torch.Tensor:
+    token_spec = _resolve_loss_token_spec(vocab=vocab, token_spec=token_spec)
     if logits_final.ndim != 3:
         raise ValueError(f"logits_final must have shape [B,T,V], got {tuple(logits_final.shape)}")
     if tuple(current_ms.shape) != tuple(logits_final.shape[:2]):
         raise ValueError(f"current_ms must have shape {tuple(logits_final.shape[:2])}, got {tuple(current_ms.shape)}")
     if write_start_ms.ndim != 1 or int(write_start_ms.shape[0]) != int(logits_final.shape[0]):
         raise ValueError(f"write_start_ms must have shape [{logits_final.shape[0]}]")
-    if int(logits_final.shape[-1]) != vocab.size:
-        raise ValueError(f"logits_final vocab dim must be {vocab.size}, got {logits_final.shape[-1]}")
+    if int(logits_final.shape[-1]) != token_spec.vocab_size:
+        raise ValueError(f"logits_final vocab dim must be {token_spec.vocab_size}, got {logits_final.shape[-1]}")
     if target_mask is None:
         valid = torch.ones_like(current_ms, dtype=torch.bool)
     else:
@@ -407,11 +470,11 @@ def expected_density_from_logits(
 
     density_logits = logits_final.masked_fill(~valid.unsqueeze(-1), 0.0)
     probs = torch.softmax(density_logits, dim=-1)
-    onset_weights = logits_final.new_zeros((vocab.size,))
-    if vocab.event_token_ids:
-        event_ids = torch.tensor(vocab.event_token_ids, dtype=torch.long, device=logits_final.device)
-        weights = [float(vocab.event_onset_weight(token_id)) for token_id in vocab.event_token_ids]
-        onset_weights[event_ids] = torch.tensor(weights, dtype=logits_final.dtype, device=logits_final.device)
+    onset_weights = logits_final.new_zeros((token_spec.vocab_size,))
+    if token_spec.onset_token_ids:
+        onset_ids = torch.tensor(token_spec.onset_token_ids, dtype=torch.long, device=logits_final.device)
+        weights = torch.tensor(token_spec.onset_weights, dtype=logits_final.dtype, device=logits_final.device)
+        onset_weights[onset_ids] = weights
     expected_onset_mass = (probs * onset_weights.reshape(1, 1, -1)).sum(dim=-1)
     expected_onset_mass = expected_onset_mass * valid.to(dtype=expected_onset_mass.dtype)
 
@@ -497,6 +560,55 @@ def _require_fragment_state_tensor(batch: Mapping[str, Any], name: str) -> torch
 
 def _density_loss_weight(*, confidence: torch.Tensor) -> torch.Tensor:
     return confidence.detach().to(dtype=torch.float32).clamp_min(0.0).sum()
+
+
+def _resolve_loss_token_spec(
+    *,
+    vocab: Any | None,
+    token_spec: MapperLossTokenSpec | None,
+) -> MapperLossTokenSpec:
+    if token_spec is not None:
+        if vocab is not None and vocab is not token_spec.contract.vocab:
+            raise ValueError("vocab and token_spec.contract.vocab must refer to the same object")
+        return token_spec
+    if vocab is None:
+        raise ValueError("vocab or token_spec is required")
+    return MapperLossTokenSpec.from_vocab(vocab)
+
+
+def _density_onset_token_ids(contract: MapperTokenContract) -> tuple[int, ...]:
+    vocab = contract.vocab
+    decoder_names = (
+        ("decode_lane_action", "decode_event")
+        if contract.requires_sparse_lane_state
+        else ("decode_event", "decode_lane_action")
+    )
+    for decoder_name in decoder_names:
+        token_ids = _token_ids_decodable_by(vocab, decoder_name, vocab_size=contract.vocab_size)
+        if token_ids:
+            return token_ids
+    return ()
+
+
+def _token_ids_decodable_by(vocab: Any, decoder_name: str, *, vocab_size: int) -> tuple[int, ...]:
+    decoder = getattr(vocab, decoder_name, None)
+    if not callable(decoder):
+        return ()
+    token_ids: list[int] = []
+    for token_id in range(int(vocab_size)):
+        try:
+            decoder(token_id)
+        except ValueError:
+            continue
+        token_ids.append(token_id)
+    return tuple(token_ids)
+
+
+def _density_onset_weight(contract: MapperTokenContract, token_id: int) -> float:
+    weight = getattr(contract.vocab, "event_onset_weight", None)
+    if not callable(weight):
+        raise ValueError("MapperTokenContract.vocab must define event_onset_weight for density loss")
+    return float(weight(int(token_id)))
 
 
 def _record_scalar(metrics: dict[str, float], key: str, value: torch.Tensor) -> None:

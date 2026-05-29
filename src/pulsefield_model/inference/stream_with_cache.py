@@ -36,6 +36,11 @@ from pulsefield_model.models.mapper.shared.generation import (
     grammar_constrained_window_generation,
     transition_carry_state,
 )
+from pulsefield_model.models.mapper.shared.generation_engine import (
+    IncrementalPrefixDecoder,
+    apply_time_shift_penalty,
+    time_shift_penalty_tensors,
+)
 from pulsefield_model.models.mapper.shared.replay import LNCarryState, empty_ln_carry_state, ln_carry_state_tensors
 from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_WRITE_MS
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
@@ -366,9 +371,15 @@ def _mapper_v2_logits_fn(
         and hasattr(model, "create_empty_decode_state")
         and hasattr(model, "incremental_decode_next_token")
     )
-    decode_state: Any | None = None
-    decoded_prefix_tokens: tuple[int, ...] = ()
-    last_incremental_logits: torch.Tensor | None = None
+    prefix_decoder = None
+    if incremental_decode:
+        prefix_decoder = IncrementalPrefixDecoder(
+            create_empty_decode_state=model.create_empty_decode_state,
+            batch_size=1,
+            device=device,
+            empty_prefix_error="mapper decoder prefix cannot be empty",
+            no_logits_error="incremental mapper decode did not produce logits",
+        )
     write_start_ms_tensor = torch.tensor([ln_carry_in.current_ms], dtype=torch.long, device=device)
     write_end_ms_tensor: torch.Tensor | None = None
     full_start_tensor = torch.tensor([bool(is_full_chart_start)], dtype=torch.bool, device=device)
@@ -379,7 +390,7 @@ def _mapper_v2_logits_fn(
     control_attention_kv_cache = control_batch.get("control_attention_kv_cache")
 
     def logits_fn(step: MapperGenerationStep) -> torch.Tensor:
-        nonlocal decode_state, decoded_prefix_tokens, last_incremental_logits, write_end_ms_tensor
+        nonlocal write_end_ms_tensor
 
         decoder_input_tokens = step.decoder_input_tokens.to(device=device, dtype=torch.long).unsqueeze(0)
         states = _target_fragment_state_batch(
@@ -393,20 +404,12 @@ def _mapper_v2_logits_fn(
         )
         write_end_ms_tensor = torch.tensor([step.write_end_ms], dtype=torch.long, device=device)
         if incremental_decode:
+            assert prefix_decoder is not None
             prefix_tokens = tuple(int(token) for token in step.decoder_input_tokens.reshape(-1).tolist())
-            if not prefix_tokens:
-                raise RuntimeError("mapper decoder prefix cannot be empty")
-            if decode_state is None or prefix_tokens[: len(decoded_prefix_tokens)] != decoded_prefix_tokens:
-                decode_state = model.create_empty_decode_state(batch_size=1, device=device)
-                decoded_prefix_tokens = ()
-                last_incremental_logits = None
-            if len(prefix_tokens) < len(decoded_prefix_tokens):
-                decode_state = model.create_empty_decode_state(batch_size=1, device=device)
-                decoded_prefix_tokens = ()
-                last_incremental_logits = None
-            for position in range(len(decoded_prefix_tokens), len(prefix_tokens)):
+
+            def decode_one(decode_state: Any, position: int) -> Any:
                 with torch.inference_mode():
-                    output = model.incremental_decode_next_token(
+                    return model.incremental_decode_next_token(
                         decode_state=decode_state,
                         decoder_input_token=decoder_input_tokens[:, position],
                         current_ms=states["current_ms"][:, position],
@@ -430,13 +433,9 @@ def _mapper_v2_logits_fn(
                         global_attention_kv_cache=control_batch.get("global_attention_kv_cache"),
                         position=position,
                     )
-                decode_state = output.decode_state
-                last_incremental_logits = output.logits_final[0].detach()
-            decoded_prefix_tokens = prefix_tokens
-            if last_incremental_logits is None:
-                raise RuntimeError("incremental mapper decode did not produce logits")
+            logits = prefix_decoder.decode(prefix_tokens, decode_one=decode_one)
             return _apply_time_shift_length_penalty(
-                last_incremental_logits,
+                logits,
                 time_shift_penalty=time_shift_penalty,
             )
 
@@ -473,19 +472,7 @@ def _time_shift_length_penalty_tensors(
     alpha: float,
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor] | None:
-    alpha = float(alpha)
-    if alpha < 0.0:
-        raise ValueError(f"time_shift_length_penalty_alpha must be non-negative, got {alpha}")
-    if alpha == 0.0:
-        return None
-
-    token_ids = [int(token_id) for token_id in vocab.time_shift_token_ids]
-    if not token_ids:
-        return None
-    return (
-        torch.tensor(token_ids, dtype=torch.long, device=device),
-        torch.full((len(token_ids),), alpha, dtype=torch.float32, device=device),
-    )
+    return time_shift_penalty_tensors(vocab, alpha=float(alpha), device=device)
 
 
 def _apply_time_shift_length_penalty(
@@ -493,12 +480,7 @@ def _apply_time_shift_length_penalty(
     *,
     time_shift_penalty: tuple[torch.Tensor, torch.Tensor] | None,
 ) -> torch.Tensor:
-    if time_shift_penalty is None:
-        return logits
-    token_ids, penalties = time_shift_penalty
-    adjusted = logits.clone()
-    adjusted[token_ids] -= penalties.to(dtype=adjusted.dtype)
-    return adjusted
+    return apply_time_shift_penalty(logits, time_shift_penalty=time_shift_penalty)
 
 
 def _target_fragment_state_batch(
