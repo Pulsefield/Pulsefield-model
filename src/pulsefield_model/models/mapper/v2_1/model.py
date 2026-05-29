@@ -7,15 +7,10 @@ from typing import Any
 import torch
 from torch import nn
 
+from pulsefield_model.models.mapper.shared.batch import MapperBatch, MapperTokenContract
 from pulsefield_model.models.control.demo_global import ControlDemoGlobalEncoderConfig
 from pulsefield_model.models.mapper.shared.model import (
     _difficulty_tensor,
-    _load_carry_state,
-    _reject_old_mapper_contract,
-    _require_state_mapping,
-    _require_state_tensor,
-    _require_tensor,
-    _sanitize_padded_fragment_states,
     _validate_carry_state_consistency,
     _validate_open_start_age_consistency,
 )
@@ -176,45 +171,38 @@ class MapperV21Model(MapperV2Model):
         if isinstance(batch.get("control_memory_padding_mask_8s"), torch.Tensor):
             raise ValueError("control_memory_padding_mask_8s is not supported in Phase B; supply full 8s control memory")
 
-        _reject_old_mapper_contract(batch)
-        decoder_input = _require_tensor(batch, "decoder_input_tokens", ndim=2).to(dtype=torch.long)
-        loss_target_tokens = _require_tensor(batch, "target_fragment_tokens", ndim=2).to(
-            device=decoder_input.device,
-            dtype=torch.long,
+        mapper_batch = MapperBatch.from_mapping(
+            batch,
+            contract=MapperTokenContract(
+                name="v2.1",
+                vocab=self.vocab,
+                requires_sparse_lane_state=True,
+                uses_chart_end_for_terminal_windows=True,
+            ),
         )
-        target_fragment_mask = _require_tensor(batch, "target_fragment_mask", ndim=2).to(
-            device=decoder_input.device,
-            dtype=torch.bool,
-        )
-        if int(decoder_input.shape[1]) < 1:
-            raise ValueError("decoder_input_tokens must contain at least one fragment position")
-        if tuple(loss_target_tokens.shape) != tuple(decoder_input.shape):
-            raise ValueError("target_fragment_tokens must match decoder_input_tokens shape")
-        if tuple(target_fragment_mask.shape) != tuple(decoder_input.shape):
-            raise ValueError("target_fragment_mask must match decoder_input_tokens shape")
-        input_padding_mask = ~target_fragment_mask
-
+        decoder_input = mapper_batch.decoder_input_tokens
+        loss_target_tokens = mapper_batch.target_fragment_tokens
+        target_fragment_mask = mapper_batch.target_fragment_mask
+        input_padding_mask = mapper_batch.input_padding_mask
         device = decoder_input.device
-        states = _require_state_mapping(batch, "target_fragment_states")
-        current_ms = _require_state_tensor(states, "current_ms", ndim=2).to(device=device, dtype=torch.long)
-        open_mask = _require_state_tensor(states, "open_mask", ndim=3).to(device=device, dtype=torch.bool)
-        open_start_ms = _require_state_tensor(states, "open_start_ms", ndim=3).to(device=device, dtype=torch.long)
-        open_age_ms = _require_state_tensor(states, "open_age_ms", ndim=3).to(device=device, dtype=torch.long)
-        emitted_lane_mask = _require_state_tensor(states, "emitted_lane_mask", ndim=3).to(device=device, dtype=torch.bool)
-        last_lane_index = _require_state_tensor(states, "last_lane_index", ndim=2).to(device=device, dtype=torch.long)
-        write_start_ms = _require_tensor(batch, "write_start_ms", ndim=1).to(device=device, dtype=torch.long)
-        write_end_ms = _require_tensor(batch, "write_end_ms", ndim=1).to(device=device, dtype=torch.long)
-        raw_chart_end_ms = batch.get("chart_end_ms")
-        if raw_chart_end_ms is None:
-            chart_end_ms = write_end_ms
-        elif not isinstance(raw_chart_end_ms, torch.Tensor):
-            raise ValueError("chart_end_ms must be a torch.Tensor")
-        else:
-            chart_end_ms = raw_chart_end_ms.to(device=device, dtype=torch.long).reshape(-1)
-        is_full_chart_start = _require_tensor(batch, "is_full_chart_start", ndim=1).to(device=device, dtype=torch.bool)
-        is_full_chart_end = _require_tensor(batch, "is_full_chart_end", ndim=1).to(device=device, dtype=torch.bool)
-        ln_carry_in = _load_carry_state(batch, "ln_carry_in", device=device)
-        ln_carry_out = _load_carry_state(batch, "ln_carry_out", device=device)
+        fragment_states = mapper_batch.fragment_states
+        current_ms = fragment_states.current_ms
+        open_mask = fragment_states.open_mask
+        open_start_ms = fragment_states.open_start_ms
+        open_age_ms = fragment_states.open_age_ms
+        emitted_lane_mask = fragment_states.emitted_lane_mask
+        last_lane_index = fragment_states.last_lane_index
+        if emitted_lane_mask is None or last_lane_index is None:
+            raise ValueError("mapper v2.1 requires emitted_lane_mask and last_lane_index states")
+        write_start_ms = mapper_batch.write_start_ms
+        write_end_ms = mapper_batch.write_end_ms
+        chart_end_ms = mapper_batch.chart_end_ms
+        if chart_end_ms is None:
+            raise ValueError("mapper v2.1 requires chart_end_ms")
+        is_full_chart_start = mapper_batch.is_full_chart_start
+        is_full_chart_end = mapper_batch.is_full_chart_end
+        ln_carry_in = mapper_batch.ln_carry_in.as_mapping()
+        ln_carry_out = mapper_batch.ln_carry_out.as_mapping()
         if tuple(current_ms.shape) != tuple(decoder_input.shape):
             raise ValueError("target_fragment_states.current_ms must align with decoder_input_tokens")
         if tuple(open_mask.shape[:2]) != tuple(decoder_input.shape) or int(open_mask.shape[-1]) != 4:
@@ -228,7 +216,7 @@ class MapperV21Model(MapperV2Model):
         if tuple(last_lane_index.shape) != tuple(decoder_input.shape):
             raise ValueError("target_fragment_states.last_lane_index must align with decoder_input_tokens")
         valid_input_mask = target_fragment_mask.to(device=device, dtype=torch.bool)
-        target_end_ms = torch.where(is_full_chart_end, chart_end_ms, write_end_ms)
+        target_end_ms = mapper_batch.target_end_ms
         _validate_v21_fragment_contract(
             decoder_input_tokens=decoder_input,
             target_fragment_tokens=loss_target_tokens,
@@ -248,18 +236,19 @@ class MapperV21Model(MapperV2Model):
             bos_id=self.vocab.bos_id,
             eos_id=self.vocab.eos_id,
         )
-        current_ms, open_mask, open_start_ms, open_age_ms = _sanitize_padded_fragment_states(
-            current_ms=current_ms,
-            open_mask=open_mask,
-            open_start_ms=open_start_ms,
-            open_age_ms=open_age_ms,
-            write_end_ms=target_end_ms,
-            valid_input_mask=valid_input_mask,
+        sanitized_states = fragment_states.sanitized(
+            target_end_ms,
+            valid_input_mask,
+            sparse_padded_last_lane_index=mapper_batch.contract.sparse_padded_last_lane_index,
         )
-        if not bool(valid_input_mask.all()):
-            padded = ~valid_input_mask
-            emitted_lane_mask = torch.where(padded.unsqueeze(-1), torch.zeros_like(emitted_lane_mask), emitted_lane_mask)
-            last_lane_index = torch.where(padded, torch.full_like(last_lane_index, -1), last_lane_index)
+        current_ms = sanitized_states.current_ms
+        open_mask = sanitized_states.open_mask
+        open_start_ms = sanitized_states.open_start_ms
+        open_age_ms = sanitized_states.open_age_ms
+        emitted_lane_mask = sanitized_states.emitted_lane_mask
+        last_lane_index = sanitized_states.last_lane_index
+        if emitted_lane_mask is None or last_lane_index is None:
+            raise ValueError("mapper v2.1 requires emitted_lane_mask and last_lane_index states")
 
         if control_memory_8s is None and projected_control_memory_8s is None:
             control_memory_8s, density_teacher_8s = self._control_teacher_8s(batch)

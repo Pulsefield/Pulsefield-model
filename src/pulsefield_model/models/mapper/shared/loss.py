@@ -64,33 +64,53 @@ class MapperTupleModelLoss(nn.Module):
             target_mask=target_mask,
         )
 
-        close_logits = _require_tensor_attr(output, "ln_close_logits")
-        close_labels = _require_batch_tensor(batch, "close_labels")
-        close_mask = _require_batch_tensor(batch, "close_label_mask").to(device=close_logits.device, dtype=torch.bool)
-        close_mask = close_mask & target_mask.to(device=close_logits.device, dtype=torch.bool).unsqueeze(-1)
-        ln_close_loss = ln_close_focal_bce_loss(
-            close_logits=close_logits,
-            labels=close_labels,
-            mask=close_mask,
-            pos_weight=self.config.ln_close_pos_weight,
-            gamma=self.config.ln_close_focal_gamma,
-        )
-
-        input_mask = _input_loss_mask(batch, steps=logits_final.shape[1], device=logits_final.device)
-        adapter_reg_loss = adapter_bias_regularization(
-            getattr(output, "state_prior_bias", None),
-            getattr(output, "ln_close_event_bias", None),
-            getattr(output, "ln_close_time_shift_bias", None),
-            mask=input_mask,
-        )
-        density_target = batch.get("density_target_8s")
-        density_confidence = batch.get("density_confidence_8s")
-        if density_target is None or density_confidence is None:
-            if self.config.lambda_density > 0.0:
-                raise ValueError("density_target_8s and density_confidence_8s are required when lambda_density > 0")
-            density_loss = logits_final.new_zeros(())
-            density_weight = logits_final.new_zeros(())
+        disabled_zero = logits_final.new_zeros(())
+        if self.config.lambda_ln_close > 0.0:
+            close_logits = _require_tensor_attr(output, "ln_close_logits")
+            close_labels = _require_batch_tensor(batch, "close_labels")
+            close_mask = _require_batch_tensor(batch, "close_label_mask").to(
+                device=close_logits.device,
+                dtype=torch.bool,
+            )
+            close_mask = close_mask & target_mask.to(device=close_logits.device, dtype=torch.bool).unsqueeze(-1)
+            ln_close_loss = ln_close_focal_bce_loss(
+                close_logits=close_logits,
+                labels=close_labels,
+                mask=close_mask,
+                pos_weight=self.config.ln_close_pos_weight,
+                gamma=self.config.ln_close_focal_gamma,
+            )
+            close_open_count = int(close_mask.to(dtype=torch.bool).sum().detach().cpu())
+            close_positive_count = int(
+                (
+                    close_labels.to(device=close_mask.device, dtype=torch.bool)
+                    & close_mask.to(dtype=torch.bool)
+                )
+                .sum()
+                .detach()
+                .cpu()
+            )
         else:
+            ln_close_loss = disabled_zero
+            close_open_count = 0
+            close_positive_count = 0
+
+        if self.config.lambda_adapter_reg > 0.0:
+            input_mask = _input_loss_mask(batch, steps=logits_final.shape[1], device=logits_final.device)
+            adapter_reg_loss = adapter_bias_regularization(
+                getattr(output, "state_prior_bias", None),
+                getattr(output, "ln_close_event_bias", None),
+                getattr(output, "ln_close_time_shift_bias", None),
+                mask=input_mask,
+            )
+        else:
+            adapter_reg_loss = disabled_zero
+
+        if self.config.lambda_density > 0.0:
+            density_target = batch.get("density_target_8s")
+            density_confidence = batch.get("density_confidence_8s")
+            if density_target is None or density_confidence is None:
+                raise ValueError("density_target_8s and density_confidence_8s are required when lambda_density > 0")
             if not isinstance(density_target, torch.Tensor) or not isinstance(density_confidence, torch.Tensor):
                 raise ValueError("density_target_8s and density_confidence_8s must be tensors")
             density_loss = density_auxiliary_loss(
@@ -107,6 +127,9 @@ class MapperTupleModelLoss(nn.Module):
             density_weight = _density_loss_weight(
                 confidence=density_confidence.to(device=density_loss.device),
             )
+        else:
+            density_loss = disabled_zero
+            density_weight = logits_final.new_zeros(())
         total_loss = (
             token_loss
             + float(self.config.lambda_ln_close) * ln_close_loss
@@ -125,22 +148,15 @@ class MapperTupleModelLoss(nn.Module):
         metrics["phase/lambda_density"] = float(self.config.lambda_density)
         metrics["phase/lambda_ln_close"] = float(self.config.lambda_ln_close)
         metrics["token/valid_count"] = int(target_mask.sum().detach().cpu())
-        metrics["ln_close/open_lane_count"] = int(close_mask.to(dtype=torch.bool).sum().detach().cpu())
-        metrics["ln_close/positive_count"] = int(
-            (
-                close_labels.to(device=close_mask.device, dtype=torch.bool)
-                & close_mask.to(dtype=torch.bool)
-            )
-            .sum()
-            .detach()
-            .cpu()
-        )
-        numerators["loss/token"] = float((token_loss.detach() * target_mask.to(dtype=token_loss.dtype).sum().clamp_min(1)).cpu())
+        metrics["ln_close/open_lane_count"] = close_open_count
+        metrics["ln_close/positive_count"] = close_positive_count
+        token_weight = target_mask.to(dtype=token_loss.dtype).sum().clamp_min(1)
+        numerators["loss/token"] = float((token_loss.detach() * token_weight).cpu())
         denominators["loss/token"] = float(target_mask.sum().detach().cpu())
         numerators["loss/ln_close"] = float(
-            (ln_close_loss.detach() * close_mask.to(device=ln_close_loss.device, dtype=ln_close_loss.dtype).sum().clamp_min(1)).cpu()
+            (ln_close_loss.detach() * max(close_open_count, 1)).cpu()
         )
-        denominators["loss/ln_close"] = float(close_mask.sum().detach().cpu())
+        denominators["loss/ln_close"] = float(close_open_count)
         numerators["loss/density"] = float((density_loss.detach() * density_weight.clamp_min(1)).cpu())
         denominators["loss/density"] = float(density_weight.detach().cpu())
 

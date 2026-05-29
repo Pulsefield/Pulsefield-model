@@ -5,6 +5,10 @@ from typing import Any
 
 
 _EXPORTS = {
+    "MapperBatch": "batch",
+    "MapperCarryStateBatch": "batch",
+    "MapperFragmentState": "batch",
+    "MapperTokenContract": "batch",
     "LaneAction": "vocab",
     "MapperTupleVocab": "vocab",
     "MapperTupleConfig": "model",
