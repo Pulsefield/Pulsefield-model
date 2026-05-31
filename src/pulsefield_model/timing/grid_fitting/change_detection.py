@@ -19,8 +19,14 @@ def _detect_change_split_candidates(
     config: GridFitterConfig,
 ) -> list[_SplitCandidate]:
     segment_signal = signal[fit.start_frame : fit.end_frame]
+    segment_downbeat_signal = None if downbeat_signal is None else downbeat_signal[fit.start_frame : fit.end_frame]
+    detection_signal = _split_detection_signal(
+        segment_signal,
+        segment_downbeat_signal,
+        config=config,
+    )
     segment_frame_times_ms = frame_times_ms[fit.start_frame : fit.end_frame]
-    peak_times_ms = _beat_peak_times_ms(segment_signal, frame_times_ms=segment_frame_times_ms, config=config)
+    peak_times_ms = _beat_peak_times_ms(detection_signal, frame_times_ms=segment_frame_times_ms, config=config)
     if peak_times_ms.shape[0] < 4:
         return []
 
@@ -32,7 +38,33 @@ def _detect_change_split_candidates(
         fit=fit,
         config=config,
     )
-    candidate_times = _candidate_change_times_from_peaks(peak_times_ms, fit=fit, config=config)
+    candidate_times = _candidate_change_times_from_peaks(
+        peak_times_ms,
+        fit=fit,
+        config=config,
+        downbeat_peak_times_ms=downbeat_peak_times_ms,
+    )
+    if config.super_timing_split_candidates:
+        super_candidate_times = _super_timing_change_candidates_from_peaks(
+            peak_times_ms,
+            signal,
+            frame_times_ms=frame_times_ms,
+            fit=fit,
+            config=config,
+            downbeat_peak_times_ms=downbeat_peak_times_ms,
+        )
+        candidate_times = [
+            *candidate_times,
+            *(
+                candidate
+                for candidate in super_candidate_times
+                if not _candidate_is_near_existing_candidate(
+                    candidate,
+                    candidate_times,
+                    tolerance_ms=config.min_segment_duration_ms,
+                )
+            ),
+        ]
 
     candidates_by_frame: dict[int, _SplitCandidate] = {}
     for candidate in candidate_times:
@@ -69,6 +101,21 @@ def _segment_downbeat_peak_times_ms(
         frame_times_ms=frame_times_ms[fit.start_frame : fit.end_frame],
         config=config,
     )
+
+
+def _split_detection_signal(
+    signal: NDArray[np.float64],
+    downbeat_signal: NDArray[np.float64] | None,
+    *,
+    config: GridFitterConfig,
+) -> NDArray[np.float64]:
+    if (
+        downbeat_signal is None
+        or config.split_downbeat_signal_weight <= 0.0
+        or float(np.linalg.norm(downbeat_signal - float(np.mean(downbeat_signal)))) == 0.0
+    ):
+        return signal
+    return signal + downbeat_signal * config.split_downbeat_signal_weight
 
 
 def _downbeat_boundary_bonus(
@@ -126,6 +173,7 @@ def _candidate_change_times_from_peaks(
     *,
     fit: _SegmentFit,
     config: GridFitterConfig,
+    downbeat_peak_times_ms: NDArray[np.float64] | None = None,
 ) -> list[_ChangeTimeCandidate]:
     intervals_ms = np.diff(peak_times_ms)
     if intervals_ms.shape[0] < 3:
@@ -156,9 +204,124 @@ def _candidate_change_times_from_peaks(
             or phase_change_ms >= config.split_phase_change_threshold_ms
             or phase_residual_ms >= config.split_phase_change_threshold_ms * 2.0
         ):
-            candidates.append(_ChangeTimeCandidate(time_ms=float(peak_times_ms[split_index]), score=float(score)))
+            boundary_time_ms = _boundary_time_from_neighboring_peaks(
+                peak_times_ms,
+                split_index=split_index,
+                downbeat_peak_times_ms=downbeat_peak_times_ms,
+                fit=fit,
+            )
+            candidates.append(_ChangeTimeCandidate(time_ms=boundary_time_ms, score=float(score)))
 
     return _merge_candidate_change_times(candidates, min_distance_ms=config.min_segment_duration_ms)
+
+
+def _super_timing_change_candidates_from_peaks(
+    peak_times_ms: NDArray[np.float64],
+    signal: NDArray[np.float64],
+    *,
+    frame_times_ms: NDArray[np.float64],
+    fit: _SegmentFit,
+    config: GridFitterConfig,
+    downbeat_peak_times_ms: NDArray[np.float64],
+) -> list[_ChangeTimeCandidate]:
+    intervals_ms = np.diff(peak_times_ms)
+    if intervals_ms.shape[0] < 5:
+        return []
+
+    peak_strengths = _peak_strengths_at_times(
+        peak_times_ms,
+        signal,
+        frame_times_ms=frame_times_ms,
+    )
+    local_interval_count = 3
+    minimum_relative_change = max(config.split_relative_interval_change_threshold, 1e-9)
+    phase_errors_ms = _peak_phase_errors_ms(peak_times_ms, fit=fit)
+    candidates: list[_ChangeTimeCandidate] = []
+
+    for split_index in range(local_interval_count, intervals_ms.shape[0] - local_interval_count + 1):
+        before_intervals = intervals_ms[split_index - local_interval_count : split_index]
+        after_intervals = intervals_ms[split_index : split_index + local_interval_count]
+        before_period_ms = float(np.median(before_intervals))
+        after_period_ms = float(np.median(after_intervals))
+        if before_period_ms <= 0.0 or after_period_ms <= 0.0:
+            continue
+
+        interval_change_ms = abs(after_period_ms - before_period_ms)
+        relative_change = interval_change_ms / max(min(before_period_ms, after_period_ms), 1e-6)
+        if relative_change < minimum_relative_change:
+            continue
+
+        boundary_time_ms = _boundary_time_from_neighboring_peaks(
+            peak_times_ms,
+            split_index=split_index,
+            downbeat_peak_times_ms=downbeat_peak_times_ms,
+            fit=fit,
+        )
+        before_prominence = float(np.mean(peak_strengths[split_index - local_interval_count : split_index + 1]))
+        after_prominence = float(np.mean(peak_strengths[split_index : split_index + local_interval_count + 1]))
+        boundary_prominence = float(peak_strengths[split_index])
+        phase_residual_ms = float(
+            max(
+                np.median(phase_errors_ms[split_index - local_interval_count : split_index]),
+                np.median(phase_errors_ms[split_index : split_index + local_interval_count]),
+            )
+        )
+        score = (
+            relative_change / minimum_relative_change
+            + interval_change_ms / max(config.offset_step_ms, 1e-6)
+            + phase_residual_ms / max(config.split_phase_change_threshold_ms, 1e-6)
+            + 0.25 * (before_prominence + after_prominence + boundary_prominence)
+        )
+        candidates.append(_ChangeTimeCandidate(time_ms=boundary_time_ms, score=float(score)))
+
+    return _merge_candidate_change_times(candidates, min_distance_ms=config.min_segment_duration_ms)
+
+
+def _boundary_time_from_neighboring_peaks(
+    peak_times_ms: NDArray[np.float64],
+    *,
+    split_index: int,
+    downbeat_peak_times_ms: NDArray[np.float64] | None,
+    fit: _SegmentFit,
+) -> float:
+    candidate_time_ms = float(peak_times_ms[split_index])
+    if downbeat_peak_times_ms is None or downbeat_peak_times_ms.shape[0] == 0:
+        return candidate_time_ms
+
+    previous_peak_time_ms = float(peak_times_ms[max(0, split_index - 1)])
+    next_peak_time_ms = float(peak_times_ms[min(peak_times_ms.shape[0] - 1, split_index + 1)])
+    lower_bound_ms = min(previous_peak_time_ms, candidate_time_ms) - fit.beat_length_ms * 0.25
+    upper_bound_ms = max(next_peak_time_ms, candidate_time_ms) + fit.beat_length_ms * 0.25
+    nearby_downbeats = downbeat_peak_times_ms[
+        (downbeat_peak_times_ms >= lower_bound_ms)
+        & (downbeat_peak_times_ms <= upper_bound_ms)
+    ]
+    if nearby_downbeats.shape[0] == 0:
+        return candidate_time_ms
+    nearest_index = int(np.argmin(np.abs(nearby_downbeats - candidate_time_ms)))
+    return float(nearby_downbeats[nearest_index])
+
+
+def _peak_strengths_at_times(
+    peak_times_ms: NDArray[np.float64],
+    signal: NDArray[np.float64],
+    *,
+    frame_times_ms: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    if peak_times_ms.shape[0] == 0:
+        return np.asarray([], dtype=np.float64)
+    frame_indices = np.searchsorted(frame_times_ms, peak_times_ms, side="left")
+    frame_indices = np.clip(frame_indices, 0, signal.shape[0] - 1)
+    return signal[frame_indices].astype(np.float64, copy=False)
+
+
+def _candidate_is_near_existing_candidate(
+    candidate: _ChangeTimeCandidate,
+    existing_candidates: Sequence[_ChangeTimeCandidate],
+    *,
+    tolerance_ms: float,
+) -> bool:
+    return any(abs(candidate.time_ms - existing.time_ms) < tolerance_ms for existing in existing_candidates)
 
 
 def _merge_candidate_change_times(

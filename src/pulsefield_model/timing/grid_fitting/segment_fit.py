@@ -12,6 +12,7 @@ from pulsefield_model.timing.grid_fitting.scoring import (
     _candidate_offsets_ms,
     _centered_signal_and_norm,
     _downbeat_rejects_close_tempo_alias,
+    _refine_grid_offset_ms,
     _score_grid,
 )
 from pulsefield_model.timing.grid_fitting.types import _GridCandidate, _SegmentFit
@@ -81,6 +82,18 @@ def _fit_segment_range(
         downbeat_centered_signal=downbeat_centered_signal,
         downbeat_signal_norm=downbeat_signal_norm,
         frame_times_ms=segment_frame_times_ms,
+        config=config,
+    )
+    best_score, best_offset_ms, best_downbeat_score = _refine_grid_offset_ms(
+        centered_signal,
+        signal_norm=signal_norm,
+        downbeat_centered_signal=downbeat_centered_signal,
+        downbeat_signal_norm=downbeat_signal_norm,
+        frame_times_ms=segment_frame_times_ms,
+        beat_length_ms=best_beat_length_ms,
+        offset_ms=best_offset_ms,
+        score=best_score,
+        downbeat_score=best_downbeat_score,
         config=config,
     )
 

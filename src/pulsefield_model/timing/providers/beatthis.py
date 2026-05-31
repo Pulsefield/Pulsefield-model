@@ -41,11 +41,32 @@ class BeatThisTimingProvider:
         self._audio2frames: Any | None = None
 
     def predict_file(self, audio_path: str | Path) -> FrameTimingPrediction:
-        signal, sample_rate = self._get_api().load_audio(audio_path)
+        signal, sample_rate = self.load_file(audio_path)
         return self._predict_audio(signal, sample_rate, source_path=audio_path)
 
-    def predict_audio(self, audio: object, sample_rate: int) -> FrameTimingPrediction:
-        return self._predict_audio(audio, sample_rate, source_path=None)
+    def load_file(self, audio_path: str | Path) -> tuple[Any, int]:
+        return self._get_api().load_audio(audio_path)
+
+    def predict_audio(
+        self,
+        audio: object,
+        sample_rate: int,
+        *,
+        source_path: str | Path | None = None,
+    ) -> FrameTimingPrediction:
+        return self._predict_audio(audio, sample_rate, source_path=source_path)
+
+    def predict_shifted_audio(
+        self,
+        audio: object,
+        sample_rate: int,
+        *,
+        shift_ms: float,
+        source_path: str | Path | None = None,
+    ) -> FrameTimingPrediction:
+        shift_samples = audio_shift_samples_for_ms(shift_ms, sample_rate)
+        shifted_audio = _prepend_zeros(audio, shift_samples)
+        return self._predict_audio(shifted_audio, sample_rate, source_path=source_path)
 
     def _predict_audio(
         self,
@@ -94,6 +115,28 @@ def _load_beat_this_api() -> BeatThisAPI:
         ) from exc
 
     return BeatThisAPI(audio2frames_cls=Audio2Frames, load_audio=load_audio)
+
+
+def audio_shift_samples_for_ms(shift_ms: float, sample_rate: int) -> int:
+    if sample_rate <= 0:
+        raise ValueError(f"sample_rate must be positive, got {sample_rate!r}")
+    if not np.isfinite(shift_ms) or shift_ms < 0.0:
+        raise ValueError(f"shift_ms must be non-negative and finite, got {shift_ms!r}")
+    return int(np.floor(float(shift_ms) / 1000.0 * sample_rate + 0.5))
+
+
+def _prepend_zeros(audio: object, sample_count: int) -> object:
+    if sample_count == 0:
+        return audio
+
+    array = np.asarray(audio)
+    if array.ndim not in (1, 2):
+        raise ValueError(f"audio must be a 1-D or 2-D signal, got shape {array.shape}")
+
+    pad_shape = list(array.shape)
+    pad_shape[0] = sample_count
+    padding = np.zeros(tuple(pad_shape), dtype=array.dtype)
+    return np.concatenate((padding, array), axis=0)
 
 
 def _as_logit_vector(value: object, name: str) -> NDArray[np.float32]:

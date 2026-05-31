@@ -24,6 +24,11 @@ from pulsefield_model.inference.ws_endpoint import (
     WsEndpointConfig,
     _is_expected_socket_disconnect,
 )
+from pulsefield_model.timing.canonicalization import (
+    TIMING_CANONICALIZATION_BPM_80_160,
+    TIMING_CANONICALIZATION_CHOICES,
+    TIMING_CANONICALIZATION_NONE,
+)
 from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
 
 
@@ -214,6 +219,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--beatthis-device", default=DEFAULT_BEATTHIS_DEVICE)
+    parser.add_argument(
+        "--canonicalization",
+        nargs="?",
+        const=TIMING_CANONICALIZATION_BPM_80_160,
+        default=TIMING_CANONICALIZATION_NONE,
+        choices=TIMING_CANONICALIZATION_CHOICES,
+        help="Fold fitted timing BPMs into [80, 160); pass 'none' to leave timing unchanged.",
+    )
     parser.add_argument("--difficulty", type=float, default=4.0)
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--mapper-checkpoint-path", type=Path, default=DEFAULT_MAPPER_CHECKPOINT_PATH)
@@ -227,6 +240,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         control_checkpoint_path=args.control_checkpoint_path,
         device=args.device,
         beatthis_device=args.beatthis_device,
+        canonicalization=args.canonicalization,
         default_difficulty=float(args.difficulty),
         max_tokens=int(args.max_tokens),
     )

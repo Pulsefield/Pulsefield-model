@@ -8,6 +8,7 @@ from pulsefield_model.timing.providers.beatthis import (
     BeatThisAPI,
     BeatThisDependencyError,
     BeatThisTimingProvider,
+    audio_shift_samples_for_ms,
 )
 from pulsefield_model.timing.providers.oracle import (
     DEFAULT_ORACLE_DENSE_TIMING_CACHE_CONFIG,
@@ -33,6 +34,7 @@ __all__ = [
     "BeatThisAPI",
     "BeatThisDependencyError",
     "BeatThisTimingProvider",
+    "audio_shift_samples_for_ms",
     "ORACLE_TIMING_PROVIDER_NAME",
     "OracleDenseTimingCacheConfig",
     "OracleTimingConfig",

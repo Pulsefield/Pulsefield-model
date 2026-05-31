@@ -290,7 +290,79 @@ def _best_bpm_fit(
         frame_times_ms=frame_times_ms,
         config=config,
     )
+    best_score, best_offset_ms, best_downbeat_score = _refine_grid_offset_ms(
+        centered_signal,
+        signal_norm=signal_norm,
+        downbeat_centered_signal=downbeat_centered_signal,
+        downbeat_signal_norm=downbeat_signal_norm,
+        frame_times_ms=frame_times_ms,
+        beat_length_ms=beat_length_ms,
+        offset_ms=best_offset_ms,
+        score=best_score,
+        downbeat_score=best_downbeat_score,
+        config=config,
+    )
     return float(best_score), best_offset_ms, float(best_downbeat_score)
+
+
+def _refine_grid_offset_ms(
+    centered_signal: NDArray[np.float64],
+    *,
+    signal_norm: float,
+    downbeat_centered_signal: NDArray[np.float64] | None,
+    downbeat_signal_norm: float,
+    frame_times_ms: NDArray[np.float64],
+    beat_length_ms: float,
+    offset_ms: float,
+    score: float,
+    downbeat_score: float,
+    config: GridFitterConfig,
+) -> tuple[float, float, float]:
+    if config.offset_refine_step_ms <= 0.0 or config.offset_refine_radius_ms <= 0.0:
+        return float(score), float(offset_ms), float(downbeat_score)
+
+    step_ms = float(config.offset_refine_step_ms)
+    radius_ms = float(config.offset_refine_radius_ms)
+    center_offset_ms = round(float(offset_ms) / step_ms) * step_ms
+    step_count = int(np.ceil(radius_ms / step_ms))
+
+    best_score = float(score)
+    best_downbeat_score = float(downbeat_score)
+    best_offset_ms = float(offset_ms)
+    downbeat_period_ms = beat_length_ms * config.downbeat_period_beats
+    for offset_index in range(-step_count, step_count + 1):
+        candidate_offset_ms = center_offset_ms + float(offset_index) * step_ms
+        candidate_score = _score_grid(
+            centered_signal,
+            signal_norm=signal_norm,
+            frame_times_ms=frame_times_ms,
+            beat_length_ms=beat_length_ms,
+            offset_ms=candidate_offset_ms,
+            pulse_width_ms=config.pulse_width_ms,
+        )
+        if downbeat_centered_signal is None or downbeat_signal_norm == 0.0:
+            candidate_downbeat_score = -np.inf
+        else:
+            candidate_downbeat_score = _score_grid(
+                downbeat_centered_signal,
+                signal_norm=downbeat_signal_norm,
+                frame_times_ms=frame_times_ms,
+                beat_length_ms=downbeat_period_ms,
+                offset_ms=candidate_offset_ms,
+                pulse_width_ms=config.pulse_width_ms,
+            )
+        if _grid_candidate_is_better(
+            candidate_score,
+            candidate_downbeat_score,
+            best_score,
+            best_downbeat_score,
+            config=config,
+        ):
+            best_score = float(candidate_score)
+            best_downbeat_score = float(candidate_downbeat_score)
+            best_offset_ms = float(candidate_offset_ms)
+
+    return float(best_score), float(best_offset_ms), float(best_downbeat_score)
 
 
 def _centered_signal_and_norm(
@@ -531,15 +603,3 @@ def _sparse_pulse_template_stats(
         float(np.dot(support_weights, support_weights)),
         float(np.dot(centered_signal[support_frame_indices], support_weights)),
     )
-
-
-def _pulse_template(
-    frame_times_ms: NDArray[np.float64],
-    *,
-    beat_length_ms: float,
-    offset_ms: float,
-    pulse_width_ms: float,
-) -> NDArray[np.float64]:
-    phase_ms = np.mod(frame_times_ms - offset_ms, beat_length_ms)
-    distance_ms = np.minimum(phase_ms, beat_length_ms - phase_ms)
-    return np.maximum(0.0, 1.0 - distance_ms / pulse_width_ms)

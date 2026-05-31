@@ -44,6 +44,12 @@ from pulsefield_model.models.mapper.shared.generation_engine import (
 from pulsefield_model.models.mapper.shared.replay import LNCarryState, empty_ln_carry_state, ln_carry_state_tensors
 from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_WRITE_MS
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
+from pulsefield_model.timing.canonicalization import (
+    TIMING_CANONICALIZATION_BPM_80_160,
+    TIMING_CANONICALIZATION_CHOICES,
+    TIMING_CANONICALIZATION_NONE,
+)
+from pulsefield_model.timing.grid_fitting import GridFitterConfig
 from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
 
 
@@ -73,6 +79,7 @@ class StreamWithCacheConfig:
     beatthis_device: str | None = DEFAULT_BEATTHIS_DEVICE
     beatthis_float16: bool = False
     eager_load_beatthis: bool = True
+    canonicalization: str = TIMING_CANONICALIZATION_NONE
     default_difficulty: float = 4.0
     max_control_batch_size: int = DEFAULT_MAX_CONTROL_BATCH_SIZE
     max_tokens: int = 512
@@ -150,6 +157,7 @@ class StreamWithCache:
                 device=self.config.device,
                 default_normalized_difficulty=normalized_difficulty,
                 max_control_batch_size=int(self.config.max_control_batch_size),
+                grid_fitter_config=_grid_fitter_config_for_canonicalization(self.config.canonicalization),
             ),
         )
         await asyncio.to_thread(
@@ -676,6 +684,7 @@ def run_cached_stream_sample(argv: Sequence[str] | None = None) -> int:
         time_shift_length_penalty_alpha=float(args.time_shift_length_penalty_alpha),
         seed=args.generation_seed,
         token_send_interval_s=0.0,
+        canonicalization=args.canonicalization,
     )
     stream = StreamWithCache(config)
     stream.model_runtime = runtime
@@ -706,6 +715,7 @@ def run_cached_stream_sample(argv: Sequence[str] | None = None) -> int:
                 "mapper_checkpoint_path": Path(args.mapper_checkpoint_path).as_posix(),
                 "control_checkpoint_path": Path(args.control_checkpoint_path).as_posix(),
                 "device": device,
+                "canonicalization": args.canonicalization,
                 "count": len(reports),
                 "reports": reports,
             },
@@ -754,6 +764,7 @@ def run_candidate(
             device=device,
             default_normalized_difficulty=normalize_difficulty(difficulty),
             max_control_batch_size=control_batch_size,
+            grid_fitter_config=_grid_fitter_config_for_canonicalization(stream.config.canonicalization),
         ),
     )
     stream._session_runtimes[session_id] = session_runtime
@@ -1049,6 +1060,14 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--beatthis-device", default=DEFAULT_BEATTHIS_DEVICE)
     parser.add_argument("--beatthis-float16", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--eager-load-beatthis", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--canonicalization",
+        nargs="?",
+        const=TIMING_CANONICALIZATION_BPM_80_160,
+        default=TIMING_CANONICALIZATION_NONE,
+        choices=TIMING_CANONICALIZATION_CHOICES,
+        help="Fold fitted timing BPMs into [80, 160); pass 'none' to leave timing unchanged.",
+    )
     parser.add_argument("--min-duration-s", type=float, default=45.0)
     parser.add_argument("--max-duration-s", type=float, default=120.0)
     parser.add_argument("--control-batch-size", type=int, default=4)
@@ -1074,6 +1093,13 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     if args.max_duration_s is not None and float(args.max_duration_s) <= 0:
         raise ValueError("--max-duration-s must be positive")
     return args
+
+
+def _grid_fitter_config_for_canonicalization(canonicalization: str) -> GridFitterConfig:
+    return GridFitterConfig(
+        canonicalization=canonicalization,
+        canonicalize_tempo_aliases=canonicalization == TIMING_CANONICALIZATION_NONE,
+    )
 
 
 def _difficulty_slug(difficulty: float) -> str:

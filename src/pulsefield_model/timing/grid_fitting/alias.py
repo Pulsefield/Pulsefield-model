@@ -20,7 +20,7 @@ from pulsefield_model.timing.grid_fitting.types import _GridCandidate, _SegmentF
 from pulsefield_model.timing.schema import TimingSegment
 
 
-DEFAULT_TEMPO_ALIAS_MULTIPLIERS = (0.25, 0.5, 1.0, 2.0, 4.0)
+DEFAULT_TEMPO_ALIAS_MULTIPLIERS = (0.25, 1.0 / 3.0, 0.5, 1.0, 2.0, 3.0, 4.0)
 
 
 @dataclass(frozen=True)
@@ -143,7 +143,17 @@ def _alias_options_for_fit(
             downbeat_signal_norm=downbeat_signal_norm,
             config=config,
         )
-        if not np.isfinite(score) or not _alias_score_is_close(score, fit.score, config=config):
+        semantic_promotion = _alias_is_semantic_promotion(
+            fit.bpm,
+            bpm,
+            score=score,
+            current_score=fit.score,
+            config=config,
+        )
+        if not np.isfinite(score) or (
+            not _alias_score_is_close(score, fit.score, config=config)
+            and not semantic_promotion
+        ):
             continue
 
         change_kind = _alias_change_kind(fit.bpm, bpm)
@@ -167,6 +177,8 @@ def _alias_options_for_fit(
             beat_support_ratio=beat_support_ratio,
             config=config,
         )
+        if semantic_promotion:
+            has_strong_evidence = True
         if not has_strong_evidence:
             continue
 
@@ -177,6 +189,8 @@ def _alias_options_for_fit(
             is_current_alias=_bpms_are_close(bpm, fit.bpm),
             config=config,
         )
+        if semantic_promotion:
+            local_score += config.alias_semantic_promotion_bonus
         bpm_key = round(bpm, 6)
         previous = options_by_bpm.get(bpm_key)
         if previous is None or local_score > previous.local_score:
@@ -286,6 +300,46 @@ def _alias_score_is_close(score: float, current_score: float, *, config: GridFit
     if current_score > 0.0 and score >= current_score * config.alias_score_ratio_threshold:
         return True
     return False
+
+
+def _alias_is_semantic_promotion(
+    current_bpm: float,
+    candidate_bpm: float,
+    *,
+    score: float,
+    current_score: float,
+    config: GridFitterConfig,
+) -> bool:
+    if current_bpm <= 0.0 or candidate_bpm <= current_bpm:
+        return False
+    below_preferred_band = current_bpm < config.alias_preferred_min_bpm
+    in_half_time_trap_band = (
+        config.alias_semantic_promotion_in_band_min_bpm
+        <= current_bpm
+        <= config.alias_semantic_promotion_current_max_bpm
+    )
+    if not below_preferred_band and not in_half_time_trap_band:
+        return False
+    if not (config.alias_preferred_min_bpm <= candidate_bpm <= config.alias_preferred_max_bpm):
+        return False
+    if not np.isfinite(score):
+        return False
+    if not np.isfinite(current_score) or current_score <= 0.0:
+        return score > 0.0
+
+    score_ratio = float(score / current_score)
+    if below_preferred_band:
+        return (
+            current_score <= config.alias_semantic_promotion_low_bpm_max_fit_score
+            and score_ratio >= config.alias_semantic_promotion_score_ratio_threshold
+        )
+    if score_ratio >= config.alias_semantic_promotion_strong_score_ratio_threshold:
+        return True
+    return (
+        current_score <= config.alias_semantic_promotion_low_confidence_max_fit_score
+        and candidate_bpm <= config.alias_semantic_promotion_low_confidence_max_candidate_bpm
+        and score_ratio >= config.alias_semantic_promotion_low_confidence_score_ratio_threshold
+    )
 
 
 def _alias_local_score(
@@ -533,10 +587,21 @@ def _alias_path_is_acceptable(
         return True
     if any(not option.has_strong_evidence for option in changed_options):
         return False
+    if len(original_fits) > config.alias_semantic_promotion_low_bpm_max_segments and any(
+        original_fit.bpm < config.alias_preferred_min_bpm and option.fit.bpm > original_fit.bpm
+        for original_fit, option in zip(original_fits, proposed_options)
+    ):
+        return False
 
     original_segments = _timing_segments_from_fits(original_fits, frame_times_ms, config=config)
     proposed_segments = _timing_segments_from_fits(proposed_fits, frame_times_ms, config=config)
     if len(proposed_segments) > len(original_segments):
+        return False
+    if len(proposed_segments) < len(original_segments) and not _alias_score_ratio_is_at_least(
+        _weighted_fit_score(proposed_fits),
+        _weighted_fit_score(original_fits),
+        threshold=config.alias_collapse_score_ratio_threshold,
+    ):
         return False
     if _segment_alias_switch_count(proposed_segments, config=config) > _segment_alias_switch_count(
         original_segments,
@@ -552,6 +617,22 @@ def _alias_path_is_acceptable(
     ):
         return False
     return True
+
+
+def _weighted_fit_score(segment_fits: Sequence[_SegmentFit]) -> float:
+    total_frames = sum(max(0, fit.frame_count) for fit in segment_fits)
+    if total_frames <= 0:
+        return np.nan
+    weighted_score = sum(max(0, fit.frame_count) * fit.score for fit in segment_fits)
+    return float(weighted_score / total_frames)
+
+
+def _alias_score_ratio_is_at_least(score: float, current_score: float, *, threshold: float) -> bool:
+    if not np.isfinite(score):
+        return False
+    if not np.isfinite(current_score) or current_score <= 0.0:
+        return True
+    return score >= current_score * threshold
 
 
 def _alias_continuity_penalty(previous_bpm: float, bpm: float, *, config: GridFitterConfig) -> float:

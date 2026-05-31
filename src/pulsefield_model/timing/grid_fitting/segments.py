@@ -139,7 +139,7 @@ def _bpms_are_alias_compatible(
 ) -> bool:
     if first_bpm <= 0.0 or second_bpm <= 0.0:
         return False
-    for multiplier in (0.25, 0.5, 2.0, 4.0):
+    for multiplier in (0.25, 1.0 / 3.0, 0.5, 2.0, 3.0, 4.0):
         if abs(first_bpm * multiplier - second_bpm) <= tolerance_bpm:
             return True
     return False
