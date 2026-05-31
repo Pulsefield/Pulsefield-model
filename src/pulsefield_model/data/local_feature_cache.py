@@ -20,6 +20,11 @@ from pulsefield_model.features.mel import DEFAULT_STAGE2_MEL_CONFIG
 from pulsefield_model.features.mel import Stage2MelConfig
 from pulsefield_model.features.mel import load_full_song_packed_mel_20ms
 from pulsefield_model.features.mel import stage2_log_mel_cache_path
+from pulsefield_model.timing.canonicalization import (
+    TIMING_CANONICALIZATION_BPM_80_160,
+    TIMING_CANONICALIZATION_CHOICES,
+    TIMING_CANONICALIZATION_NONE,
+)
 from pulsefield_model.timing.providers.oracle import DEFAULT_ORACLE_DENSE_TIMING_CACHE_CONFIG
 from pulsefield_model.timing.providers.oracle import DEFAULT_ORACLE_TIMING_CONFIG
 from pulsefield_model.timing.providers.oracle import OracleDenseTimingCacheConfig
@@ -227,6 +232,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--progress-every", type=int, default=100)
     parser.add_argument("--mel", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--oracle-timing", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--canonicalization",
+        nargs="?",
+        const=TIMING_CANONICALIZATION_BPM_80_160,
+        default=TIMING_CANONICALIZATION_NONE,
+        choices=TIMING_CANONICALIZATION_CHOICES,
+        help="Fold oracle timing BPMs into [80, 160); pass 'none' to leave timing unchanged.",
+    )
     args = parser.parse_args(argv)
 
     report = build_local_mel_and_oracle_timing_cache(
@@ -236,6 +249,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         progress_every=args.progress_every,
         build_mel=bool(args.mel),
         build_oracle_timing=bool(args.oracle_timing),
+        oracle_timing_config=OracleTimingConfig(canonicalization=args.canonicalization),
     )
     printable = {
         key: value.as_posix() if isinstance(value, Path) else value

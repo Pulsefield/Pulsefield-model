@@ -4,6 +4,11 @@ import numpy as np
 
 import pulsefield_model.timing.grid_fitting.scoring as scoring_module
 from pulsefield_model.timing.diagnostics.compare_to_oracle import compare_timing_grids
+from pulsefield_model.timing.canonicalization import (
+    TIMING_CANONICALIZATION_BPM_80_160,
+    canonical_bpm_80_160,
+    canonicalize_timing_grid,
+)
 from pulsefield_model.timing.grid_fitting import GridFitter, GridFitterConfig
 from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
 
@@ -54,6 +59,41 @@ class GridFittingDiagnosticsTests(unittest.TestCase):
         self.assertAlmostEqual(segment.offset_ms, 120.0, delta=1e-6)
         self.assertAlmostEqual(segment.beat_length_ms, 500.0, delta=1e-6)
         self.assertGreater(result.score, 0.95)
+
+    def test_canonical_bpm_80_160_uses_half_open_octave(self) -> None:
+        self.assertEqual(
+            [canonical_bpm_80_160(bpm) for bpm in (60.0, 80.0, 120.0, 160.0, 200.0, 240.0)],
+            [120.0, 80.0, 120.0, 80.0, 100.0, 120.0],
+        )
+
+    def test_canonicalize_timing_grid_keeps_offsets_and_meters(self) -> None:
+        grid = FittedTimingGrid(
+            segments=(
+                TimingSegment(offset_ms=0.0, beat_length_ms=1000.0, meter=3),
+                TimingSegment(offset_ms=1000.0, beat_length_ms=250.0, meter=4),
+            )
+        )
+
+        canonical = canonicalize_timing_grid(grid, canonicalization=TIMING_CANONICALIZATION_BPM_80_160)
+
+        self.assertEqual([segment.offset_ms for segment in canonical.segments], [0.0, 1000.0])
+        self.assertEqual([segment.meter for segment in canonical.segments], [3, 4])
+        self.assertEqual([segment.local_bpm for segment in canonical.segments], [120.0, 120.0])
+
+    def test_grid_fitter_canonicalization_skips_alias_dealiasing(self) -> None:
+        prediction = _sample_prediction(offset_ms=120.0, beat_length_ms=250.0)
+
+        result = GridFitter(
+            GridFitterConfig(
+                min_bpm=200.0,
+                max_bpm=260.0,
+                canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
+            )
+        ).fit(prediction)
+
+        segment = result.grid.segments[0]
+        self.assertAlmostEqual(segment.local_bpm, 120.0, delta=1e-6)
+        self.assertEqual(result.diagnostics.alias_candidate_count, 0)
 
     def test_compare_identical_grids_has_zero_error(self) -> None:
         grid = FittedTimingGrid(segments=(TimingSegment(offset_ms=0.0, beat_length_ms=500.0),))

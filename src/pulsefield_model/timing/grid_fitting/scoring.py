@@ -532,14 +532,3 @@ def _sparse_pulse_template_stats(
         float(np.dot(centered_signal[support_frame_indices], support_weights)),
     )
 
-
-def _pulse_template(
-    frame_times_ms: NDArray[np.float64],
-    *,
-    beat_length_ms: float,
-    offset_ms: float,
-    pulse_width_ms: float,
-) -> NDArray[np.float64]:
-    phase_ms = np.mod(frame_times_ms - offset_ms, beat_length_ms)
-    distance_ms = np.minimum(phase_ms, beat_length_ms - phase_ms)
-    return np.maximum(0.0, 1.0 - distance_ms / pulse_width_ms)

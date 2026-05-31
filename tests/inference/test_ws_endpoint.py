@@ -41,6 +41,7 @@ from pulsefield_model.data.control_windows import normalize_difficulty
 from pulsefield_model.models.mapper.shared.generation import MapperGeneratedWindow, MapperGenerationStep
 from pulsefield_model.models.mapper.shared.replay import empty_ln_carry_state
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
+from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
 
 
 MANIFEST_PATH = Path("src/pulsefield_model/inference/hitobject_token_manifest_v2.json")
@@ -566,6 +567,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             control_checkpoint_path="control.pt",
             device="cpu",
             token_send_interval_s=0.0,
+            canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
         )
         backend = StreamWithCache(
             config,
@@ -586,6 +588,8 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(loader_configs[0].control_checkpoint_path, Path.cwd() / "control.pt")
         self.assertEqual(created[0][0], "s1")
         self.assertAlmostEqual(created[0][2].default_normalized_difficulty, normalize_difficulty(5.0))
+        self.assertEqual(created[0][2].grid_fitter_config.canonicalization, TIMING_CANONICALIZATION_BPM_80_160)
+        self.assertFalse(created[0][2].grid_fitter_config.canonicalize_tempo_aliases)
         self.assertEqual(fake_session.prepare_audio_calls, [(Path("/tmp/song.wav"), 1_234, 0)])
 
     async def test_mapper_v2_backend_streams_selected_window_through_music_end(self) -> None:

@@ -5,6 +5,9 @@ from typing import Final
 
 import numpy as np
 
+from pulsefield_model.timing.canonicalization import DEFAULT_TIMING_CANONICALIZATION
+from pulsefield_model.timing.canonicalization import require_timing_canonicalization
+
 
 @dataclass(frozen=True)
 class GridFitterConfig:
@@ -47,6 +50,7 @@ class GridFitterConfig:
     merge_alias_bpm_tolerance: float = 2.0
     merge_alias_phase_tolerance_ms: float = 60.0
     merge_alias_max_fit_score: float = 0.92
+    canonicalization: str = DEFAULT_TIMING_CANONICALIZATION
     canonicalize_tempo_aliases: bool = True
     alias_tempo_multipliers: tuple[float, ...] = (0.25, 0.5, 1.0, 2.0, 4.0)
     alias_score_tie_margin: float = 0.03
@@ -66,6 +70,7 @@ class GridFitterConfig:
         _require_nonnegative_finite(self, _NONNEGATIVE_FINITE_FIELDS)
         _require_positive(self, _POSITIVE_COUNT_FIELDS)
         _require_nonnegative(self, _NONNEGATIVE_COUNT_FIELDS)
+        require_timing_canonicalization(self.canonicalization)
         _require_alias_tempo_multipliers(self.alias_tempo_multipliers)
 
         if not np.isfinite(self.max_bpm) or self.max_bpm <= self.min_bpm:

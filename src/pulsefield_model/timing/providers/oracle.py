@@ -9,6 +9,8 @@ from typing import Sequence
 
 import numpy as np
 
+from pulsefield_model.timing.canonicalization import DEFAULT_TIMING_CANONICALIZATION, canonicalize_timing_grid
+from pulsefield_model.timing.canonicalization import require_timing_canonicalization
 from pulsefield_model.timing.rendering.dense_timing_v2 import DEFAULT_DENSE_TIMING_V2_CONFIG
 from pulsefield_model.timing.rendering.dense_timing_v2 import DENSE_TIMING_V2_CHANNELS
 from pulsefield_model.timing.rendering.dense_timing_v2 import DENSE_TIMING_V2_VERSION
@@ -26,10 +28,12 @@ ORACLE_TIMING_PROVIDER_NAME = "oracle-red-timing"
 class OracleTimingConfig:
     dense_timing_config: DenseTimingV2Config = DEFAULT_DENSE_TIMING_V2_CONFIG
     input_start_ms: float = 0.0
+    canonicalization: str = DEFAULT_TIMING_CANONICALIZATION
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.input_start_ms):
             raise ValueError(f"input_start_ms must be finite, got {self.input_start_ms!r}")
+        require_timing_canonicalization(self.canonicalization)
 
 
 DEFAULT_ORACLE_TIMING_CONFIG = OracleTimingConfig()
@@ -65,7 +69,7 @@ class OracleTimingProvider:
         )
 
     def grid_for_file(self, beatmap_path: str | Path) -> FittedTimingGrid:
-        return oracle_timing_grid_from_beatmap(beatmap_path)
+        return oracle_timing_grid_from_beatmap(beatmap_path, canonicalization=self.config.canonicalization)
 
 
 def render_oracle_dense_timing_v2(
@@ -83,7 +87,7 @@ def render_oracle_dense_timing_v2(
         config=config.dense_timing_config,
     )
     return render_dense_timing_v2(
-        oracle_timing_grid_from_beatmap(beatmap_path),
+        oracle_timing_grid_from_beatmap(beatmap_path, canonicalization=config.canonicalization),
         input_start_ms=config.input_start_ms,
         frame_count=resolved_frame_count,
         config=config.dense_timing_config,
@@ -148,8 +152,15 @@ def oracle_dense_timing_v2_cache_path(
     )
 
 
-def oracle_timing_grid_from_beatmap(beatmap_path: str | Path) -> FittedTimingGrid:
-    return fitted_timing_grid_from_red_points(_require_red_timing_points(beatmap_path))
+def oracle_timing_grid_from_beatmap(
+    beatmap_path: str | Path,
+    *,
+    canonicalization: str = DEFAULT_TIMING_CANONICALIZATION,
+) -> FittedTimingGrid:
+    return canonicalize_timing_grid(
+        fitted_timing_grid_from_red_points(_require_red_timing_points(beatmap_path)),
+        canonicalization=canonicalization,
+    )
 
 
 def fitted_timing_grid_from_red_points(red_timing_points: Sequence[object]) -> FittedTimingGrid:
@@ -234,6 +245,7 @@ def _oracle_dense_timing_config_hash(config: OracleTimingConfig) -> str:
         "version": DENSE_TIMING_V2_VERSION,
         "channels": DENSE_TIMING_V2_CHANNELS,
         "input_start_ms": config.input_start_ms,
+        "canonicalization": config.canonicalization,
         "frame_hop_ms": dense.frame_hop_ms,
         "frame_center_offset_ms": dense.frame_center_offset_ms,
         "pulse_width_ms": dense.pulse_width_ms,

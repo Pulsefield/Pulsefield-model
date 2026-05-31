@@ -9,6 +9,7 @@ from unittest import mock
 
 import numpy as np
 
+from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
 from pulsefield_model.timing.providers import beatthis
 from pulsefield_model.timing.providers.beatthis import (
     BEATTHIS_FRAME_RATE_HZ,
@@ -17,6 +18,7 @@ from pulsefield_model.timing.providers.beatthis import (
     BeatThisTimingProvider,
 )
 from pulsefield_model.timing.providers.oracle import OracleDenseTimingCacheConfig
+from pulsefield_model.timing.providers.oracle import OracleTimingConfig
 from pulsefield_model.timing.providers.oracle import load_or_create_oracle_dense_timing_v2_cache
 from pulsefield_model.timing.providers.oracle import oracle_dense_timing_v2_cache_path
 from pulsefield_model.timing.providers.oracle import oracle_timing_grid_from_beatmap
@@ -46,11 +48,10 @@ def _fake_load_audio(path: str | Path) -> tuple[np.ndarray, int]:
     return np.asarray([0.25, -0.25, 0.0], dtype=np.float32), 44100
 
 
-def _sample_prediction() -> FrameTimingPrediction:
+def _sample_prediction(*, beat_length_ms: float = 500.0) -> FrameTimingPrediction:
     frame_count = 1000
     frame_rate_hz = 50.0
     frame_times_ms = np.arange(frame_count, dtype=np.float64) / frame_rate_hz * 1000.0
-    beat_length_ms = 500.0
     offset_ms = 120.0
     phase = ((frame_times_ms - offset_ms) / beat_length_ms) % 1.0
     distance_ms = np.minimum(phase, 1.0 - phase) * beat_length_ms
@@ -74,6 +75,12 @@ class _FakeBeatThisTimingProvider:
     def predict_file(self, audio_path: Path) -> FrameTimingPrediction:
         self.audio_path = audio_path
         return _sample_prediction()
+
+
+class _FakeFastBeatThisTimingProvider(_FakeBeatThisTimingProvider):
+    def predict_file(self, audio_path: Path) -> FrameTimingPrediction:
+        self.audio_path = audio_path
+        return _sample_prediction(beat_length_ms=250.0)
 
 
 class TimingProviderCliTests(unittest.TestCase):
@@ -122,6 +129,19 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(track.shape, (4, 4))
         self.assertEqual(track.dtype, np.dtype("float32"))
 
+    def test_oracle_timing_grid_can_be_bpm_canonicalized(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            osu_path = Path(tmp_dir) / "map.osu"
+            _write_timing_osu(osu_path, ["0,250,4,2,0,80,1,0"])
+
+            grid = oracle_timing_grid_from_beatmap(
+                osu_path,
+                canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
+            )
+
+        self.assertEqual(grid.segments[0].offset_ms, 0.0)
+        self.assertEqual(grid.segments[0].local_bpm, 120.0)
+
     def test_oracle_dense_timing_cache_hits_existing_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
@@ -150,6 +170,27 @@ class TimingProviderCliTests(unittest.TestCase):
 
         np.testing.assert_array_equal(cached, created)
 
+    def test_oracle_dense_timing_cache_path_includes_canonicalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            osu_path = root / "map.osu"
+            cache_config = OracleDenseTimingCacheConfig(cache_root=root / "cache")
+            _write_timing_osu(osu_path, ["0,500,4,2,0,80,1,0"])
+
+            raw_path = oracle_dense_timing_v2_cache_path(
+                osu_path,
+                frame_count=4,
+                cache_config=cache_config,
+            )
+            canonical_path = oracle_dense_timing_v2_cache_path(
+                osu_path,
+                frame_count=4,
+                timing_config=OracleTimingConfig(canonicalization=TIMING_CANONICALIZATION_BPM_80_160),
+                cache_config=cache_config,
+            )
+
+        self.assertNotEqual(raw_path, canonical_path)
+
     def test_fit_audio_main_can_emit_json(self) -> None:
         from pulsefield_model.timing import fit_audio
 
@@ -164,6 +205,30 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(report["provider"], "fake-beat-this")
         self.assertEqual(report["segments"][0]["offset_ms"], 120.0)
         self.assertEqual(report["segments"][0]["beat_length_ms"], 500.0)
+        self.assertEqual(report["segments"][0]["bpm"], 120.0)
+
+    def test_fit_audio_main_can_canonicalize_timing(self) -> None:
+        from pulsefield_model.timing import fit_audio
+
+        stdout = io.StringIO()
+        with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeFastBeatThisTimingProvider):
+            with contextlib.redirect_stdout(stdout):
+                exit_code = fit_audio.main(
+                    [
+                        "song.mp3",
+                        "--json",
+                        "--min-bpm",
+                        "200",
+                        "--max-bpm",
+                        "260",
+                        "--canonicalization",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(report["canonicalization"], TIMING_CANONICALIZATION_BPM_80_160)
+        self.assertEqual(report["diagnostics"]["alias_candidate_count"], 0)
         self.assertEqual(report["segments"][0]["bpm"], 120.0)
 
 

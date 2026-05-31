@@ -6,6 +6,11 @@ import time
 from pathlib import Path
 from typing import Sequence
 
+from pulsefield_model.timing.canonicalization import (
+    TIMING_CANONICALIZATION_BPM_80_160,
+    TIMING_CANONICALIZATION_CHOICES,
+    TIMING_CANONICALIZATION_NONE,
+)
 from pulsefield_model.timing.grid_fitting import GridFitter, GridFitterConfig, TimingFitResult
 from pulsefield_model.timing.providers.beatthis import (
     DEFAULT_BEATTHIS_CHECKPOINT,
@@ -34,7 +39,13 @@ def fit_audio_file(
     fit_start_seconds = time.perf_counter()
     fit_result = fitter.fit(prediction)
     fit_seconds = time.perf_counter() - fit_start_seconds
-    return _timing_report(prediction, fit_result, fit_seconds=fit_seconds, device=device)
+    return _timing_report(
+        prediction,
+        fit_result,
+        fit_seconds=fit_seconds,
+        device=device,
+        canonicalization=fitter_config.canonicalization,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -70,6 +81,7 @@ def _report_header_lines(report: dict[str, object]) -> list[str]:
         f"provider: {report['provider']}",
         f"checkpoint: {report['checkpoint_path']}",
         f"device: {report['device']}",
+        f"canonicalization: {report['canonicalization']}",
         f"frame_count: {report['frame_count']}",
         f"fit_seconds: {float(report['fit_seconds']):.3f}",
         f"score: {float(report['score']):.6f}",
@@ -106,6 +118,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-bpm", type=float, default=default_config.max_bpm)
     parser.add_argument("--max-segments", type=int, default=default_config.max_segments)
     parser.add_argument("--double-tempo-score-ratio-threshold", type=float, default=None)
+    parser.add_argument(
+        "--canonicalization",
+        nargs="?",
+        const=TIMING_CANONICALIZATION_BPM_80_160,
+        default=default_config.canonicalization,
+        choices=TIMING_CANONICALIZATION_CHOICES,
+        help="Fold fitted BPMs into [80, 160); pass 'none' to leave timing unchanged.",
+    )
     return parser
 
 
@@ -121,6 +141,8 @@ def _fitter_config_from_args(args: argparse.Namespace) -> GridFitterConfig:
         max_bpm=args.max_bpm,
         max_segments=args.max_segments,
         double_tempo_score_ratio_threshold=double_tempo_threshold,
+        canonicalization=args.canonicalization,
+        canonicalize_tempo_aliases=args.canonicalization == TIMING_CANONICALIZATION_NONE,
     )
 
 
@@ -130,12 +152,14 @@ def _timing_report(
     *,
     fit_seconds: float,
     device: str,
+    canonicalization: str,
 ) -> dict[str, object]:
     return {
         "source_path": prediction.source_path,
         "provider": prediction.provider,
         "checkpoint_path": prediction.checkpoint_path,
         "device": device,
+        "canonicalization": canonicalization,
         "frame_count": prediction.frame_count,
         "frame_rate_hz": prediction.frame_rate_hz,
         "fit_seconds": float(fit_seconds),
