@@ -16,6 +16,7 @@ from pulsefield_model.timing.providers.beatthis import (
     DEFAULT_BEATTHIS_CHECKPOINT,
     DEFAULT_BEATTHIS_DEVICE,
     BeatThisTimingProvider,
+    audio_shift_samples_for_ms,
 )
 from pulsefield_model.timing.providers.oracle import OracleDenseTimingCacheConfig
 from pulsefield_model.timing.providers.oracle import OracleTimingConfig
@@ -83,9 +84,46 @@ class _FakeFastBeatThisTimingProvider(_FakeBeatThisTimingProvider):
         return _sample_prediction(beat_length_ms=250.0)
 
 
+class _FakeShiftBeatThisTimingProvider:
+    instances: list["_FakeShiftBeatThisTimingProvider"] = []
+
+    def __init__(self, *, checkpoint_path: str, device: str, float16: bool) -> None:
+        self.checkpoint_path = checkpoint_path
+        self.device = device
+        self.float16 = float16
+        self.calls: list[tuple[str, float]] = []
+        self.__class__.instances.append(self)
+
+    def load_file(self, audio_path: Path) -> tuple[np.ndarray, int]:
+        self.audio_path = audio_path
+        return np.asarray([0.25, -0.25, 0.0], dtype=np.float32), 1000
+
+    def predict_audio(
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        *,
+        source_path: Path | None = None,
+    ) -> FrameTimingPrediction:
+        self.calls.append(("base", 0.0))
+        return _sample_prediction()
+
+    def predict_shifted_audio(
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        *,
+        shift_ms: float,
+        source_path: Path | None = None,
+    ) -> FrameTimingPrediction:
+        self.calls.append(("shift", float(shift_ms)))
+        return _sample_prediction()
+
+
 class TimingProviderCliTests(unittest.TestCase):
     def setUp(self) -> None:
         _FakeAudio2Frames.instances.clear()
+        _FakeShiftBeatThisTimingProvider.instances.clear()
 
     def test_beatthis_predict_audio_uses_defaults_and_probability_vectors(self) -> None:
         audio = np.asarray([0.0, 0.5, -0.5], dtype=np.float32)
@@ -110,6 +148,30 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(prediction.frame_rate_hz, BEATTHIS_FRAME_RATE_HZ)
         np.testing.assert_allclose(prediction.beat_prob, np.asarray([0.11920292, 0.5, 0.88079708]), rtol=1e-6)
         np.testing.assert_allclose(prediction.downbeat_prob, np.asarray([0.88079708, 0.5, 0.11920292]), rtol=1e-6)
+
+    def test_beatthis_predict_shifted_audio_prepends_zero_padding(self) -> None:
+        audio = np.asarray([0.0, 0.5, -0.5], dtype=np.float32)
+        provider = BeatThisTimingProvider()
+
+        with mock.patch.object(
+            beatthis,
+            "_load_beat_this_api",
+            return_value=beatthis.BeatThisAPI(_FakeAudio2Frames, _fake_load_audio),
+        ):
+            prediction = provider.predict_shifted_audio(
+                audio,
+                sample_rate=1000,
+                shift_ms=5.0,
+                source_path="song.wav",
+            )
+
+        padded_audio = _FakeAudio2Frames.instances[0].calls[0][0]
+        np.testing.assert_array_equal(
+            padded_audio,
+            np.asarray([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, -0.5], dtype=np.float32),
+        )
+        self.assertEqual(prediction.source_path, "song.wav")
+        self.assertEqual(audio_shift_samples_for_ms(5.0, 44100), 221)
 
     def test_oracle_provider_renders_dense_timing_from_osu_red_points(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -206,6 +268,29 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(report["segments"][0]["offset_ms"], 120.0)
         self.assertEqual(report["segments"][0]["beat_length_ms"], 500.0)
         self.assertEqual(report["segments"][0]["bpm"], 120.0)
+
+    def test_fit_audio_main_can_emit_super_timing_shift_runs(self) -> None:
+        from pulsefield_model.timing import fit_audio
+
+        stdout = io.StringIO()
+        with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeShiftBeatThisTimingProvider):
+            with contextlib.redirect_stdout(stdout):
+                exit_code = fit_audio.main(["song.mp3", "--json", "--super-timing-shifts"])
+
+        self.assertEqual(exit_code, 0)
+        report = json.loads(stdout.getvalue())
+        super_timing = report["super_timing"]
+        self.assertEqual(super_timing["shift_ms"], [0.0, 5.0, 10.0, 15.0])
+        self.assertEqual(len(super_timing["runs"]), 4)
+        self.assertEqual(
+            [(call_kind, shift_ms) for call_kind, shift_ms in _FakeShiftBeatThisTimingProvider.instances[0].calls],
+            [("base", 0.0), ("shift", 5.0), ("shift", 10.0), ("shift", 15.0)],
+        )
+
+        first_shifted_run = super_timing["runs"][1]
+        self.assertEqual(first_shifted_run["pad_samples"], 5)
+        self.assertEqual(first_shifted_run["raw_segments"][0]["offset_ms"], 120.0)
+        self.assertEqual(first_shifted_run["segments"][0]["offset_ms"], 115.0)
 
     def test_fit_audio_main_can_canonicalize_timing(self) -> None:
         from pulsefield_model.timing import fit_audio

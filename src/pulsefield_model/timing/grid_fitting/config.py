@@ -15,6 +15,8 @@ class GridFitterConfig:
     max_bpm: float = 1000.0
     bpm_step: float = 0.5
     offset_step_ms: float = 20.0
+    offset_refine_step_ms: float = 1.0
+    offset_refine_radius_ms: float = 10.0
     pulse_width_ms: float = 40.0
     double_tempo_score_ratio_threshold: float = 0.95
     max_segments: int = 16
@@ -53,6 +55,22 @@ class GridFitterConfig:
     merge_alias_bpm_tolerance: float = 2.0
     merge_alias_phase_tolerance_ms: float = 60.0
     merge_alias_max_fit_score: float = 0.92
+    refine_structural_segments: bool = True
+    refine_offset_quantum_ms: float = 1.0
+    refine_dominant_min_segments: int = 4
+    refine_dominant_min_segment_count: int = 2
+    refine_dominant_min_outlier_segments: int = 3
+    refine_dominant_min_far_outlier_segments: int = 3
+    refine_dominant_min_duration_ratio: float = 0.55
+    refine_dominant_bpm_tolerance: float = 1.5
+    refine_dominant_far_bpm_tolerance: float = 5.0
+    refine_dominant_far_relative_bpm_tolerance: float = 0.05
+    refine_dominant_max_first_anchor_ratio: float = 0.25
+    refine_dominant_boundary_phase_tolerance_ms: float = 35.0
+    refine_dominant_min_off_lattice_transitions: int = 2
+    refine_dominant_bpm_snap_tolerance: float = 0.25
+    refine_circular_phase_min_coherence: float = 0.25
+    refine_structural_max_score_loss: float = 0.24
     canonicalization: str = DEFAULT_TIMING_CANONICALIZATION
     canonicalize_tempo_aliases: bool = True
     alias_tempo_multipliers: tuple[float, ...] = (0.25, 1.0 / 3.0, 0.5, 1.0, 2.0, 3.0, 4.0)
@@ -107,6 +125,8 @@ _POSITIVE_FINITE_FIELDS: Final[tuple[str, ...]] = (
 
 _NONNEGATIVE_FINITE_FIELDS: Final[tuple[str, ...]] = (
     "double_tempo_score_ratio_threshold",
+    "offset_refine_step_ms",
+    "offset_refine_radius_ms",
     "split_score_improvement_threshold",
     "split_phase_change_threshold_ms",
     "split_relative_interval_change_threshold",
@@ -124,6 +144,16 @@ _NONNEGATIVE_FINITE_FIELDS: Final[tuple[str, ...]] = (
     "merge_alias_bpm_tolerance",
     "merge_alias_phase_tolerance_ms",
     "merge_alias_max_fit_score",
+    "refine_offset_quantum_ms",
+    "refine_dominant_min_duration_ratio",
+    "refine_dominant_bpm_tolerance",
+    "refine_dominant_far_bpm_tolerance",
+    "refine_dominant_far_relative_bpm_tolerance",
+    "refine_dominant_max_first_anchor_ratio",
+    "refine_dominant_boundary_phase_tolerance_ms",
+    "refine_dominant_bpm_snap_tolerance",
+    "refine_circular_phase_min_coherence",
+    "refine_structural_max_score_loss",
     "alias_score_tie_margin",
     "alias_score_ratio_threshold",
     "alias_preferred_min_bpm",
@@ -160,6 +190,11 @@ _POSITIVE_COUNT_FIELDS: Final[tuple[str, ...]] = (
     "downbeat_refine_candidate_count",
     "merge_many_similar_min_segments",
     "merge_alias_min_segments",
+    "refine_dominant_min_segments",
+    "refine_dominant_min_segment_count",
+    "refine_dominant_min_outlier_segments",
+    "refine_dominant_min_far_outlier_segments",
+    "refine_dominant_min_off_lattice_transitions",
     "alias_semantic_promotion_low_bpm_max_segments",
 )
 

@@ -11,6 +11,7 @@ from pulsefield_model.timing.grid_fitting.alias import (
 from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_NONE, canonicalize_timing_grid
 from pulsefield_model.timing.grid_fitting.config import GridFitterConfig, _effective_config_for_prediction
 from pulsefield_model.timing.grid_fitting.scoring import _candidate_period_frame_bounds
+from pulsefield_model.timing.grid_fitting.refinement import _refine_timing_segments
 from pulsefield_model.timing.grid_fitting.segment_fit import _fit_segment_range
 from pulsefield_model.timing.grid_fitting.segments import _timing_segments_from_fits, _weighted_score
 from pulsefield_model.timing.grid_fitting.splitting import _split_segment_range
@@ -82,8 +83,14 @@ def fit_timing_grid(
     segment_fits = alias_result.segment_fits
     best_score = _weighted_score(segment_fits)
     first_fit = segment_fits[0]
+    refined_segments = _refine_timing_segments(
+        _timing_segments_from_fits(segment_fits, frame_times_ms, config=config),
+        frame_times_ms,
+        beat_signal=signal,
+        config=config,
+    )
     grid = canonicalize_timing_grid(
-        FittedTimingGrid(segments=_timing_segments_from_fits(segment_fits, frame_times_ms, config=config)),
+        FittedTimingGrid(segments=refined_segments),
         canonicalization=config.canonicalization,
     )
     selected_segment = grid.segments[0]

@@ -9,6 +9,7 @@ from pulsefield_model.timing.grid_fitting.alias import (
     _alias_path_is_acceptable,
 )
 from pulsefield_model.timing.grid_fitting.change_detection import _detect_change_split_candidates
+from pulsefield_model.timing.grid_fitting.refinement import _refine_timing_segments
 from pulsefield_model.timing.diagnostics.compare_to_oracle import compare_timing_grids
 from pulsefield_model.timing.canonicalization import (
     TIMING_CANONICALIZATION_BPM_80_160,
@@ -84,6 +85,26 @@ def _multi_tempo_prediction(
     )
 
 
+def _piecewise_beat_probabilities(
+    frame_times_ms: np.ndarray,
+    segments: tuple[TimingSegment, ...],
+    *,
+    pulse_width_ms: float = 40.0,
+) -> np.ndarray:
+    beat_times_ms: list[float] = []
+    duration_ms = float(frame_times_ms[-1])
+    for index, segment in enumerate(segments):
+        end_time_ms = duration_ms
+        if index + 1 < len(segments):
+            end_time_ms = segments[index + 1].offset_ms
+        last_beat_index = int(np.ceil((end_time_ms - segment.offset_ms) / segment.beat_length_ms))
+        beat_times_ms.extend(
+            float(segment.offset_ms + beat_index * segment.beat_length_ms)
+            for beat_index in range(last_beat_index + 1)
+        )
+    return _pulse_probabilities(frame_times_ms, beat_times_ms, pulse_width_ms=pulse_width_ms).astype(np.float64)
+
+
 def _fit_for_change_detection(
     *,
     frame_count: int = 1000,
@@ -132,6 +153,18 @@ class GridFittingDiagnosticsTests(unittest.TestCase):
         self.assertAlmostEqual(segment.offset_ms, 120.0, delta=1e-6)
         self.assertAlmostEqual(segment.beat_length_ms, 500.0, delta=1e-6)
         self.assertGreater(result.score, 0.95)
+
+    def test_grid_fitter_refines_offset_to_integer_millisecond(self) -> None:
+        prediction = _sample_prediction(
+            frame_count=2000,
+            frame_rate_hz=1000.0,
+            offset_ms=123.0,
+            beat_length_ms=500.0,
+        )
+
+        result = GridFitter(GridFitterConfig(min_bpm=100.0, max_bpm=140.0, bpm_step=1.0)).fit(prediction)
+
+        self.assertEqual(result.grid.segments[0].offset_ms, 123.0)
 
     def test_change_detection_finds_peak_walk_bpm_boundary(self) -> None:
         fit, frame_times_ms = _fit_for_change_detection()
@@ -186,6 +219,100 @@ class GridFittingDiagnosticsTests(unittest.TestCase):
         self.assertAlmostEqual(result.grid.segments[0].beat_length_ms, 500.0, delta=1e-6)
         self.assertAlmostEqual(result.grid.segments[1].beat_length_ms, 400.0, delta=1e-6)
         self.assertAlmostEqual(result.grid.segments[1].offset_ms, 8000.0, delta=40.0)
+
+    def test_refinement_collapses_repeated_dominant_tempo_with_outlier_islands(self) -> None:
+        frame_times_ms = np.arange(0.0, 130000.0, 20.0, dtype=np.float64)
+        segments = (
+            TimingSegment(offset_ms=725.421, beat_length_ms=60000.0 / 170.111111),
+            TimingSegment(offset_ms=37785.123, beat_length_ms=60000.0 / 113.222222),
+            TimingSegment(offset_ms=55971.906, beat_length_ms=60000.0 / 170.222222),
+            TimingSegment(offset_ms=65308.962, beat_length_ms=60000.0 / 169.875),
+            TimingSegment(offset_ms=93208.011, beat_length_ms=60000.0 / 122.333333),
+            TimingSegment(offset_ms=103090.522, beat_length_ms=60000.0 / 244.777778),
+            TimingSegment(offset_ms=117252.156, beat_length_ms=60000.0 / 125.222222),
+        )
+        signal = _piecewise_beat_probabilities(
+            frame_times_ms,
+            (TimingSegment(offset_ms=725.0, beat_length_ms=60000.0 / 170.0),),
+        )
+
+        refined = _refine_timing_segments(
+            segments,
+            frame_times_ms,
+            beat_signal=signal,
+            config=GridFitterConfig(),
+        )
+
+        self.assertEqual(len(refined), 1)
+        self.assertAlmostEqual(refined[0].local_bpm, 170.0, delta=1e-6)
+        self.assertEqual(refined[0].offset_ms, round(refined[0].offset_ms))
+
+    def test_refinement_does_not_collapse_dominant_tempo_without_signal_guard(self) -> None:
+        frame_times_ms = np.arange(0.0, 130000.0, 20.0, dtype=np.float64)
+        segments = (
+            TimingSegment(offset_ms=725.421, beat_length_ms=60000.0 / 170.111111),
+            TimingSegment(offset_ms=37785.123, beat_length_ms=60000.0 / 113.222222),
+            TimingSegment(offset_ms=55971.906, beat_length_ms=60000.0 / 170.222222),
+            TimingSegment(offset_ms=65308.962, beat_length_ms=60000.0 / 169.875),
+            TimingSegment(offset_ms=93208.011, beat_length_ms=60000.0 / 122.333333),
+            TimingSegment(offset_ms=103090.522, beat_length_ms=60000.0 / 244.777778),
+            TimingSegment(offset_ms=117252.156, beat_length_ms=60000.0 / 125.222222),
+        )
+
+        refined = _refine_timing_segments(segments, frame_times_ms, config=GridFitterConfig())
+
+        self.assertGreater(len(refined), 1)
+
+    def test_refinement_signal_guard_keeps_repeated_real_tempo_changes(self) -> None:
+        frame_times_ms = np.arange(0.0, 56000.0, 20.0, dtype=np.float64)
+        segments = (
+            TimingSegment(offset_ms=0.0, beat_length_ms=400.0),
+            TimingSegment(offset_ms=12000.0, beat_length_ms=600.0),
+            TimingSegment(offset_ms=16200.0, beat_length_ms=400.0),
+            TimingSegment(offset_ms=28200.0, beat_length_ms=600.0),
+            TimingSegment(offset_ms=32400.0, beat_length_ms=400.0),
+            TimingSegment(offset_ms=44400.0, beat_length_ms=600.0),
+        )
+        signal = _piecewise_beat_probabilities(frame_times_ms, segments)
+
+        refined = _refine_timing_segments(
+            segments,
+            frame_times_ms,
+            beat_signal=signal,
+            config=GridFitterConfig(),
+        )
+
+        self.assertEqual(len(refined), len(segments))
+        self.assertEqual([segment.beat_length_ms for segment in refined], [400.0, 600.0, 400.0, 600.0, 400.0, 600.0])
+
+    def test_refinement_keeps_simple_two_tempo_structure(self) -> None:
+        frame_times_ms = np.arange(0.0, 120000.0, 20.0, dtype=np.float64)
+        segments = (
+            TimingSegment(offset_ms=0.4, beat_length_ms=500.0),
+            TimingSegment(offset_ms=60000.6, beat_length_ms=400.0),
+        )
+
+        refined = _refine_timing_segments(segments, frame_times_ms, config=GridFitterConfig())
+
+        self.assertEqual(len(refined), 2)
+        self.assertEqual([segment.offset_ms for segment in refined], [0.0, 60001.0])
+        self.assertEqual([segment.beat_length_ms for segment in refined], [500.0, 400.0])
+
+    def test_refinement_keeps_near_bpm_anchor_churn(self) -> None:
+        frame_times_ms = np.arange(0.0, 90000.0, 20.0, dtype=np.float64)
+        segments = (
+            TimingSegment(offset_ms=0.1, beat_length_ms=60000.0 / 180.222),
+            TimingSegment(offset_ms=12000.2, beat_length_ms=60000.0 / 181.778),
+            TimingSegment(offset_ms=26000.3, beat_length_ms=60000.0 / 181.778),
+            TimingSegment(offset_ms=43000.4, beat_length_ms=60000.0 / 180.222),
+            TimingSegment(offset_ms=58000.5, beat_length_ms=60000.0 / 181.778),
+            TimingSegment(offset_ms=73000.6, beat_length_ms=60000.0 / 181.778),
+        )
+
+        refined = _refine_timing_segments(segments, frame_times_ms, config=GridFitterConfig())
+
+        self.assertEqual(len(refined), len(segments))
+        self.assertEqual([segment.offset_ms for segment in refined], [0.0, 12000.0, 26000.0, 43000.0, 58000.0, 73001.0])
 
     def test_grid_fitter_does_not_move_short_speedup_boundary_early(self) -> None:
         prediction = _multi_tempo_prediction(frame_count=260, boundary_ms=2000.0)
