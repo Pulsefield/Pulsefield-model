@@ -22,6 +22,9 @@ class GridFitterConfig:
     split_step_ms: float = 4000.0
     split_score_improvement_threshold: float = 0.02
     split_phase_change_threshold_ms: float = 10.0
+    super_timing_split_candidates: bool = True
+    split_relative_interval_change_threshold: float = 0.025
+    split_downbeat_signal_weight: float = 0.35
     autocorrelation_candidate_count: int = 16
     bpm_search_window_ratio: float = 0.08
     bpm_search_window_min_bpm: float = 2.0
@@ -52,7 +55,7 @@ class GridFitterConfig:
     merge_alias_max_fit_score: float = 0.92
     canonicalization: str = DEFAULT_TIMING_CANONICALIZATION
     canonicalize_tempo_aliases: bool = True
-    alias_tempo_multipliers: tuple[float, ...] = (0.25, 0.5, 1.0, 2.0, 4.0)
+    alias_tempo_multipliers: tuple[float, ...] = (0.25, 1.0 / 3.0, 0.5, 1.0, 2.0, 3.0, 4.0)
     alias_score_tie_margin: float = 0.03
     alias_score_ratio_threshold: float = 0.97
     alias_preferred_min_bpm: float = 80.0
@@ -61,6 +64,17 @@ class GridFitterConfig:
     alias_current_tempo_bonus: float = 0.04
     alias_downbeat_score_weight: float = 0.02
     alias_continuity_penalty: float = 0.02
+    alias_semantic_promotion_in_band_min_bpm: float = 86.0
+    alias_semantic_promotion_current_max_bpm: float = 100.0
+    alias_semantic_promotion_score_ratio_threshold: float = 0.65
+    alias_semantic_promotion_low_bpm_max_fit_score: float = 0.78
+    alias_semantic_promotion_strong_score_ratio_threshold: float = 0.78
+    alias_semantic_promotion_low_confidence_max_fit_score: float = 0.70
+    alias_semantic_promotion_low_confidence_score_ratio_threshold: float = 0.60
+    alias_semantic_promotion_low_confidence_max_candidate_bpm: float = 185.0
+    alias_semantic_promotion_low_bpm_max_segments: int = 4
+    alias_semantic_promotion_bonus: float = 0.35
+    alias_collapse_score_ratio_threshold: float = 0.78
     alias_demotion_dropped_support_ratio_threshold: float = 0.35
     alias_promotion_inserted_support_ratio_threshold: float = 0.35
     alias_beat_match_tolerance_ms: float = 45.0
@@ -95,6 +109,8 @@ _NONNEGATIVE_FINITE_FIELDS: Final[tuple[str, ...]] = (
     "double_tempo_score_ratio_threshold",
     "split_score_improvement_threshold",
     "split_phase_change_threshold_ms",
+    "split_relative_interval_change_threshold",
+    "split_downbeat_signal_weight",
     "bpm_search_window_ratio",
     "bpm_search_window_min_bpm",
     "initial_batch_split_max_parent_score",
@@ -116,6 +132,16 @@ _NONNEGATIVE_FINITE_FIELDS: Final[tuple[str, ...]] = (
     "alias_current_tempo_bonus",
     "alias_downbeat_score_weight",
     "alias_continuity_penalty",
+    "alias_semantic_promotion_in_band_min_bpm",
+    "alias_semantic_promotion_current_max_bpm",
+    "alias_semantic_promotion_score_ratio_threshold",
+    "alias_semantic_promotion_low_bpm_max_fit_score",
+    "alias_semantic_promotion_strong_score_ratio_threshold",
+    "alias_semantic_promotion_low_confidence_max_fit_score",
+    "alias_semantic_promotion_low_confidence_score_ratio_threshold",
+    "alias_semantic_promotion_low_confidence_max_candidate_bpm",
+    "alias_semantic_promotion_bonus",
+    "alias_collapse_score_ratio_threshold",
     "alias_demotion_dropped_support_ratio_threshold",
     "alias_promotion_inserted_support_ratio_threshold",
     "alias_beat_match_tolerance_ms",
@@ -134,6 +160,7 @@ _POSITIVE_COUNT_FIELDS: Final[tuple[str, ...]] = (
     "downbeat_refine_candidate_count",
     "merge_many_similar_min_segments",
     "merge_alias_min_segments",
+    "alias_semantic_promotion_low_bpm_max_segments",
 )
 
 _NONNEGATIVE_COUNT_FIELDS: Final[tuple[str, ...]] = (
