@@ -402,7 +402,7 @@ def _merge_lane_primitive_actions(actions: Sequence[LaneAction], *, time_ms: int
     if len(actions) == 1:
         return actions[0]
     raise UnsupportedMapperActionError(
-        f"mapper tuple cannot represent same-lane compound actions at {time_ms}ms lane {lane}: {list(actions)}",
+        f"mapper tuple cannot represent multiple same-lane actions at {time_ms}ms lane {lane}: {list(actions)}",
     )
 
 
