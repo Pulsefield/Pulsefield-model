@@ -14,8 +14,6 @@ class LaneAction(str, Enum):
     TAP = "TAP"
     HOLD_START = "HOLD_START"
     HOLD_END = "HOLD_END"
-    END_TAP = "END_TAP"
-    END_START = "END_START"
 
 
 @dataclass(frozen=True)
@@ -31,10 +29,6 @@ class CanonicalEventBuildResult:
 
 
 class NegativeHitObjectTimeError(ValueError):
-    pass
-
-
-class UnsupportedCompoundLaneActionError(ValueError):
     pass
 
 
@@ -103,14 +97,8 @@ def _merge_lane_actions(actions: Sequence[LaneAction], *, time_ms: int, lane: in
     if len(actions) == 1:
         return actions[0]
 
-    action_set = set(actions)
-    if len(actions) == 2 and action_set == {LaneAction.HOLD_END, LaneAction.TAP}:
-        return LaneAction.END_TAP
-    if len(actions) == 2 and action_set == {LaneAction.HOLD_END, LaneAction.HOLD_START}:
-        return LaneAction.END_START
-
-    raise UnsupportedCompoundLaneActionError(
-        f"Unsupported same-lane compound actions at {time_ms}ms lane {lane}: {list(actions)}",
+    raise ValueError(
+        f"multiple same-lane actions at {time_ms}ms lane {lane}: {list(actions)}",
     )
 
 
@@ -119,7 +107,6 @@ __all__ = [
     "CanonicalTimepoint",
     "LaneAction",
     "NegativeHitObjectTimeError",
-    "UnsupportedCompoundLaneActionError",
     "build_canonical_quantized_events",
     "ceil_10ms",
     "quantize_10ms_half_up",
