@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from pulsefield_model.timing.ramp_detection import TimingRampDetection
 from pulsefield_model.timing.schema import FittedTimingGrid
 
 
@@ -20,6 +21,7 @@ class TimingFitDiagnostics:
     segment_alias_switch_count: int
     tempo_multiplier_distribution: dict[str, int]
     alias_candidate_count: int = 0
+    ramp_detection: TimingRampDetection | None = None
 
 
 @dataclass(frozen=True)
