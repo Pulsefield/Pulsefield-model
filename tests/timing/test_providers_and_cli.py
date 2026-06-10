@@ -10,6 +10,8 @@ from unittest import mock
 import numpy as np
 
 from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
+from pulsefield_model.timing.canonicalization import canonicalize_timing_grid
+from pulsefield_model.timing.grid_fitting import TimingFitDiagnostics, TimingFitResult
 from pulsefield_model.timing.providers import beatthis
 from pulsefield_model.timing.providers.beatthis import (
     BEATTHIS_FRAME_RATE_HZ,
@@ -24,7 +26,9 @@ from pulsefield_model.timing.providers.oracle import load_or_create_oracle_dense
 from pulsefield_model.timing.providers.oracle import oracle_dense_timing_v2_cache_path
 from pulsefield_model.timing.providers.oracle import oracle_timing_grid_from_beatmap
 from pulsefield_model.timing.providers.oracle import render_oracle_dense_timing_v2
+from pulsefield_model.timing.ramp_detection import detect_timing_ramp
 from pulsefield_model.timing.schema import FrameTimingPrediction
+from pulsefield_model.timing.schema import FittedTimingGrid, TimingSegment
 
 
 class _FakeAudio2Frames:
@@ -268,6 +272,7 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(report["segments"][0]["offset_ms"], 120.0)
         self.assertEqual(report["segments"][0]["beat_length_ms"], 500.0)
         self.assertEqual(report["segments"][0]["bpm"], 120.0)
+        self.assertFalse(report["ramp"]["is_ramp"])
 
     def test_fit_audio_main_can_emit_super_timing_shift_runs(self) -> None:
         from pulsefield_model.timing import fit_audio
@@ -315,6 +320,53 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(report["canonicalization"], TIMING_CANONICALIZATION_BPM_80_160)
         self.assertEqual(report["diagnostics"]["alias_candidate_count"], 0)
         self.assertEqual(report["segments"][0]["bpm"], 120.0)
+
+    def test_timing_report_uses_pre_canonical_ramp_detection(self) -> None:
+        from pulsefield_model.timing import fit_audio
+
+        raw_grid = FittedTimingGrid(
+            tuple(
+                TimingSegment(offset_ms=index * 1000.0, beat_length_ms=60000.0 / bpm)
+                for index, bpm in enumerate([120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0])
+            )
+        )
+        canonical_grid = canonicalize_timing_grid(
+            raw_grid,
+            canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
+        )
+        pre_canonical_detection = detect_timing_ramp(raw_grid)
+
+        self.assertTrue(pre_canonical_detection.is_ramp)
+        self.assertFalse(detect_timing_ramp(canonical_grid).is_ramp)
+
+        report = fit_audio._timing_report(
+            _sample_prediction(),
+            TimingFitResult(
+                grid=canonical_grid,
+                score=0.99,
+                diagnostics=TimingFitDiagnostics(
+                    fit_score=0.99,
+                    selected_period_frames=25.0,
+                    selected_offset_frames=0.0,
+                    selected_bpm=canonical_grid.segments[0].local_bpm,
+                    candidate_count=1,
+                    half_tempo_score=0.0,
+                    double_tempo_score=0.0,
+                    raw_selected_bpm=raw_grid.segments[0].local_bpm,
+                    raw_score=0.99,
+                    tempo_multiplier=1.0,
+                    segment_alias_switch_count=0,
+                    tempo_multiplier_distribution={"1.0": 1},
+                    ramp_detection=pre_canonical_detection,
+                ),
+            ),
+            fit_seconds=0.01,
+            device="cpu",
+            canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
+        )
+
+        self.assertTrue(report["ramp"]["is_ramp"])
+        self.assertEqual(report["ramp"]["best_run"]["start_bpm"], 120.0)
 
 
 def _write_timing_osu(path: Path, timing_lines: list[str]) -> None:

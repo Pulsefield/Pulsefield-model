@@ -12,6 +12,12 @@ from pulsefield_model.timing.grid_fitting import (
     TimingFitResult,
     fit_timing_grid,
 )
+from pulsefield_model.timing.ramp_detection import (
+    TimingRampDetection,
+    TimingRampDetectionConfig,
+    TimingRampRun,
+    detect_timing_ramp,
+)
 from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
 
 __all__ = [
@@ -24,8 +30,12 @@ __all__ = [
     "TIMING_CANONICALIZATION_NONE",
     "TimingFitDiagnostics",
     "TimingFitResult",
+    "TimingRampDetection",
+    "TimingRampDetectionConfig",
+    "TimingRampRun",
     "TimingSegment",
     "canonical_bpm_80_160",
     "canonicalize_timing_grid",
+    "detect_timing_ramp",
     "fit_timing_grid",
 ]

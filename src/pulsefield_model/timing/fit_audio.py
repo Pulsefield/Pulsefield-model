@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Sequence
 
@@ -20,6 +21,7 @@ from pulsefield_model.timing.providers.beatthis import (
     BeatThisTimingProvider,
     audio_shift_samples_for_ms,
 )
+from pulsefield_model.timing.ramp_detection import detect_timing_ramp
 from pulsefield_model.timing.schema import FrameTimingPrediction
 
 
@@ -250,6 +252,9 @@ def _timing_report(
     device: str,
     canonicalization: str,
 ) -> dict[str, object]:
+    ramp_detection = fit_result.diagnostics.ramp_detection
+    if ramp_detection is None:
+        ramp_detection = detect_timing_ramp(fit_result.grid)
     return {
         "source_path": prediction.source_path,
         "provider": prediction.provider,
@@ -267,6 +272,7 @@ def _timing_report(
             "candidate_count": fit_result.diagnostics.candidate_count,
             "alias_candidate_count": fit_result.diagnostics.alias_candidate_count,
         },
+        "ramp": asdict(ramp_detection),
         "segments": [
             {
                 "offset_ms": segment.offset_ms,

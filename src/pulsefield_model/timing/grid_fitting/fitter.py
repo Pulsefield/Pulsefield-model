@@ -16,6 +16,7 @@ from pulsefield_model.timing.grid_fitting.segment_fit import _fit_segment_range
 from pulsefield_model.timing.grid_fitting.segments import _timing_segments_from_fits, _weighted_score
 from pulsefield_model.timing.grid_fitting.splitting import _split_segment_range
 from pulsefield_model.timing.grid_fitting.types import TimingFitDiagnostics, TimingFitResult
+from pulsefield_model.timing.ramp_detection import detect_timing_ramp
 from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction
 
 
@@ -89,8 +90,10 @@ def fit_timing_grid(
         beat_signal=signal,
         config=config,
     )
+    pre_canonical_grid = FittedTimingGrid(segments=refined_segments)
+    ramp_detection = detect_timing_ramp(pre_canonical_grid)
     grid = canonicalize_timing_grid(
-        FittedTimingGrid(segments=refined_segments),
+        pre_canonical_grid,
         canonicalization=config.canonicalization,
     )
     selected_segment = grid.segments[0]
@@ -112,5 +115,6 @@ def fit_timing_grid(
             segment_alias_switch_count=_segment_alias_switch_count(grid.segments, config=config),
             tempo_multiplier_distribution=_tempo_multiplier_distribution(segment_fits),
             alias_candidate_count=alias_result.alias_candidate_count,
+            ramp_detection=ramp_detection,
         ),
     )
