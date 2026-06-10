@@ -22,6 +22,8 @@ class TimingRampDetectionConfig:
     max_continuous_gap_s: float = 20.0
     min_ramp_points: int = 8
     min_ramp_bpm_span: float = 80.0
+    min_candidate_bpm_span: float = 60.0
+    min_candidate_relative_bpm_span: float = 0.25
     min_ramp_duration_s: float = 4.0
     max_continuous_p90_gap_s: float = 20.0
     min_continuous_point_density_per_s: float = 0.08
@@ -37,6 +39,8 @@ class TimingRampDetectionConfig:
                 "monotonic_eps_bpm",
                 "max_continuous_gap_s",
                 "min_ramp_bpm_span",
+                "min_candidate_bpm_span",
+                "min_candidate_relative_bpm_span",
                 "min_ramp_duration_s",
                 "max_continuous_p90_gap_s",
                 "min_continuous_point_density_per_s",
@@ -86,6 +90,7 @@ class TimingRampDetection:
     reasons: tuple[str, ...]
     best_run: TimingRampRun | None
     segment_count: int
+    candidate_status: str = "reject"
 
 
 def detect_timing_ramp(
@@ -105,12 +110,14 @@ def detect_timing_ramp(
             reasons=("no_timing_segments",),
             best_run=None,
             segment_count=len(grid.segments),
+            candidate_status="reject",
         )
 
     reasons = _rejection_reasons(best_run, config=config)
     is_ramp = not reasons
     if is_ramp:
         reasons = ("long_continuous_monotonic_ramp",)
+    candidate_status = _candidate_status(best_run, reasons, config=config)
     return TimingRampDetection(
         is_ramp=is_ramp,
         family=_ramp_family(best_run),
@@ -118,6 +125,7 @@ def detect_timing_ramp(
         reasons=tuple(reasons),
         best_run=best_run,
         segment_count=len(grid.segments),
+        candidate_status=candidate_status,
     )
 
 
@@ -256,6 +264,37 @@ def _rejection_reasons(
     if run.linear_r2 < config.smooth_min_linear_r2 and run.jumpiness > config.smooth_max_jumpiness:
         reasons.append("weak_ramp_smoothness")
     return reasons
+
+
+def _candidate_status(
+    run: TimingRampRun,
+    reasons: Sequence[str],
+    *,
+    config: TimingRampDetectionConfig,
+) -> str:
+    if not reasons or tuple(reasons) == ("long_continuous_monotonic_ramp",):
+        return "strict_ramp"
+    if tuple(reasons) == ("low_bpm_span",) and _is_low_span_candidate(run, config=config):
+        return "borderline_low_span"
+    return "reject"
+
+
+def _is_low_span_candidate(
+    run: TimingRampRun,
+    *,
+    config: TimingRampDetectionConfig,
+) -> bool:
+    return (
+        run.bpm_span >= config.min_candidate_bpm_span
+        and _relative_bpm_span(run) >= config.min_candidate_relative_bpm_span
+    )
+
+
+def _relative_bpm_span(run: TimingRampRun) -> float:
+    reference_bpm = (abs(run.start_bpm) + abs(run.end_bpm)) / 2.0
+    if reference_bpm <= 0.0:
+        return 0.0
+    return float(run.bpm_span / reference_bpm)
 
 
 def _ramp_family(run: TimingRampRun) -> str:

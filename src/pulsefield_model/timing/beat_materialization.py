@@ -362,6 +362,7 @@ def _candidate_report(candidate: RampBeatGridCandidate) -> dict[str, object]:
             "score": candidate.ramp_detection.score,
             "reasons": list(candidate.ramp_detection.reasons),
             "segment_count": candidate.ramp_detection.segment_count,
+            "candidate_status": candidate.ramp_detection.candidate_status,
         },
         "segments": [
             {
