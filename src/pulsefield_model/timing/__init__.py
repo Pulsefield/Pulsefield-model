@@ -5,6 +5,17 @@ from pulsefield_model.timing.canonicalization import (
     canonical_bpm_80_160,
     canonicalize_timing_grid,
 )
+from pulsefield_model.timing.beat_materialization import (
+    BeatMaterializationConfig,
+    BeatMaterializationResult,
+    MaterializedBeatSequence,
+    RampBeatGridCandidate,
+    RampBeatGridHint,
+    RampBeatGridResult,
+    fit_ramp_beat_grid,
+    materialize_beats,
+    ramp_beat_grid_report,
+)
 from pulsefield_model.timing.grid_fitting import (
     GridFitter,
     GridFitterConfig,
@@ -23,8 +34,14 @@ from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPredicti
 __all__ = [
     "FittedTimingGrid",
     "FrameTimingPrediction",
+    "BeatMaterializationConfig",
+    "BeatMaterializationResult",
     "GridFitter",
     "GridFitterConfig",
+    "MaterializedBeatSequence",
+    "RampBeatGridCandidate",
+    "RampBeatGridHint",
+    "RampBeatGridResult",
     "TIMING_CANONICALIZATION_BPM_80_160",
     "TIMING_CANONICALIZATION_CHOICES",
     "TIMING_CANONICALIZATION_NONE",
@@ -37,5 +54,8 @@ __all__ = [
     "canonical_bpm_80_160",
     "canonicalize_timing_grid",
     "detect_timing_ramp",
+    "fit_ramp_beat_grid",
     "fit_timing_grid",
+    "materialize_beats",
+    "ramp_beat_grid_report",
 ]
