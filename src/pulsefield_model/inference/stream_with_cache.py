@@ -145,7 +145,10 @@ class StreamWithCache:
         audio_path: Path,
         audio_length_ms: int,
         difficulty: float | None,
+        route: str = "mapper",
     ) -> None:
+        if route != "mapper":
+            raise ValueError(f"StreamWithCache only supports mapper route, got {route!r}")
         model_runtime = self._require_model_runtime()
         normalized_difficulty = normalize_difficulty(
             self.config.default_difficulty if difficulty is None else float(difficulty),

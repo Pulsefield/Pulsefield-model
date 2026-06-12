@@ -20,6 +20,10 @@ from pulsefield_model.inference.stream_with_cache import (
     clamp_decoder_window_to_audio,
     decoder_windows_until_audio_end,
 )
+from pulsefield_model.inference.routed_backend import (
+    RoutedInferenceBackend,
+    TimingMockStreamBackend,
+)
 from pulsefield_model.inference.ws_endpoint import (
     InferenceEndpoint,
     ProtocolError,
@@ -31,6 +35,8 @@ from pulsefield_model.inference.ws_endpoint import (
     current_host_time_ms,
     difficulty_from_message,
     infer_message_type,
+    inference_route_from_message,
+    is_mock_from_message,
     host_time_ms_reached,
     parse_json_message,
     reference_clock_from_message,
@@ -45,6 +51,29 @@ from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM
 
 
 MANIFEST_PATH = Path("src/pulsefield_model/inference/hitobject_token_manifest_v2.json")
+
+
+def _timing_report() -> dict[str, object]:
+    return {
+        "source_path": "song.mp3",
+        "provider": "unit-test",
+        "checkpoint_path": "fake",
+        "device": "cpu",
+        "canonicalization": "bpm_80_160",
+        "frame_count": 110,
+        "frame_rate_hz": 50.0,
+        "fit_seconds": 0.001,
+        "score": 1.0,
+        "diagnostics": {},
+        "segments": [
+            {
+                "offset_ms": 120.0,
+                "beat_length_ms": 500.0,
+                "bpm": 120.0,
+                "meter": 4,
+            },
+        ],
+    }
 
 
 class FakePeer:
@@ -114,6 +143,18 @@ class WsEndpointProtocolTests(unittest.TestCase):
         self.assertEqual(audio_path_from_message({"audio_path": "/tmp/a.wav"}), "/tmp/a.wav")
         self.assertEqual(audio_path_from_message({"audio": "/tmp/b.wav"}), "/tmp/b.wav")
         self.assertEqual(audio_path_from_message({"audio": {"path": "/tmp/c.wav"}}), "/tmp/c.wav")
+
+    def test_inference_route_from_message_accepts_is_mock_aliases(self) -> None:
+        self.assertFalse(is_mock_from_message({"audio_path": "/tmp/a.wav"}))
+        self.assertTrue(is_mock_from_message({"audio_path": "/tmp/a.wav", "isMock": True}))
+        self.assertTrue(is_mock_from_message({"audio": {"path": "/tmp/a.wav", "is_mock": True}}))
+        self.assertEqual(inference_route_from_message({"audio_path": "/tmp/a.wav"}), "mapper")
+        self.assertEqual(
+            inference_route_from_message({"audio_path": "/tmp/a.wav", "isMock": True}),
+            "timing_mock",
+        )
+        with self.assertRaisesRegex(ProtocolError, "isMock"):
+            is_mock_from_message({"audio_path": "/tmp/a.wav", "isMock": 1})
 
     def test_difficulty_from_message_validates_supported_mapper_range(self) -> None:
         self.assertEqual(difficulty_from_message({}, default=4.0), 4.0)
@@ -326,6 +367,105 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
                 FakePeer(),
             )
 
+    async def test_default_backend_router_ready_does_not_load_route_backends(self) -> None:
+        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0))
+        backend = endpoint.backend
+        assert isinstance(backend, RoutedInferenceBackend)
+
+        await endpoint.handle_message({"control": "ready"}, FakePeer())
+
+        self.assertTrue(backend.models_ready)
+        self.assertFalse(backend.mapper_backend.models_ready)
+        self.assertFalse(backend.timing_mock_backend.models_ready)
+
+    async def test_routed_backend_lazy_startup_serializes_concurrent_first_prepare_same_route(self) -> None:
+        mapper_backend = FakeInferenceBackend(startup_delay_s=0.01)
+        timing_mock_backend = FakeInferenceBackend()
+        backend = RoutedInferenceBackend(
+            WsEndpointConfig(token_send_interval_s=0.0),
+            mapper_backend=mapper_backend,
+            timing_mock_backend=timing_mock_backend,
+        )
+        await backend.startup()
+
+        await asyncio.gather(
+            *(
+                backend.prepare_audio(
+                    session_id=f"s{index}",
+                    audio_path=Path(f"/tmp/song-{index}.wav"),
+                    audio_length_ms=2_000,
+                    difficulty=4.0,
+                    route="mapper",
+                )
+                for index in range(8)
+            ),
+        )
+
+        self.assertEqual(mapper_backend.startup_calls, 1)
+        self.assertEqual(len(mapper_backend.prepared_audio), 8)
+        self.assertEqual(timing_mock_backend.startup_calls, 0)
+
+    async def test_routed_backend_reset_waits_for_in_flight_prepare_same_session(self) -> None:
+        route_backend = BlockingPrepareBackend()
+        backend = RoutedInferenceBackend(
+            WsEndpointConfig(token_send_interval_s=0.0),
+            mapper_backend=route_backend,
+            timing_mock_backend=FakeInferenceBackend(),
+        )
+        await backend.startup()
+
+        prepare_task = asyncio.create_task(
+            backend.prepare_audio(
+                session_id="s1",
+                audio_path=Path("/tmp/song.wav"),
+                audio_length_ms=2_000,
+                difficulty=4.0,
+                route="mapper",
+            ),
+        )
+        await route_backend.prepare_started.wait()
+        reset_task = asyncio.create_task(backend.reset_session("s1"))
+        await asyncio.sleep(0)
+        self.assertFalse(reset_task.done())
+
+        route_backend.release_prepare.set()
+        await prepare_task
+        await reset_task
+
+        self.assertNotIn("s1", backend._session_backends)
+        self.assertEqual(route_backend.reset_sessions, ["s1"])
+
+    async def test_routed_backend_reset_waits_for_lazy_startup_before_prepare_same_session(self) -> None:
+        route_backend = BlockingStartupBackend()
+        backend = RoutedInferenceBackend(
+            WsEndpointConfig(token_send_interval_s=0.0),
+            mapper_backend=route_backend,
+            timing_mock_backend=FakeInferenceBackend(),
+        )
+        await backend.startup()
+
+        prepare_task = asyncio.create_task(
+            backend.prepare_audio(
+                session_id="s1",
+                audio_path=Path("/tmp/song.wav"),
+                audio_length_ms=2_000,
+                difficulty=4.0,
+                route="mapper",
+            ),
+        )
+        await route_backend.startup_started.wait()
+        reset_task = asyncio.create_task(backend.reset_session("s1"))
+        await asyncio.sleep(0)
+        self.assertFalse(reset_task.done())
+
+        route_backend.release_startup.set()
+        await prepare_task
+        await reset_task
+
+        self.assertNotIn("s1", backend._session_backends)
+        self.assertNotIn("s1", backend._session_locks)
+        self.assertEqual(route_backend.reset_sessions, ["s1"])
+
     async def test_reference_time_starts_hitobject_token_stream(self) -> None:
         config = WsEndpointConfig(token_send_interval_s=0.0)
         backend = FakeInferenceBackend(
@@ -382,9 +522,61 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(backend.iter_calls[0]["window"], DecoderWindow)
         await endpoint.stop_session("s1")
 
+    async def test_endpoint_streams_timing_mock_route_through_reference_time(self) -> None:
+        def timing_fit_fn(audio_path, **kwargs):
+            del audio_path, kwargs
+            return _timing_report()
+
+        mapper_backend = FakeInferenceBackend()
+        timing_mock_backend = TimingMockStreamBackend(
+            WsEndpointConfig(decoder_window_ms=1_000, token_send_interval_s=0.0),
+            timing_fit_fn=timing_fit_fn,
+        )
+        backend = RoutedInferenceBackend(
+            WsEndpointConfig(decoder_window_ms=1_000, token_send_interval_s=0.0, decoder_lead_ms=0),
+            mapper_backend=mapper_backend,
+            timing_mock_backend=timing_mock_backend,
+        )
+        endpoint = InferenceEndpoint(
+            config=WsEndpointConfig(decoder_window_ms=1_000, token_send_interval_s=0.0, decoder_lead_ms=0),
+            backend=backend,
+        )
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.mp3",
+                "audio_length_ms": 1_700,
+                "isMock": True,
+            },
+            peer,
+        )
+        await endpoint.handle_message(
+            {
+                "type": "reference_time",
+                "session_id": "s1",
+                "ref_time_ms": 1,
+                "local_host_time_send_ms": current_host_time_ms(),
+            },
+            peer,
+        )
+        task = endpoint.sessions["s1"].stream_task
+        assert task is not None
+        await task
+
+        self.assertFalse(mapper_backend.models_ready)
+        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens"] * 2)
+        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in peer.messages))
+        self.assertEqual([message["token"][1] for message in peer.messages], [1_120, 1_620])
+        await endpoint.stop_session("s1")
+
     async def test_stream_token_socket_disconnect_finishes_task_quietly(self) -> None:
         config = WsEndpointConfig(token_send_interval_s=0.0)
-        endpoint = InferenceEndpoint(config=config, backend=FakeInferenceBackend())
+        backend = FakeInferenceBackend()
+        endpoint = InferenceEndpoint(config=config, backend=backend)
 
         await endpoint.handle_message({"type": "ready", "control": "ready"}, FakePeer())
         await endpoint.handle_message(
@@ -405,13 +597,13 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             },
             DisconnectingPeer(),
         )
-        task = endpoint.sessions["s1"].stream_task
-        assert task is not None
-        await task
+        for _ in range(20):
+            if "s1" not in endpoint.sessions:
+                break
+            await asyncio.sleep(0.01)
 
-        self.assertFalse(task.cancelled())
-        self.assertIsNone(task.exception())
-        await endpoint.stop_session("s1")
+        self.assertNotIn("s1", endpoint.sessions)
+        self.assertEqual(backend.reset_sessions, ["s1"])
 
     async def test_raw_tcp_disconnect_before_websocket_handshake_is_ignored(self) -> None:
         endpoint = InferenceEndpoint(
@@ -448,6 +640,75 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             await server.wait_closed()
 
         self.assertEqual(errors, [])
+
+    async def test_websocket_disconnect_after_audio_path_resets_owned_session(self) -> None:
+        backend = FakeInferenceBackend()
+        endpoint = InferenceEndpoint(
+            config=WsEndpointConfig(token_send_interval_s=0.0),
+            backend=backend,
+        )
+        errors: list[BaseException] = []
+        handler_tasks: list[asyncio.Task] = []
+
+        async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            task = asyncio.current_task()
+            assert task is not None
+            handler_tasks.append(task)
+            try:
+                await _handle_websocket_client(endpoint, reader, writer)
+            except BaseException as exc:
+                errors.append(exc)
+
+        server = await asyncio.start_server(handle_client, host="127.0.0.1", port=0)
+        try:
+            assert server.sockets is not None
+            host, port = server.sockets[0].getsockname()[:2]
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(
+                b"GET / HTTP/1.1\r\n"
+                b"Host: localhost\r\n"
+                b"Upgrade: websocket\r\n"
+                b"Connection: Upgrade\r\n"
+                b"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                b"Sec-WebSocket-Version: 13\r\n"
+                b"\r\n"
+            )
+            await writer.drain()
+            self.assertIn(b"101 Switching Protocols", await reader.readuntil(b"\r\n\r\n"))
+
+            writer.write(_client_text_frame({"control": "ready"}))
+            writer.write(
+                _client_text_frame(
+                    {
+                        "type": "audio_path",
+                        "session_id": "s1",
+                        "audio_path": "/tmp/song.wav",
+                        "audio_length_ms": 2_000,
+                    },
+                ),
+            )
+            await writer.drain()
+            for _ in range(20):
+                if backend.prepared_audio:
+                    break
+                await asyncio.sleep(0.01)
+            self.assertEqual(len(backend.prepared_audio), 1)
+
+            writer.close()
+            await writer.wait_closed()
+            for _ in range(20):
+                if handler_tasks and all(task.done() for task in handler_tasks):
+                    break
+                await asyncio.sleep(0.01)
+            self.assertTrue(handler_tasks)
+            await asyncio.wait_for(asyncio.gather(*handler_tasks), timeout=1.0)
+        finally:
+            server.close()
+            await server.wait_closed()
+
+        self.assertEqual(errors, [])
+        self.assertNotIn("s1", endpoint.sessions)
+        self.assertEqual(backend.reset_sessions, ["s1"])
 
     async def test_audio_path_requires_length_or_readable_audio_file(self) -> None:
         endpoint = InferenceEndpoint(
@@ -515,6 +776,118 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(backend.prepared_audio[0]["audio_path"], Path("/tmp/song.wav"))
         self.assertEqual(backend.prepared_audio[0]["audio_length_ms"], 2_000)
 
+    async def test_audio_path_is_mock_routes_timing_mock_without_mapper_difficulty(self) -> None:
+        backend = FakeInferenceBackend()
+        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 2_000,
+                "isMock": True,
+                "difficulty": 7.0,
+            },
+            peer,
+        )
+
+        self.assertEqual(endpoint.sessions["s1"].route, "timing_mock")
+        self.assertIsNone(endpoint.sessions["s1"].difficulty)
+        self.assertEqual(backend.prepared_routes, ["timing_mock"])
+        self.assertIsNone(backend.prepared_audio[0]["difficulty"])
+
+    async def test_reference_time_is_mock_requires_audio_path_mock_route(self) -> None:
+        backend = FakeInferenceBackend()
+        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 2_000,
+            },
+            peer,
+        )
+
+        with self.assertRaisesRegex(ProtocolError, "audio_path"):
+            await endpoint.handle_message(
+                {
+                    "type": "reference_time",
+                    "session_id": "s1",
+                    "ref_time_ms": 0,
+                    "local_host_time_send_ms": current_host_time_ms(),
+                    "isMock": True,
+                },
+                peer,
+            )
+        self.assertEqual(endpoint.sessions["s1"].route, "mapper")
+        self.assertEqual(backend.prepared_routes, ["mapper"])
+
+    async def test_is_mock_endpoint_streams_timing_grid_tokens_without_mapper_backend(self) -> None:
+        timing_calls = []
+
+        def timing_fit_fn(audio_path, **kwargs):
+            timing_calls.append((Path(audio_path), kwargs))
+            return _timing_report()
+
+        config = WsEndpointConfig(
+            decoder_window_ms=800,
+            decoder_lead_ms=0,
+            token_send_interval_s=0.0,
+        )
+        mapper_backend = FakeInferenceBackend()
+        backend = RoutedInferenceBackend(
+            config,
+            mapper_backend=mapper_backend,
+            timing_mock_backend=TimingMockStreamBackend(config, timing_fit_fn=timing_fit_fn),
+        )
+        endpoint = InferenceEndpoint(config=config, backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready", "isMock": True}, peer)
+        self.assertFalse(mapper_backend.models_ready)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 1_300,
+                "isMock": True,
+            },
+            peer,
+        )
+        await endpoint.handle_message(
+            {
+                "type": "reference_time",
+                "session_id": "s1",
+                "ref_time_ms": 0,
+                "local_host_time_send_ms": current_host_time_ms() + 1_000.0,
+            },
+            peer,
+        )
+        task = endpoint.sessions["s1"].stream_task
+        assert task is not None
+        await task
+
+        vocab = MapperTupleVocab()
+        self.assertEqual(
+            [message["token"] for message in peer.messages],
+            [
+                [vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 120],
+                [vocab.encode_event(("TAP", "TAP", "NONE", "NONE")), 620],
+                [vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 1120],
+            ],
+        )
+        self.assertEqual(timing_calls[0][0], Path("/tmp/song.wav"))
+        self.assertEqual(mapper_backend.prepared_routes, [])
+        await endpoint.stop_session("s1")
+
     async def test_reference_time_difficulty_does_not_override_audio_path_difficulty(self) -> None:
         backend = FakeInferenceBackend()
         endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
@@ -548,6 +921,141 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(endpoint.sessions["s1"].difficulty, 5.0)
         self.assertEqual(backend.prepared_audio[0]["difficulty"], 5.0)
         await endpoint.stop_session("s1")
+
+    async def test_audio_path_rejects_cross_owner_session_replace(self) -> None:
+        backend = FakeInferenceBackend()
+        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
+        peer = FakePeer()
+        owner_a = object()
+        owner_b = object()
+
+        await endpoint.handle_message({"control": "ready"}, peer, owner=owner_a)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song-a.wav",
+                "audio_length_ms": 1_000,
+            },
+            peer,
+            owner=owner_a,
+        )
+
+        with self.assertRaisesRegex(ProtocolError, "owned"):
+            await endpoint.handle_message(
+                {
+                    "type": "audio_path",
+                    "session_id": "s1",
+                    "audio_path": "/tmp/song-b.wav",
+                    "audio_length_ms": 2_000,
+                },
+                peer,
+                owner=owner_b,
+            )
+
+        self.assertEqual(endpoint.sessions["s1"].owner, owner_a)
+        self.assertEqual(endpoint.sessions["s1"].audio_path, Path("/tmp/song-a.wav"))
+        self.assertEqual(endpoint.sessions["s1"].audio_length_ms, 1_000)
+        self.assertEqual(len(backend.prepared_audio), 1)
+        self.assertEqual(backend.reset_sessions, [])
+
+    async def test_reference_time_rejects_audio_length_change_after_prepare(self) -> None:
+        backend = FakeInferenceBackend()
+        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 1_000,
+            },
+            peer,
+        )
+
+        with self.assertRaisesRegex(ProtocolError, "audio_length_ms"):
+            await endpoint.handle_message(
+                {
+                    "type": "reference_time",
+                    "session_id": "s1",
+                    "ref_time_ms": 0,
+                    "local_host_time_send_ms": current_host_time_ms(),
+                    "audio_length_ms": 2_000,
+                },
+                peer,
+            )
+        self.assertIsNone(endpoint.sessions["s1"].stream_task)
+
+    async def test_stop_waits_for_in_flight_prepare_and_resets_routed_session(self) -> None:
+        route_backend = BlockingPrepareBackend()
+        config = WsEndpointConfig(token_send_interval_s=0.0)
+        backend = RoutedInferenceBackend(
+            config,
+            mapper_backend=route_backend,
+            timing_mock_backend=FakeInferenceBackend(),
+        )
+        endpoint = InferenceEndpoint(config=config, backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        prepare_task = asyncio.create_task(
+            endpoint.handle_message(
+                {
+                    "type": "audio_path",
+                    "session_id": "s1",
+                    "audio_path": "/tmp/song.wav",
+                    "audio_length_ms": 1_000,
+                },
+                peer,
+            ),
+        )
+        await route_backend.prepare_started.wait()
+        stop_task = asyncio.create_task(endpoint.stop_session("s1"))
+        await asyncio.sleep(0)
+        self.assertFalse(stop_task.done())
+
+        route_backend.release_prepare.set()
+        await prepare_task
+        await stop_task
+
+        self.assertNotIn("s1", endpoint.sessions)
+        self.assertNotIn("s1", backend._session_backends)
+        self.assertNotIn("s1", endpoint._session_locks)
+        self.assertNotIn("s1", backend._session_locks)
+        self.assertEqual(route_backend.reset_sessions, ["s1"])
+
+    async def test_session_locks_are_released_after_stop(self) -> None:
+        route_backend = FakeInferenceBackend()
+        config = WsEndpointConfig(token_send_interval_s=0.0)
+        backend = RoutedInferenceBackend(
+            config,
+            mapper_backend=route_backend,
+            timing_mock_backend=FakeInferenceBackend(),
+        )
+        endpoint = InferenceEndpoint(config=config, backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 1_000,
+            },
+            peer,
+        )
+        self.assertIn("s1", endpoint._session_locks)
+        self.assertIn("s1", backend._session_locks)
+
+        await endpoint.stop_session("s1")
+
+        self.assertNotIn("s1", endpoint.sessions)
+        self.assertNotIn("s1", backend._session_backends)
+        self.assertNotIn("s1", endpoint._session_locks)
+        self.assertNotIn("s1", backend._session_locks)
 
     async def test_mapper_v2_backend_prepares_session_runtime_from_ws_audio(self) -> None:
         loader_configs = []
@@ -619,6 +1127,56 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual([token.ms_in_ref_audio for token in tokens], [8_000, 16_000])
+
+    async def test_timing_mock_backend_streams_mock_tokens_from_selected_reference_window(self) -> None:
+        fit_calls = []
+
+        def timing_fit_fn(audio_path, **kwargs):
+            fit_calls.append((Path(audio_path), kwargs))
+            return _timing_report()
+
+        backend = TimingMockStreamBackend(
+            WsEndpointConfig(
+                decoder_window_ms=1_000,
+                token_send_interval_s=0.0,
+                beatthis_device="cpu",
+                canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
+            ),
+            timing_fit_fn=timing_fit_fn,
+        )
+
+        await backend.startup()
+        await backend.prepare_audio(
+            session_id="s1",
+            audio_path=Path("/tmp/song.mp3"),
+            audio_length_ms=1_700,
+            difficulty=None,
+            route="timing_mock",
+        )
+
+        tokens = []
+        async for token in backend.iter_hitobject_tokens(
+            session_id="s1",
+            audio_path=Path("/tmp/song.mp3"),
+            audio_length_ms=1_700,
+            window=DecoderWindow(start_ms=1_000, end_ms=2_000),
+        ):
+            tokens.append(token)
+
+        self.assertEqual([token.ms_in_ref_audio for token in tokens], [1_120, 1_620])
+        self.assertEqual(
+            [token.actions for token in tokens],
+            [
+                ("NONE", "NONE", "TAP", "TAP"),
+                ("TAP", "TAP", "NONE", "NONE"),
+            ],
+        )
+        self.assertEqual(fit_calls[0][0], Path("/tmp/song.mp3"))
+        self.assertEqual(fit_calls[0][1]["device"], "cpu")
+        self.assertEqual(
+            fit_calls[0][1]["fitter_config"].canonicalization,
+            TIMING_CANONICALIZATION_BPM_80_160,
+        )
 
     def test_hitobject_token_manifest_matches_full_mapper_event_vocab(self) -> None:
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -704,17 +1262,25 @@ class FakeInferenceBackend:
         *,
         tokens: tuple[HitObjectToken, ...] | None = None,
         block_after_first: bool = False,
+        startup_delay_s: float = 0.0,
     ) -> None:
         self.models_ready = False
         self.tokens = (
             HitObjectToken(10, "EVENT_A", 0, ("tap", "none", "none", "none")),
         ) if tokens is None else tokens
         self.block_after_first = bool(block_after_first)
+        self.startup_delay_s = float(startup_delay_s)
+        self.startup_calls = 0
         self.prepared_audio: list[dict[str, object]] = []
+        self.prepared_routes: list[str] = []
         self.iter_calls: list[dict[str, object]] = []
         self.reset_sessions: list[str] = []
 
-    async def startup(self) -> None:
+    async def startup(self, *, route: str = "mapper") -> None:
+        del route
+        self.startup_calls += 1
+        if self.startup_delay_s:
+            await asyncio.sleep(self.startup_delay_s)
         self.models_ready = True
 
     async def prepare_audio(
@@ -724,7 +1290,9 @@ class FakeInferenceBackend:
         audio_path: Path,
         audio_length_ms: int,
         difficulty: float | None,
+        route: str = "mapper",
     ) -> None:
+        self.prepared_routes.append(route)
         self.prepared_audio.append(
             {
                 "session_id": session_id,
@@ -758,6 +1326,46 @@ class FakeInferenceBackend:
 
     async def reset_session(self, session_id: str) -> None:
         self.reset_sessions.append(session_id)
+
+
+class BlockingPrepareBackend(FakeInferenceBackend):
+    def __init__(self) -> None:
+        super().__init__()
+        self.prepare_started = asyncio.Event()
+        self.release_prepare = asyncio.Event()
+
+    async def prepare_audio(
+        self,
+        *,
+        session_id: str,
+        audio_path: Path,
+        audio_length_ms: int,
+        difficulty: float | None,
+        route: str = "mapper",
+    ) -> None:
+        self.prepare_started.set()
+        await self.release_prepare.wait()
+        await super().prepare_audio(
+            session_id=session_id,
+            audio_path=audio_path,
+            audio_length_ms=audio_length_ms,
+            difficulty=difficulty,
+            route=route,
+        )
+
+
+class BlockingStartupBackend(FakeInferenceBackend):
+    def __init__(self) -> None:
+        super().__init__()
+        self.startup_started = asyncio.Event()
+        self.release_startup = asyncio.Event()
+
+    async def startup(self, *, route: str = "mapper") -> None:
+        del route
+        self.startup_calls += 1
+        self.startup_started.set()
+        await self.release_startup.wait()
+        self.models_ready = True
 
 
 class StreamingBackend(StreamWithCache):
@@ -820,6 +1428,18 @@ def _write_silent_wav(path: Path, *, duration_ms: int, sample_rate: int = 8_000)
         audio.setsampwidth(2)
         audio.setframerate(sample_rate)
         audio.writeframes(b"\x00\x00" * frame_count)
+
+
+def _client_text_frame(payload: dict) -> bytes:
+    data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    length = len(data)
+    if length < 126:
+        prefix = bytes([0x81, length])
+    elif length <= 0xFFFF:
+        prefix = bytes([0x81, 126]) + length.to_bytes(2, "big")
+    else:
+        prefix = bytes([0x81, 127]) + length.to_bytes(8, "big")
+    return prefix + data
 
 
 if __name__ == "__main__":
