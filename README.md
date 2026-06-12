@@ -202,3 +202,11 @@ uv sync --group dev
   postmortems used to bound claims in this README.
 - `ref-proj/`: local reference projects used for analogy and comparison, not
   authority.
+
+## License
+
+Pulsefield-model is licensed under the GNU Affero General Public License v3.0
+only (`AGPL-3.0-only`). See `LICENSE`.
+
+The projects under `ref-proj/` are git submodules/reference projects and retain
+their upstream licenses.

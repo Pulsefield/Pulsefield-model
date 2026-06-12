@@ -1,11 +1,13 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pulsefield-model"
 version = "0.1.0"
 requires-python = ">=3.10"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 dependencies = [
     "numpy==1.26.4",
     "pandas==2.3.3",
