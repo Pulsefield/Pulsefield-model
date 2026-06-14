@@ -17,6 +17,7 @@ dependencies = [
     "matplotlib==3.10.8",
     "mutagen==1.47.0",
     "flask==3.1.2",
+    "pulsefield-protocol==0.0.3",
     "audioop-lts; python_version >= '3.13'",
 ]
 

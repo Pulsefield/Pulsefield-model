@@ -19,6 +19,7 @@ class PackageLayoutTest(unittest.TestCase):
             "pulsefield_model.models.mapper.v2_1",
             "pulsefield_model.training",
             "pulsefield_model.inference",
+            "pulsefield_model.inference.protobuf_transport",
             "pulsefield_model.evals",
         ]
 

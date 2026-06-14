@@ -48,8 +48,8 @@ class InferenceError(RuntimeError):
         self.route = route
         self.code = code
 
-    def to_payload(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
+    def to_event(self) -> dict[str, Any]:
+        event: dict[str, Any] = {
             "type": "error",
             "error_kind": "inference",
             "session_id": self.session_id,
@@ -59,16 +59,16 @@ class InferenceError(RuntimeError):
             "error": str(self),
         }
         if self.route is not None:
-            payload["route"] = self.route
-        return payload
+            event["route"] = self.route
+        return event
 
 
 class PeerDisconnected(ConnectionError):
     pass
 
 
-class JsonPeer(Protocol):
-    async def send_json(self, payload: Mapping[str, Any]) -> None:
+class EndpointPeer(Protocol):
+    async def send_event(self, event: Mapping[str, Any]) -> None:
         ...
 
 
@@ -166,25 +166,30 @@ class InferenceEndpoint:
 
     async def handle_message(
         self,
-        raw_message: str | bytes | Mapping[str, Any],
-        peer: JsonPeer,
+        message: Mapping[str, Any],
+        peer: EndpointPeer,
         *,
         owner: object | None = None,
     ) -> None:
-        message = parse_json_message(raw_message)
         message_type = infer_message_type(message)
 
         if message_type == "ready":
             await self.startup()
             return
-        if message_type in {"audio_path", "audio"}:
-            await self._handle_audio_path(message, owner=owner)
+        if message_type == "node_hello":
+            return
+        if message_type == "audio":
+            await self._handle_audio(message, owner=owner)
             return
         if message_type == "reference_time":
             await self._handle_reference_time(message, peer, owner=owner)
             return
         if message_type == "stop":
-            await self.stop_session(require_session_id(message), owner=owner)
+            await self.stop_session(
+                require_session_id(message),
+                reason=stop_session_reason_from_message(message),
+                owner=owner,
+            )
             return
         raise ProtocolError(f"unsupported message type: {message_type!r}")
 
@@ -236,10 +241,10 @@ class InferenceEndpoint:
             reason=reason,
         )
 
-    async def _handle_audio_path(self, message: Mapping[str, Any], *, owner: object | None = None) -> None:
+    async def _handle_audio(self, message: Mapping[str, Any], *, owner: object | None = None) -> None:
         assert self.backend is not None
         if not self.backend.models_ready:
-            raise ProtocolError("send ready before audio_path")
+            raise ProtocolError("send ready before audio")
         session_id = require_session_id(message)
         raw_audio_path = audio_path_from_message(message)
         if not isinstance(raw_audio_path, str) or not raw_audio_path.strip():
@@ -262,7 +267,7 @@ class InferenceEndpoint:
             if existing is not None:
                 if owner is not None and existing.owner is not owner:
                     raise ProtocolError("session is owned by another websocket connection")
-                await self._stop_session_locked(session_id, reason="replace_audio_path")
+                await self._stop_session_locked(session_id, reason="replace_audio")
 
             session = SessionState(
                 session_id=session_id,
@@ -277,7 +282,7 @@ class InferenceEndpoint:
                 session_id=session_id,
                 from_status="no_session",
                 to_status="audio_preparing",
-                reason="audio_path",
+                reason="audio",
                 audio_path=str(audio_path),
                 audio_length_ms=audio_length_ms,
                 difficulty=difficulty,
@@ -328,7 +333,7 @@ class InferenceEndpoint:
     async def _handle_reference_time(
         self,
         message: Mapping[str, Any],
-        peer: JsonPeer,
+        peer: EndpointPeer,
         *,
         owner: object | None = None,
     ) -> None:
@@ -336,7 +341,7 @@ class InferenceEndpoint:
         async with self._session_scope(session_id):
             session = self.sessions.get(session_id)
             if session is None or session.audio_path is None or not session.audio_prepared:
-                raise ProtocolError("send audio_path before reference_time")
+                raise ProtocolError("send audio before reference_time")
             if owner is not None and session.owner is not owner:
                 raise ProtocolError("session is owned by another websocket connection")
 
@@ -349,8 +354,6 @@ class InferenceEndpoint:
             if session.audio_length_ms is None:
                 raise ProtocolError("audio_length_ms is required or must be readable from audio_path")
             audio_length_ms = session.audio_length_ms
-            if is_mock_from_message(message) and session.route != "timing_mock":
-                raise ProtocolError("isMock must be sent with audio_path before reference_time")
             from_status = session_status(session)
             window_policy = decoder_window_policy_for_route(session.route, self.config)
             window = clamp_decoder_window_for_policy(
@@ -408,7 +411,7 @@ class InferenceEndpoint:
                 return
             await asyncio.sleep(check_interval_s)
 
-    async def _stream_tokens(self, session: SessionState, window: DecoderWindow, peer: JsonPeer) -> None:
+    async def _stream_tokens(self, session: SessionState, window: DecoderWindow, peer: EndpointPeer) -> None:
         assert self.backend is not None
         assert session.audio_path is not None
         if session.audio_length_ms is None:
@@ -424,15 +427,16 @@ class InferenceEndpoint:
                     return
                 if int(hitobject.ms_in_ref_audio) >= int(session.audio_length_ms):
                     continue
-                await peer.send_json(
+                await peer.send_event(
                     {
-                        "type": "hitobject_tokens",
+                        "type": "hit_object_token",
                         "session_id": session.session_id,
-                        "token": hitobject.message_token(),
+                        "token_id": int(hitobject.token_id),
+                        "ms_in_ref_audio": int(hitobject.ms_in_ref_audio),
                     },
                 )
             if self.sessions.get(session.session_id) is session:
-                await peer.send_json(
+                await peer.send_event(
                     {
                         "type": "end_of_stream",
                         "session_id": session.session_id,
@@ -455,7 +459,7 @@ class InferenceEndpoint:
                         phase="stream",
                         route=session.route,
                     )
-                    await peer.send_json(inference_error.to_payload())
+                    await peer.send_event(inference_error.to_event())
                 except PeerDisconnected:
                     await self.stop_session(session.session_id, reason="peer_disconnect", owner=session.owner)
                     return
@@ -481,36 +485,13 @@ class InferenceEndpoint:
                 self._session_locks.pop(session_id, None)
 
 
-def parse_json_message(raw_message: str | bytes | Mapping[str, Any]) -> Mapping[str, Any]:
-    if isinstance(raw_message, Mapping):
-        return raw_message
-    if isinstance(raw_message, bytes):
-        raw_message = raw_message.decode("utf-8")
-    try:
-        message = json.loads(raw_message)
-    except json.JSONDecodeError as exc:
-        raise ProtocolError(f"invalid json message: {exc.msg}") from exc
-    if not isinstance(message, Mapping):
-        raise ProtocolError("websocket message must be a JSON object")
-    return message
-
-
 def infer_message_type(message: Mapping[str, Any]) -> str:
     raw_type = message.get("type")
     if isinstance(raw_type, str) and raw_type:
-        return raw_type
-    control = message.get("control")
-    if control == "ready":
-        return "ready"
-    if control == "end_session":
-        return "stop"
-    if "audio_path" in message or "audio" in message:
-        return "audio_path"
-    has_ref_time_ms = "ref_time_ms" in message
-    has_send_local_host_time_ms = "local_host_time_send_ms" in message
-    if has_ref_time_ms and has_send_local_host_time_ms:
-        return "reference_time"
-    raise ProtocolError("message must include type or a recognized control field")
+        if raw_type in {"ready", "node_hello", "audio", "reference_time", "stop"}:
+            return raw_type
+        raise ProtocolError(f"unsupported message type: {raw_type!r}")
+    raise ProtocolError("message must include type")
 
 
 def require_session_id(message: Mapping[str, Any]) -> str:
@@ -524,30 +505,14 @@ def audio_path_from_message(message: Mapping[str, Any]) -> str | None:
     value = message.get("audio_path")
     if isinstance(value, str):
         return value
-    audio = message.get("audio")
-    if isinstance(audio, str):
-        return audio
-    if isinstance(audio, Mapping):
-        nested = audio.get("audio_path", audio.get("path"))
-        if isinstance(nested, str):
-            return nested
     return None
 
 
 def inference_route_from_message(message: Mapping[str, Any]) -> InferenceRoute:
-    return "timing_mock" if is_mock_from_message(message) else "mapper"
-
-
-def is_mock_from_message(message: Mapping[str, Any]) -> bool:
-    value = _optional_bool_alias(message, "isMock", "is_mock")
-    if value is not None:
-        return value
-    audio = message.get("audio")
-    if isinstance(audio, Mapping):
-        nested = _optional_bool_alias(audio, "isMock", "is_mock")
-        if nested is not None:
-            return nested
-    return False
+    route = _optional_route_from_message(message)
+    if route is not None:
+        return route
+    return "mapper"
 
 
 def reference_clock_from_message(message: Mapping[str, Any]) -> ReferenceClock:
@@ -556,6 +521,15 @@ def reference_clock_from_message(message: Mapping[str, Any]) -> ReferenceClock:
         local_host_time_send_ms=_required_float(message, "local_host_time_send_ms"),
         received_local_host_time_ms=current_host_time_ms(),
     )
+
+
+def stop_session_reason_from_message(message: Mapping[str, Any]) -> str:
+    reason = message.get("reason")
+    if reason is None:
+        return "client_stop"
+    if not isinstance(reason, str) or not reason.strip():
+        raise ProtocolError("stop reason must be a non-empty string")
+    return reason
 
 
 @dataclass(frozen=True)
@@ -678,20 +652,15 @@ def log_ws_status(
 
 
 def audio_length_ms_from_message(message: Mapping[str, Any]) -> int | None:
-    value = _optional_int_alias(message, "audio_length_ms", "audio_length")
-    if value is not None:
-        if value <= 0:
-            raise ProtocolError("audio_length_ms must be positive")
-        return value
-    seconds = message.get("audio_length_s")
-    if seconds is None:
+    value = message.get("audio_length_ms")
+    if value is None:
         return None
-    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
-        raise ProtocolError("audio_length_s must be numeric")
-    seconds = float(seconds)
-    if not math.isfinite(seconds) or seconds <= 0:
-        raise ProtocolError("audio_length_s must be positive and finite")
-    return int(round(seconds * 1000.0))
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ProtocolError("audio_length_ms must be an integer")
+    value = int(value)
+    if value <= 0:
+        raise ProtocolError("audio_length_ms must be positive")
+    return value
 
 
 def difficulty_from_message(message: Mapping[str, Any], *, default: float) -> float:
@@ -708,15 +677,18 @@ def difficulty_from_message(message: Mapping[str, Any], *, default: float) -> fl
     return value
 
 
-def _optional_bool_alias(message: Mapping[str, Any], *keys: str) -> bool | None:
-    for key in keys:
-        if key not in message:
-            continue
-        value = message[key]
-        if not isinstance(value, bool):
-            raise ProtocolError(f"{key} must be a boolean")
-        return value
-    return None
+def _optional_route_from_message(message: Mapping[str, Any]) -> InferenceRoute | None:
+    raw_route = message.get("route")
+    if raw_route is None:
+        return None
+    if not isinstance(raw_route, str):
+        raise ProtocolError("route must be a string")
+    route = raw_route.strip().lower().replace("-", "_")
+    if route in {"mapper", "inference_route_mapper"}:
+        return "mapper"
+    if route in {"timing_mock", "inference_route_timing_mock"}:
+        return "timing_mock"
+    raise ProtocolError(f"unsupported inference route: {raw_route!r}")
 
 
 def _required_int(message: Mapping[str, Any], key: str) -> int:
@@ -734,17 +706,6 @@ def _required_float(message: Mapping[str, Any], key: str) -> float:
     if not math.isfinite(value) or value < 0:
         raise ProtocolError(f"{key} must be finite and non-negative")
     return value
-
-
-def _optional_int_alias(message: Mapping[str, Any], *keys: str) -> int | None:
-    for key in keys:
-        if key not in message:
-            continue
-        value = message[key]
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise ProtocolError(f"{key} must be an integer")
-        return int(value)
-    return None
 
 
 async def _prepare_backend_audio(

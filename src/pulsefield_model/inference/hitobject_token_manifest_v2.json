@@ -1,7 +1,7 @@
 {
   "manifest_type": "mapper_tuple_event_token_lane_actions",
   "version": 1,
-  "description": "Complete mapper tuple EVENT token_id to four-lane LaneAction manifest. WebSocket hitobject_tokens send token: [token_id, ms_in_ref_audio].",
+  "description": "Complete mapper tuple EVENT token_id to four-lane LaneAction manifest. Protobuf HitObjectTokenEvent sends token_id plus ms_in_ref_audio.",
   "key_count": 4,
   "event_token_id_range": [
     25,

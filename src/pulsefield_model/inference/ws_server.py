@@ -26,8 +26,13 @@ from pulsefield_model.inference.ws_endpoint import (
     WsEndpointConfig,
     _is_expected_socket_disconnect,
     infer_message_type,
-    parse_json_message,
     require_session_id,
+)
+from pulsefield_model.inference.protobuf_transport import (
+    MAPPER_TOKEN_CONTRACT_VERSION,
+    envelope_to_message,
+    outbound_payload_to_envelope,
+    parse_envelope_frame,
 )
 from pulsefield_model.timing.canonicalization import (
     TIMING_CANONICALIZATION_BPM_80_160,
@@ -66,11 +71,15 @@ async def _handle_websocket_client(
             await _send_http_error(writer, status=400, reason="Bad Request", body=str(exc))
             return
         while True:
-            message = await _read_client_text_frame(reader, writer)
-            if message is None:
+            try:
+                payload = await _read_client_binary_envelope_frame(reader, writer)
+            except ProtocolError as exc:
+                await peer.send_event({"type": "error", "code": "protocol_error", "message": str(exc)})
+                break
+            if payload is None:
                 break
             try:
-                parsed_message = parse_json_message(message)
+                parsed_message = envelope_to_message(parse_envelope_frame(payload))
                 message_type = infer_message_type(parsed_message)
                 await endpoint.handle_message(parsed_message, peer, owner=owner)
                 _track_owned_session(
@@ -79,11 +88,11 @@ async def _handle_websocket_client(
                     message=parsed_message,
                 )
             except ProtocolError as exc:
-                await peer.send_json({"type": "error", "error": str(exc)})
+                await peer.send_event({"type": "error", "code": "protocol_error", "message": str(exc)})
             except InferenceError as exc:
                 _log_inference_error(exc)
                 try:
-                    await peer.send_json(exc.to_payload())
+                    await peer.send_event(exc.to_event())
                 except PeerDisconnected:
                     return
             except PeerDisconnected:
@@ -102,17 +111,63 @@ class _WebSocketPeer:
     def __init__(self, writer: asyncio.StreamWriter) -> None:
         self._writer = writer
         self._send_lock = asyncio.Lock()
+        self._sequence_by_session_id: dict[str, int] = {}
+        self._token_index_by_session_id: dict[str, int] = {}
+        self._protobuf_stream_begun_session_ids: set[str] = set()
 
-    async def send_json(self, payload: Mapping[str, Any]) -> None:
-        data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    async def send_event(self, payload: Mapping[str, Any]) -> None:
         async with self._send_lock:
             try:
-                self._writer.write(_encode_server_text_frame(data))
+                for envelope in self._protobuf_envelopes_for_payload(payload):
+                    self._writer.write(_encode_server_binary_frame(envelope.SerializeToString()))
                 await _drain_writer(self._writer)
             except Exception as exc:
                 if _is_expected_socket_disconnect(exc):
                     raise PeerDisconnected("websocket peer disconnected") from exc
                 raise
+
+    def _protobuf_envelopes_for_payload(self, payload: Mapping[str, Any]):
+        session_id = payload.get("session_id")
+        payload_type = payload.get("type")
+        if not isinstance(session_id, str):
+            session_id = ""
+
+        if payload_type in {"hit_object_token", "end_of_stream"} and session_id:
+            if session_id not in self._protobuf_stream_begun_session_ids:
+                self._protobuf_stream_begun_session_ids.add(session_id)
+                begin_payload: dict[str, Any] = {
+                    "type": "mapper_stream_begin",
+                    "session_id": session_id,
+                    "token_contract_version": MAPPER_TOKEN_CONTRACT_VERSION,
+                }
+                audio_length_ms = payload.get("audio_length_ms")
+                if isinstance(audio_length_ms, int):
+                    begin_payload["audio_length_ms"] = audio_length_ms
+                yield self._next_protobuf_envelope(begin_payload)
+
+        if payload_type == "hit_object_token" and session_id:
+            token_payload = dict(payload)
+            token_payload["token_index"] = self._next_token_index(session_id)
+            yield self._next_protobuf_envelope(token_payload)
+            return
+
+        yield self._next_protobuf_envelope(payload)
+        if payload_type == "end_of_stream" and session_id:
+            self._token_index_by_session_id.pop(session_id, None)
+            self._protobuf_stream_begun_session_ids.discard(session_id)
+
+    def _next_protobuf_envelope(self, payload: Mapping[str, Any]):
+        session_id = payload.get("session_id")
+        if not isinstance(session_id, str):
+            session_id = ""
+        sequence = self._sequence_by_session_id.get(session_id, 0) + 1
+        self._sequence_by_session_id[session_id] = sequence
+        return outbound_payload_to_envelope(payload, sequence=sequence)
+
+    def _next_token_index(self, session_id: str) -> int:
+        token_index = self._token_index_by_session_id.get(session_id, 0)
+        self._token_index_by_session_id[session_id] = token_index + 1
+        return token_index
 
 
 def _log_inference_error(exc: InferenceError) -> None:
@@ -140,7 +195,7 @@ def _track_owned_session(
     message_type: str,
     message: Mapping[str, Any],
 ) -> None:
-    if message_type in {"audio_path", "audio"}:
+    if message_type == "audio":
         owned_session_ids.add(require_session_id(message))
         return
     if message_type == "stop":
@@ -212,10 +267,10 @@ async def _send_http_error(
     await _drain_writer(writer)
 
 
-async def _read_client_text_frame(
+async def _read_client_binary_envelope_frame(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
-) -> str | None:
+) -> bytes | None:
     while True:
         header = await reader.readexactly(2)
         first, second = header
@@ -239,9 +294,9 @@ async def _read_client_text_frame(
             writer.write(_encode_server_frame(payload, opcode=0xA))
             await _drain_writer(writer)
             continue
-        if opcode != 0x1:
-            raise ProtocolError(f"unsupported websocket opcode: {opcode}")
-        return payload.decode("utf-8")
+        if opcode != 0x2:
+            raise ProtocolError(f"websocket messages must be binary protobuf frames; got opcode {opcode}")
+        return payload
 
 
 async def _drain_writer(writer: asyncio.StreamWriter) -> None:
@@ -264,8 +319,8 @@ async def _close_writer(writer: asyncio.StreamWriter) -> None:
             raise
 
 
-def _encode_server_text_frame(payload: bytes) -> bytes:
-    return _encode_server_frame(payload, opcode=0x1)
+def _encode_server_binary_frame(payload: bytes) -> bytes:
+    return _encode_server_frame(payload, opcode=0x2)
 
 
 def _encode_server_frame(payload: bytes, *, opcode: int) -> bytes:

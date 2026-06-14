@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import torch
+from pulsefield.protocol.v1 import envelope_pb2, inference_pb2
 
 from pulsefield_model.inference.stream_with_cache import (
     DecoderWindow,
@@ -39,11 +40,14 @@ from pulsefield_model.inference.ws_endpoint import (
     difficulty_from_message,
     infer_message_type,
     inference_route_from_message,
-    is_mock_from_message,
     host_time_ms_reached,
-    parse_json_message,
     reference_clock_from_message,
     ws_status_log_payload,
+)
+from pulsefield_model.inference.protobuf_transport import (
+    MAPPER_TOKEN_CONTRACT_VERSION,
+    envelope_to_message,
+    outbound_payload_to_envelope,
 )
 from pulsefield_model.inference.ws_server import _handle_websocket_client
 from pulsefield_model.data.control_windows import normalize_difficulty
@@ -83,13 +87,13 @@ class FakePeer:
     def __init__(self) -> None:
         self.messages: list[dict] = []
 
-    async def send_json(self, payload: dict) -> None:
-        self.messages.append(dict(payload))
+    async def send_event(self, event: dict) -> None:
+        self.messages.append(dict(event))
 
 
 class DisconnectingPeer:
-    async def send_json(self, payload: dict) -> None:
-        del payload
+    async def send_event(self, event: dict) -> None:
+        del event
         raise OSError(errno.ENOTCONN, "Socket is not connected")
 
 
@@ -116,48 +120,81 @@ class FakeIncrementalMapperModel:
 
 
 class WsEndpointProtocolTests(unittest.TestCase):
-    def test_parse_json_message_requires_object(self) -> None:
-        message = parse_json_message(json.dumps({"type": "ready", "control": "ready"}))
-
-        self.assertEqual(message["type"], "ready")
-        with self.assertRaisesRegex(ProtocolError, "JSON object"):
-            parse_json_message("[1, 2, 3]")
-
-    def test_infer_message_type_accepts_control_fallbacks(self) -> None:
-        self.assertEqual(infer_message_type({"type": "audio_path"}), "audio_path")
+    def test_infer_message_type_accepts_protocol_message_types(self) -> None:
+        self.assertEqual(infer_message_type({"type": "ready"}), "ready")
+        self.assertEqual(infer_message_type({"type": "node_hello"}), "node_hello")
         self.assertEqual(infer_message_type({"type": "audio"}), "audio")
         self.assertEqual(infer_message_type({"type": "reference_time"}), "reference_time")
-        self.assertEqual(infer_message_type({"control": "ready"}), "ready")
-        self.assertEqual(infer_message_type({"control": "end_session"}), "stop")
-        self.assertEqual(infer_message_type({"session_id": "s1", "audio_path": "/tmp/song.wav"}), "audio_path")
-        self.assertEqual(infer_message_type({"session_id": "s1", "audio": {"path": "/tmp/song.wav"}}), "audio_path")
-        self.assertEqual(
-            infer_message_type(
-                {
-                    "session_id": "s1",
-                    "ref_time_ms": 100,
-                    "local_host_time_send_ms": 200.25,
-                },
-            ),
-            "reference_time",
-        )
+        self.assertEqual(infer_message_type({"type": "stop"}), "stop")
+        with self.assertRaisesRegex(ProtocolError, "message must include type"):
+            infer_message_type({"session_id": "s1", "audio_path": "/tmp/song.wav"})
+        with self.assertRaisesRegex(ProtocolError, "message must include type"):
+            infer_message_type({"control": "ready"})
+        with self.assertRaisesRegex(ProtocolError, "unsupported message type"):
+            infer_message_type({"type": "audio_path", "session_id": "s1", "audio_path": "/tmp/song.wav"})
+        with self.assertRaisesRegex(ProtocolError, "unsupported message type"):
+            infer_message_type({"type": "unknown"})
 
-    def test_audio_path_from_message_accepts_audio_alias(self) -> None:
+    def test_audio_path_from_message_reads_normalized_local_path(self) -> None:
         self.assertEqual(audio_path_from_message({"audio_path": "/tmp/a.wav"}), "/tmp/a.wav")
-        self.assertEqual(audio_path_from_message({"audio": "/tmp/b.wav"}), "/tmp/b.wav")
-        self.assertEqual(audio_path_from_message({"audio": {"path": "/tmp/c.wav"}}), "/tmp/c.wav")
+        self.assertIsNone(audio_path_from_message({"audio": {"path": "/tmp/a.wav"}}))
 
-    def test_inference_route_from_message_accepts_is_mock_aliases(self) -> None:
-        self.assertFalse(is_mock_from_message({"audio_path": "/tmp/a.wav"}))
-        self.assertTrue(is_mock_from_message({"audio_path": "/tmp/a.wav", "isMock": True}))
-        self.assertTrue(is_mock_from_message({"audio": {"path": "/tmp/a.wav", "is_mock": True}}))
+    def test_inference_route_from_message_defaults_mapper(self) -> None:
         self.assertEqual(inference_route_from_message({"audio_path": "/tmp/a.wav"}), "mapper")
+
+    def test_inference_route_from_message_accepts_protocol_route_names(self) -> None:
+        self.assertEqual(inference_route_from_message({"route": "mapper"}), "mapper")
+        self.assertEqual(inference_route_from_message({"route": "INFERENCE_ROUTE_MAPPER"}), "mapper")
+        self.assertEqual(inference_route_from_message({"route": "timing_mock"}), "timing_mock")
         self.assertEqual(
-            inference_route_from_message({"audio_path": "/tmp/a.wav", "isMock": True}),
+            inference_route_from_message({"route": "INFERENCE_ROUTE_TIMING_MOCK"}),
             "timing_mock",
         )
-        with self.assertRaisesRegex(ProtocolError, "isMock"):
-            is_mock_from_message({"audio_path": "/tmp/a.wav", "isMock": 1})
+        with self.assertRaisesRegex(ProtocolError, "unsupported inference route"):
+            inference_route_from_message({"route": "unknown"})
+
+    def test_protocol_envelope_audio_request_converts_from_pypi_package(self) -> None:
+        envelope = envelope_pb2.Envelope(session_id="s1")
+        envelope.audio.audio.local_path = "/tmp/song.wav"
+        envelope.audio.audio.audio_length_ms = 2_000
+        envelope.audio.difficulty = 5.0
+        envelope.audio.route = inference_pb2.INFERENCE_ROUTE_MAPPER
+
+        message = envelope_to_message(envelope)
+
+        self.assertEqual(
+            message,
+            {
+                "type": "audio",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 2_000,
+                "difficulty": 5.0,
+                "route": "mapper",
+            },
+        )
+
+    def test_protocol_outbound_hitobject_token_uses_pypi_envelope(self) -> None:
+        envelope = outbound_payload_to_envelope(
+            {
+                "type": "hit_object_token",
+                "session_id": "s1",
+                "token_id": 10,
+                "ms_in_ref_audio": 1_240,
+                "token_index": 3,
+            },
+            sequence=7,
+        )
+
+        roundtrip = envelope_pb2.Envelope()
+        roundtrip.ParseFromString(envelope.SerializeToString())
+
+        self.assertEqual(roundtrip.session_id, "s1")
+        self.assertEqual(roundtrip.sequence, 7)
+        self.assertEqual(roundtrip.WhichOneof("payload"), "hit_object_token")
+        self.assertEqual(roundtrip.hit_object_token.token_id, 10)
+        self.assertEqual(roundtrip.hit_object_token.ms_in_ref_audio, 1_240)
+        self.assertEqual(roundtrip.hit_object_token.token_index, 3)
 
     def test_difficulty_from_message_validates_supported_mapper_range(self) -> None:
         self.assertEqual(difficulty_from_message({}, default=4.0), 4.0)
@@ -403,7 +440,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaisesRegex(ProtocolError, "send ready"):
             await endpoint.handle_message(
-                {"type": "audio_path", "session_id": "s1", "audio_path": "/tmp/song.wav"},
+                {"type": "audio", "session_id": "s1", "audio_path": "/tmp/song.wav"},
                 FakePeer(),
             )
 
@@ -417,11 +454,11 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         )
         peer = FakePeer()
 
-        await endpoint.handle_message({"type": "ready", "control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         with self.assertRaises(InferenceError) as caught:
             await endpoint.handle_message(
                 {
-                    "type": "audio_path",
+                    "type": "audio",
                     "session_id": "s1",
                     "audio_path": "/tmp/song.wav",
                     "audio_length_ms": 2_000,
@@ -434,7 +471,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error.phase, "prepare_audio")
         self.assertEqual(error.route, "mapper")
         self.assertEqual(error.code, "invalid_device")
-        self.assertEqual(error.to_payload()["error_kind"], "inference")
+        self.assertEqual(error.to_event()["error_kind"], "inference")
         self.assertNotIn("s1", endpoint.sessions)
         self.assertEqual(backend.reset_sessions, ["s1"])
 
@@ -443,7 +480,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         backend = endpoint.backend
         assert isinstance(backend, RoutedInferenceBackend)
 
-        await endpoint.handle_message({"control": "ready"}, FakePeer())
+        await endpoint.handle_message({"type": "ready"}, FakePeer())
 
         self.assertTrue(backend.models_ready)
         self.assertFalse(backend.mapper_backend.models_ready)
@@ -548,10 +585,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=config, backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"type": "ready", "control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/Users/ken/audio/song1.wav",
                 "audio_length_ms": 180_000,
@@ -572,11 +609,19 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         assert task is not None
         await task
 
-        token_messages = [message for message in peer.messages if message["type"] == "hitobject_tokens"]
-        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens", "hitobject_tokens", "end_of_stream"])
+        token_messages = [message for message in peer.messages if message["type"] == "hit_object_token"]
+        self.assertEqual(
+            [message["type"] for message in peer.messages],
+            ["hit_object_token", "hit_object_token", "end_of_stream"],
+        )
         self.assertTrue(all(message["session_id"] == "s1" for message in peer.messages))
-        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in token_messages))
-        self.assertEqual([message["token"] for message in token_messages], [[10, 1_240], [11, 1_500]])
+        self.assertTrue(
+            all(set(message) == {"type", "session_id", "token_id", "ms_in_ref_audio"} for message in token_messages),
+        )
+        self.assertEqual(
+            [(message["token_id"], message["ms_in_ref_audio"]) for message in token_messages],
+            [(10, 1_240), (11, 1_500)],
+        )
         self.assertEqual(
             peer.messages[-1],
             {
@@ -624,14 +669,14 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         )
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.mp3",
                 "audio_length_ms": 1_700,
-                "isMock": True,
+                "route": "timing_mock",
             },
             peer,
         )
@@ -649,10 +694,12 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await task
 
         self.assertFalse(mapper_backend.models_ready)
-        token_messages = [message for message in peer.messages if message["type"] == "hitobject_tokens"]
-        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens"] * 4 + ["end_of_stream"])
-        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in token_messages))
-        self.assertEqual([message["token"][1] for message in token_messages], [120, 620, 1_120, 1_620])
+        token_messages = [message for message in peer.messages if message["type"] == "hit_object_token"]
+        self.assertEqual([message["type"] for message in peer.messages], ["hit_object_token"] * 4 + ["end_of_stream"])
+        self.assertTrue(
+            all(set(message) == {"type", "session_id", "token_id", "ms_in_ref_audio"} for message in token_messages),
+        )
+        self.assertEqual([message["ms_in_ref_audio"] for message in token_messages], [120, 620, 1_120, 1_620])
         self.assertEqual(peer.messages[-1]["audio_length_ms"], 1_700)
         await endpoint.stop_session("s1")
 
@@ -667,10 +714,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 1_000,
@@ -690,8 +737,9 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         assert task is not None
         await task
 
-        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens", "end_of_stream"])
-        self.assertEqual(peer.messages[0]["token"], [10, 900])
+        self.assertEqual([message["type"] for message in peer.messages], ["hit_object_token", "end_of_stream"])
+        self.assertEqual(peer.messages[0]["token_id"], 10)
+        self.assertEqual(peer.messages[0]["ms_in_ref_audio"], 900)
         self.assertEqual(peer.messages[1]["complete_through_ms"], 1_000)
         await endpoint.stop_session("s1")
 
@@ -700,10 +748,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         backend = FakeInferenceBackend()
         endpoint = InferenceEndpoint(config=config, backend=backend)
 
-        await endpoint.handle_message({"type": "ready", "control": "ready"}, FakePeer())
+        await endpoint.handle_message({"type": "ready"}, FakePeer())
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/Users/ken/audio/song1.wav",
                 "audio_length_ms": 180_000,
@@ -798,17 +846,14 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             await writer.drain()
             self.assertIn(b"101 Switching Protocols", await reader.readuntil(b"\r\n\r\n"))
 
-            writer.write(_client_text_frame({"control": "ready"}))
-            writer.write(
-                _client_text_frame(
-                    {
-                        "type": "audio_path",
-                        "session_id": "s1",
-                        "audio_path": "/tmp/song.wav",
-                        "audio_length_ms": 2_000,
-                    },
-                ),
-            )
+            ready = envelope_pb2.Envelope()
+            ready.ready.SetInParent()
+            audio = envelope_pb2.Envelope(session_id="s1")
+            audio.audio.audio.local_path = "/tmp/song.wav"
+            audio.audio.audio.audio_length_ms = 2_000
+            audio.audio.route = inference_pb2.INFERENCE_ROUTE_MAPPER
+            writer.write(_client_binary_frame(ready))
+            writer.write(_client_binary_frame(audio))
             await writer.drain()
             for _ in range(20):
                 if backend.prepared_audio:
@@ -867,26 +912,23 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             await writer.drain()
             self.assertIn(b"101 Switching Protocols", await reader.readuntil(b"\r\n\r\n"))
 
-            writer.write(_client_text_frame({"control": "ready"}))
-            writer.write(
-                _client_text_frame(
-                    {
-                        "type": "audio_path",
-                        "session_id": "s1",
-                        "audio_path": "/tmp/song.wav",
-                        "audio_length_ms": 2_000,
-                    },
-                ),
-            )
+            ready = envelope_pb2.Envelope()
+            ready.ready.SetInParent()
+            audio = envelope_pb2.Envelope(session_id="s1")
+            audio.audio.audio.local_path = "/tmp/song.wav"
+            audio.audio.audio.audio_length_ms = 2_000
+            audio.audio.route = inference_pb2.INFERENCE_ROUTE_MAPPER
+            writer.write(_client_binary_frame(ready))
+            writer.write(_client_binary_frame(audio))
             await writer.drain()
 
-            payload = await _read_server_json_frame(reader)
-            self.assertEqual(payload["type"], "error")
-            self.assertEqual(payload["error_kind"], "inference")
-            self.assertEqual(payload["session_id"], "s1")
-            self.assertEqual(payload["phase"], "prepare_audio")
-            self.assertEqual(payload["route"], "mapper")
-            self.assertEqual(payload["code"], "invalid_device")
+            envelope = await _read_server_envelope_frame(reader)
+            self.assertEqual(envelope.WhichOneof("payload"), "error")
+            self.assertEqual(envelope.session_id, "s1")
+            self.assertEqual(envelope.error.error_kind, "inference")
+            self.assertEqual(envelope.error.phase, "prepare_audio")
+            self.assertEqual(envelope.error.route, inference_pb2.INFERENCE_ROUTE_MAPPER)
+            self.assertEqual(envelope.error.code, "invalid_device")
 
             writer.close()
             await writer.wait_closed()
@@ -899,6 +941,139 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("s1", endpoint.sessions)
         self.assertEqual(backend.reset_sessions, ["s1"])
 
+    async def test_websocket_text_json_frame_returns_protobuf_protocol_error(self) -> None:
+        endpoint = InferenceEndpoint(
+            config=WsEndpointConfig(token_send_interval_s=0.0),
+            backend=FakeInferenceBackend(),
+        )
+        errors: list[BaseException] = []
+        handler_tasks: list[asyncio.Task] = []
+
+        async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            task = asyncio.current_task()
+            assert task is not None
+            handler_tasks.append(task)
+            try:
+                await _handle_websocket_client(endpoint, reader, writer)
+            except BaseException as exc:
+                errors.append(exc)
+
+        server = await asyncio.start_server(handle_client, host="127.0.0.1", port=0)
+        try:
+            assert server.sockets is not None
+            host, port = server.sockets[0].getsockname()[:2]
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(
+                b"GET / HTTP/1.1\r\n"
+                b"Host: localhost\r\n"
+                b"Upgrade: websocket\r\n"
+                b"Connection: Upgrade\r\n"
+                b"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                b"Sec-WebSocket-Version: 13\r\n"
+                b"\r\n"
+            )
+            await writer.drain()
+            self.assertIn(b"101 Switching Protocols", await reader.readuntil(b"\r\n\r\n"))
+
+            writer.write(_client_text_frame(b'{"control":"ready"}'))
+            await writer.drain()
+
+            envelope = await _read_server_envelope_frame(reader)
+            self.assertEqual(envelope.WhichOneof("payload"), "error")
+            self.assertEqual(envelope.error.code, "protocol_error")
+            self.assertIn("binary protobuf", envelope.error.message)
+
+            writer.close()
+            await writer.wait_closed()
+            await asyncio.wait_for(asyncio.gather(*handler_tasks), timeout=1.0)
+        finally:
+            server.close()
+            await server.wait_closed()
+
+        self.assertEqual(errors, [])
+
+    async def test_websocket_binary_protobuf_round_trip_streams_envelopes(self) -> None:
+        backend = FakeInferenceBackend(
+            tokens=(
+                HitObjectToken(10, "EVENT_A", 1_240, ("tap", "none", "none", "none")),
+            ),
+        )
+        endpoint = InferenceEndpoint(
+            config=WsEndpointConfig(token_send_interval_s=0.0, decoder_lead_ms=0),
+            backend=backend,
+        )
+        errors: list[BaseException] = []
+        handler_tasks: list[asyncio.Task] = []
+
+        async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            task = asyncio.current_task()
+            assert task is not None
+            handler_tasks.append(task)
+            try:
+                await _handle_websocket_client(endpoint, reader, writer)
+            except BaseException as exc:
+                errors.append(exc)
+
+        server = await asyncio.start_server(handle_client, host="127.0.0.1", port=0)
+        try:
+            assert server.sockets is not None
+            host, port = server.sockets[0].getsockname()[:2]
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(
+                b"GET / HTTP/1.1\r\n"
+                b"Host: localhost\r\n"
+                b"Upgrade: websocket\r\n"
+                b"Connection: Upgrade\r\n"
+                b"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                b"Sec-WebSocket-Version: 13\r\n"
+                b"\r\n"
+            )
+            await writer.drain()
+            self.assertIn(b"101 Switching Protocols", await reader.readuntil(b"\r\n\r\n"))
+
+            ready = envelope_pb2.Envelope()
+            ready.ready.SetInParent()
+            audio = envelope_pb2.Envelope(session_id="s1")
+            audio.audio.audio.local_path = "/tmp/song.wav"
+            audio.audio.audio.audio_length_ms = 2_000
+            audio.audio.difficulty = 5.0
+            audio.audio.route = inference_pb2.INFERENCE_ROUTE_MAPPER
+            reference = envelope_pb2.Envelope(session_id="s1")
+            reference.reference_time.ref_time_ms = 0
+            reference.reference_time.local_host_time_send_ms = int(current_host_time_ms())
+
+            writer.write(_client_binary_frame(ready))
+            writer.write(_client_binary_frame(audio))
+            writer.write(_client_binary_frame(reference))
+            await writer.drain()
+
+            begin = await _read_server_envelope_frame(reader)
+            token = await _read_server_envelope_frame(reader)
+            eos = await _read_server_envelope_frame(reader)
+
+            self.assertEqual(begin.session_id, "s1")
+            self.assertEqual(begin.WhichOneof("payload"), "mapper_stream_begin")
+            self.assertEqual(begin.mapper_stream_begin.token_contract_version, MAPPER_TOKEN_CONTRACT_VERSION)
+            self.assertEqual(token.WhichOneof("payload"), "hit_object_token")
+            self.assertEqual(token.hit_object_token.token_id, 10)
+            self.assertEqual(token.hit_object_token.ms_in_ref_audio, 1_240)
+            self.assertEqual(token.hit_object_token.token_index, 0)
+            self.assertEqual(eos.WhichOneof("payload"), "end_of_stream")
+            self.assertEqual(eos.end_of_stream.audio_length_ms, 2_000)
+            self.assertEqual(eos.end_of_stream.complete_through_ms, 2_000)
+            self.assertEqual([begin.sequence, token.sequence, eos.sequence], [1, 2, 3])
+
+            writer.close()
+            await writer.wait_closed()
+            await asyncio.wait_for(asyncio.gather(*handler_tasks), timeout=1.0)
+        finally:
+            server.close()
+            await server.wait_closed()
+
+        self.assertEqual(errors, [])
+        self.assertEqual(backend.prepared_audio[0]["audio_path"], Path("/tmp/song.wav"))
+        self.assertEqual(backend.prepared_audio[0]["difficulty"], 5.0)
+
     async def test_audio_path_requires_length_or_readable_audio_file(self) -> None:
         endpoint = InferenceEndpoint(
             config=WsEndpointConfig(token_send_interval_s=0.0),
@@ -906,10 +1081,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         )
         peer = FakePeer()
 
-        await endpoint.handle_message({"type": "ready", "control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         with self.assertRaisesRegex(ProtocolError, "audio_length_ms"):
             await endpoint.handle_message(
-                {"type": "audio_path", "session_id": "s1", "audio_path": "/tmp/nonexistent-song.wav"},
+                {"type": "audio", "session_id": "s1", "audio_path": "/tmp/nonexistent-song.wav"},
                 peer,
             )
 
@@ -922,9 +1097,9 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             audio_path = Path(tmpdir) / "song.wav"
             _write_silent_wav(audio_path, duration_ms=1_000)
 
-            await endpoint.handle_message({"type": "ready", "control": "ready"}, peer)
+            await endpoint.handle_message({"type": "ready"}, peer)
             await endpoint.handle_message(
-                {"type": "audio_path", "session_id": "s1", "audio_path": str(audio_path)},
+                {"type": "audio", "session_id": "s1", "audio_path": str(audio_path)},
                 peer,
             )
             await endpoint.handle_message(
@@ -946,38 +1121,19 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(backend.iter_calls[0]["audio_length_ms"], 1_000)
             await endpoint.stop_session("s1")
 
-    async def test_audio_message_alias_prepares_ws_audio(self) -> None:
+    async def test_audio_route_timing_mock_omits_mapper_difficulty(self) -> None:
         backend = FakeInferenceBackend()
         endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
                 "type": "audio",
                 "session_id": "s1",
-                "audio": {"path": "/tmp/song.wav"},
-                "audio_length_ms": 2_000,
-            },
-            peer,
-        )
-
-        self.assertEqual(backend.prepared_audio[0]["audio_path"], Path("/tmp/song.wav"))
-        self.assertEqual(backend.prepared_audio[0]["audio_length_ms"], 2_000)
-
-    async def test_audio_path_is_mock_routes_timing_mock_without_mapper_difficulty(self) -> None:
-        backend = FakeInferenceBackend()
-        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
-        peer = FakePeer()
-
-        await endpoint.handle_message({"control": "ready"}, peer)
-        await endpoint.handle_message(
-            {
-                "type": "audio_path",
-                "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 2_000,
-                "isMock": True,
+                "route": "timing_mock",
                 "difficulty": 7.0,
             },
             peer,
@@ -988,37 +1144,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(backend.prepared_routes, ["timing_mock"])
         self.assertIsNone(backend.prepared_audio[0]["difficulty"])
 
-    async def test_reference_time_is_mock_requires_audio_path_mock_route(self) -> None:
-        backend = FakeInferenceBackend()
-        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
-        peer = FakePeer()
-
-        await endpoint.handle_message({"control": "ready"}, peer)
-        await endpoint.handle_message(
-            {
-                "type": "audio_path",
-                "session_id": "s1",
-                "audio_path": "/tmp/song.wav",
-                "audio_length_ms": 2_000,
-            },
-            peer,
-        )
-
-        with self.assertRaisesRegex(ProtocolError, "audio_path"):
-            await endpoint.handle_message(
-                {
-                    "type": "reference_time",
-                    "session_id": "s1",
-                    "ref_time_ms": 0,
-                    "local_host_time_send_ms": current_host_time_ms(),
-                    "isMock": True,
-                },
-                peer,
-            )
-        self.assertEqual(endpoint.sessions["s1"].route, "mapper")
-        self.assertEqual(backend.prepared_routes, ["mapper"])
-
-    async def test_is_mock_endpoint_streams_timing_grid_tokens_without_mapper_backend(self) -> None:
+    async def test_timing_mock_route_streams_timing_grid_tokens_without_mapper_backend(self) -> None:
         timing_calls = []
 
         def timing_fit_fn(audio_path, **kwargs):
@@ -1039,15 +1165,15 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=config, backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready", "isMock": True}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         self.assertFalse(mapper_backend.models_ready)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 1_300,
-                "isMock": True,
+                "route": "timing_mock",
             },
             peer,
         )
@@ -1065,13 +1191,13 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await task
 
         vocab = MapperTupleVocab()
-        token_messages = [message for message in peer.messages if message["type"] == "hitobject_tokens"]
+        token_messages = [message for message in peer.messages if message["type"] == "hit_object_token"]
         self.assertEqual(
-            [message["token"] for message in token_messages],
+            [(message["token_id"], message["ms_in_ref_audio"]) for message in token_messages],
             [
-                [vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 120],
-                [vocab.encode_event(("TAP", "TAP", "NONE", "NONE")), 620],
-                [vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 1120],
+                (vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 120),
+                (vocab.encode_event(("TAP", "TAP", "NONE", "NONE")), 620),
+                (vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 1120),
             ],
         )
         self.assertEqual(peer.messages[-1]["type"], "end_of_stream")
@@ -1085,10 +1211,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 2_000,
@@ -1121,10 +1247,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         owner_a = object()
         owner_b = object()
 
-        await endpoint.handle_message({"control": "ready"}, peer, owner=owner_a)
+        await endpoint.handle_message({"type": "ready"}, peer, owner=owner_a)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song-a.wav",
                 "audio_length_ms": 1_000,
@@ -1136,7 +1262,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(ProtocolError, "owned"):
             await endpoint.handle_message(
                 {
-                    "type": "audio_path",
+                    "type": "audio",
                     "session_id": "s1",
                     "audio_path": "/tmp/song-b.wav",
                     "audio_length_ms": 2_000,
@@ -1156,10 +1282,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 1_000,
@@ -1191,11 +1317,11 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=config, backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         prepare_task = asyncio.create_task(
             endpoint.handle_message(
                 {
-                    "type": "audio_path",
+                    "type": "audio",
                     "session_id": "s1",
                     "audio_path": "/tmp/song.wav",
                     "audio_length_ms": 1_000,
@@ -1229,10 +1355,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=config, backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 1_000,
@@ -1420,10 +1546,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         endpoint = InferenceEndpoint(config=config, backend=backend)
         peer = FakePeer()
 
-        await endpoint.handle_message({"type": "ready", "control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
-                "type": "audio_path",
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": str(Path("/tmp/song.wav")),
                 "audio_length_ms": 180_000,
@@ -1440,7 +1566,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             peer,
         )
         await asyncio.sleep(0)
-        await endpoint.handle_message({"type": "stop", "session_id": "s1", "control": "end_session"}, peer)
+        await endpoint.handle_message({"type": "stop", "session_id": "s1"}, peer)
 
         self.assertNotIn("s1", endpoint.sessions)
         self.assertEqual(backend.reset_sessions, ["s1"])
@@ -1455,9 +1581,10 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         peer = FakePeer()
         now_ms = current_host_time_ms()
 
-        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message({"type": "ready"}, peer)
         await endpoint.handle_message(
             {
+                "type": "audio",
                 "session_id": "s1",
                 "audio_path": "/tmp/song.wav",
                 "audio_length_ms": 1,
@@ -1466,6 +1593,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         )
         await endpoint.handle_message(
             {
+                "type": "reference_time",
                 "session_id": "s1",
                 "ref_time_ms": 1,
                 "local_host_time_send_ms": now_ms,
@@ -1671,27 +1799,40 @@ def _write_silent_wav(path: Path, *, duration_ms: int, sample_rate: int = 8_000)
         audio.writeframes(b"\x00\x00" * frame_count)
 
 
-def _client_text_frame(payload: dict) -> bytes:
-    data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+def _client_binary_frame(envelope: envelope_pb2.Envelope) -> bytes:
+    data = envelope.SerializeToString()
+    return _client_frame(data, opcode=0x2)
+
+
+def _client_text_frame(payload: bytes) -> bytes:
+    return _client_frame(payload, opcode=0x1)
+
+
+def _client_frame(data: bytes, *, opcode: int) -> bytes:
     length = len(data)
     if length < 126:
-        prefix = bytes([0x81, length])
+        prefix = bytes([0x80 | opcode, length])
     elif length <= 0xFFFF:
-        prefix = bytes([0x81, 126]) + length.to_bytes(2, "big")
+        prefix = bytes([0x80 | opcode, 126]) + length.to_bytes(2, "big")
     else:
-        prefix = bytes([0x81, 127]) + length.to_bytes(8, "big")
+        prefix = bytes([0x80 | opcode, 127]) + length.to_bytes(8, "big")
     return prefix + data
 
 
-async def _read_server_json_frame(reader: asyncio.StreamReader) -> dict:
+async def _read_server_envelope_frame(reader: asyncio.StreamReader) -> envelope_pb2.Envelope:
     header = await reader.readexactly(2)
+    opcode = header[0] & 0x0F
     length = header[1] & 0x7F
     if length == 126:
         length = int.from_bytes(await reader.readexactly(2), "big")
     elif length == 127:
         length = int.from_bytes(await reader.readexactly(8), "big")
     payload = await reader.readexactly(length)
-    return json.loads(payload.decode("utf-8"))
+    envelope = envelope_pb2.Envelope()
+    envelope.ParseFromString(payload)
+    if opcode != 0x2:
+        raise AssertionError(f"expected binary protobuf frame, got opcode {opcode}")
+    return envelope
 
 
 if __name__ == "__main__":
