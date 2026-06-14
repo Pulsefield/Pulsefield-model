@@ -13,8 +13,6 @@ from pulsefield_model.inference.stream_with_cache import (
     HitObjectToken,
     StreamWithCache,
     StreamWithCacheConfig,
-    clamp_decoder_window_to_audio,
-    decoder_windows_until_audio_end,
 )
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
 from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_NONE
@@ -234,17 +232,13 @@ class TimingMockStreamBackend:
         session = self._sessions.get(session_id)
         if session is None:
             raise RuntimeError(f"session audio has not been prepared: {session_id}")
-        starting_window = clamp_decoder_window_to_audio(window, audio_length_ms=audio_length_ms, config=self.config)
-        for decode_window in decoder_windows_until_audio_end(
-            starting_window,
-            audio_length_ms=audio_length_ms,
-            config=self.config,
-        ):
-            for timepoint in _timepoints_in_window(session.timepoints, decode_window):
-                yield _hitobject_token_from_timepoint(timepoint, self._vocab)
-                interval = max(0.0, float(self.config.token_send_interval_s))
-                if interval:
-                    await asyncio.sleep(interval)
+        start_ms = min(max(0, int(window.start_ms)), int(audio_length_ms))
+        stream_window = DecoderWindow(start_ms=start_ms, end_ms=int(audio_length_ms))
+        for timepoint in _timepoints_in_window(session.timepoints, stream_window):
+            yield _hitobject_token_from_timepoint(timepoint, self._vocab)
+            interval = max(0.0, float(self.config.token_send_interval_s))
+            if interval:
+                await asyncio.sleep(interval)
 
     async def reset_session(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)

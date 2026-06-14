@@ -199,6 +199,8 @@ class StreamWithCache:
                 audio_length_ms,
             )
             for token in _hitobject_tokens_from_generated(generated, self._vocab()):
+                if int(token.ms_in_ref_audio) >= int(audio_length_ms):
+                    continue
                 yield token
                 interval = max(0.0, float(self.config.token_send_interval_s))
                 if interval:

@@ -31,8 +31,10 @@ from pulsefield_model.inference.ws_endpoint import (
     WsEndpointConfig,
     audio_end_reset_host_time_ms,
     audio_path_from_message,
+    clamp_decoder_window_for_policy,
     choose_decoder_window,
     current_host_time_ms,
+    decoder_window_policy_for_route,
     difficulty_from_message,
     infer_message_type,
     inference_route_from_message,
@@ -242,6 +244,43 @@ class WsEndpointProtocolTests(unittest.TestCase):
         )
 
         self.assertEqual(window, DecoderWindow(start_ms=8_000, end_ms=16_000))
+
+    def test_choose_decoder_window_can_disable_lead_and_boundary_roundup(self) -> None:
+        clock = ReferenceClock(
+            ref_time_ms=1_234,
+            local_host_time_send_ms=10_000.0,
+            received_local_host_time_ms=10_500.0,
+        )
+
+        window = choose_decoder_window(
+            clock,
+            WsEndpointConfig(decoder_window_ms=8_000, decoder_lead_ms=2_000),
+            decoder_lead_ms=0,
+            align_to_decoder_window=False,
+        )
+
+        self.assertEqual(window, DecoderWindow(start_ms=1_734, end_ms=9_734))
+
+    def test_decoder_window_policy_disables_live_lead_for_timing_mock_by_default(self) -> None:
+        config = WsEndpointConfig(decoder_lead_ms=2_000)
+
+        self.assertEqual(decoder_window_policy_for_route("mapper", config).decoder_lead_ms, 2_000)
+        self.assertTrue(decoder_window_policy_for_route("mapper", config).align_to_decoder_window)
+        self.assertEqual(decoder_window_policy_for_route("timing_mock", config).decoder_lead_ms, 0)
+        self.assertFalse(decoder_window_policy_for_route("timing_mock", config).align_to_decoder_window)
+
+    def test_unaligned_decoder_window_clamp_does_not_round_near_audio_end_back_to_boundary(self) -> None:
+        config = WsEndpointConfig(decoder_window_ms=8_000)
+        policy = decoder_window_policy_for_route("timing_mock", config)
+
+        window = clamp_decoder_window_for_policy(
+            DecoderWindow(start_ms=9_400, end_ms=17_400),
+            policy=policy,
+            audio_length_ms=9_500,
+            config=config,
+        )
+
+        self.assertEqual(window, DecoderWindow(start_ms=9_400, end_ms=17_400))
 
     def test_clamp_decoder_window_keeps_reference_window_inside_audio(self) -> None:
         config = WsEndpointConfig(decoder_window_ms=8_000)
@@ -501,10 +540,20 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         assert task is not None
         await task
 
-        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens"] * 2)
+        token_messages = [message for message in peer.messages if message["type"] == "hitobject_tokens"]
+        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens", "hitobject_tokens", "end_of_stream"])
         self.assertTrue(all(message["session_id"] == "s1" for message in peer.messages))
-        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in peer.messages))
-        self.assertEqual([message["token"] for message in peer.messages], [[10, 1_240], [11, 1_500]])
+        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in token_messages))
+        self.assertEqual([message["token"] for message in token_messages], [[10, 1_240], [11, 1_500]])
+        self.assertEqual(
+            peer.messages[-1],
+            {
+                "type": "end_of_stream",
+                "session_id": "s1",
+                "audio_length_ms": 180_000,
+                "complete_through_ms": 180_000,
+            },
+        )
         self.assertEqual(
             backend.prepared_audio,
             [
@@ -568,9 +617,50 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await task
 
         self.assertFalse(mapper_backend.models_ready)
-        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens"] * 2)
-        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in peer.messages))
-        self.assertEqual([message["token"][1] for message in peer.messages], [1_120, 1_620])
+        token_messages = [message for message in peer.messages if message["type"] == "hitobject_tokens"]
+        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens"] * 4 + ["end_of_stream"])
+        self.assertTrue(all(set(message) == {"type", "session_id", "token"} for message in token_messages))
+        self.assertEqual([message["token"][1] for message in token_messages], [120, 620, 1_120, 1_620])
+        self.assertEqual(peer.messages[-1]["audio_length_ms"], 1_700)
+        await endpoint.stop_session("s1")
+
+    async def test_endpoint_clamps_forwarded_tokens_at_audio_end_before_eos(self) -> None:
+        backend = FakeInferenceBackend(
+            tokens=(
+                HitObjectToken(10, "EVENT_A", 900, ("tap", "none", "none", "none")),
+                HitObjectToken(11, "EVENT_B", 1_000, ("none", "tap", "none", "none")),
+                HitObjectToken(12, "EVENT_C", 1_500, ("none", "none", "tap", "none")),
+            ),
+        )
+        endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0), backend=backend)
+        peer = FakePeer()
+
+        await endpoint.handle_message({"control": "ready"}, peer)
+        await endpoint.handle_message(
+            {
+                "type": "audio_path",
+                "session_id": "s1",
+                "audio_path": "/tmp/song.wav",
+                "audio_length_ms": 1_000,
+            },
+            peer,
+        )
+        await endpoint.handle_message(
+            {
+                "type": "reference_time",
+                "session_id": "s1",
+                "ref_time_ms": 0,
+                "local_host_time_send_ms": current_host_time_ms(),
+            },
+            peer,
+        )
+        task = endpoint.sessions["s1"].stream_task
+        assert task is not None
+        await task
+
+        self.assertEqual([message["type"] for message in peer.messages], ["hitobject_tokens", "end_of_stream"])
+        self.assertEqual(peer.messages[0]["token"], [10, 900])
+        self.assertEqual(peer.messages[1]["complete_through_ms"], 1_000)
         await endpoint.stop_session("s1")
 
     async def test_stream_token_socket_disconnect_finishes_task_quietly(self) -> None:
@@ -876,14 +966,17 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await task
 
         vocab = MapperTupleVocab()
+        token_messages = [message for message in peer.messages if message["type"] == "hitobject_tokens"]
         self.assertEqual(
-            [message["token"] for message in peer.messages],
+            [message["token"] for message in token_messages],
             [
                 [vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 120],
                 [vocab.encode_event(("TAP", "TAP", "NONE", "NONE")), 620],
                 [vocab.encode_event(("NONE", "NONE", "TAP", "TAP")), 1120],
             ],
         )
+        self.assertEqual(peer.messages[-1]["type"], "end_of_stream")
+        self.assertEqual(peer.messages[-1]["audio_length_ms"], 1_300)
         self.assertEqual(timing_calls[0][0], Path("/tmp/song.wav"))
         self.assertEqual(mapper_backend.prepared_routes, [])
         await endpoint.stop_session("s1")
@@ -1177,6 +1270,36 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             fit_calls[0][1]["fitter_config"].canonicalization,
             TIMING_CANONICALIZATION_BPM_80_160,
         )
+
+    async def test_timing_mock_backend_does_not_round_near_end_reference_back_to_boundary(self) -> None:
+        def timing_fit_fn(audio_path, **kwargs):
+            del audio_path, kwargs
+            return _timing_report()
+
+        backend = TimingMockStreamBackend(
+            WsEndpointConfig(decoder_window_ms=1_000, token_send_interval_s=0.0),
+            timing_fit_fn=timing_fit_fn,
+        )
+
+        await backend.startup()
+        await backend.prepare_audio(
+            session_id="s1",
+            audio_path=Path("/tmp/song.mp3"),
+            audio_length_ms=1_700,
+            difficulty=None,
+            route="timing_mock",
+        )
+
+        tokens = []
+        async for token in backend.iter_hitobject_tokens(
+            session_id="s1",
+            audio_path=Path("/tmp/song.mp3"),
+            audio_length_ms=1_700,
+            window=DecoderWindow(start_ms=1_201, end_ms=2_201),
+        ):
+            tokens.append(token)
+
+        self.assertEqual([token.ms_in_ref_audio for token in tokens], [1_620])
 
     def test_hitobject_token_manifest_matches_full_mapper_event_vocab(self) -> None:
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))

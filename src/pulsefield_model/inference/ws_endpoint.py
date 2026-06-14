@@ -46,6 +46,8 @@ class WsEndpointConfig(StreamWithCacheConfig):
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     decoder_lead_ms: int = 2_000
+    timing_mock_decoder_lead_ms: int = 0
+    timing_mock_align_decoder_window: bool = False
     reset_after_audio_end_ms: int = 2_000
     wall_clock_check_interval_s: float = 0.05
 
@@ -303,8 +305,15 @@ class InferenceEndpoint:
             if is_mock_from_message(message) and session.route != "timing_mock":
                 raise ProtocolError("isMock must be sent with audio_path before reference_time")
             from_status = session_status(session)
-            window = clamp_decoder_window_to_audio(
-                choose_decoder_window(clock, self.config),
+            window_policy = decoder_window_policy_for_route(session.route, self.config)
+            window = clamp_decoder_window_for_policy(
+                choose_decoder_window(
+                    clock,
+                    self.config,
+                    decoder_lead_ms=window_policy.decoder_lead_ms,
+                    align_to_decoder_window=window_policy.align_to_decoder_window,
+                ),
+                policy=window_policy,
                 audio_length_ms=audio_length_ms,
                 config=self.config,
             )
@@ -366,11 +375,22 @@ class InferenceEndpoint:
             ):
                 if self.sessions.get(session.session_id) is not session:
                     return
+                if int(hitobject.ms_in_ref_audio) >= int(session.audio_length_ms):
+                    continue
                 await peer.send_json(
                     {
                         "type": "hitobject_tokens",
                         "session_id": session.session_id,
                         "token": hitobject.message_token(),
+                    },
+                )
+            if self.sessions.get(session.session_id) is session:
+                await peer.send_json(
+                    {
+                        "type": "end_of_stream",
+                        "session_id": session.session_id,
+                        "audio_length_ms": session.audio_length_ms,
+                        "complete_through_ms": session.audio_length_ms,
                     },
                 )
         except PeerDisconnected:
@@ -485,14 +505,59 @@ def reference_clock_from_message(message: Mapping[str, Any]) -> ReferenceClock:
     )
 
 
-def choose_decoder_window(clock: ReferenceClock, config: WsEndpointConfig) -> DecoderWindow:
-    elapsed_ms = max(0.0, clock.received_local_host_time_ms - clock.local_host_time_send_ms)
-    estimated_ref_ms = max(0, clock.ref_time_ms + elapsed_ms)
-    target_ms = estimated_ref_ms + max(0, int(config.decoder_lead_ms))
+@dataclass(frozen=True)
+class DecoderWindowPolicy:
+    decoder_lead_ms: int
+    align_to_decoder_window: bool
+
+
+def decoder_window_policy_for_route(route: InferenceRoute, config: WsEndpointConfig) -> DecoderWindowPolicy:
+    if route == "timing_mock":
+        return DecoderWindowPolicy(
+            decoder_lead_ms=int(config.timing_mock_decoder_lead_ms),
+            align_to_decoder_window=bool(config.timing_mock_align_decoder_window),
+        )
+    return DecoderWindowPolicy(
+        decoder_lead_ms=int(config.decoder_lead_ms),
+        align_to_decoder_window=True,
+    )
+
+
+def clamp_decoder_window_for_policy(
+    window: DecoderWindow,
+    *,
+    policy: DecoderWindowPolicy,
+    audio_length_ms: int,
+    config: WsEndpointConfig,
+) -> DecoderWindow:
+    if policy.align_to_decoder_window:
+        return clamp_decoder_window_to_audio(window, audio_length_ms=audio_length_ms, config=config)
+
     window_ms = int(config.decoder_window_ms)
     if window_ms <= 0:
         raise ValueError("decoder_window_ms must be positive")
-    start_ms = int((target_ms + window_ms - 1) // window_ms) * window_ms
+    start_ms = min(max(0, int(window.start_ms)), int(audio_length_ms))
+    return DecoderWindow(start_ms=start_ms, end_ms=start_ms + window_ms)
+
+
+def choose_decoder_window(
+    clock: ReferenceClock,
+    config: WsEndpointConfig,
+    *,
+    decoder_lead_ms: int | None = None,
+    align_to_decoder_window: bool = True,
+) -> DecoderWindow:
+    elapsed_ms = max(0.0, clock.received_local_host_time_ms - clock.local_host_time_send_ms)
+    estimated_ref_ms = max(0, clock.ref_time_ms + elapsed_ms)
+    lead_ms = config.decoder_lead_ms if decoder_lead_ms is None else decoder_lead_ms
+    target_ms = estimated_ref_ms + max(0, int(lead_ms))
+    window_ms = int(config.decoder_window_ms)
+    if window_ms <= 0:
+        raise ValueError("decoder_window_ms must be positive")
+    if align_to_decoder_window:
+        start_ms = int((target_ms + window_ms - 1) // window_ms) * window_ms
+    else:
+        start_ms = int(target_ms)
     return DecoderWindow(start_ms=start_ms, end_ms=start_ms + window_ms)
 
 
