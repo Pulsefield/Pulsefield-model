@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import struct
+import traceback
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -19,10 +20,14 @@ from pulsefield_model.inference.ws_endpoint import (
     DEFAULT_PORT,
     PULSEFIELD_WS_URL,
     InferenceEndpoint,
+    InferenceError,
     PeerDisconnected,
     ProtocolError,
     WsEndpointConfig,
     _is_expected_socket_disconnect,
+    infer_message_type,
+    parse_json_message,
+    require_session_id,
 )
 from pulsefield_model.timing.canonicalization import (
     TIMING_CANONICALIZATION_BPM_80_160,
@@ -52,6 +57,8 @@ async def _handle_websocket_client(
     writer: asyncio.StreamWriter,
 ) -> None:
     peer = _WebSocketPeer(writer)
+    owner = object()
+    owned_session_ids: set[str] = set()
     try:
         try:
             await _accept_websocket_handshake(reader, writer)
@@ -63,16 +70,32 @@ async def _handle_websocket_client(
             if message is None:
                 break
             try:
-                await endpoint.handle_message(message, peer)
+                parsed_message = parse_json_message(message)
+                message_type = infer_message_type(parsed_message)
+                await endpoint.handle_message(parsed_message, peer, owner=owner)
+                _track_owned_session(
+                    owned_session_ids,
+                    message_type=message_type,
+                    message=parsed_message,
+                )
             except ProtocolError as exc:
                 await peer.send_json({"type": "error", "error": str(exc)})
+            except InferenceError as exc:
+                _log_inference_error(exc)
+                try:
+                    await peer.send_json(exc.to_payload())
+                except PeerDisconnected:
+                    return
             except PeerDisconnected:
                 return
     except Exception as exc:
         if not _is_expected_socket_disconnect(exc):
             raise
     finally:
-        await _close_writer(writer)
+        try:
+            await _stop_owned_sessions(endpoint, owned_session_ids, owner=owner)
+        finally:
+            await _close_writer(writer)
 
 
 class _WebSocketPeer:
@@ -90,6 +113,49 @@ class _WebSocketPeer:
                 if _is_expected_socket_disconnect(exc):
                     raise PeerDisconnected("websocket peer disconnected") from exc
                 raise
+
+
+def _log_inference_error(exc: InferenceError) -> None:
+    print(
+        "ws_inference_error "
+        + json.dumps(
+            {
+                "session_id": exc.session_id,
+                "phase": exc.phase,
+                "route": exc.route,
+                "code": exc.code,
+                "message": str(exc),
+            },
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+
+
+def _track_owned_session(
+    owned_session_ids: set[str],
+    *,
+    message_type: str,
+    message: Mapping[str, Any],
+) -> None:
+    if message_type in {"audio_path", "audio"}:
+        owned_session_ids.add(require_session_id(message))
+        return
+    if message_type == "stop":
+        owned_session_ids.discard(require_session_id(message))
+
+
+async def _stop_owned_sessions(
+    endpoint: InferenceEndpoint,
+    owned_session_ids: set[str],
+    *,
+    owner: object,
+) -> None:
+    for session_id in tuple(owned_session_ids):
+        await endpoint.stop_session(session_id, reason="peer_disconnect", owner=owner)
+    owned_session_ids.clear()
 
 
 async def _accept_websocket_handshake(

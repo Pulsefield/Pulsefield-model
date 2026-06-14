@@ -145,7 +145,10 @@ class StreamWithCache:
         audio_path: Path,
         audio_length_ms: int,
         difficulty: float | None,
+        route: str = "mapper",
     ) -> None:
+        if route != "mapper":
+            raise ValueError(f"StreamWithCache only supports mapper route, got {route!r}")
         model_runtime = self._require_model_runtime()
         normalized_difficulty = normalize_difficulty(
             self.config.default_difficulty if difficulty is None else float(difficulty),
@@ -196,6 +199,8 @@ class StreamWithCache:
                 audio_length_ms,
             )
             for token in _hitobject_tokens_from_generated(generated, self._vocab()):
+                if int(token.ms_in_ref_audio) >= int(audio_length_ms):
+                    continue
                 yield token
                 interval = max(0.0, float(self.config.token_send_interval_s))
                 if interval:
