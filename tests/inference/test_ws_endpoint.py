@@ -26,6 +26,7 @@ from pulsefield_model.inference.routed_backend import (
 )
 from pulsefield_model.inference.ws_endpoint import (
     InferenceEndpoint,
+    InferenceError,
     ProtocolError,
     ReferenceClock,
     WsEndpointConfig,
@@ -405,6 +406,37 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
                 {"type": "audio_path", "session_id": "s1", "audio_path": "/tmp/song.wav"},
                 FakePeer(),
             )
+
+    async def test_audio_path_backend_failure_is_inference_error_and_cleans_session(self) -> None:
+        backend = FailingPrepareBackend(
+            RuntimeError("Expected one of cpu device type at start of device string: auto"),
+        )
+        endpoint = InferenceEndpoint(
+            config=WsEndpointConfig(token_send_interval_s=0.0),
+            backend=backend,
+        )
+        peer = FakePeer()
+
+        await endpoint.handle_message({"type": "ready", "control": "ready"}, peer)
+        with self.assertRaises(InferenceError) as caught:
+            await endpoint.handle_message(
+                {
+                    "type": "audio_path",
+                    "session_id": "s1",
+                    "audio_path": "/tmp/song.wav",
+                    "audio_length_ms": 2_000,
+                },
+                peer,
+            )
+
+        error = caught.exception
+        self.assertEqual(error.session_id, "s1")
+        self.assertEqual(error.phase, "prepare_audio")
+        self.assertEqual(error.route, "mapper")
+        self.assertEqual(error.code, "invalid_device")
+        self.assertEqual(error.to_payload()["error_kind"], "inference")
+        self.assertNotIn("s1", endpoint.sessions)
+        self.assertEqual(backend.reset_sessions, ["s1"])
 
     async def test_default_backend_router_ready_does_not_load_route_backends(self) -> None:
         endpoint = InferenceEndpoint(config=WsEndpointConfig(token_send_interval_s=0.0))
@@ -791,6 +823,73 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
                     break
                 await asyncio.sleep(0.01)
             self.assertTrue(handler_tasks)
+            await asyncio.wait_for(asyncio.gather(*handler_tasks), timeout=1.0)
+        finally:
+            server.close()
+            await server.wait_closed()
+
+        self.assertEqual(errors, [])
+        self.assertNotIn("s1", endpoint.sessions)
+        self.assertEqual(backend.reset_sessions, ["s1"])
+
+    async def test_websocket_inference_error_returns_structured_error_without_handler_failure(self) -> None:
+        backend = FailingPrepareBackend(RuntimeError("invalid device: auto"))
+        endpoint = InferenceEndpoint(
+            config=WsEndpointConfig(token_send_interval_s=0.0),
+            backend=backend,
+        )
+        errors: list[BaseException] = []
+        handler_tasks: list[asyncio.Task] = []
+
+        async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            task = asyncio.current_task()
+            assert task is not None
+            handler_tasks.append(task)
+            try:
+                await _handle_websocket_client(endpoint, reader, writer)
+            except BaseException as exc:
+                errors.append(exc)
+
+        server = await asyncio.start_server(handle_client, host="127.0.0.1", port=0)
+        try:
+            assert server.sockets is not None
+            host, port = server.sockets[0].getsockname()[:2]
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(
+                b"GET / HTTP/1.1\r\n"
+                b"Host: localhost\r\n"
+                b"Upgrade: websocket\r\n"
+                b"Connection: Upgrade\r\n"
+                b"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                b"Sec-WebSocket-Version: 13\r\n"
+                b"\r\n"
+            )
+            await writer.drain()
+            self.assertIn(b"101 Switching Protocols", await reader.readuntil(b"\r\n\r\n"))
+
+            writer.write(_client_text_frame({"control": "ready"}))
+            writer.write(
+                _client_text_frame(
+                    {
+                        "type": "audio_path",
+                        "session_id": "s1",
+                        "audio_path": "/tmp/song.wav",
+                        "audio_length_ms": 2_000,
+                    },
+                ),
+            )
+            await writer.drain()
+
+            payload = await _read_server_json_frame(reader)
+            self.assertEqual(payload["type"], "error")
+            self.assertEqual(payload["error_kind"], "inference")
+            self.assertEqual(payload["session_id"], "s1")
+            self.assertEqual(payload["phase"], "prepare_audio")
+            self.assertEqual(payload["route"], "mapper")
+            self.assertEqual(payload["code"], "invalid_device")
+
+            writer.close()
+            await writer.wait_closed()
             await asyncio.wait_for(asyncio.gather(*handler_tasks), timeout=1.0)
         finally:
             server.close()
@@ -1451,6 +1550,25 @@ class FakeInferenceBackend:
         self.reset_sessions.append(session_id)
 
 
+class FailingPrepareBackend(FakeInferenceBackend):
+    def __init__(self, exc: Exception) -> None:
+        super().__init__()
+        self.exc = exc
+
+    async def prepare_audio(
+        self,
+        *,
+        session_id: str,
+        audio_path: Path,
+        audio_length_ms: int,
+        difficulty: float | None,
+        route: str = "mapper",
+    ) -> None:
+        del session_id, audio_path, audio_length_ms, difficulty
+        self.prepared_routes.append(route)
+        raise self.exc
+
+
 class BlockingPrepareBackend(FakeInferenceBackend):
     def __init__(self) -> None:
         super().__init__()
@@ -1563,6 +1681,17 @@ def _client_text_frame(payload: dict) -> bytes:
     else:
         prefix = bytes([0x81, 127]) + length.to_bytes(8, "big")
     return prefix + data
+
+
+async def _read_server_json_frame(reader: asyncio.StreamReader) -> dict:
+    header = await reader.readexactly(2)
+    length = header[1] & 0x7F
+    if length == 126:
+        length = int.from_bytes(await reader.readexactly(2), "big")
+    elif length == 127:
+        length = int.from_bytes(await reader.readexactly(8), "big")
+    payload = await reader.readexactly(length)
+    return json.loads(payload.decode("utf-8"))
 
 
 if __name__ == "__main__":

@@ -13,6 +13,17 @@ from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPredicti
 
 
 class SessionRuntimeTests(unittest.TestCase):
+    def test_auto_session_device_inherits_model_runtime_device(self) -> None:
+        runtime = SessionRuntime(
+            session_id="s1",
+            model_runtime=_fake_model_runtime(_FakeTimingProvider(_prediction())),
+            config=SessionRuntimeConfig(device="auto", minimum_frame_count=4),
+            mel_loader=_fake_mel_loader(np.zeros((5, 160), dtype=np.float32)),
+            grid_fitter=_FakeGridFitter(),
+        )
+
+        self.assertEqual(runtime.device, torch.device("cpu"))
+
     def test_prepare_audio_caches_mel_dense_timing_and_padding_mask(self) -> None:
         audio_path = Path("song.wav")
         mel = np.arange(3 * 160, dtype=np.float32).reshape(3, 160)

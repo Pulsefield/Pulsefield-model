@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import struct
+import traceback
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,7 @@ from pulsefield_model.inference.ws_endpoint import (
     DEFAULT_PORT,
     PULSEFIELD_WS_URL,
     InferenceEndpoint,
+    InferenceError,
     PeerDisconnected,
     ProtocolError,
     WsEndpointConfig,
@@ -78,6 +80,12 @@ async def _handle_websocket_client(
                 )
             except ProtocolError as exc:
                 await peer.send_json({"type": "error", "error": str(exc)})
+            except InferenceError as exc:
+                _log_inference_error(exc)
+                try:
+                    await peer.send_json(exc.to_payload())
+                except PeerDisconnected:
+                    return
             except PeerDisconnected:
                 return
     except Exception as exc:
@@ -105,6 +113,25 @@ class _WebSocketPeer:
                 if _is_expected_socket_disconnect(exc):
                     raise PeerDisconnected("websocket peer disconnected") from exc
                 raise
+
+
+def _log_inference_error(exc: InferenceError) -> None:
+    print(
+        "ws_inference_error "
+        + json.dumps(
+            {
+                "session_id": exc.session_id,
+                "phase": exc.phase,
+                "route": exc.route,
+                "code": exc.code,
+                "message": str(exc),
+            },
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
 
 
 def _track_owned_session(

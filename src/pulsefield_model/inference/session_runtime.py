@@ -700,7 +700,7 @@ class SessionRuntime:
 
 
 def _resolve_session_device(model_runtime: ModelRuntime, requested: str | torch.device | None) -> torch.device:
-    if requested is not None:
+    if requested is not None and str(requested) != "auto":
         return torch.device(requested)
     runtime_device = getattr(model_runtime, "device", None)
     if runtime_device is None:

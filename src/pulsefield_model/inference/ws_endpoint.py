@@ -32,6 +32,37 @@ class ProtocolError(ValueError):
     pass
 
 
+class InferenceError(RuntimeError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        session_id: str,
+        phase: str,
+        route: InferenceRoute | None = None,
+        code: str = "inference_failed",
+    ) -> None:
+        super().__init__(message)
+        self.session_id = session_id
+        self.phase = phase
+        self.route = route
+        self.code = code
+
+    def to_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "type": "error",
+            "error_kind": "inference",
+            "session_id": self.session_id,
+            "phase": self.phase,
+            "code": self.code,
+            "message": str(self),
+            "error": str(self),
+        }
+        if self.route is not None:
+            payload["route"] = self.route
+        return payload
+
+
 class PeerDisconnected(ConnectionError):
     pass
 
@@ -261,6 +292,22 @@ class InferenceEndpoint:
                     difficulty=difficulty,
                     route=route,
                 )
+            except InferenceError as exc:
+                if self.sessions.get(session_id) is session:
+                    self.sessions.pop(session_id, None)
+                    await self.backend.reset_session(session_id)
+                log_ws_status(
+                    session_id=session_id,
+                    from_status="audio_preparing",
+                    to_status="failed",
+                    reason=exc.code,
+                    phase=exc.phase,
+                    route=route,
+                    audio_path=str(audio_path),
+                    audio_length_ms=audio_length_ms,
+                    difficulty=difficulty,
+                )
+                raise
             except BaseException:
                 if self.sessions.get(session_id) is session:
                     self.sessions.pop(session_id, None)
@@ -402,7 +449,13 @@ class InferenceEndpoint:
                 return
             if self.sessions.get(session.session_id) is session:
                 try:
-                    await peer.send_json({"type": "error", "session_id": session.session_id, "error": str(exc)})
+                    inference_error = _inference_error_from_exception(
+                        exc,
+                        session_id=session.session_id,
+                        phase="stream",
+                        route=session.route,
+                    )
+                    await peer.send_json(inference_error.to_payload())
                 except PeerDisconnected:
                     await self.stop_session(session.session_id, reason="peer_disconnect", owner=session.owner)
                     return
@@ -711,7 +764,48 @@ async def _prepare_backend_audio(
     }
     if _call_accepts_keyword(backend.prepare_audio, "route"):
         kwargs["route"] = route
-    await backend.prepare_audio(**kwargs)
+    try:
+        await backend.prepare_audio(**kwargs)
+    except InferenceError:
+        raise
+    except Exception as exc:
+        raise _inference_error_from_exception(
+            exc,
+            session_id=session_id,
+            phase="prepare_audio",
+            route=route,
+        ) from exc
+
+
+def _inference_error_from_exception(
+    exc: Exception,
+    *,
+    session_id: str,
+    phase: str,
+    route: InferenceRoute,
+) -> InferenceError:
+    return InferenceError(
+        _inference_error_message(exc),
+        session_id=session_id,
+        phase=phase,
+        route=route,
+        code=_inference_error_code(exc),
+    )
+
+
+def _inference_error_message(exc: Exception) -> str:
+    detail = str(exc).strip()
+    name = type(exc).__name__
+    return f"{name}: {detail}" if detail else name
+
+
+def _inference_error_code(exc: Exception) -> str:
+    message = _inference_error_message(exc).lower()
+    if "device" in message and ("expected one of" in message or "invalid" in message or "auto" in message):
+        return "invalid_device"
+    if isinstance(exc, FileNotFoundError):
+        return "audio_not_found"
+    return "inference_failed"
 
 
 def _call_accepts_keyword(callable_obj: Any, keyword: str) -> bool:
