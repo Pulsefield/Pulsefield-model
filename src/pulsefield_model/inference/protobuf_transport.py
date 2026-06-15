@@ -9,7 +9,24 @@ from typing import Any
 from google.protobuf.message import DecodeError
 from pulsefield.protocol.v1 import core_pb2, envelope_pb2, inference_pb2
 
-from pulsefield_model.inference.ws_endpoint import ProtocolError
+from pulsefield_model.inference.errors import ProtocolError
+from pulsefield_model.inference.service_models import (
+    AudioCommand,
+    EndOfStreamEvent,
+    ErrorEvent,
+    HitObjectTokenEvent,
+    InferenceRoute,
+    MapperStreamBeginEvent,
+    NodeHelloCommand,
+    ReadyCommand,
+    ReferenceTimeCommand,
+    ServiceCommand,
+    ServiceEvent,
+    StatusEvent,
+    StopCommand,
+    command_to_endpoint_payload,
+    service_event_from_endpoint_payload,
+)
 
 
 MODEL_SERVICE_NODE_ID = "pulsefield-model.inference"
@@ -31,30 +48,55 @@ def parse_envelope_frame(payload: bytes) -> envelope_pb2.Envelope:
     return envelope
 
 
-def envelope_to_message(envelope: envelope_pb2.Envelope) -> dict[str, Any]:
+def envelope_to_command(envelope: envelope_pb2.Envelope) -> ServiceCommand:
     payload_name = envelope.WhichOneof("payload")
     if payload_name is None:
         raise ProtocolError("protobuf envelope must include a payload")
 
     if payload_name == "node_hello":
-        return {"type": "node_hello"}
+        return NodeHelloCommand()
     if payload_name == "ready":
-        return {"type": "ready"}
+        return ReadyCommand()
     if payload_name == "audio":
-        _require_session_id(envelope, payload_name)
-        return _audio_request_to_message(envelope)
+        _require_envelope_session_id(envelope, payload_name)
+        return _audio_request_to_command(envelope)
     if payload_name == "reference_time":
-        _require_session_id(envelope, payload_name)
-        return _reference_time_request_to_message(envelope)
+        _require_envelope_session_id(envelope, payload_name)
+        request = envelope.reference_time
+        return ReferenceTimeCommand(
+            session_id=envelope.session_id,
+            ref_time_ms=int(request.ref_time_ms),
+            local_host_time_send_ms=int(request.local_host_time_send_ms),
+            audio_length_ms=int(request.audio_length_ms) if request.HasField("audio_length_ms") else None,
+        )
     if payload_name == "stop_session":
-        _require_session_id(envelope, payload_name)
-        return {
-            "type": "stop",
-            "session_id": envelope.session_id,
-            "reason": envelope.stop_session.reason or "client_stop",
-        }
+        _require_envelope_session_id(envelope, payload_name)
+        return StopCommand(
+            session_id=envelope.session_id,
+            reason=envelope.stop_session.reason or "client_stop",
+        )
 
     raise ProtocolError(f"unsupported inbound protobuf payload: {payload_name}")
+
+
+def envelope_to_message(envelope: envelope_pb2.Envelope) -> dict[str, Any]:
+    return command_to_endpoint_payload(envelope_to_command(envelope))
+
+
+def outbound_event_to_envelope(
+    event: ServiceEvent | Mapping[str, Any],
+    *,
+    sequence: int,
+    source_node_id: str = MODEL_SERVICE_NODE_ID,
+) -> envelope_pb2.Envelope:
+    service_event = _coerce_service_event(event)
+    envelope = _base_envelope(
+        session_id=_event_session_id(service_event),
+        sequence=sequence,
+        source_node_id=source_node_id,
+    )
+    _fill_envelope_payload(envelope, service_event)
+    return envelope
 
 
 def outbound_payload_to_envelope(
@@ -63,75 +105,11 @@ def outbound_payload_to_envelope(
     sequence: int,
     source_node_id: str = MODEL_SERVICE_NODE_ID,
 ) -> envelope_pb2.Envelope:
-    envelope = envelope_pb2.Envelope(
-        session_id=_payload_session_id(payload),
-        sequence=max(0, int(sequence)),
-        sent_at_unix_ms=int(time.time() * 1000),
-        source_node_id=source_node_id,
-        message_id=str(uuid.uuid4()),
-    )
-
-    payload_type = payload.get("type")
-    if payload_type == "mapper_stream_begin":
-        event = envelope.mapper_stream_begin
-        event.token_contract_version = _optional_uint(payload, "token_contract_version") or MAPPER_TOKEN_CONTRACT_VERSION
-        audio_length_ms = _optional_uint(payload, "audio_length_ms")
-        if audio_length_ms is not None:
-            event.audio_length_ms = audio_length_ms
-        return envelope
-    if payload_type == "hit_object_token":
-        event = envelope.hit_object_token
-        event.token_id = _required_uint(payload, "token_id")
-        event.ms_in_ref_audio = _required_uint(payload, "ms_in_ref_audio")
-        event.token_index = _optional_uint(payload, "token_index") or 0
-        return envelope
-    if payload_type == "end_of_stream":
-        event = envelope.end_of_stream
-        event.complete_through_ms = _required_uint(payload, "complete_through_ms")
-        audio_length_ms = _optional_uint(payload, "audio_length_ms")
-        if audio_length_ms is not None:
-            event.audio_length_ms = audio_length_ms
-        return envelope
-    if payload_type == "error":
-        event = envelope.error
-        event.code = str(payload.get("code") or "protocol_error")
-        event.message = str(payload.get("message") or payload.get("error") or "protocol error")
-        event.error_code = _error_code_from_payload(payload)
-        event.phase = str(payload.get("phase") or "")
-        event.route = _route_to_proto(payload.get("route"))
-        event.error_kind = str(payload.get("error_kind") or "protocol")
-        return envelope
-    if payload_type == "status":
-        event = envelope.status
-        event.status = _status_to_proto(payload.get("status") or payload.get("to"))
-        event.message = str(payload.get("message") or "")
-        event.from_status = _status_to_proto(payload.get("from_status") or payload.get("from"))
-        event.reason = str(payload.get("reason") or "")
-        event.route = _route_to_proto(payload.get("route"))
-        for source_key, target_attr in (
-            ("ref_time_ms", "ref_time_ms"),
-            ("sender_monotonic_ms", "sender_monotonic_ms"),
-            ("reset_sender_monotonic_ms", "reset_sender_monotonic_ms"),
-            ("audio_length_ms", "audio_length_ms"),
-        ):
-            value = _optional_uint(payload, source_key)
-            if value is not None:
-                setattr(event, target_attr, value)
-        difficulty = payload.get("difficulty")
-        if difficulty is not None:
-            event.difficulty = float(difficulty)
-        return envelope
-
-    raise ProtocolError(f"unsupported outbound payload type for protobuf transport: {payload_type!r}")
+    return outbound_event_to_envelope(payload, sequence=sequence, source_node_id=source_node_id)
 
 
 def node_hello_envelope(*, sequence: int = 1, source_node_id: str = MODEL_SERVICE_NODE_ID) -> envelope_pb2.Envelope:
-    envelope = envelope_pb2.Envelope(
-        sequence=max(0, int(sequence)),
-        sent_at_unix_ms=int(time.time() * 1000),
-        source_node_id=source_node_id,
-        message_id=str(uuid.uuid4()),
-    )
+    envelope = _base_envelope(session_id="", sequence=sequence, source_node_id=source_node_id)
     hello = envelope.node_hello
     hello.node_id = source_node_id
     hello.role = core_pb2.NODE_ROLE_MODEL_SERVICE
@@ -150,51 +128,111 @@ def node_hello_envelope(*, sequence: int = 1, source_node_id: str = MODEL_SERVIC
     return envelope
 
 
-def _audio_request_to_message(envelope: envelope_pb2.Envelope) -> dict[str, Any]:
+def _audio_request_to_command(envelope: envelope_pb2.Envelope) -> AudioCommand:
     request = envelope.audio
     audio = request.audio
     ref_kind = audio.WhichOneof("ref")
-    if ref_kind != "local_path":
+    if ref_kind != "local_path" or not audio.local_path.strip():
         raise ProtocolError("AudioRequest.audio.local_path is required by the local inference server")
-
-    message: dict[str, Any] = {
-        "type": "audio",
-        "session_id": envelope.session_id,
-        "audio_path": audio.local_path,
-    }
-    if audio.HasField("audio_length_ms"):
-        message["audio_length_ms"] = int(audio.audio_length_ms)
-    if request.HasField("difficulty"):
-        message["difficulty"] = float(request.difficulty)
-    route = _route_from_proto(request.route)
-    message["route"] = route
-    return message
+    return AudioCommand(
+        session_id=envelope.session_id,
+        audio_path=audio.local_path,
+        audio_length_ms=int(audio.audio_length_ms) if audio.HasField("audio_length_ms") else None,
+        difficulty=float(request.difficulty) if request.HasField("difficulty") else None,
+        route=_route_from_proto(request.route),
+    )
 
 
-def _reference_time_request_to_message(envelope: envelope_pb2.Envelope) -> dict[str, Any]:
-    request = envelope.reference_time
-    message: dict[str, Any] = {
-        "type": "reference_time",
-        "session_id": envelope.session_id,
-        "ref_time_ms": int(request.ref_time_ms),
-        "local_host_time_send_ms": int(request.local_host_time_send_ms),
-    }
-    if request.HasField("audio_length_ms"):
-        message["audio_length_ms"] = int(request.audio_length_ms)
-    return message
+def _coerce_service_event(event: ServiceEvent | Mapping[str, Any]) -> ServiceEvent:
+    if isinstance(event, Mapping):
+        try:
+            return service_event_from_endpoint_payload(event)
+        except ValueError as exc:
+            raise ProtocolError(str(exc)) from exc
+    return event
 
 
-def _require_session_id(envelope: envelope_pb2.Envelope, payload_name: str) -> None:
+def _fill_envelope_payload(envelope: envelope_pb2.Envelope, event: ServiceEvent) -> None:
+    if isinstance(event, MapperStreamBeginEvent):
+        _require_event_session_id(event, "mapper_stream_begin")
+        payload = envelope.mapper_stream_begin
+        payload.token_contract_version = _positive_int(event.token_contract_version, "token_contract_version")
+        if event.audio_length_ms is not None:
+            payload.audio_length_ms = _positive_int(event.audio_length_ms, "audio_length_ms")
+        return
+    if isinstance(event, HitObjectTokenEvent):
+        _require_event_session_id(event, "hit_object_token")
+        payload = envelope.hit_object_token
+        payload.token_id = _uint(event.token_id, "token_id")
+        payload.ms_in_ref_audio = _uint(event.ms_in_ref_audio, "ms_in_ref_audio")
+        payload.token_index = _uint(event.token_index or 0, "token_index")
+        return
+    if isinstance(event, EndOfStreamEvent):
+        _require_event_session_id(event, "end_of_stream")
+        payload = envelope.end_of_stream
+        payload.complete_through_ms = _uint(event.complete_through_ms, "complete_through_ms")
+        if event.audio_length_ms is not None:
+            payload.audio_length_ms = _positive_int(event.audio_length_ms, "audio_length_ms")
+        return
+    if isinstance(event, ErrorEvent):
+        payload = envelope.error
+        payload.code = event.code or "protocol_error"
+        payload.message = event.message or event.error or "protocol error"
+        payload.error_code = _error_code_from_string(event.code)
+        payload.phase = event.phase
+        payload.route = _route_to_proto(event.route)
+        payload.error_kind = event.error_kind or "protocol"
+        return
+    if isinstance(event, StatusEvent):
+        payload = envelope.status
+        payload.status = _status_to_proto(event.status)
+        payload.message = event.message
+        payload.from_status = _status_to_proto(event.from_status)
+        payload.reason = event.reason
+        payload.route = _route_to_proto(event.route)
+        if event.ref_time_ms is not None:
+            payload.ref_time_ms = _uint(event.ref_time_ms, "ref_time_ms")
+        if event.sender_monotonic_ms is not None:
+            payload.sender_monotonic_ms = _uint(event.sender_monotonic_ms, "sender_monotonic_ms")
+        if event.reset_sender_monotonic_ms is not None:
+            payload.reset_sender_monotonic_ms = _uint(
+                event.reset_sender_monotonic_ms,
+                "reset_sender_monotonic_ms",
+            )
+        if event.audio_length_ms is not None:
+            payload.audio_length_ms = _positive_int(event.audio_length_ms, "audio_length_ms")
+        if event.difficulty is not None:
+            payload.difficulty = float(event.difficulty)
+        return
+    raise ProtocolError(f"unsupported service event: {type(event).__name__}")
+
+
+def _base_envelope(*, session_id: str, sequence: int, source_node_id: str) -> envelope_pb2.Envelope:
+    return envelope_pb2.Envelope(
+        session_id=session_id,
+        sequence=max(0, int(sequence)),
+        sent_at_unix_ms=int(time.time() * 1000),
+        source_node_id=source_node_id,
+        message_id=str(uuid.uuid4()),
+    )
+
+
+def _event_session_id(event: ServiceEvent) -> str:
+    session_id = getattr(event, "session_id", None)
+    return session_id if isinstance(session_id, str) else ""
+
+
+def _require_event_session_id(event: ServiceEvent, payload_name: str) -> None:
+    if not _event_session_id(event).strip():
+        raise ProtocolError(f"{payload_name} event requires a non-empty session_id")
+
+
+def _require_envelope_session_id(envelope: envelope_pb2.Envelope, payload_name: str) -> None:
     if not envelope.session_id.strip():
         raise ProtocolError(f"{payload_name} envelope requires a non-empty session_id")
 
 
-def _payload_session_id(payload: Mapping[str, Any]) -> str:
-    value = payload.get("session_id")
-    return value if isinstance(value, str) else ""
-
-
-def _route_from_proto(value: int) -> str:
+def _route_from_proto(value: int) -> InferenceRoute:
     if value in (
         inference_pb2.INFERENCE_ROUTE_UNSPECIFIED,
         inference_pb2.INFERENCE_ROUTE_MAPPER,
@@ -213,8 +251,8 @@ def _route_to_proto(value: object) -> int:
     return inference_pb2.INFERENCE_ROUTE_UNSPECIFIED
 
 
-def _error_code_from_payload(payload: Mapping[str, Any]) -> int:
-    code = str(payload.get("code") or "").lower()
+def _error_code_from_string(value: object) -> int:
+    code = str(value or "").lower()
     if code == "protocol_error":
         return inference_pb2.INFERENCE_ERROR_CODE_PROTOCOL_ERROR
     if code == "invalid_device":
@@ -255,22 +293,19 @@ def _status_to_proto(value: object) -> int:
     return inference_pb2.ENDPOINT_STATUS_UNSPECIFIED
 
 
-def _required_uint(payload: Mapping[str, Any], key: str) -> int:
-    if key not in payload:
-        raise ProtocolError(f"{key} is required")
-    return _uint_from_value(payload[key], key)
-
-
-def _optional_uint(payload: Mapping[str, Any], key: str) -> int | None:
-    if key not in payload or payload[key] is None:
-        return None
-    return _uint_from_value(payload[key], key)
-
-
-def _uint_from_value(value: object, key: str) -> int:
+def _uint(value: object, key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ProtocolError(f"{key} must be an integer")
     value = int(value)
     if value < 0:
         raise ProtocolError(f"{key} must be non-negative")
+    return value
+
+
+def _positive_int(value: object, key: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ProtocolError(f"{key} must be an integer")
+    value = int(value)
+    if value <= 0:
+        raise ProtocolError(f"{key} must be positive")
     return value

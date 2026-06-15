@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import errno
 import inspect
 import json
 import math
@@ -10,10 +9,29 @@ from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol, TypeAlias
 
 from pulsefield_model.data.control_windows import normalize_difficulty
-from pulsefield_model.inference.routed_backend import InferenceRoute, RoutedInferenceBackend
+from pulsefield_model.inference.errors import (
+    PeerDisconnected,
+    ProtocolError,
+    is_expected_socket_disconnect as _is_expected_socket_disconnect,
+)
+from pulsefield_model.inference.routed_backend import RoutedInferenceBackend
+from pulsefield_model.inference.service_models import (
+    AudioCommand,
+    EndOfStreamEvent,
+    ErrorEvent,
+    HitObjectTokenEvent,
+    InferenceRoute,
+    NodeHelloCommand,
+    ReadyCommand,
+    ReferenceTimeCommand,
+    ServiceCommand,
+    ServiceEvent,
+    StopCommand,
+    service_command_from_message,
+)
 from pulsefield_model.inference.stream_with_cache import (
     DecoderWindow,
     HitObjectToken,
@@ -26,10 +44,6 @@ from pulsefield_model.inference.stream_with_cache import (
 PULSEFIELD_WS_URL = "ws://localhost:8765"
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8765
-
-
-class ProtocolError(ValueError):
-    pass
 
 
 class InferenceError(RuntimeError):
@@ -62,13 +76,20 @@ class InferenceError(RuntimeError):
             event["route"] = self.route
         return event
 
-
-class PeerDisconnected(ConnectionError):
-    pass
+    def to_service_event(self) -> ErrorEvent:
+        return ErrorEvent(
+            code=self.code,
+            message=str(self),
+            session_id=self.session_id,
+            error=str(self),
+            error_kind="inference",
+            phase=self.phase,
+            route=self.route,
+        )
 
 
 class EndpointPeer(Protocol):
-    async def send_event(self, event: Mapping[str, Any]) -> None:
+    async def send_event(self, event: ServiceEvent | Mapping[str, Any]) -> None:
         ...
 
 
@@ -105,13 +126,71 @@ class SessionState:
     decoder_window: DecoderWindow | None = None
 
 
+SessionStatus: TypeAlias = Literal["no_session", "audio_preparing", "audio_ready", "streaming"]
+SessionTransition: TypeAlias = Literal[
+    "start_audio",
+    "audio_prepared",
+    "reference_time",
+    "replace_audio",
+    "stop",
+    "prepare_failed",
+    "peer_disconnect",
+]
+
+
+@dataclass(frozen=True)
+class SessionTransitionRule:
+    allowed_from: frozenset[SessionStatus]
+    to_status: SessionStatus
+
+
+_SESSION_STATUS_ORDER: tuple[SessionStatus, ...] = (
+    "no_session",
+    "audio_preparing",
+    "audio_ready",
+    "streaming",
+)
+
+
+SESSION_TRANSITION_RULES: dict[SessionTransition, SessionTransitionRule] = {
+    "start_audio": SessionTransitionRule(
+        allowed_from=frozenset({"no_session"}),
+        to_status="audio_preparing",
+    ),
+    "audio_prepared": SessionTransitionRule(
+        allowed_from=frozenset({"audio_preparing"}),
+        to_status="audio_ready",
+    ),
+    "reference_time": SessionTransitionRule(
+        allowed_from=frozenset({"audio_ready", "streaming"}),
+        to_status="streaming",
+    ),
+    "replace_audio": SessionTransitionRule(
+        allowed_from=frozenset({"audio_ready", "streaming"}),
+        to_status="no_session",
+    ),
+    "stop": SessionTransitionRule(
+        allowed_from=frozenset({"no_session", "audio_preparing", "audio_ready", "streaming"}),
+        to_status="no_session",
+    ),
+    "prepare_failed": SessionTransitionRule(
+        allowed_from=frozenset({"audio_preparing"}),
+        to_status="no_session",
+    ),
+    "peer_disconnect": SessionTransitionRule(
+        allowed_from=frozenset({"no_session", "audio_preparing", "audio_ready", "streaming"}),
+        to_status="no_session",
+    ),
+}
+
+
 @dataclass
 class _SessionLockEntry:
     lock: asyncio.Lock
     ref_count: int = 0
 
 
-def session_status(session: SessionState | None) -> str:
+def session_status(session: SessionState | None) -> SessionStatus:
     if session is None:
         return "no_session"
     if session.reference_clock is not None and session.decoder_window is not None:
@@ -164,6 +243,33 @@ class InferenceEndpoint:
         self._startup_lock = asyncio.Lock()
         self._session_locks: dict[str, _SessionLockEntry] = {}
 
+    async def handle_command(
+        self,
+        command: ServiceCommand,
+        peer: EndpointPeer,
+        *,
+        owner: object | None = None,
+    ) -> None:
+        if isinstance(command, ReadyCommand):
+            await self.startup()
+            return
+        if isinstance(command, NodeHelloCommand):
+            return
+        if isinstance(command, AudioCommand):
+            await self._handle_audio(command, owner=owner)
+            return
+        if isinstance(command, ReferenceTimeCommand):
+            await self._handle_reference_time(command, peer, owner=owner)
+            return
+        if isinstance(command, StopCommand):
+            await self.stop_session(
+                _require_command_session_id(command.session_id),
+                reason=_validated_stop_reason(command.reason),
+                owner=owner,
+            )
+            return
+        raise ProtocolError(f"unsupported command type: {type(command).__name__}")
+
     async def handle_message(
         self,
         message: Mapping[str, Any],
@@ -171,27 +277,11 @@ class InferenceEndpoint:
         *,
         owner: object | None = None,
     ) -> None:
-        message_type = infer_message_type(message)
-
-        if message_type == "ready":
-            await self.startup()
-            return
-        if message_type == "node_hello":
-            return
-        if message_type == "audio":
-            await self._handle_audio(message, owner=owner)
-            return
-        if message_type == "reference_time":
-            await self._handle_reference_time(message, peer, owner=owner)
-            return
-        if message_type == "stop":
-            await self.stop_session(
-                require_session_id(message),
-                reason=stop_session_reason_from_message(message),
-                owner=owner,
-            )
-            return
-        raise ProtocolError(f"unsupported message type: {message_type!r}")
+        try:
+            command = service_command_from_message(message)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ProtocolError(str(exc)) from exc
+        await self.handle_command(command, peer, owner=owner)
 
     async def startup(self) -> None:
         assert self.backend is not None
@@ -212,9 +302,10 @@ class InferenceEndpoint:
         *,
         reason: str = "client_stop",
         owner: object | None = None,
+        transition: SessionTransition = "stop",
     ) -> None:
         async with self._session_scope(session_id):
-            await self._stop_session_locked(session_id, reason=reason, owner=owner)
+            await self._stop_session_locked(session_id, reason=reason, owner=owner, transition=transition)
 
     async def _stop_session_locked(
         self,
@@ -222,14 +313,15 @@ class InferenceEndpoint:
         *,
         reason: str,
         owner: object | None = None,
+        transition: SessionTransition = "stop",
     ) -> None:
-        session = self.sessions.pop(session_id, None)
+        session = self.sessions.get(session_id)
+        from_status = enforce_session_transition(transition, session, session_id=session_id)
         if session is None:
             return
         if owner is not None and session.owner is not owner:
-            self.sessions[session_id] = session
             return
-        from_status = session_status(session)
+        self.sessions.pop(session_id, None)
         await _cancel_task(session.stream_task)
         await _cancel_task(session.wall_clock_reset_task)
         assert self.backend is not None
@@ -241,25 +333,24 @@ class InferenceEndpoint:
             reason=reason,
         )
 
-    async def _handle_audio(self, message: Mapping[str, Any], *, owner: object | None = None) -> None:
+    async def _handle_audio(self, command: AudioCommand, *, owner: object | None = None) -> None:
         assert self.backend is not None
         if not self.backend.models_ready:
             raise ProtocolError("send ready before audio")
-        session_id = require_session_id(message)
-        raw_audio_path = audio_path_from_message(message)
-        if not isinstance(raw_audio_path, str) or not raw_audio_path.strip():
+        session_id = _require_command_session_id(command.session_id)
+        if not command.audio_path.strip():
             raise ProtocolError("audio_path must be a non-empty string")
-        audio_path = Path(raw_audio_path).expanduser()
-        audio_length_ms = audio_length_ms_from_message(message)
+        audio_path = Path(command.audio_path).expanduser()
+        audio_length_ms = _validated_optional_audio_length_ms(command.audio_length_ms)
         if audio_length_ms is None:
             audio_length_ms = audio_length_ms_from_file(audio_path)
         if audio_length_ms is None:
             raise ProtocolError("audio_length_ms was omitted and audio duration could not be read from audio_path")
-        route = inference_route_from_message(message)
+        route = command.route
         difficulty = (
             None
             if route == "timing_mock"
-            else difficulty_from_message(message, default=self.config.default_difficulty)
+            else _validated_difficulty(command.difficulty, default=self.config.default_difficulty)
         )
 
         async with self._session_scope(session_id):
@@ -267,7 +358,12 @@ class InferenceEndpoint:
             if existing is not None:
                 if owner is not None and existing.owner is not owner:
                     raise ProtocolError("session is owned by another websocket connection")
-                await self._stop_session_locked(session_id, reason="replace_audio")
+                await self._stop_session_locked(
+                    session_id,
+                    reason="replace_audio",
+                    transition="replace_audio",
+                )
+            enforce_session_transition("start_audio", self.sessions.get(session_id), session_id=session_id)
 
             session = SessionState(
                 session_id=session_id,
@@ -299,6 +395,7 @@ class InferenceEndpoint:
                 )
             except InferenceError as exc:
                 if self.sessions.get(session_id) is session:
+                    enforce_session_transition("prepare_failed", session, session_id=session_id)
                     self.sessions.pop(session_id, None)
                     await self.backend.reset_session(session_id)
                 log_ws_status(
@@ -315,9 +412,11 @@ class InferenceEndpoint:
                 raise
             except BaseException:
                 if self.sessions.get(session_id) is session:
+                    enforce_session_transition("prepare_failed", session, session_id=session_id)
                     self.sessions.pop(session_id, None)
                     await self.backend.reset_session(session_id)
                 raise
+            enforce_session_transition("audio_prepared", session, session_id=session_id)
             session.audio_prepared = True
             log_ws_status(
                 session_id=session_id,
@@ -332,21 +431,22 @@ class InferenceEndpoint:
 
     async def _handle_reference_time(
         self,
-        message: Mapping[str, Any],
+        command: ReferenceTimeCommand,
         peer: EndpointPeer,
         *,
         owner: object | None = None,
     ) -> None:
-        session_id = require_session_id(message)
+        session_id = _require_command_session_id(command.session_id)
         async with self._session_scope(session_id):
             session = self.sessions.get(session_id)
-            if session is None or session.audio_path is None or not session.audio_prepared:
-                raise ProtocolError("send audio before reference_time")
-            if owner is not None and session.owner is not owner:
+            if session is not None and owner is not None and session.owner is not owner:
                 raise ProtocolError("session is owned by another websocket connection")
+            enforce_session_transition("reference_time", session, session_id=session_id)
+            if session is None or session.audio_path is None:
+                raise ProtocolError("send audio before reference_time")
 
-            clock = reference_clock_from_message(message)
-            message_audio_length_ms = audio_length_ms_from_message(message)
+            clock = _reference_clock_from_command(command)
+            message_audio_length_ms = _validated_optional_audio_length_ms(command.audio_length_ms)
             if message_audio_length_ms is not None:
                 if session.audio_length_ms is not None and message_audio_length_ms != session.audio_length_ms:
                     raise ProtocolError("audio_length_ms must match the prepared audio_length_ms")
@@ -428,28 +528,36 @@ class InferenceEndpoint:
                 if int(hitobject.ms_in_ref_audio) >= int(session.audio_length_ms):
                     continue
                 await peer.send_event(
-                    {
-                        "type": "hit_object_token",
-                        "session_id": session.session_id,
-                        "token_id": int(hitobject.token_id),
-                        "ms_in_ref_audio": int(hitobject.ms_in_ref_audio),
-                    },
+                    HitObjectTokenEvent(
+                        session_id=session.session_id,
+                        token_id=int(hitobject.token_id),
+                        ms_in_ref_audio=int(hitobject.ms_in_ref_audio),
+                    ),
                 )
             if self.sessions.get(session.session_id) is session:
                 await peer.send_event(
-                    {
-                        "type": "end_of_stream",
-                        "session_id": session.session_id,
-                        "audio_length_ms": session.audio_length_ms,
-                        "complete_through_ms": session.audio_length_ms,
-                    },
+                    EndOfStreamEvent(
+                        session_id=session.session_id,
+                        audio_length_ms=session.audio_length_ms,
+                        complete_through_ms=session.audio_length_ms,
+                    ),
                 )
         except PeerDisconnected:
-            await self.stop_session(session.session_id, reason="peer_disconnect", owner=session.owner)
+            await self.stop_session(
+                session.session_id,
+                reason="peer_disconnect",
+                owner=session.owner,
+                transition="peer_disconnect",
+            )
             return
         except Exception as exc:
             if _is_expected_socket_disconnect(exc):
-                await self.stop_session(session.session_id, reason="peer_disconnect", owner=session.owner)
+                await self.stop_session(
+                    session.session_id,
+                    reason="peer_disconnect",
+                    owner=session.owner,
+                    transition="peer_disconnect",
+                )
                 return
             if self.sessions.get(session.session_id) is session:
                 try:
@@ -459,13 +567,23 @@ class InferenceEndpoint:
                         phase="stream",
                         route=session.route,
                     )
-                    await peer.send_event(inference_error.to_event())
+                    await peer.send_event(inference_error.to_service_event())
                 except PeerDisconnected:
-                    await self.stop_session(session.session_id, reason="peer_disconnect", owner=session.owner)
+                    await self.stop_session(
+                        session.session_id,
+                        reason="peer_disconnect",
+                        owner=session.owner,
+                        transition="peer_disconnect",
+                    )
                     return
                 except Exception as send_exc:
                     if _is_expected_socket_disconnect(send_exc):
-                        await self.stop_session(session.session_id, reason="peer_disconnect", owner=session.owner)
+                        await self.stop_session(
+                            session.session_id,
+                            reason="peer_disconnect",
+                            owner=session.owner,
+                            transition="peer_disconnect",
+                        )
                         return
                     raise
 
@@ -494,8 +612,43 @@ def infer_message_type(message: Mapping[str, Any]) -> str:
     raise ProtocolError("message must include type")
 
 
+def session_transition_target(transition: SessionTransition, from_status: SessionStatus) -> SessionStatus:
+    rule = SESSION_TRANSITION_RULES[transition]
+    if from_status not in rule.allowed_from:
+        raise ProtocolError(
+            "invalid session transition "
+            f"{transition!r} from {from_status!r}; expected one of {_format_statuses(rule.allowed_from)}",
+        )
+    return rule.to_status
+
+
+def enforce_session_transition(
+    transition: SessionTransition,
+    session: SessionState | None,
+    *,
+    session_id: str,
+) -> SessionStatus:
+    from_status = session_status(session)
+    try:
+        session_transition_target(transition, from_status)
+    except ProtocolError as exc:
+        raise ProtocolError(f"session {session_id!r}: {exc}") from exc
+    return from_status
+
+
+def _format_statuses(statuses: frozenset[SessionStatus]) -> str:
+    ordered = [status for status in _SESSION_STATUS_ORDER if status in statuses]
+    return ", ".join(ordered)
+
+
 def require_session_id(message: Mapping[str, Any]) -> str:
     session_id = message.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise ProtocolError("session_id must be a non-empty string")
+    return session_id
+
+
+def _require_command_session_id(session_id: str) -> str:
     if not isinstance(session_id, str) or not session_id.strip():
         raise ProtocolError("session_id must be a non-empty string")
     return session_id
@@ -523,8 +676,23 @@ def reference_clock_from_message(message: Mapping[str, Any]) -> ReferenceClock:
     )
 
 
+def _reference_clock_from_command(command: ReferenceTimeCommand) -> ReferenceClock:
+    return ReferenceClock(
+        ref_time_ms=_validated_required_int(command.ref_time_ms, "ref_time_ms"),
+        local_host_time_send_ms=_validated_required_float(
+            command.local_host_time_send_ms,
+            "local_host_time_send_ms",
+        ),
+        received_local_host_time_ms=current_host_time_ms(),
+    )
+
+
 def stop_session_reason_from_message(message: Mapping[str, Any]) -> str:
     reason = message.get("reason")
+    return _validated_stop_reason(reason)
+
+
+def _validated_stop_reason(reason: object) -> str:
     if reason is None:
         return "client_stop"
     if not isinstance(reason, str) or not reason.strip():
@@ -653,6 +821,10 @@ def log_ws_status(
 
 def audio_length_ms_from_message(message: Mapping[str, Any]) -> int | None:
     value = message.get("audio_length_ms")
+    return _validated_optional_audio_length_ms(value)
+
+
+def _validated_optional_audio_length_ms(value: object) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int):
@@ -665,6 +837,12 @@ def audio_length_ms_from_message(message: Mapping[str, Any]) -> int | None:
 
 def difficulty_from_message(message: Mapping[str, Any], *, default: float) -> float:
     value = message.get("difficulty", default)
+    return _validated_difficulty(value, default=default)
+
+
+def _validated_difficulty(value: object, *, default: float) -> float:
+    if value is None:
+        value = default
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ProtocolError("difficulty must be numeric")
     value = float(value)
@@ -693,13 +871,24 @@ def _optional_route_from_message(message: Mapping[str, Any]) -> InferenceRoute |
 
 def _required_int(message: Mapping[str, Any], key: str) -> int:
     value = message.get(key)
+    return _validated_required_int(value, key)
+
+
+def _validated_required_int(value: object, key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ProtocolError(f"{key} must be an integer")
-    return int(value)
+    value = int(value)
+    if value < 0:
+        raise ProtocolError(f"{key} must be non-negative")
+    return value
 
 
 def _required_float(message: Mapping[str, Any], key: str) -> float:
     value = message.get(key)
+    return _validated_required_float(value, key)
+
+
+def _validated_required_float(value: object, key: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ProtocolError(f"{key} must be numeric")
     value = float(value)
@@ -788,20 +977,3 @@ async def _cancel_task(task: asyncio.Task[None] | None) -> None:
         await task
     except asyncio.CancelledError:
         pass
-
-
-_EXPECTED_SOCKET_DISCONNECT_ERRNOS = {
-    errno.ECONNABORTED,
-    errno.ECONNRESET,
-    errno.ENOTCONN,
-    errno.EPIPE,
-    errno.ETIMEDOUT,
-}
-
-
-def _is_expected_socket_disconnect(exc: BaseException) -> bool:
-    if isinstance(exc, (asyncio.IncompleteReadError, ConnectionError)):
-        return True
-    if isinstance(exc, OSError) and exc.errno in _EXPECTED_SOCKET_DISCONNECT_ERRNOS:
-        return True
-    return False
