@@ -5,9 +5,10 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Protocol
 
 from pulsefield_model.events.canonical import CanonicalTimepoint
+from pulsefield_model.inference.service_models import InferenceRoute
 from pulsefield_model.inference.stream_with_cache import (
     DecoderWindow,
     HitObjectToken,
@@ -28,7 +29,6 @@ from pulsefield_model.timing.providers.beatthis import (
 from pulsefield_model.timing.schema import FittedTimingGrid
 
 
-InferenceRoute = Literal["mapper", "timing_mock"]
 TimingFitFn = Callable[..., dict[str, object]]
 
 
