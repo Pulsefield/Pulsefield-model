@@ -143,13 +143,6 @@ def iter_cols(mask: int, key_count: int = 4):
             yield c
 
 
-def mask_from_cols(cols: Sequence[int]) -> int:
-    mask = 0
-    for c in cols:
-        mask |= 1 << c
-    return mask
-
-
 def center_of_mass(mask: int, key_count: int = 4) -> float:
     cols = list(iter_cols(mask, key_count))
     if not cols:
@@ -674,30 +667,4 @@ def extract_control_features(
         "feature_names": FEATURE_NAMES,
         "features": features,
         "debug": debug,
-    }
-
-
-def extract_raw_for_norm_fit(
-    maps: Sequence[Sequence[HitObject]],
-    beat_length_fns: Sequence[Callable[[float], float]] | None = None,
-    cfg: FeatureConfig | None = None,
-) -> dict[str, Robust01]:
-    if cfg is None:
-        cfg = FeatureConfig()
-    density_values: list[np.ndarray] = []
-    jack_values: list[np.ndarray] = []
-    for i, hits in enumerate(maps):
-        beat_fn = beat_length_fns[i] if beat_length_fns is not None else default_beat_length_at
-        out = extract_control_features(
-            hits,
-            beat_length_at=beat_fn,
-            cfg=cfg,
-            normalizers=None,
-            return_debug=False,
-        )
-        density_values.append(out["features"]["density_env"])
-        jack_values.append(out["features"]["jack_risk"])
-    return {
-        "density_env": Robust01.fit(density_values, 5.0, 95.0),
-        "jack_risk": Robust01.fit(jack_values, 5.0, 95.0),
     }

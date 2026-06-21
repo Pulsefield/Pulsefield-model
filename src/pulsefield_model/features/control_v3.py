@@ -8,7 +8,6 @@ import numpy as np
 from .control import (
     HitObject,
     OnsetEvent,
-    Robust01,
     clip01,
     default_beat_length_at,
     group_onsets,
@@ -382,40 +381,3 @@ def extract_control_features(
         "features": features,
         "debug": debug,
     }
-
-
-def extract_raw_for_norm_fit(
-    maps: Sequence[Sequence[HitObject]],
-    beat_length_fns: Sequence[Callable[[float], float]] | None = None,
-    cfg: FeatureConfigV3 | None = None,
-    confidence_threshold: float = 0.0,
-) -> dict[str, Robust01]:
-    if cfg is None:
-        cfg = FeatureConfigV3()
-    values_by_name: dict[str, list[np.ndarray]] = {
-        "density_level": [],
-        "ln_change_rate_gated": [],
-        "jack_excess": [],
-        "jack_streak_exposure": [],
-    }
-    confidence_by_name = {
-        "density_level": "density_confidence",
-        "ln_change_rate_gated": "ln_change_confidence",
-        "jack_excess": "jack_confidence",
-        "jack_streak_exposure": "jack_streak_confidence",
-    }
-    for i, hits in enumerate(maps):
-        beat_fn = beat_length_fns[i] if beat_length_fns is not None else default_beat_length_at
-        out = extract_control_features(
-            hits,
-            beat_length_at=beat_fn,
-            cfg=cfg,
-            normalizers=None,
-            return_debug=True,
-        )
-        valid_mask = out["debug"]["valid_control_mask"]
-        for name in values_by_name:
-            confidence = out["debug"][confidence_by_name[name]]
-            mask = valid_mask & (confidence > confidence_threshold)
-            values_by_name[name].append(out["features"][name][mask])
-    return {name: Robust01.fit(values, 5.0, 95.0) for name, values in values_by_name.items()}

@@ -305,41 +305,6 @@ def ln_close_focal_bce_loss(
     return (bce * mask_f).sum() / mask_f.sum().clamp_min(torch.finfo(mask_f.dtype).eps)
 
 
-def ln_close_aux_loss(
-    *,
-    close_logits: torch.Tensor,
-    labels: torch.Tensor,
-    mask: torch.Tensor,
-    pos_weight: float | torch.Tensor | None = None,
-    gamma: float = 1.5,
-    focal: bool = True,
-) -> torch.Tensor:
-    if close_logits.ndim != 3:
-        raise ValueError(f"close_logits must have shape [B,T,4], got {tuple(close_logits.shape)}")
-    if tuple(labels.shape) != tuple(close_logits.shape) or tuple(mask.shape) != tuple(close_logits.shape):
-        raise ValueError("labels and mask must match close_logits shape")
-    mask_bool = mask.to(device=close_logits.device, dtype=torch.bool)
-    if not bool(mask_bool.any()):
-        return close_logits.sum() * 0.0
-    labels_f = labels.to(device=close_logits.device, dtype=close_logits.dtype)
-    resolved_pos_weight = (
-        close_pos_weight(labels=labels, mask=mask).to(device=close_logits.device, dtype=close_logits.dtype)
-        if pos_weight is None
-        else torch.as_tensor(pos_weight, device=close_logits.device, dtype=close_logits.dtype)
-    )
-    bce = F.binary_cross_entropy_with_logits(
-        close_logits,
-        labels_f,
-        pos_weight=resolved_pos_weight,
-        reduction="none",
-    )
-    if focal and float(gamma) > 0.0:
-        prob = torch.sigmoid(close_logits)
-        p_t = torch.where(labels_f > 0.5, prob, 1.0 - prob)
-        bce = bce * (1.0 - p_t).clamp_min(0.0).pow(float(gamma))
-    return bce[mask_bool].mean()
-
-
 def close_pos_weight(
     *,
     labels: torch.Tensor,
@@ -377,31 +342,6 @@ def adapter_bias_regularization(*biases: torch.Tensor | None, mask: torch.Tensor
             denom = mask_f.sum() * float(trailing_dims)
             total = total + (bias.square() * mask_f).sum() / denom.clamp_min(torch.finfo(bias.dtype).eps)
     return total
-
-
-def adapter_regularization(*biases: torch.Tensor | None, mask: torch.Tensor | None = None) -> torch.Tensor:
-    return adapter_bias_regularization(*biases, mask=mask)
-
-
-def adapter_reg(*biases: torch.Tensor | None, mask: torch.Tensor | None = None) -> torch.Tensor:
-    return adapter_bias_regularization(*biases, mask=mask)
-
-
-def token_ce(
-    logits: torch.Tensor,
-    target: torch.Tensor,
-    *,
-    pad_id: int | None = None,
-    target_mask: torch.Tensor | None = None,
-    grammar_mask: torch.Tensor | None = None,
-) -> torch.Tensor:
-    return token_cross_entropy(
-        logits,
-        target,
-        pad_id=pad_id,
-        target_mask=target_mask,
-        grammar_mask=grammar_mask,
-    )
 
 
 def density_auxiliary_loss(

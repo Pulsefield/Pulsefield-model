@@ -13,7 +13,6 @@ from pulsefield_model.data.mapper_tuple_windows import (
     collate_mapper_tuple_windows,
     control_teacher_cache_key,
     extract_mapper_density_8s,
-    is_mapper_tuple_window_start_allowed,
     load_control_teacher_cache_entry,
 )
 from pulsefield_model.models.mapper.v2_1.replay import NO_EMITTED_LANE_INDEX, ln_carry_state_tensors
@@ -199,14 +198,6 @@ def collate_mapper_v2_1_windows(samples: Sequence[dict[str, Any]], *, pad_id: in
     batch["target_fragment_states"]["emitted_lane_mask"] = emitted_lane_mask
     batch["target_fragment_states"]["last_lane_index"] = last_lane_index
     return batch
-
-
-def is_mapper_v2_1_window_start_allowed(
-    record: Any,
-    *,
-    mapper_stride_frames: int = MAPPER_WRITE_FRAMES,
-) -> bool:
-    return is_mapper_tuple_window_start_allowed(record, mapper_stride_frames=mapper_stride_frames)
 
 
 def mapper_v2_1_padded_frame_count(record: Any) -> int:
