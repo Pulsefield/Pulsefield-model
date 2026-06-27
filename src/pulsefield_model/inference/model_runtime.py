@@ -11,6 +11,11 @@ import torch
 from torch import nn
 
 from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
+from pulsefield_model.inference.mapper_protocol import (
+    MapperInferenceProfile,
+    MapperProfileConfig,
+    resolve_mapper_profile,
+)
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
 from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
 from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21Model, MapperV21Vocab
@@ -28,6 +33,7 @@ CONTROL_ENCODER_STATE_PREFIX = "control_encoder."
 class ModelRuntimeConfig:
     mapper_checkpoint_path: str | Path
     control_checkpoint_path: str | Path
+    mapper_profile: MapperProfileConfig = "auto"
     beatthis_checkpoint: str | Path = DEFAULT_BEATTHIS_CHECKPOINT
     beatthis_device: str | torch.device | None = DEFAULT_BEATTHIS_DEVICE
     device: str = "auto"
@@ -42,6 +48,7 @@ class ModelRuntime:
     control_model: ControlDemoGlobalEncoder
     mapper_model: nn.Module
     vocab: MapperTupleVocab | MapperV21Vocab
+    mapper_profile: MapperInferenceProfile
     checkpoint_metadata: Mapping[str, Any]
 
     @classmethod
@@ -91,7 +98,8 @@ def load_model_runtime(config: ModelRuntimeConfig) -> ModelRuntime:
     mapper_state_raw = _required_state_dict(mapper_checkpoint, checkpoint_kind="mapper")
     mapper_state, filtered_control_encoder_keys = _mapper_tensor_state_dict(mapper_state_raw)
     mapper_version = _detect_mapper_checkpoint_version(mapper_checkpoint, mapper_state=mapper_state)
-    if mapper_version == "v2_1":
+    mapper_profile = resolve_mapper_profile(config.mapper_profile, checkpoint_version=mapper_version)
+    if mapper_profile.name == "v2_1_sparse":
         mapper_config = MapperV21Config(**mapper_config_raw)
         vocab = MapperV21Vocab()
         mapper_model = MapperV21Model(mapper_config, vocab=vocab)
@@ -113,6 +121,12 @@ def load_model_runtime(config: ModelRuntimeConfig) -> ModelRuntime:
     mapper_metadata = {
         "checkpoint_path": mapper_path.as_posix(),
         "version": mapper_version,
+        "profile": mapper_profile.name,
+        "model_family": mapper_profile.model_family,
+        "vocab_contract": mapper_profile.vocab_contract,
+        "grammar_contract": mapper_profile.grammar_contract,
+        "protobuf_capability": mapper_profile.protocol_contract.capability_name,
+        "protobuf_token_contract_version": mapper_profile.protocol_contract.token_contract_version,
         "checkpoint_schema_version": mapper_checkpoint.get("checkpoint_schema_version"),
         "loaded_keys": len(mapper_state),
         "filtered_control_encoder_keys": tuple(filtered_control_encoder_keys),
@@ -140,6 +154,7 @@ def load_model_runtime(config: ModelRuntimeConfig) -> ModelRuntime:
         control_model=control_model,
         mapper_model=mapper_model,
         vocab=vocab,
+        mapper_profile=mapper_profile,
         checkpoint_metadata=checkpoint_metadata,
     )
 

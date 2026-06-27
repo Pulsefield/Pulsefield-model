@@ -13,6 +13,7 @@ from pulsefield_model.inference.errors import (
     ProtocolError,
     is_expected_socket_disconnect,
 )
+from pulsefield_model.inference.mapper_protocol import resolve_mapper_profile
 from pulsefield_model.inference.protocol_adapter import PulsefieldProtocolAdapter
 from pulsefield_model.inference.service_models import (
     AudioCommand,
@@ -68,7 +69,7 @@ async def _handle_websocket_client(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
 ) -> None:
-    peer = _WebSocketPeer(writer)
+    peer = _WebSocketPeer(writer, config=endpoint.config)
     owner = object()
     owned_session_ids: set[str] = set()
     try:
@@ -114,10 +115,11 @@ async def _handle_websocket_client(
 
 
 class _WebSocketPeer:
-    def __init__(self, writer: asyncio.StreamWriter) -> None:
+    def __init__(self, writer: asyncio.StreamWriter, *, config: WsEndpointConfig) -> None:
         self._writer = writer
         self._send_lock = asyncio.Lock()
-        self._protocol_adapter = PulsefieldProtocolAdapter()
+        mapper_contract = resolve_mapper_profile(config.mapper_profile).protocol_contract
+        self._protocol_adapter = PulsefieldProtocolAdapter(mapper_contract=mapper_contract)
 
     def decode_inbound_frame(self, payload: bytes) -> ServiceCommand:
         return self._protocol_adapter.decode_inbound_frame(payload)
@@ -190,7 +192,7 @@ async def _stop_owned_sessions(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=f"Run Mapper V2 local WS server at {PULSEFIELD_WS_URL}.")
+    parser = argparse.ArgumentParser(description=f"Run mapper local WS server at {PULSEFIELD_WS_URL}.")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--device", default="auto")
@@ -207,6 +209,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--mapper-checkpoint-path", type=Path, default=DEFAULT_MAPPER_CHECKPOINT_PATH)
     parser.add_argument("--control-checkpoint-path", type=Path, default=DEFAULT_CONTROL_CHECKPOINT_PATH)
+    parser.add_argument("--mapper-profile", choices=("auto", "v2_tuple", "v2_1_sparse"), default="auto")
     args = parser.parse_args(argv)
 
     config = WsEndpointConfig(
@@ -214,6 +217,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         port=args.port,
         mapper_checkpoint_path=args.mapper_checkpoint_path,
         control_checkpoint_path=args.control_checkpoint_path,
+        mapper_profile=args.mapper_profile,
         device=args.device,
         beatthis_device=args.beatthis_device,
         canonicalization=args.canonicalization,

@@ -18,6 +18,17 @@ import torch
 
 from pulsefield_model.data.control_windows import normalize_difficulty
 from pulsefield_model.events.canonical import CanonicalTimepoint, LaneAction as CanonicalLaneAction
+from pulsefield_model.inference.mapper_protocol import (
+    HitObjectToken,
+    MapperProtocolTranslator,
+    build_mapper_protocol_translator,
+    infer_mapper_profile_name_from_vocab,
+    resolve_mapper_profile,
+)
+from pulsefield_model.inference.mapper_v2_1_rollout import (
+    grammar_constrained_window_generation_v2_1,
+    mapper_v2_1_logits_fn,
+)
 from pulsefield_model.inference.model_runtime import (
     ModelRuntime,
     ModelRuntimeConfig,
@@ -44,6 +55,11 @@ from pulsefield_model.models.mapper.shared.generation_engine import (
 from pulsefield_model.models.mapper.shared.replay import LNCarryState, empty_ln_carry_state, ln_carry_state_tensors
 from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_WRITE_MS
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
+from pulsefield_model.models.mapper.v2_1.replay import (
+    LNCarryState as MapperV21LNCarryState,
+    empty_ln_carry_state as empty_ln_carry_state_v2_1,
+)
+from pulsefield_model.models.mapper.v2_1.vocab import MapperV21Vocab
 from pulsefield_model.timing.canonicalization import (
     TIMING_CANONICALIZATION_BPM_80_160,
     TIMING_CANONICALIZATION_CHOICES,
@@ -54,10 +70,15 @@ from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_MAPPER_CHECKPOINT_PATH = Path(
+DEFAULT_MAPPER_V2_CHECKPOINT_PATH = Path(
     "artifacts/runs/stage2_mapper_v2/"
     "stage2_mapper_v2_phase_b_global_d768_l8_b1/checkpoint.pt",
 )
+DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH = Path(
+    "artifacts/runs/stage2_mapper_v2_1/"
+    "stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2/checkpoint.pt",
+)
+DEFAULT_MAPPER_CHECKPOINT_PATH = DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH
 DEFAULT_CONTROL_CHECKPOINT_PATH = Path(
     "artifacts/runs/stage2_control_demo/"
     "stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt",
@@ -65,7 +86,7 @@ DEFAULT_CONTROL_CHECKPOINT_PATH = Path(
 DEFAULT_TIME_SHIFT_LENGTH_PENALTY = 5.2
 DEFAULT_INDEX_PATH = Path("artifacts/indexes/stage2_control_windows_4k_2to6_dense_local_bpm_norm_unique_le3.parquet")
 DEFAULT_DATASET_ROOT = Path("dataset")
-DEFAULT_OUTPUT_DIR = Path("artifacts/inference/mapper_v2_cached_stream_random_diff4")
+DEFAULT_OUTPUT_DIR = Path("artifacts/inference/mapper_v2_1_cached_stream_random_diff4")
 T = TypeVar("T")
 
 
@@ -75,6 +96,7 @@ class StreamWithCacheConfig:
     token_send_interval_s: float = 0.02
     mapper_checkpoint_path: str | Path = DEFAULT_MAPPER_CHECKPOINT_PATH
     control_checkpoint_path: str | Path = DEFAULT_CONTROL_CHECKPOINT_PATH
+    mapper_profile: str = "auto"
     device: str = "auto"
     beatthis_device: str | None = DEFAULT_BEATTHIS_DEVICE
     beatthis_float16: bool = False
@@ -94,17 +116,6 @@ class StreamWithCacheConfig:
 class DecoderWindow:
     start_ms: int
     end_ms: int
-
-
-@dataclass(frozen=True)
-class HitObjectToken:
-    token_id: int
-    token_name: str
-    ms_in_ref_audio: int
-    actions: tuple[str, ...]
-
-    def message_token(self) -> list[int]:
-        return [self.token_id, self.ms_in_ref_audio]
 
 
 RuntimeLoader = Callable[[ModelRuntimeConfig], ModelRuntime]
@@ -130,7 +141,8 @@ class StreamWithCache:
         )
         self._session_runtimes: dict[str, SessionRuntime] = {}
         self._last_context_token_by_session: dict[str, int] = {}
-        self._last_carry_state_by_session: dict[str, LNCarryState] = {}
+        self._last_carry_state_by_session: dict[str, Any] = {}
+        self._protocol_translators_by_session: dict[str, MapperProtocolTranslator] = {}
 
     async def startup(self) -> None:
         if self.models_ready:
@@ -172,6 +184,7 @@ class StreamWithCache:
         self._session_runtimes[session_id] = session_runtime
         self._last_context_token_by_session.pop(session_id, None)
         self._last_carry_state_by_session.pop(session_id, None)
+        self._protocol_translators_by_session.pop(session_id, None)
 
     async def iter_hitobject_tokens(
         self,
@@ -191,6 +204,7 @@ class StreamWithCache:
             audio_length_ms=audio_length_ms,
             config=self.config,
         ):
+            translator = self._protocol_translator(session_id)
             generated = await asyncio.to_thread(
                 self._generate_window,
                 session_id,
@@ -198,7 +212,7 @@ class StreamWithCache:
                 decode_window,
                 audio_length_ms,
             )
-            for token in _hitobject_tokens_from_generated(generated, self._vocab()):
+            for token in translator.consume_window(generated):
                 if int(token.ms_in_ref_audio) >= int(audio_length_ms):
                     continue
                 yield token
@@ -210,6 +224,7 @@ class StreamWithCache:
         session_runtime = self._session_runtimes.pop(session_id, None)
         self._last_context_token_by_session.pop(session_id, None)
         self._last_carry_state_by_session.pop(session_id, None)
+        self._protocol_translators_by_session.pop(session_id, None)
         if session_runtime is not None:
             await asyncio.to_thread(session_runtime.reset_audio_cache)
 
@@ -218,6 +233,7 @@ class StreamWithCache:
             ModelRuntimeConfig(
                 mapper_checkpoint_path=_resolve_repo_path(self.config.mapper_checkpoint_path),
                 control_checkpoint_path=_resolve_repo_path(self.config.control_checkpoint_path),
+                mapper_profile=self.config.mapper_profile,
                 device=self.config.device,
                 beatthis_device=self.config.beatthis_device,
                 beatthis_float16=bool(self.config.beatthis_float16),
@@ -231,13 +247,21 @@ class StreamWithCache:
         session_runtime: SessionRuntime,
         window: DecoderWindow,
         audio_length_ms: int,
-    ) -> MapperGeneratedWindow:
+    ) -> Any:
         if session_runtime.audio_cache is None:
             raise RuntimeError("prepare_audio must finish before mapper generation")
         write_start_ms = int(window.start_ms)
         write_end_ms = int(window.end_ms)
         if write_end_ms - write_start_ms != int(self.config.decoder_window_ms):
             raise ValueError("decoder window span does not match config.decoder_window_ms")
+        if self._mapper_profile_name() == "v2_1_sparse":
+            return self._generate_window_v2_1(
+                session_id=session_id,
+                session_runtime=session_runtime,
+                window=window,
+                audio_length_ms=audio_length_ms,
+            )
+
         mapper_window_cache = session_runtime.prepare_mapper_window(
             start_ms=write_start_ms,
             end_ms=write_end_ms,
@@ -289,21 +313,114 @@ class StreamWithCache:
             self._last_carry_state_by_session[session_id] = generated.terminal_state
         return generated
 
-    def _carry_in_for_window(self, session_id: str, write_start_ms: int) -> LNCarryState:
+    def _generate_window_v2_1(
+        self,
+        *,
+        session_id: str,
+        session_runtime: SessionRuntime,
+        window: DecoderWindow,
+        audio_length_ms: int,
+    ) -> Any:
+        if session_runtime.audio_cache is None:
+            raise RuntimeError("prepare_audio must finish before mapper generation")
+        write_start_ms = int(window.start_ms)
+        write_end_ms = int(window.end_ms)
+        mapper_window_cache = session_runtime.prepare_mapper_window(
+            start_ms=write_start_ms,
+            end_ms=write_end_ms,
+            include_control_attention_kv_cache=bool(self.config.use_incremental_mapper_decode),
+        )
+
+        vocab = self._vocab()
+        if not isinstance(vocab, MapperV21Vocab):
+            raise TypeError("v2_1_sparse mapper profile requires MapperV21Vocab")
+        carry_in = self._carry_in_for_window(session_id, write_start_ms)
+        if not isinstance(carry_in, MapperV21LNCarryState):
+            raise TypeError("v2_1_sparse mapper profile requires MapperV21LNCarryState carry")
+        chart_end_ms = _chart_end_ms_for_generation(audio_length_ms)
+        is_full_chart_start = write_start_ms == 0 and not any(carry_in.open_mask)
+        is_full_chart_end = write_end_ms >= chart_end_ms
+        target_end_ms = chart_end_ms if is_full_chart_end else write_end_ms
+        carry_out = empty_ln_carry_state_v2_1(target_end_ms)
+        left_context_tokens: tuple[int, ...] = ()
+        if not is_full_chart_start:
+            left_context_tokens = (self._left_context_token(session_id, vocab),)
+
+        generator = _make_torch_generator(self.config.seed, device=session_runtime.device)
+        logits_fn = mapper_v2_1_logits_fn(
+            model=session_runtime.model_runtime.mapper_model,
+            vocab=vocab,
+            device=session_runtime.device,
+            normalized_difficulty=mapper_window_cache.normalized_difficulty,
+            control_batch=mapper_window_cache.as_model_batch(),
+            ln_carry_in=carry_in,
+            ln_carry_out=carry_out,
+            write_start_ms=write_start_ms,
+            write_end_ms=write_end_ms,
+            chart_end_ms=chart_end_ms,
+            is_full_chart_start=is_full_chart_start,
+            is_full_chart_end=is_full_chart_end,
+            time_shift_length_penalty_alpha=float(self.config.time_shift_length_penalty_alpha),
+        )
+        generated = grammar_constrained_window_generation_v2_1(
+            vocab=vocab,
+            write_start_ms=write_start_ms,
+            write_end_ms=write_end_ms,
+            chart_end_ms=chart_end_ms,
+            ln_carry_in=carry_in,
+            ln_carry_out=carry_out,
+            logits_fn=logits_fn,
+            left_context_tokens=left_context_tokens,
+            is_full_chart_start=is_full_chart_start,
+            is_full_chart_end=is_full_chart_end,
+            max_tokens=int(self.config.max_tokens),
+            temperature=float(self.config.temperature),
+            top_p=self.config.top_p,
+            generator=generator,
+        )
+        if generated.tokens:
+            self._last_context_token_by_session[session_id] = int(generated.tokens[-1])
+        if generated.completed:
+            self._last_carry_state_by_session[session_id] = _mapper_v2_1_carry_from_replay_state(
+                generated.terminal_state,
+            )
+        return generated
+
+    def _carry_in_for_window(self, session_id: str, write_start_ms: int) -> Any:
         previous = self._last_carry_state_by_session.get(session_id)
         if previous is not None and int(previous.current_ms) == int(write_start_ms):
             return previous
+        if self._mapper_profile_name() == "v2_1_sparse":
+            return empty_ln_carry_state_v2_1(write_start_ms)
         return empty_ln_carry_state(write_start_ms)
 
-    def _left_context_token(self, session_id: str, vocab: MapperTupleVocab) -> int:
+    def _left_context_token(self, session_id: str, vocab: Any) -> int:
         token = self._last_context_token_by_session.get(session_id)
         if token is not None and token != vocab.bos_id:
             return int(token)
         return int(vocab.time_shift_token_id(10))
 
-    def _vocab(self) -> MapperTupleVocab:
+    def _vocab(self) -> Any:
         runtime = self._require_model_runtime()
         return runtime.vocab
+
+    def _mapper_profile_name(self) -> str:
+        runtime = self.model_runtime
+        if runtime is not None and getattr(runtime, "mapper_profile", None) is not None:
+            return runtime.mapper_profile.name
+        requested = str(getattr(self.config, "mapper_profile", "auto"))
+        if requested.strip().lower() != "auto":
+            return resolve_mapper_profile(requested).name
+        return infer_mapper_profile_name_from_vocab(self._vocab())
+
+    def _protocol_translator(self, session_id: str) -> MapperProtocolTranslator:
+        profile_name = self._mapper_profile_name()
+        translator = self._protocol_translators_by_session.get(session_id)
+        if translator is not None and translator.profile_name == profile_name:
+            return translator
+        translator = build_mapper_protocol_translator(profile_name, source_vocab=self._vocab())
+        self._protocol_translators_by_session[session_id] = translator
+        return translator
 
     def _require_model_runtime(self) -> ModelRuntime:
         if self.model_runtime is None:
@@ -338,25 +455,26 @@ def _make_torch_generator(seed: int | None, *, device: torch.device) -> torch.Ge
     return generator
 
 
+def _chart_end_ms_for_generation(audio_length_ms: int) -> int:
+    audio_length_ms = max(1, int(audio_length_ms))
+    return max(10, int(math.ceil(audio_length_ms / 10.0) * 10))
+
+
+def _mapper_v2_1_carry_from_replay_state(state: Any) -> MapperV21LNCarryState:
+    return MapperV21LNCarryState(
+        current_ms=int(state.current_ms),
+        open_mask=tuple(bool(value) for value in state.open_mask),  # type: ignore[arg-type]
+        open_start_ms=tuple(None if value is None else int(value) for value in state.open_start_ms),  # type: ignore[arg-type]
+        open_age_ms=tuple(int(value) for value in state.open_age_ms),  # type: ignore[arg-type]
+    )
+
+
 def _hitobject_tokens_from_generated(
     generated: MapperGeneratedWindow,
-    vocab: MapperTupleVocab,
+    vocab: Any,
 ) -> tuple[HitObjectToken, ...]:
-    tokens: list[HitObjectToken] = []
-    for token_id, state_before in zip(generated.tokens, generated.states_before, strict=True):
-        token_id = int(token_id)
-        if not vocab.is_event_token(token_id):
-            continue
-        actions = vocab.decode_event(token_id)
-        tokens.append(
-            HitObjectToken(
-                token_id=token_id,
-                token_name=vocab.token_name(token_id),
-                ms_in_ref_audio=int(state_before.current_ms),
-                actions=tuple(action.value for action in actions),
-            ),
-        )
-    return tuple(tokens)
+    profile_name = infer_mapper_profile_name_from_vocab(vocab)
+    return build_mapper_protocol_translator(profile_name, source_vocab=vocab).consume_window(generated)
 
 
 def _mapper_v2_logits_fn(
@@ -665,6 +783,7 @@ def run_cached_stream_sample(argv: Sequence[str] | None = None) -> int:
             ModelRuntimeConfig(
                 mapper_checkpoint_path=Path(args.mapper_checkpoint_path),
                 control_checkpoint_path=Path(args.control_checkpoint_path),
+                mapper_profile=args.mapper_profile,
                 device=device,
                 beatthis_device=args.beatthis_device,
                 beatthis_float16=bool(args.beatthis_float16),
@@ -676,6 +795,7 @@ def run_cached_stream_sample(argv: Sequence[str] | None = None) -> int:
     config = StreamWithCacheConfig(
         mapper_checkpoint_path=Path(args.mapper_checkpoint_path),
         control_checkpoint_path=Path(args.control_checkpoint_path),
+        mapper_profile=args.mapper_profile,
         device=device,
         beatthis_device=args.beatthis_device,
         beatthis_float16=bool(args.beatthis_float16),
@@ -719,6 +839,7 @@ def run_cached_stream_sample(argv: Sequence[str] | None = None) -> int:
                 "difficulty": difficulty,
                 "mapper_checkpoint_path": Path(args.mapper_checkpoint_path).as_posix(),
                 "control_checkpoint_path": Path(args.control_checkpoint_path).as_posix(),
+                "mapper_profile": args.mapper_profile,
                 "device": device,
                 "canonicalization": args.canonicalization,
                 "count": len(reports),
@@ -1040,7 +1161,7 @@ def resolve_dataset_path(dataset_root: Path, shard: str, raw_path: object) -> Pa
 
 def output_filename(candidate: CandidateMap, *, index: int, difficulty: float) -> str:
     identity = candidate.beatmap_id or candidate.beatmap_set_id or candidate.row_index
-    return f"{index:02d}_{identity}_mapper_v2_cached_diff{_difficulty_slug(difficulty)}.osu"
+    return f"{index:02d}_{identity}_mapper_cached_diff{_difficulty_slug(difficulty)}.osu"
 
 
 def relative_audio_filename(audio_path: Path, output_path: Path) -> str:
@@ -1061,6 +1182,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--mapper-checkpoint-path", type=Path, default=DEFAULT_MAPPER_CHECKPOINT_PATH)
     parser.add_argument("--control-checkpoint-path", type=Path, default=DEFAULT_CONTROL_CHECKPOINT_PATH)
+    parser.add_argument("--mapper-profile", choices=("auto", "v2_tuple", "v2_1_sparse"), default="auto")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--beatthis-device", default=DEFAULT_BEATTHIS_DEVICE)
     parser.add_argument("--beatthis-float16", action=argparse.BooleanOptionalAction, default=False)

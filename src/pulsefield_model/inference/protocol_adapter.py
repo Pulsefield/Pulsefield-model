@@ -6,8 +6,11 @@ from typing import Any
 from pulsefield.protocol.v1 import envelope_pb2
 
 from pulsefield_model.inference.errors import ProtocolError
+from pulsefield_model.inference.mapper_protocol import (
+    DEFAULT_MAPPER_PROTOCOL_CONTRACT,
+    MapperProtocolContract,
+)
 from pulsefield_model.inference.protobuf_transport import (
-    MAPPER_TOKEN_CONTRACT_VERSION,
     envelope_to_command,
     outbound_event_to_envelope,
     parse_envelope_frame,
@@ -26,7 +29,8 @@ from pulsefield_model.inference.service_models import (
 class PulsefieldProtocolAdapter:
     """Stateful @pulsefield/protocol adapter for one peer connection."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, mapper_contract: MapperProtocolContract = DEFAULT_MAPPER_PROTOCOL_CONTRACT) -> None:
+        self.mapper_contract = mapper_contract
         self._sequence_by_session_id: dict[str, int] = {}
         self._token_index_by_session_id: dict[str, int] = {}
         self._stream_begun_session_ids: set[str] = set()
@@ -50,7 +54,7 @@ class PulsefieldProtocolAdapter:
                 yield self._next_envelope(
                     MapperStreamBeginEvent(
                         session_id=session_id,
-                        token_contract_version=MAPPER_TOKEN_CONTRACT_VERSION,
+                        token_contract_version=int(self.mapper_contract.token_contract_version),
                         audio_length_ms=service_event.audio_length_ms
                         if isinstance(service_event, EndOfStreamEvent)
                         else None,
