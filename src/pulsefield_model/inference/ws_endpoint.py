@@ -17,6 +17,7 @@ from pulsefield_model.inference.errors import (
     ProtocolError,
     is_expected_socket_disconnect as _is_expected_socket_disconnect,
 )
+from pulsefield_model.inference.model_bundles import ModelBundleSnapshot
 from pulsefield_model.inference.routed_backend import RoutedInferenceBackend
 from pulsefield_model.inference.service_models import (
     AudioCommand,
@@ -295,6 +296,46 @@ class InferenceEndpoint:
                 to_status="ready",
                 reason="ready",
             )
+
+    async def mount_model(self, model_id: str) -> None:
+        assert self.backend is not None
+        mount = getattr(self.backend, "mount_model", None)
+        if not callable(mount):
+            raise RuntimeError("configured endpoint backend does not support model mount")
+        await mount(model_id)
+
+    async def unmount_model(self, model_id: str) -> None:
+        assert self.backend is not None
+        unmount = getattr(self.backend, "unmount_model", None)
+        if not callable(unmount):
+            raise RuntimeError("configured endpoint backend does not support model unmount")
+        await unmount(model_id)
+
+    def bundle_status(self) -> tuple[ModelBundleSnapshot, ...]:
+        assert self.backend is not None
+        status = getattr(self.backend, "bundle_status", None)
+        if not callable(status):
+            return ()
+        return tuple(status())
+
+    async def shutdown(self) -> None:
+        assert self.backend is not None
+        for session_id in tuple(self.sessions):
+            await self.stop_session(session_id, reason="endpoint_shutdown")
+        shutdown = getattr(self.backend, "shutdown", None)
+        if callable(shutdown):
+            await shutdown()
+
+    async def aclose(self) -> None:
+        await self.shutdown()
+
+    async def __aenter__(self) -> InferenceEndpoint:
+        await self.startup()
+        return self
+
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        del exc_type, exc, tb
+        await self.shutdown()
 
     async def stop_session(
         self,
