@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import argparse
 import asyncio
 import json
 import traceback
 from collections.abc import Mapping, Sequence
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pulsefield_model.inference.errors import (
     PeerDisconnected,
@@ -22,10 +20,6 @@ from pulsefield_model.inference.service_models import (
     ServiceEvent,
     StopCommand,
 )
-from pulsefield_model.inference.stream_with_cache import (
-    DEFAULT_CONTROL_CHECKPOINT_PATH,
-    DEFAULT_MAPPER_CHECKPOINT_PATH,
-)
 from pulsefield_model.inference.ws_framing import (
     accept_websocket_handshake,
     close_writer,
@@ -34,25 +28,28 @@ from pulsefield_model.inference.ws_framing import (
     read_client_binary_frame,
     send_http_error,
 )
-from pulsefield_model.inference.ws_endpoint import (
-    DEFAULT_HOST,
-    DEFAULT_PORT,
-    PULSEFIELD_WS_URL,
-    InferenceEndpoint,
-    InferenceError,
-    WsEndpointConfig,
-)
-from pulsefield_model.timing.canonicalization import (
-    TIMING_CANONICALIZATION_BPM_80_160,
-    TIMING_CANONICALIZATION_CHOICES,
-    TIMING_CANONICALIZATION_NONE,
-)
-from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
+
+if TYPE_CHECKING:
+    from pulsefield_model.inference.ws_endpoint import (
+        InferenceEndpoint,
+        InferenceError,
+        WsEndpointConfig,
+    )
 
 
 async def serve_forever(endpoint: InferenceEndpoint | None = None) -> None:
-    config = WsEndpointConfig()
-    endpoint = InferenceEndpoint(config=config) if endpoint is None else endpoint
+    if endpoint is None:
+        from pulsefield_model.inference.config import (
+            default_inference_service_config,
+            project_to_ws_endpoint_config,
+        )
+        from pulsefield_model.inference.ws_endpoint import InferenceEndpoint
+
+        endpoint = InferenceEndpoint(
+            config=project_to_ws_endpoint_config(default_inference_service_config()),
+        )
+    from pulsefield_model.inference.ws_endpoint import PULSEFIELD_WS_URL
+
     server = await asyncio.start_server(
         lambda reader, writer: _handle_websocket_client(endpoint, reader, writer),
         host=endpoint.config.host,
@@ -69,6 +66,8 @@ async def _handle_websocket_client(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
 ) -> None:
+    from pulsefield_model.inference.ws_endpoint import InferenceError
+
     peer = _WebSocketPeer(writer, config=endpoint.config)
     owner = object()
     owned_session_ids: set[str] = set()
@@ -192,40 +191,9 @@ async def _stop_owned_sessions(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=f"Run mapper local WS server at {PULSEFIELD_WS_URL}.")
-    parser.add_argument("--host", default=DEFAULT_HOST)
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--device", default="auto")
-    parser.add_argument("--beatthis-device", default=DEFAULT_BEATTHIS_DEVICE)
-    parser.add_argument(
-        "--canonicalization",
-        nargs="?",
-        const=TIMING_CANONICALIZATION_BPM_80_160,
-        default=TIMING_CANONICALIZATION_NONE,
-        choices=TIMING_CANONICALIZATION_CHOICES,
-        help="Fold fitted timing BPMs into [80, 160); pass 'none' to leave timing unchanged.",
-    )
-    parser.add_argument("--difficulty", type=float, default=4.0)
-    parser.add_argument("--max-tokens", type=int, default=512)
-    parser.add_argument("--mapper-checkpoint-path", type=Path, default=DEFAULT_MAPPER_CHECKPOINT_PATH)
-    parser.add_argument("--control-checkpoint-path", type=Path, default=DEFAULT_CONTROL_CHECKPOINT_PATH)
-    parser.add_argument("--mapper-profile", choices=("auto", "v2_tuple", "v2_1_sparse"), default="auto")
-    args = parser.parse_args(argv)
+    from pulsefield_model.inference.hydra_entry import main as hydra_main
 
-    config = WsEndpointConfig(
-        host=args.host,
-        port=args.port,
-        mapper_checkpoint_path=args.mapper_checkpoint_path,
-        control_checkpoint_path=args.control_checkpoint_path,
-        mapper_profile=args.mapper_profile,
-        device=args.device,
-        beatthis_device=args.beatthis_device,
-        canonicalization=args.canonicalization,
-        default_difficulty=float(args.difficulty),
-        max_tokens=int(args.max_tokens),
-    )
-    asyncio.run(serve_forever(InferenceEndpoint(config=config)))
-    return 0
+    return hydra_main(argv)
 
 
 if __name__ == "__main__":

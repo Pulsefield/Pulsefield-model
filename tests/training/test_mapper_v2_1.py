@@ -93,22 +93,20 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
             final_loss=0.0,
             completed_steps=0,
         )
-        with patch.object(
-            mapper_v2_1_training,
-            "run_mapper_v2_1_phase_b_training",
-            return_value=train_result,
-            autospec=True,
-        ) as train:
-            mapper_v2_1_training.main(
-                [
-                    "--config",
-                    "configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml",
-                    "--max-steps",
-                    "1",
-                    "--resume-from",
-                    "artifacts/runs/stage2_mapper_v2_1/example/checkpoint.pt",
-                ],
-            )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                mapper_v2_1_training,
+                "run_mapper_v2_1_phase_b_training",
+                return_value=train_result,
+                autospec=True,
+            ) as train:
+                mapper_v2_1_training.main(
+                    [
+                        "run.max_steps=1",
+                        f"output.output_dir={(Path(temp_dir) / 'run').as_posix()}",
+                        "output.resume_from=artifacts/runs/stage2_mapper_v2_1/example/checkpoint.pt",
+                    ],
+                )
 
         train.assert_called_once()
         kwargs = train.call_args.kwargs
@@ -122,6 +120,11 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
         self.assertEqual(kwargs["model_config_overrides"]["max_seq_len"], 1024)
         self.assertEqual(kwargs["loss_config_overrides"]["lambda_density"], 0.05)
 
+    def test_main_rejects_mapper_group_override(self) -> None:
+        with self.assertRaises(SystemExit) as raised:
+            mapper_v2_1_training.main(["training/mapper=v2_tuple_d384_l4_phase_b", "--dry-run"])
+        self.assertEqual(raised.exception.code, 2)
+
     def test_cache_only_cli_runs_shared_control_teacher_precompute(self) -> None:
         precompute_result = SimpleNamespace(
             reports=[
@@ -134,20 +137,20 @@ class MapperV21PhaseBTrainingTests(unittest.TestCase):
                 }
             ],
         )
-        with patch.object(
-            mapper_v2_1_training,
-            "precompute_mapper_tuple_phase_b_control_teacher_cache",
-            return_value=precompute_result,
-            autospec=True,
-        ) as precompute:
-            with patch.object(mapper_v2_1_training, "run_mapper_v2_1_phase_b_training", autospec=True) as train:
-                mapper_v2_1_training.main(
-                    [
-                        "--config",
-                        "configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml",
-                        "--precompute-control-teacher-cache-only",
-                    ],
-                )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                mapper_v2_1_training,
+                "precompute_mapper_tuple_phase_b_control_teacher_cache",
+                return_value=precompute_result,
+                autospec=True,
+            ) as precompute:
+                with patch.object(mapper_v2_1_training, "run_mapper_v2_1_phase_b_training", autospec=True) as train:
+                    mapper_v2_1_training.main(
+                        [
+                            "data.precompute_control_teacher_cache_only=true",
+                            f"output.output_dir={(Path(temp_dir) / 'run').as_posix()}",
+                        ],
+                    )
 
         precompute.assert_called_once()
         train.assert_not_called()

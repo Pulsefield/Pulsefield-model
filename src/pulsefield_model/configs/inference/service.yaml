@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - /schema/inference/service
+  - mapper: v2_1_sparse
+  - timing: mock_default
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null
