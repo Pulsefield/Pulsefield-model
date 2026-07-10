@@ -45,11 +45,6 @@ class RoutedInferenceBackend(InferenceSupervisor):
         )
         super().__init__((self.mapper_bundle, self.timing_mock_bundle))
 
-        # Kept for existing tests and callers that inspect router internals.
-        self._session_backends = self.registry._session_backends
-        self._session_locks = self.registry._session_locks
-        self._session_bindings = self.registry._session_bindings
-
     def _backend_for_route(self, route: InferenceRoute) -> RouteBackend:
         if route == "mapper":
             return self.mapper_backend

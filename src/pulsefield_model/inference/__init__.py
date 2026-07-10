@@ -19,7 +19,6 @@ _EXPORTS = {
     "ModelRuntimeConfig": "model_runtime",
     "load_model_runtime": "model_runtime",
     "InferenceSupervisor": "supervisor",
-    "MapperModelBundle": "model_bundles",
     "MapperV21SparseBundle": "model_bundles",
     "MapperV21SparseStreamWithCache": "model_bundles",
     "MapperV2TupleBundle": "model_bundles",

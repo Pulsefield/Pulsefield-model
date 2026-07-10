@@ -33,24 +33,10 @@ def mapper_bundle_for_config(
     return bundle_type(config, model_id=model_id, backend=backend)
 
 
-class MapperModelBundle:
-    """Compatibility factory for the concrete mapper stream-with-cache bundles."""
-
-    def __new__(
-        cls,
-        config: StreamWithCacheConfig,
-        *,
-        model_id: str = DEFAULT_MAPPER_MODEL_ID,
-        backend: RouteBackend | None = None,
-    ) -> StreamWithCacheMapperBundle:
-        return mapper_bundle_for_config(config, model_id=model_id, backend=backend)
-
-
 __all__ = [
     "DEFAULT_MAPPER_MODEL_ID",
     "MAPPER_V2_1_SPARSE_MODEL_ID",
     "MAPPER_V2_TUPLE_MODEL_ID",
-    "MapperModelBundle",
     "MapperV21SparseBundle",
     "MapperV2TupleBundle",
     "StreamWithCacheMapperBundle",

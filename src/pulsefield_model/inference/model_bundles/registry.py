@@ -5,7 +5,6 @@ from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from pulsefield_model.inference.model_bundles.base import (
     ModelBundle,
@@ -36,7 +35,6 @@ class ModelBundleRegistry:
         self._bundles_by_id: dict[str, ModelBundle] = {}
         self._default_bundle_by_route: dict[InferenceRoute, ModelBundle] = {}
         self._session_bindings: dict[str, BundleSessionBinding] = {}
-        self._session_backends: dict[str, Any] = {}
         self._session_locks: dict[str, _SessionLockEntry] = {}
         for bundle in bundles:
             self.add_bundle(bundle)
@@ -69,6 +67,16 @@ class ModelBundleRegistry:
 
     def bundle_status(self) -> tuple[ModelBundleSnapshot, ...]:
         return tuple(bundle.snapshot() for bundle in self._bundles_by_id.values())
+
+    def has_session(self, session_id: str) -> bool:
+        """Return whether a prepared session currently holds a bundle lease."""
+
+        return session_id in self._session_bindings
+
+    def has_session_lock(self, session_id: str) -> bool:
+        """Return whether work is queued or active for a session."""
+
+        return session_id in self._session_locks
 
     def bundle_for_route(self, route: InferenceRoute) -> ModelBundle:
         try:
@@ -107,7 +115,6 @@ class ModelBundleRegistry:
                     await lease.release()
                 raise
             self._session_bindings[session_id] = BundleSessionBinding(bundle=bundle, lease=lease)
-            self._session_backends[session_id] = getattr(bundle, "backend", bundle)
 
     async def iter_hitobject_tokens(
         self,
@@ -134,7 +141,6 @@ class ModelBundleRegistry:
 
     async def _reset_session_locked(self, session_id: str) -> None:
         binding = self._session_bindings.pop(session_id, None)
-        self._session_backends.pop(session_id, None)
         if binding is None:
             return
         try:

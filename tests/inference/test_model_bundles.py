@@ -79,12 +79,12 @@ class ModelBundleLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(timing_backend.startup_calls, 0)
         self.assertEqual(backend.mapper_bundle.state, "ready")
         self.assertEqual(backend.mapper_bundle.lease_count, 1)
-        self.assertIn("s1", backend._session_backends)
+        self.assertTrue(backend.registry.has_session("s1"))
 
         await backend.reset_session("s1")
 
         self.assertEqual(backend.mapper_bundle.lease_count, 0)
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
 
     async def test_default_mapper_route_uses_v2_1_sparse_concrete_bundle(self) -> None:
         backend = RoutedInferenceBackend(WsEndpointConfig(token_send_interval_s=0.0))

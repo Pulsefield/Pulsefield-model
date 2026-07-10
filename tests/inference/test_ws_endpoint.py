@@ -648,7 +648,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await prepare_task
         await reset_task
 
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
         self.assertEqual(route_backend.reset_sessions, ["s1"])
 
     async def test_routed_backend_reset_waits_for_lazy_startup_before_prepare_same_session(self) -> None:
@@ -678,8 +678,8 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await prepare_task
         await reset_task
 
-        self.assertNotIn("s1", backend._session_backends)
-        self.assertNotIn("s1", backend._session_locks)
+        self.assertFalse(backend.registry.has_session("s1"))
+        self.assertFalse(backend.registry.has_session_lock("s1"))
         self.assertEqual(route_backend.reset_sessions, ["s1"])
 
     async def test_reference_time_starts_hitobject_token_stream(self) -> None:
@@ -1694,9 +1694,9 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await stop_task
 
         self.assertNotIn("s1", endpoint.sessions)
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
         self.assertNotIn("s1", endpoint._session_locks)
-        self.assertNotIn("s1", backend._session_locks)
+        self.assertFalse(backend.registry.has_session_lock("s1"))
         self.assertEqual(route_backend.reset_sessions, ["s1"])
 
     async def test_session_locks_are_released_after_stop(self) -> None:
@@ -1721,14 +1721,14 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             peer,
         )
         self.assertIn("s1", endpoint._session_locks)
-        self.assertIn("s1", backend._session_locks)
+        self.assertTrue(backend.registry.has_session_lock("s1"))
 
         await endpoint.stop_session("s1")
 
         self.assertNotIn("s1", endpoint.sessions)
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
         self.assertNotIn("s1", endpoint._session_locks)
-        self.assertNotIn("s1", backend._session_locks)
+        self.assertFalse(backend.registry.has_session_lock("s1"))
 
     async def test_mapper_v2_backend_prepares_session_runtime_from_ws_audio(self) -> None:
         loader_configs = []
