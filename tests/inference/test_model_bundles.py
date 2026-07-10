@@ -42,6 +42,21 @@ class ModelBundleLifecycleTests(unittest.IsolatedAsyncioTestCase):
             [(DEFAULT_MAPPER_MODEL_ID, "cold"), (DEFAULT_TIMING_MOCK_MODEL_ID, "cold")],
         )
 
+    async def test_configured_route_model_ids_become_bundle_ids(self) -> None:
+        backend = RoutedInferenceBackend(
+            WsEndpointConfig(
+                mapper_model_id="mapper/custom",
+                timing_mock_model_id="timing_mock/custom",
+            ),
+            mapper_backend=FakeRouteBackend(),
+            timing_mock_backend=FakeRouteBackend(),
+        )
+
+        self.assertEqual(
+            [status.model_id for status in backend.bundle_status()],
+            ["mapper/custom", "timing_mock/custom"],
+        )
+
     async def test_prepare_audio_mounts_only_selected_bundle_and_holds_session_lease(self) -> None:
         mapper_backend = FakeRouteBackend()
         timing_backend = FakeRouteBackend()

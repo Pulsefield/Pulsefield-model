@@ -29,12 +29,20 @@ class RoutedInferenceBackend(InferenceSupervisor):
         timing_mock_backend: RouteBackend | None = None,
     ) -> None:
         self.config = config
-        self.mapper_bundle = mapper_bundle_for_config(config, backend=mapper_backend)
+        self.mapper_bundle = mapper_bundle_for_config(
+            config,
+            model_id=config.mapper_model_id,
+            backend=mapper_backend,
+        )
         self.mapper_backend = self.mapper_bundle.backend
         self.timing_mock_backend = (
             TimingMockStreamBackend(config) if timing_mock_backend is None else timing_mock_backend
         )
-        self.timing_mock_bundle = TimingMockModelBundle(config, backend=self.timing_mock_backend)
+        self.timing_mock_bundle = TimingMockModelBundle(
+            config,
+            model_id=config.timing_mock_model_id,
+            backend=self.timing_mock_backend,
+        )
         super().__init__((self.mapper_bundle, self.timing_mock_bundle))
 
         # Kept for existing tests and callers that inspect router internals.

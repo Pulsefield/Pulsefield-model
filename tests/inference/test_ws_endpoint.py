@@ -1746,6 +1746,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         config = WsEndpointConfig(
             mapper_checkpoint_path="mapper.pt",
             control_checkpoint_path="control.pt",
+            beatthis_checkpoint="custom-beatthis",
             device="cpu",
             token_send_interval_s=0.0,
             canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
@@ -1767,6 +1768,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(backend.models_ready)
         self.assertEqual(loader_configs[0].mapper_checkpoint_path, Path.cwd() / "mapper.pt")
         self.assertEqual(loader_configs[0].control_checkpoint_path, Path.cwd() / "control.pt")
+        self.assertEqual(loader_configs[0].beatthis_checkpoint, "custom-beatthis")
         self.assertEqual(created[0][0], "s1")
         self.assertAlmostEqual(created[0][2].default_normalized_difficulty, normalize_difficulty(5.0))
         self.assertEqual(created[0][2].grid_fitter_config.canonicalization, TIMING_CANONICALIZATION_BPM_80_160)
@@ -1812,6 +1814,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             WsEndpointConfig(
                 decoder_window_ms=1_000,
                 token_send_interval_s=0.0,
+                beatthis_checkpoint="custom-beatthis",
                 beatthis_device="cpu",
                 canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
             ),
@@ -1845,6 +1848,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual(fit_calls[0][0], Path("/tmp/song.mp3"))
+        self.assertEqual(fit_calls[0][1]["checkpoint_path"], "custom-beatthis")
         self.assertEqual(fit_calls[0][1]["device"], "cpu")
         self.assertEqual(
             fit_calls[0][1]["fitter_config"].canonicalization,

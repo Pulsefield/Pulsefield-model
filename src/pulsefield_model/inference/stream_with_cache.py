@@ -10,6 +10,7 @@ import torch
 
 from pulsefield_model.data.control_windows import normalize_difficulty
 from pulsefield_model.inference.audio_probe import audio_length_ms_from_file
+from pulsefield_model.inference.defaults import DEFAULT_MAPPER_MODEL_ID, DEFAULT_TIMING_MOCK_MODEL_ID
 from pulsefield_model.inference.mapper_protocol import (
     HitObjectToken,
     MapperProtocolTranslator,
@@ -44,7 +45,7 @@ from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_WRITE_MS
 from pulsefield_model.models.mapper.v2_1.replay import empty_ln_carry_state as empty_ln_carry_state_v2_1
 from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_NONE
 from pulsefield_model.timing.grid_fitting import GridFitterConfig
-from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
+from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_CHECKPOINT, DEFAULT_BEATTHIS_DEVICE
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -68,10 +69,13 @@ DEFAULT_TIME_SHIFT_LENGTH_PENALTY = 5.2
 class StreamWithCacheConfig:
     decoder_window_ms: int = MAPPER_WRITE_MS
     token_send_interval_s: float = 0.02
+    mapper_model_id: str = DEFAULT_MAPPER_MODEL_ID
+    timing_mock_model_id: str = DEFAULT_TIMING_MOCK_MODEL_ID
     mapper_checkpoint_path: str | Path = DEFAULT_MAPPER_CHECKPOINT_PATH
     control_checkpoint_path: str | Path = DEFAULT_CONTROL_CHECKPOINT_PATH
     mapper_profile: str = "auto"
     device: str = "auto"
+    beatthis_checkpoint: str | Path = DEFAULT_BEATTHIS_CHECKPOINT
     beatthis_device: str | None = DEFAULT_BEATTHIS_DEVICE
     beatthis_float16: bool = False
     eager_load_beatthis: bool = True
@@ -230,6 +234,7 @@ class StreamWithCache:
                 control_checkpoint_path=_resolve_repo_path(self.config.control_checkpoint_path),
                 mapper_profile=self._runtime_mapper_profile_config(),
                 device=self.config.device,
+                beatthis_checkpoint=self.config.beatthis_checkpoint,
                 beatthis_device=self.config.beatthis_device,
                 beatthis_float16=bool(self.config.beatthis_float16),
                 eager_load_beatthis=bool(self.config.eager_load_beatthis),

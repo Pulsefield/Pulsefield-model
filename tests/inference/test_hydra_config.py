@@ -35,9 +35,28 @@ def test_default_inference_service_projection_matches_current_endpoint_defaults(
     assert endpoint_config.host == DEFAULT_HOST
     assert endpoint_config.port == DEFAULT_PORT
     assert endpoint_config.mapper_profile == "v2_1_sparse"
+    assert endpoint_config.mapper_model_id == "mapper/default"
+    assert endpoint_config.timing_mock_model_id == "timing_mock/default"
     assert endpoint_config.mapper_checkpoint_path == DEFAULT_MAPPER_CHECKPOINT_PATH
     assert endpoint_config.control_checkpoint_path == DEFAULT_CONTROL_CHECKPOINT_PATH
+    assert endpoint_config.beatthis_checkpoint == "final0"
     assert endpoint_config.device == DEFAULT_RUNTIME_DEVICE
+
+
+def test_inference_identity_and_timing_checkpoint_overrides_reach_endpoint_config() -> None:
+    config = _compose(
+        [
+            "mapper.model_id=mapper/custom",
+            "timing_mock.model_id=timing_mock/custom",
+            "timing_mock.timing_checkpoint_path=custom-checkpoint",
+        ],
+    )
+
+    endpoint_config = project_to_ws_endpoint_config(config)
+
+    assert endpoint_config.mapper_model_id == "mapper/custom"
+    assert endpoint_config.timing_mock_model_id == "timing_mock/custom"
+    assert endpoint_config.beatthis_checkpoint == "custom-checkpoint"
 
 
 def test_mapping_adapter_rejects_unknown_keys_without_hydra_dependency() -> None:
@@ -104,6 +123,21 @@ def test_hydra_composition_rejects_disabled_timing_mock_route() -> None:
 
     with pytest.raises(ValueError, match="timing_mock.enabled must be true"):
         compose_inference_service_config(["timing_mock.enabled=false"])
+
+
+@pytest.mark.parametrize(
+    "override",
+    (
+        "mapper.model_id=''",
+        "timing_mock.model_id=''",
+        "timing_mock.timing_checkpoint_path=''",
+    ),
+)
+def test_hydra_composition_rejects_blank_runtime_identity_fields(override: str) -> None:
+    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+
+    with pytest.raises(ValueError, match="must be a non-empty string"):
+        compose_inference_service_config([override])
 
 
 def test_hydra_composition_rejects_auto_mapper_profile() -> None:

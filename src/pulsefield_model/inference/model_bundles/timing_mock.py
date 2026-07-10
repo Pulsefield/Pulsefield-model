@@ -16,10 +16,7 @@ from pulsefield_model.timing.mock_osu_export import (
     build_mock_beat_grid_timepoints,
     timing_grid_from_report,
 )
-from pulsefield_model.timing.providers.beatthis import (
-    DEFAULT_BEATTHIS_CHECKPOINT,
-    DEFAULT_BEATTHIS_DEVICE,
-)
+from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_DEVICE
 from pulsefield_model.timing.schema import FittedTimingGrid
 
 
@@ -115,7 +112,7 @@ class TimingMockStreamBackend:
     def _prepare_session(self, audio_path: Path, audio_length_ms: int) -> TimingMockSession:
         timing_report = self._timing_fit_fn(
             audio_path,
-            checkpoint_path=DEFAULT_BEATTHIS_CHECKPOINT,
+            checkpoint_path=str(self.config.beatthis_checkpoint),
             device=str(self.config.beatthis_device or DEFAULT_BEATTHIS_DEVICE),
             float16=bool(self.config.beatthis_float16),
             fitter_config=_grid_fitter_config_for_canonicalization(self.config.canonicalization),

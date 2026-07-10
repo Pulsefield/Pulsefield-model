@@ -159,10 +159,13 @@ def project_to_ws_endpoint_config(config: InferenceServiceConfig) -> "WsEndpoint
         reset_after_audio_end_ms=int(config.server.reset_after_audio_end_ms),
         wall_clock_check_interval_s=float(config.server.wall_clock_check_interval_s),
         decoder_window_ms=int(config.mapper.decoder_window_ms),
+        mapper_model_id=str(config.mapper.model_id),
+        timing_mock_model_id=str(config.timing_mock.model_id),
         mapper_checkpoint_path=Path(config.mapper.checkpoint_path),
         control_checkpoint_path=Path(config.mapper.control_checkpoint_path),
         mapper_profile=resolve_mapper_profile(config.mapper.profile).name,
         device=str(config.runtime.device),
+        beatthis_checkpoint=str(config.timing_mock.timing_checkpoint_path),
         beatthis_device=config.runtime.beatthis_device,
         beatthis_float16=bool(config.runtime.beatthis_float16),
         eager_load_beatthis=bool(config.runtime.eager_load_beatthis),
@@ -187,6 +190,9 @@ def validate_inference_service_config(config: InferenceServiceConfig) -> None:
         raise ValueError(
             "timing_mock.enabled must be true because the timing_mock route is always available",
         )
+    _require_nonempty_string(config.mapper.model_id, "mapper.model_id")
+    _require_nonempty_string(config.timing_mock.model_id, "timing_mock.model_id")
+    _require_nonempty_string(config.timing_mock.timing_checkpoint_path, "timing_mock.timing_checkpoint_path")
     _require_timing_canonicalization(config.runtime.canonicalization)
     _validate_numeric_bounds(config)
 
@@ -276,6 +282,12 @@ def _require_timing_canonicalization(canonicalization: str) -> str:
         choices = ", ".join(TIMING_CANONICALIZATION_CHOICES)
         raise ValueError(f"canonicalization must be one of {choices}, got {canonicalization!r}")
     return canonicalization
+
+
+def _require_nonempty_string(value: object, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a non-empty string")
+    return value
 
 
 def _require_positive_int(value: object, field: str) -> int:
