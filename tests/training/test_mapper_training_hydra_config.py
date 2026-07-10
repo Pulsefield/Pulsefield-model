@@ -17,6 +17,7 @@ from pulsefield_model.training.hydra_config import (
     training_experiment_config_to_legacy_dict,
     validate_training_experiment_config,
 )
+from pulsefield_model.training.mapper_training_hydra import _call_kwargs
 
 
 @pytest.mark.parametrize(
@@ -101,18 +102,45 @@ def test_mapper_training_hydra_schema_allows_plain_optional_overrides() -> None:
     assert legacy["dataset_progress"] is True
 
 
-def test_mapper_training_hydra_schema_allows_plain_optional_data_override() -> None:
+@pytest.mark.parametrize(
+    "override",
+    (
+        "data.length_bucketed_batches=true",
+        "data.length_bucket_size_multiplier=16",
+        "output.init_from_mapper_checkpoint=artifacts/example.pt",
+    ),
+)
+def test_v21_hydra_schema_rejects_fields_its_runner_cannot_consume(override: str) -> None:
+    with pytest.raises(ValueError, match="v2_1 mapper does not support training config field"):
+        compose_training_experiment_config(
+            overrides=[
+                "training/mapper=v2_1_sparse_d384_l4_phase_b",
+                override,
+            ],
+        )
+
+
+def test_v2_hydra_schema_allows_v2_specific_fields() -> None:
     config = compose_training_experiment_config(
         overrides=[
-            "training/mapper=v2_1_sparse_d384_l4_phase_b",
-            "data.length_bucketed_batches=true",
+            "training/mapper=v2_tuple_d384_l4_phase_b",
+            "data.length_bucketed_batches=false",
+            "output.init_from_mapper_checkpoint=artifacts/example.pt",
         ],
     )
 
     legacy = training_experiment_config_to_legacy_dict(config)
 
-    assert legacy["length_bucketed_batches"] is True
-    assert legacy["eval_size"] is None
+    assert legacy["length_bucketed_batches"] is False
+    assert legacy["init_from_mapper_checkpoint"] == "artifacts/example.pt"
+
+
+def test_runner_projection_rejects_non_null_unconsumed_fields() -> None:
+    def runner(*, accepted: int) -> None:
+        del accepted
+
+    with pytest.raises(ValueError, match="runner cannot consume config field.*unconsumed"):
+        _call_kwargs(runner, {"accepted": 1, "unconsumed": 2})
 
 
 def test_mapper_training_hydra_dry_run_does_not_write_cwd_log(tmp_path: Path) -> None:

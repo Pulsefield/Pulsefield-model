@@ -194,6 +194,7 @@ def validate_training_experiment_config(config: Any) -> Any:
     mapper_kind = mapper_training_kind(structured)
     if structured.experiment.phase != "B":
         raise ValueError(f"unsupported mapper training phase: {structured.experiment.phase!r}")
+    _validate_mapper_run_fields(structured, mapper_kind=mapper_kind)
     _validate_model_sections(structured, mapper_kind=mapper_kind)
     return structured
 
@@ -286,6 +287,42 @@ def _validate_model_sections(config: Any, *, mapper_kind: str) -> None:
     OmegaConf.merge(OmegaConf.structured(ControlDemoGlobalEncoderConfig), config.control_model)
     OmegaConf.merge(OmegaConf.structured(model_config_type), config.model)
     OmegaConf.merge(OmegaConf.structured(loss_config_type), config.loss)
+
+
+def _validate_mapper_run_fields(config: Any, *, mapper_kind: str) -> None:
+    from omegaconf import OmegaConf
+
+    container = OmegaConf.to_container(config, resolve=True)
+    if not isinstance(container, Mapping):
+        raise ValueError("training experiment config must be a mapping")
+
+    supported = _mapper_run_config_keys(mapper_kind)
+    configured: set[str] = set()
+    for section_name in _LEGACY_SECTION_FIELDS:
+        section = container.get(section_name, {})
+        if not isinstance(section, Mapping):
+            continue
+        configured.update(str(key) for key, value in section.items() if value is not None)
+    for section_name in ("model", "control_model", "loss"):
+        section = container.get(section_name)
+        if isinstance(section, Mapping) and section:
+            configured.add(section_name)
+
+    unsupported = sorted(configured - supported)
+    if unsupported:
+        raise ValueError(f"{mapper_kind} mapper does not support training config field(s): {unsupported}")
+
+
+def _mapper_run_config_keys(mapper_kind: str) -> frozenset[str]:
+    if mapper_kind == "v2":
+        from pulsefield_model.training.mapper_v2 import RUN_CONFIG_KEYS
+
+        return frozenset(RUN_CONFIG_KEYS)
+    if mapper_kind == "v2_1":
+        from pulsefield_model.training.mapper_v2_1 import RUN_CONFIG_KEYS
+
+        return frozenset(RUN_CONFIG_KEYS)
+    raise ValueError(f"unknown mapper training kind: {mapper_kind!r}")
 
 
 def _validate_known_training_experiment_keys(config: Any) -> None:

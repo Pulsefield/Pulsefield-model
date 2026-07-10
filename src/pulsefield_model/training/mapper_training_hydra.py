@@ -42,6 +42,25 @@ _PATH_KWARGS = {
     "mapper_record_cache_path",
     "control_teacher_cache_dir",
 }
+_CONTROL_TEACHER_CACHE_CONFIG_KEYS = frozenset(
+    (
+        "dataset_root",
+        "index_path",
+        "eval_index_path",
+        "control_v3_timeseries_path",
+        "batch_size",
+        "seed",
+        "device",
+        "init_from_control_checkpoint",
+        "num_workers",
+        "max_cached_maps",
+        "dataset_progress",
+        "control_teacher_cache_dir",
+        "control_teacher_precompute_batch_size",
+        "control_teacher_cache_overwrite",
+        "control_model",
+    ),
+)
 _HYDRA_META_FLAGS_WITHOUT_JOB_CONFIG = frozenset(("--hydra-help", "--info", "--version", "-i"))
 _HYDRA_SHORT_FLAGS = frozenset(("-c", "-cd", "-cn", "-cp", "-h", "-i", "-m", "-p", "-r", "-sc"))
 _HYDRA_VALUE_FLAGS = {
@@ -141,7 +160,9 @@ def run_mapper_training_config(
         return
 
     runner = _training_runner(mapper_kind, v2_runner=v2_runner, v21_runner=v21_runner)
-    result = runner(**_call_kwargs(runner, legacy_config))
+    training_config = dict(legacy_config)
+    training_config.pop("precompute_control_teacher_cache_only", None)
+    result = runner(**_call_kwargs(runner, training_config))
     print(
         "mapper_training_hydra_done "
         f"steps={result.completed_steps} final_loss={result.final_loss:.6f} "
@@ -152,7 +173,8 @@ def run_mapper_training_config(
 
 def _run_control_teacher_cache_precompute(config: dict[str, Any], *, runner: MapperRunner | None = None) -> None:
     runner = precompute_mapper_tuple_phase_b_control_teacher_cache if runner is None else runner
-    result = runner(**_call_kwargs(runner, config))
+    precompute_config = {key: config[key] for key in _CONTROL_TEACHER_CACHE_CONFIG_KEYS if key in config}
+    result = runner(**_call_kwargs(runner, precompute_config))
     for report in result.reports:
         print(
             "control_teacher_cache_report "
@@ -187,11 +209,18 @@ def _training_runner(
 def _call_kwargs(runner: MapperRunner, config: dict[str, Any]) -> dict[str, Any]:
     accepted = set(inspect.signature(runner).parameters)
     kwargs: dict[str, Any] = {}
+    unconsumed: list[str] = []
     for source_key, value in config.items():
         target_key = _KWARG_ALIASES.get(source_key, source_key)
-        if target_key not in accepted or value is None:
+        if value is None:
+            continue
+        if target_key not in accepted:
+            unconsumed.append(source_key)
             continue
         kwargs[target_key] = _coerce_call_value(target_key, value)
+    if unconsumed:
+        runner_name = getattr(runner, "__name__", type(runner).__name__)
+        raise ValueError(f"{runner_name} cannot consume config field(s): {sorted(unconsumed)}")
     return kwargs
 
 
