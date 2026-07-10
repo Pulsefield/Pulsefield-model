@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hydra Conventions"
+  short_description: "Use the repo's Hydra configuration style."
+  default_prompt: "Use $hydra-conventions to update this Pulsefield config or entrypoint without breaking its Hydra boundaries."
