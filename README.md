@@ -1,212 +1,205 @@
 # Pulsefield Model
 
-Pulsefield-model is the research backend for Pulsefield: a fast osu!mania-oriented
-beatmap generation stack intended to serve interactive play, not just offline map
-export. The current research target is 4K osu!mania-like generation in the 2-6
-star range, using audio timing, learned control features, and a grammar-constrained
-mapper.
+Pulsefield Model is the research backend for Pulsefield's real-time, 4-key rhythm-map generation stack. It turns audio into timing, control memory, grammar-constrained mapper tokens, `.osu` output, and a WebSocket stream for the client.
 
-Status: experimental. The repository contains runnable model/runtime code,
-training/eval scripts, local checkpoints, and artifact reports, but the current
-mapper is not yet a production-quality beatmap generator.
+> This project is experimental. The timing and mapper pipelines run end to end, but generated maps are not yet production quality. Large datasets, caches, and trained checkpoints are local research assets and are not included in a fresh clone.
 
-## Ultimate Goal
+## What this repository owns
 
-The end goal is a Pulsefield + Pulsefield-app experience:
+Pulsefield Model covers the model side of the interactive play loop:
 
-1. Listen to any music.
-2. Recognize or load the audio.
-3. Infer timing and synchronize to playback.
-4. Generate 2-6 star high-quality osu!mania-like beatmaps fast enough for
-   real-time play.
-5. Stream playable hitobjects to the client with enough lead time that the user
-   experiences "listen, recognize, sync, then play" instead of waiting for an
-   offline batch generator.
+1. Read an audio file and compute mel features.
+2. Predict and fit a musical timing grid.
+3. Build dense timing and learned control features.
+4. Decode a 2-6 star osu!mania-like chart under grammar and replay constraints.
+5. Export hitobjects or stream them to the client with playback lead time.
 
-This repo owns the model side of that loop: audio features, timing fitting,
-control memory, mapper inference, `.osu` export, and the local WebSocket endpoint
-used by the client.
+The current research target is 4K generation. The repository does not contain the Pulsefield client or a hosted inference service.
 
-## Future Roadmap
-
-Current exploration is focused on making global map planning more measurable,
-more musically grounded, and cheaper to decode. These are research directions,
-not settled claims.
-
-- Canonical beat-based representation: move core map representation away from
-  raw seconds and toward beat-relative positions. `.osu` hitobject timestamps are
-  limited to 1 ms resolution, and the current second-based quantization can add
-  avoidable error before the model even sees the musical grid. A beat-based
-  representation should make timing, subdivisions, phrase structure, and BPM
-  changes easier to compare across maps.
-- Latent planner: replace the current hand-authored control feature planner with
-  a learned latent planning layer. The existing control fields are useful for
-  inspection, but they may bottleneck map structure into features that are easy
-  to name rather than features that best predict playable chart flow.
-- Tokenization and embedding research: study existing high-quality maps as
-  structured objects, not just event streams. The goal is to learn better token
-  units, embeddings, and structural priors from the inner organization of real
-  maps: beats, measures, anchors, repetitions, long-note phrases, hand balance,
-  and difficulty progression.
-
-The planner and tokenization work are coupled. If the representation exposes
-meaningful musical units and the planner operates over learned latents instead
-of hand-crafted fields, global planning can become measurable against real map
-structure rather than only against local density proxies. A better global plan
-may also reduce decoder burden by letting the decoder fill in constrained local
-details instead of rediscovering structure token by token.
-
-
-## Pipeline
-
-The intended inference path is:
+## System path
 
 ```text
-audio file
+audio
   -> mel features
   -> BeatThis timing prediction
   -> GridFitter timing grid
   -> dense timing features
   -> control encoder memory
   -> mapper decoder
-  -> grammar/replay validation
-  -> hitobject tokens / .osu export / WebSocket stream
+  -> grammar and replay validation
+  -> hitobject tokens
+  -> .osu export or WebSocket stream
 ```
 
-Important artifacts and checkpoints in this workspace:
+## Quick start
 
-- v2 mapper checkpoint:
-  `artifacts/runs/stage2_mapper_v2/stage2_mapper_v2_phase_b_global_d768_l8_b1/checkpoint.pt`
-- v2.1 sparse mapper checkpoint:
-  `artifacts/runs/stage2_mapper_v2_1/stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2/checkpoint.pt`
-- v2.1 step 44k checkpoint:
-  `artifacts/runs/stage2_mapper_v2_1/stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2/checkpoints/checkpoint_step_044000.pt`
-- control checkpoint:
-  `artifacts/runs/stage2_control_demo/stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt`
-- control v3 feature artifact metadata:
-  `artifacts/features/control_v3_artifact_metadata_4k_no_timing_anomalies_2to6_dense_local_bpm_norm_unique_le3.json`
-
-Fresh clones may not contain all local datasets, caches, and checkpoints.
-
-## Known Limitations
-
-These limitations are copied from local artifact reports.
-
-- Mapper quality is not solved. The frozen v2.1 44k real held-out rollout
-  completed 11/11 windows but produced 10 empty windows, only 6 lane actions,
-  and an 86.75 second longest event gap.
-  See `artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md`.
-- Greedy no-TS decode has two observed failure modes: synthetic zero-control can
-  hit the token cap after an early repetitive pattern, while real control can
-  fast-forward through almost all windows and emit only a late chord burst.
-- EOS was not confidently learned in that postmortem. At the exact chart end,
-  pre-grammar EOS rank was 23 with probability 0.00103; EOS won only after
-  grammar masking.
-- A later PR2 decode policy recovered density on the Riria eval song
-  (`lane_action_count=722`, no dead end, no token cap), but it remained a policy
-  candidate rather than a quality solution: timepoints and pattern repetition
-  were still high.
-  See `artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_decode_policy_report.md`.
-- The best PR2 export was structurally valid but rhythmically off-grid against
-  the reference: starts aligned perfectly to the 10 ms grid, not to normal beat
-  subdivisions; only 11.4% of starts were within 5 ms of a 1/16 grid.
-  See `artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_timing_drift_audit.md`.
-- Runtime claims are hardware- and snapshot-limited. MPS profiling in the
-  postmortem showed grammar-mask cost growing from 54 ms at prefix 16 to
-  2648 ms at prefix 1024. Current code has incremental decode support, but
-  grammar/replay work remains a first speed target.
-- Timing is useful but not robustly solved. A local timing-oracle slice reported
-  mixed mean phase error of 36.14 ms and multi-BPM mean phase error of 46.15 ms;
-  the report explicitly does not support claiming robust multi-BPM accuracy.
-  See `artifacts/evals/timing_oracle_result_log.md`.
-- BeatThis checkpoint choice materially changes fitted timing grids:
-  108/183 comparable maps had material oracle phase divergence and 97/183 had
-  segment-count divergence across checkpoints.
-  See `artifacts/evals/timing_oracle_checkpoint_divergence_result_log.md`.
-- Raw downbeat-weighted fitting should not be advertised as an improvement. In
-  the 160-map eval it worsened mean phase from 47.780 ms to 48.160 ms and had
-  more material regressions than improvements.
-  See `artifacts/evals/timing_oracle_downbeat_weighted_grid_result_log.md`.
-- `.osu` red timing is a noisy comparator. It is useful for diagnostics, not a
-  production oracle for musical correctness.
-
-## Quickstart
-
-This section is only for initializing a development environment on a new
-machine. The repository does not publish trained checkpoints, datasets, caches,
-or generated artifact reports. Any command that loads a model, resumes training,
-or runs inference requires those local files to be supplied separately.
-
-Use `uv run python`, not plain `python`, because some machines do not expose a
-`python` command.
-
-Common setup:
+Use Python 3.10 or newer. Install [uv](https://docs.astral.sh/uv/) and FFmpeg first:
 
 ```sh
 uv --version
 ffmpeg -version
 ```
 
-### Apple Silicon Mac
+Use the platform extra that matches the machine.
 
-Use this path for local development with the PyTorch MPS runtime.
+### Apple Silicon
 
 ```sh
 uv sync --extra mps --group dev
-uv run python -c "import torch; print(torch.__version__, torch.backends.mps.is_available())"
-uv run pytest -q
+uv run --extra mps python -c "import torch; print(torch.__version__, torch.backends.mps.is_available())"
+uv run --extra mps --group dev pytest -q tests/test_package_layout.py
 ```
 
-### Linux With NVIDIA CUDA
+### Linux with NVIDIA CUDA
 
-Use this path for CUDA-capable Linux machines. The CUDA extra uses the
-`pytorch-cu128` index configured in `pyproject.toml`.
+The CUDA extra uses the `pytorch-cu128` index declared in `pyproject.toml`.
 
 ```sh
 nvidia-smi
 uv sync --extra cuda --group dev
-uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-uv run pytest -q
+uv run --extra cuda python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+uv run --extra cuda --group dev pytest -q tests/test_package_layout.py
 ```
 
-### Windows
-
-Native Windows is not the primary target. Use WSL2 Ubuntu with NVIDIA GPU
-passthrough, then follow the Linux CUDA path. Keep datasets and local artifacts
-inside the WSL filesystem for better IO behavior.
-
-### CPU-Only Or Docs Work
-
-Use this path for lightweight editing, documentation, and non-model checks.
-Model runtime code still needs either the `mps` or `cuda` extra on matching
-hardware.
+### CPU-only documentation and config work
 
 ```sh
 uv sync --group dev
 ```
 
-## Repository Map
+Model imports and model-backed tests require either the `mps` or `cuda` extra. Native Windows is not a primary target; use WSL2 and follow the CUDA setup when GPU passthrough is available.
 
-- `src/pulsefield_model/features/`: mel/audio features and control feature
-  extraction.
-- `src/pulsefield_model/timing/`: BeatThis provider integration, grid fitting,
-  dense timing rendering, and timing diagnostics.
-- `src/pulsefield_model/models/control/`: control encoder models.
-- `src/pulsefield_model/models/mapper/`: mapper vocabularies, tokenizers,
-  grammar, replay, model code, and generation engines.
-- `src/pulsefield_model/inference/`: runtime loading, session caching,
-  WebSocket serving, streaming, rollout, and `.osu` export.
-- `src/pulsefield_model/training/`: control and mapper training entrypoints.
-- `tests/`: unit and focused integration tests.
-- `artifacts/reports/` and `artifacts/evals/`: local experiment reports and
-  postmortems used to bound claims in this README.
-- `ref-proj/`: local reference projects used for analogy and comparison, not
-  authority.
+## Inspect configuration before running
+
+Mapper training and inference use packaged Hydra configs. Inspect the composed job before starting a server or training run:
+
+```sh
+uv run --extra mps python -m pulsefield_model.inference.hydra_entry --cfg job
+uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --cfg job
+```
+
+Replace `mps` with `cuda` on Linux. For an actual Linux training run, also override `runtime.device=cuda` because the canonical mapper presets target MPS. `--cfg job` shows raw Hydra composition; it does not run the semantic validation path.
+
+The main entrypoints are:
+
+| Task | Command |
+| --- | --- |
+| Show inference options | `uv run --extra mps python -m pulsefield_model.inference.hydra_entry --help` |
+| Start the local WebSocket service | `uv run --extra mps python -m pulsefield_model.inference.hydra_entry` |
+| Show mapper training options | `uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --help` |
+| Validate a training preset without training | `uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --dry-run output.output_dir=/tmp/pulsefield-dry-run output.resume_from=null` |
+
+Inference needs the checkpoints selected by the mapper profile and timing config. Override their Hydra fields when the defaults are not present locally. A training dry run writes `hydra_resolved_config.yaml` and `legacy_run_config.yaml`; the latter is a flattened runner adapter, not a second configuration source.
+
+The WebSocket service listens on `ws://localhost:8765` and exchanges binary `pulsefield-protocol` envelopes. A client sends `ready`, then an `audio` request with a local path, then `reference_time` updates to begin streaming. This repository does not ship a sample client.
+
+A fresh clone can compose configs, run dry runs, and execute tests, but it cannot perform model-backed inference or training. No checkpoint or dataset download workflow is published. Inference requires mapper and control checkpoints through `mapper.checkpoint_path` and `mapper.control_checkpoint_path`. Training presets also expect local dataset indexes, control features, caches, and initialization or resume checkpoints under their `data.*` and `output.*` fields.
+
+## Testing
+
+Run the smallest relevant test first. Keep the accelerator extra explicit so model-backed tests do not turn into dependency skips:
+
+```sh
+uv run --extra mps --group dev pytest -q tests/inference/test_hydra_config.py
+```
+
+Run the complete suite in separate processes to release Torch and accelerator memory between the major surfaces:
+
+```sh
+uv run --extra mps --group dev pytest -q tests/models
+for test_file in tests/training/test_*.py; do
+  uv run --extra mps --group dev pytest -q "$test_file" || exit
+done
+uv run --extra mps --group dev pytest -q \
+  tests/data tests/evals tests/events tests/features tests/inference \
+  tests/osu_core tests/timing tests/test_package_layout.py
+```
+
+Use `cuda` instead of `mps` on Linux.
+Add `--extra render` when changing the optional Reamber-backed rendering surface.
+
+## Sources of truth
+
+Use these paths before adding another constant, config field, or preset:
+
+| Concern | Canonical source |
+| --- | --- |
+| Dependencies, extras, package data, test discovery | [`pyproject.toml`](pyproject.toml) |
+| Mapper training presets | [`src/pulsefield_model/configs/hydra/training/mapper/`](src/pulsefield_model/configs/hydra/training/mapper/) |
+| Inference service and selector groups | [`src/pulsefield_model/configs/inference/`](src/pulsefield_model/configs/inference/) |
+| Typed training schema and preset projection | [`src/pulsefield_model/training/hydra_config.py`](src/pulsefield_model/training/hydra_config.py) |
+| Training CLI and runner adapter | [`src/pulsefield_model/training/mapper_training_hydra.py`](src/pulsefield_model/training/mapper_training_hydra.py) |
+| Typed inference schema and runtime projection | [`src/pulsefield_model/inference/config.py`](src/pulsefield_model/inference/config.py) |
+| Mapper profile metadata and protocol contracts | [`src/pulsefield_model/inference/mapper_protocol.py`](src/pulsefield_model/inference/mapper_protocol.py) |
+| Public token manifest | [`src/pulsefield_model/inference/hitobject_token_manifest_v2.json`](src/pulsefield_model/inference/hitobject_token_manifest_v2.json) |
+| Research rules | [`AGENTS.md`](AGENTS.md) |
+
+Mapper inference YAML selects a profile. `MAPPER_PROFILE_SPECS` owns profile-derived checkpoint defaults, bundle IDs, aliases, model-family metadata, vocab and grammar contracts, and protocol compatibility.
+
+## Working with coding agents
+
+The repository keeps durable agent guidance close to the code. A coding agent should:
+
+1. Read [`AGENTS.md`](AGENTS.md) before changing research code.
+2. Use [`.skills/research-triage/`](.skills/research-triage/) for research ideas, novelty questions, and Experiment Cards.
+3. Use [`.skills/hydra-conventions/`](.skills/hydra-conventions/) for configuration, preset, projection, and Hydra CLI changes.
+4. Inspect the relevant source-of-truth path and nearby tests before editing.
+5. Treat tracked experiment results as evidence and preserve unrelated local or untracked artifacts.
+6. Run focused tests for the changed surface, then the full suite with the platform accelerator extra.
+
+Research coding and experiments start with a bounded Experiment Card. Critique may instead end in `KILL` or `MUTATE`. The human owner decides novelty, interpretation, and research direction; agents may propose, implement, verify, and summarize scoped experiments.
+
+## Repository map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/pulsefield_model/features/` | Audio, mel, and control-feature extraction |
+| `src/pulsefield_model/timing/` | Timing providers, grid fitting, rendering, and diagnostics |
+| `src/pulsefield_model/data/` | Dataset indexes and training windows |
+| `src/pulsefield_model/models/control/` | Control encoders and losses |
+| `src/pulsefield_model/models/mapper/` | Mapper models, vocabularies, tokenizers, grammar, replay, and generation |
+| `src/pulsefield_model/inference/` | Runtime loading, model bundles, sessions, streaming, protocol translation, and `.osu` export |
+| `src/pulsefield_model/training/` | Training runners, Hydra projection, resume logic, and overnight wrappers |
+| `tests/` | Unit tests and focused integration tests |
+| `artifacts/evals/` | Experiment Cards, result logs, metrics, and retained evaluation outputs |
+| `artifacts/reports/` | Research postmortems and report snapshots |
+| `ref-proj/` | Reference projects used for comparison, never as authority |
+
+Populate the optional reference-project submodules only when that comparison work is needed:
+
+```sh
+git submodule update --init --recursive
+```
+
+## Research status
+
+The mapper remains the main quality bottleneck. Current evidence shows sparse output, repetitive patterns, and rhythm placement that can be structurally valid while remaining musically off-grid. Decode-policy work has recovered event density in selected evaluations, but it has not established production-quality chart structure.
+
+Timing research includes structural recognition of shapes such as BPM ramps, but a parsed timing-grid result is not audio-ground truth. Treat `.osu` red timing as a diagnostic comparator rather than a musical oracle, and treat runtime measurements as hardware- and checkpoint-specific.
+
+Start with the retained evidence instead of copying claims from this README:
+
+- [`artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md`](artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md)
+- [`artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_decode_policy_report.md`](artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_decode_policy_report.md)
+- [`artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_timing_drift_audit.md`](artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_timing_drift_audit.md)
+- [`artifacts/evals/bpm_ramp_timing_detection/result_log.md`](artifacts/evals/bpm_ramp_timing_detection/result_log.md)
+
+## Research directions
+
+- Move the core map representation toward beat-relative positions so timing, subdivisions, phrase structure, and BPM changes are easier to compare.
+- Replace hand-authored control planning with a learned latent planner that can represent global chart flow without depending only on named density features.
+- Study tokenization and embeddings over structured chart units such as measures, anchors, repetitions, long-note phrases, hand balance, and difficulty progression.
+
+These directions are connected but remain hypotheses. Use a small, measurable experiment to decide each change.
+
+## Local artifacts and checkpoints
+
+Some evaluation reports and compact outputs are tracked for reproducibility. Datasets, feature stores, caches, audio, and most checkpoints are local and may be absent after cloning.
+
+Do not add a second checkpoint or profile registry to the README. Read the current defaults from `MAPPER_PROFILE_SPECS`, and use Hydra overrides when a local artifact lives elsewhere.
 
 ## License
 
-Pulsefield-model is licensed under the GNU Affero General Public License v3.0
-only (`AGPL-3.0-only`). See `LICENSE`.
+Pulsefield Model is licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`). See [`LICENSE`](LICENSE).
 
-The projects under `ref-proj/` are git submodules/reference projects and retain
-their upstream licenses.
+The projects under `ref-proj/` retain their upstream licenses.
