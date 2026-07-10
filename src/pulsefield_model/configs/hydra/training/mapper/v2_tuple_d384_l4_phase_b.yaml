@@ -4,7 +4,6 @@ experiment:
   mapper: v2_tuple
   phase: B
   preset: v2_tuple_d384_l4_phase_b
-  legacy_config_path: configs/training/stage2_mapper_v2_phase_b_global_mps.yaml
 
 run:
   run_name: stage2_mapper_v2_phase_b_global_d384_l4_b2

@@ -13,7 +13,6 @@ class ExperimentSection:
     mapper: str = ""
     phase: str = ""
     preset: str = ""
-    legacy_config_path: str | None = None
 
 
 @dataclass
@@ -151,7 +150,7 @@ _TRAINING_EXPERIMENT_TOP_LEVEL_FIELDS = frozenset(
         "loss",
     )
 )
-_EXPERIMENT_FIELDS = frozenset(("name", "mapper", "phase", "preset", "legacy_config_path"))
+_EXPERIMENT_FIELDS = frozenset(("name", "mapper", "phase", "preset"))
 
 
 def register_training_experiment_config() -> None:

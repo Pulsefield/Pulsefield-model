@@ -4,7 +4,6 @@ experiment:
   mapper: v2_1_sparse
   phase: B
   preset: v2_1_sparse_d384_l4_phase_b
-  legacy_config_path: configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml
 
 run:
   run_name: stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2

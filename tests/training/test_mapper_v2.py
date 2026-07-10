@@ -7,23 +7,30 @@ if importlib.util.find_spec("torch") is None:
     raise unittest.SkipTest("requires torch")
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 import torch
 
 from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
 from pulsefield_model.training import mapper_v2 as mapper_v2_training
-from pulsefield_model.training.mapper_v2 import (
-    initialize_mapper_v2_from_mapper_checkpoint,
-    load_run_config,
+from pulsefield_model.training.hydra_config import (
+    compose_training_experiment_config,
+    training_experiment_config_to_legacy_dict,
 )
+from pulsefield_model.training.mapper_v2 import initialize_mapper_v2_from_mapper_checkpoint
 
 _STALE_ROOT = "train" + "/"
 
 
+def _load_mapper_v2_preset(preset: str) -> dict[str, Any]:
+    config = compose_training_experiment_config(overrides=[f"training/mapper={preset}"])
+    return training_experiment_config_to_legacy_dict(config)
+
+
 class MapperV2PhaseBTrainingTests(unittest.TestCase):
-    def test_phase_b_global_config_loads_v2_fields(self) -> None:
-        config = load_run_config("configs/training/stage2_mapper_v2_phase_b_global_mps.yaml")
+    def test_phase_b_global_preset_loads_v2_fields(self) -> None:
+        config = _load_mapper_v2_preset("v2_tuple_d384_l4_phase_b")
 
         self.assertTrue(config["include_full_song_context"])
         self.assertTrue(config["skip_first_eval_pass"])
@@ -49,8 +56,8 @@ class MapperV2PhaseBTrainingTests(unittest.TestCase):
         )
         MapperV2Config(**config["model"])
 
-    def test_phase_b_large_global_config_loads_v2_fields(self) -> None:
-        config = load_run_config("configs/training/stage2_mapper_v2_phase_b_global_d768_l8_mps.yaml")
+    def test_phase_b_large_global_preset_loads_v2_fields(self) -> None:
+        config = _load_mapper_v2_preset("v2_tuple_d768_l8_phase_b")
 
         self.assertTrue(config["include_full_song_context"])
         self.assertTrue(config["skip_first_eval_pass"])

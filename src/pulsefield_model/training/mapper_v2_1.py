@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import torch
-import yaml
 from torch.utils.data import DataLoader
 
 from pulsefield_model.data.control_windows import DEFAULT_MAX_CACHED_MAPS
@@ -84,35 +83,8 @@ RUN_CONFIG_KEYS = {
     "control_model",
     "loss",
 }
-MODEL_CONFIG_KEYS = {field.name for field in fields(MapperV21Config)}
-CONTROL_MODEL_CONFIG_KEYS = {field.name for field in fields(ControlDemoGlobalEncoderConfig)}
-LOSS_CONFIG_KEYS = {field.name for field in fields(MapperV21LossConfig)}
 MAPPER_V2_1_RESUME_TRAINING_RUNTIME_KEYS = frozenset(("mps_cleanup_every",))
 MAPPER_V2_1_RESUME_DATASET_RUNTIME_KEYS = frozenset(("max_cached_maps", "num_workers", "dataset_progress"))
-
-
-def load_run_config(config_path: str | Path) -> dict[str, Any]:
-    path = Path(config_path)
-    try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        raise ValueError(f"invalid YAML run config: {path}") from exc
-    if loaded is None:
-        return {"model": {}, "control_model": {}, "loss": {}}
-    if not isinstance(loaded, dict):
-        raise ValueError(f"run config must be a mapping: {path}")
-    config = dict(loaded)
-    unknown = sorted(set(config) - RUN_CONFIG_KEYS)
-    if unknown:
-        raise ValueError(f"unknown run config keys: {unknown}")
-    config["model"] = _normalized_section(config.get("model", {}), allowed=MODEL_CONFIG_KEYS, name="model config")
-    config["control_model"] = _normalized_section(
-        config.get("control_model", {}),
-        allowed=CONTROL_MODEL_CONFIG_KEYS,
-        name="control model config",
-    )
-    config["loss"] = _normalized_section(config.get("loss", {}), allowed=LOSS_CONFIG_KEYS, name="loss config")
-    return config
 
 
 def run_mapper_v2_1_phase_b_training(
@@ -654,17 +626,6 @@ def _write_checkpoint_and_report(
         mps_cleanup_every=mps_cleanup_every,
         resume_from=resume_from,
     )
-
-
-def _normalized_section(source: object, *, allowed: set[str], name: str) -> dict[str, Any]:
-    if source is None:
-        return {}
-    if not isinstance(source, dict):
-        raise ValueError(f"{name} must be a mapping")
-    unknown = sorted(set(source) - allowed)
-    if unknown:
-        raise ValueError(f"unknown {name} keys: {unknown}")
-    return dict(source)
 
 
 def main(argv: Sequence[str] | None = None) -> None:

@@ -9,7 +9,6 @@ pytest.importorskip("torch")
 from omegaconf import OmegaConf
 from omegaconf.errors import ConfigAttributeError, ConfigKeyError
 
-from pulsefield_model.training import mapper_v2, mapper_v2_1
 from pulsefield_model.training.hydra_config import (
     TrainingExperimentConfig,
     compose_training_experiment_config,
@@ -21,35 +20,48 @@ from pulsefield_model.training.mapper_training_hydra import _call_kwargs
 
 
 @pytest.mark.parametrize(
-    ("mapper_preset", "legacy_path", "legacy_loader"),
+    ("mapper_preset", "mapper", "run_name", "d_model", "layers"),
     (
         (
             "v2_tuple_d384_l4_phase_b",
-            "configs/training/stage2_mapper_v2_phase_b_global_mps.yaml",
-            mapper_v2.load_run_config,
+            "v2_tuple",
+            "stage2_mapper_v2_phase_b_global_d384_l4_b2",
+            384,
+            4,
         ),
         (
             "v2_tuple_d768_l8_phase_b",
-            "configs/training/stage2_mapper_v2_phase_b_global_d768_l8_mps.yaml",
-            mapper_v2.load_run_config,
+            "v2_tuple",
+            "stage2_mapper_v2_phase_b_global_d768_l8_b1",
+            768,
+            8,
         ),
         (
             "v2_1_sparse_d384_l4_phase_b",
-            "configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml",
-            mapper_v2_1.load_run_config,
+            "v2_1_sparse",
+            "stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2",
+            384,
+            4,
         ),
     ),
 )
-def test_mapper_training_hydra_composes_legacy_equivalent_config(
+def test_mapper_training_hydra_presets_are_complete_runner_configs(
     mapper_preset: str,
-    legacy_path: str,
-    legacy_loader: object,
+    mapper: str,
+    run_name: str,
+    d_model: int,
+    layers: int,
 ) -> None:
     config = compose_training_experiment_config(overrides=[f"training/mapper={mapper_preset}"])
 
     structured = validate_training_experiment_config(config)
+    runner_config = training_experiment_config_to_legacy_dict(config)
     assert isinstance(OmegaConf.to_object(structured), TrainingExperimentConfig)
-    assert training_experiment_config_to_legacy_dict(config) == legacy_loader(legacy_path)
+    assert structured.experiment.preset == mapper_preset
+    assert structured.experiment.mapper == mapper
+    assert runner_config["run_name"] == run_name
+    assert runner_config["model"]["d_model"] == d_model
+    assert runner_config["model"]["layers"] == layers
 
 
 @pytest.mark.parametrize(
@@ -78,9 +90,8 @@ def test_default_mapper_training_hydra_config_uses_v2_tuple_preset() -> None:
     legacy = training_experiment_config_to_legacy_dict(config)
 
     assert legacy["run_name"] == "stage2_mapper_v2_phase_b_global_d768_l8_b1"
-    assert legacy == mapper_v2.load_run_config(
-        "configs/training/stage2_mapper_v2_phase_b_global_d768_l8_mps.yaml",
-    )
+    assert legacy["model"]["d_model"] == 768
+    assert legacy["model"]["layers"] == 8
     assert "eval_index_path" not in legacy
     assert "init_from_mapper_checkpoint" not in legacy
     assert "dataset_progress" not in legacy

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import pickle
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import torch
-import yaml
 from torch.utils.data import DataLoader, Dataset
 
 from pulsefield_model.data.control_windows import DEFAULT_MAX_CACHED_MAPS
@@ -22,13 +21,9 @@ from pulsefield_model.training.common import (
     split_train_eval_dataset,
 )
 from pulsefield_model.training.mapper_common import (
-    CONTROL_MODEL_CONFIG_KEYS,
-    LOSS_CONFIG_KEYS,
     RUN_CONFIG_KEYS as MAPPER_TUPLE_RUN_CONFIG_KEYS,
     MapperTuplePhaseBLossConfig,
     _make_mapper_tuple_phase_b_train_loader,
-    _normalize_config_mapping,
-    _normalized_section,
     _run_training,
     precompute_mapper_tuple_phase_b_control_teacher_cache,
 )
@@ -37,32 +32,6 @@ from pulsefield_model.training.mapper_common import (
 DEFAULT_RUNS_ROOT = Path("artifacts/runs/stage2_mapper_v2")
 DEFAULT_OUTPUT_DIR = DEFAULT_RUNS_ROOT / "phase_b_global_teacher_forced"
 RUN_CONFIG_KEYS = set(MAPPER_TUPLE_RUN_CONFIG_KEYS) | {"include_full_song_context", "skip_first_eval_pass"}
-MODEL_CONFIG_KEYS = {field.name for field in fields(MapperV2Config)}
-
-
-def load_run_config(config_path: str | Path) -> dict[str, Any]:
-    path = Path(config_path)
-    try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        raise ValueError(f"invalid YAML run config: {path}") from exc
-    if loaded is None:
-        return {"model": {}, "control_model": {}, "loss": {}}
-    if not isinstance(loaded, dict):
-        raise ValueError(f"run config must be a mapping: {path}")
-
-    config = _normalize_config_mapping(loaded, source_name="run config")
-    unknown = sorted(set(config) - RUN_CONFIG_KEYS)
-    if unknown:
-        raise ValueError(f"unknown run config keys: {unknown}")
-    config["model"] = _normalized_section(config.get("model", {}), allowed=MODEL_CONFIG_KEYS, name="model config")
-    config["control_model"] = _normalized_section(
-        config.get("control_model", {}),
-        allowed=CONTROL_MODEL_CONFIG_KEYS,
-        name="control model config",
-    )
-    config["loss"] = _normalized_section(config.get("loss", {}), allowed=LOSS_CONFIG_KEYS, name="loss config")
-    return config
 
 
 def run_mapper_v2_phase_b_training(
