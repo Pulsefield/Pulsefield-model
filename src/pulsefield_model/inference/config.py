@@ -15,17 +15,12 @@ from pulsefield_model.inference.defaults import (
     DEFAULT_DIFFICULTY,
     DEFAULT_EAGER_LOAD_BEATTHIS,
     DEFAULT_HOST,
-    DEFAULT_MAPPER_CHECKPOINT_PATH,
-    DEFAULT_MAPPER_CHECKPOINT_VERSION,
     DEFAULT_MAPPER_DECODER_WINDOW_MS,
-    DEFAULT_MAPPER_GRAMMAR_CONTRACT,
     DEFAULT_MAPPER_MAX_TOKENS,
-    DEFAULT_MAPPER_MODEL_FAMILY,
     DEFAULT_MAPPER_MODEL_ID,
     DEFAULT_MAPPER_PROFILE,
     DEFAULT_MAPPER_TEMPERATURE,
     DEFAULT_MAPPER_TOP_P,
-    DEFAULT_MAPPER_VOCAB_CONTRACT,
     DEFAULT_MAX_CONTROL_BATCH_SIZE,
     DEFAULT_PORT,
     DEFAULT_RESET_AFTER_AUDIO_END_MS,
@@ -37,8 +32,6 @@ from pulsefield_model.inference.defaults import (
     DEFAULT_TOKEN_SEND_INTERVAL_S,
     DEFAULT_USE_INCREMENTAL_MAPPER_DECODE,
     DEFAULT_WALL_CLOCK_CHECK_INTERVAL_S,
-    MAPPER_V2_1_SPARSE_MODEL_ID,
-    MAPPER_V2_TUPLE_MODEL_ID,
     SUPPORTED_DIFFICULTY_MAX,
     SUPPORTED_DIFFICULTY_MIN,
     TIMING_CANONICALIZATION_CHOICES,
@@ -79,14 +72,9 @@ class InferenceRuntimeConfig:
 class InferenceMapperConfig:
     route: str = "mapper"
     model_id: str = DEFAULT_MAPPER_MODEL_ID
-    bundle_model_id: str = MAPPER_V2_1_SPARSE_MODEL_ID
     profile: str = DEFAULT_MAPPER_PROFILE
-    checkpoint_path: str = DEFAULT_MAPPER_CHECKPOINT_PATH.as_posix()
-    checkpoint_version: str = DEFAULT_MAPPER_CHECKPOINT_VERSION
+    checkpoint_path: str | None = None
     control_checkpoint_path: str = DEFAULT_CONTROL_CHECKPOINT_PATH.as_posix()
-    model_family: str = DEFAULT_MAPPER_MODEL_FAMILY
-    vocab_contract: str = DEFAULT_MAPPER_VOCAB_CONTRACT
-    grammar_contract: str = DEFAULT_MAPPER_GRAMMAR_CONTRACT
     decoder_window_ms: int = DEFAULT_MAPPER_DECODER_WINDOW_MS
     max_tokens: int = DEFAULT_MAPPER_MAX_TOKENS
     temperature: float = DEFAULT_MAPPER_TEMPERATURE
@@ -101,10 +89,7 @@ class TimingMockConfig:
     enabled: bool = True
     route: str = "timing_mock"
     model_id: str = DEFAULT_TIMING_MOCK_MODEL_ID
-    profile: str = "mock_default"
     timing_checkpoint_path: str = DEFAULT_BEATTHIS_CHECKPOINT
-    vocab_contract: str = "tuple_event_tokens"
-    grammar_contract: str = "timing_grid_mock"
 
 
 @dataclass
@@ -161,7 +146,7 @@ def project_to_ws_endpoint_config(config: InferenceServiceConfig) -> "WsEndpoint
         decoder_window_ms=int(config.mapper.decoder_window_ms),
         mapper_model_id=str(config.mapper.model_id),
         timing_mock_model_id=str(config.timing_mock.model_id),
-        mapper_checkpoint_path=Path(config.mapper.checkpoint_path),
+        mapper_checkpoint_path=_mapper_checkpoint_path(config),
         control_checkpoint_path=Path(config.mapper.control_checkpoint_path),
         mapper_profile=resolve_mapper_profile(config.mapper.profile).name,
         device=str(config.runtime.device),
@@ -191,6 +176,8 @@ def validate_inference_service_config(config: InferenceServiceConfig) -> None:
             "timing_mock.enabled must be true because the timing_mock route is always available",
         )
     _require_nonempty_string(config.mapper.model_id, "mapper.model_id")
+    if config.mapper.checkpoint_path is not None:
+        _require_nonempty_string(config.mapper.checkpoint_path, "mapper.checkpoint_path")
     _require_nonempty_string(config.timing_mock.model_id, "timing_mock.model_id")
     _require_nonempty_string(config.timing_mock.timing_checkpoint_path, "timing_mock.timing_checkpoint_path")
     _require_timing_canonicalization(config.runtime.canonicalization)
@@ -200,32 +187,6 @@ def validate_inference_service_config(config: InferenceServiceConfig) -> None:
     if normalized_profile == MAPPER_PROFILE_AUTO:
         raise ValueError("mapper.profile must be explicit; use mapper=v2_tuple or mapper=v2_1_sparse")
     profile = resolve_mapper_profile(normalized_profile)
-    expected_bundle_model_id = _bundle_model_id_for_profile(profile.name)
-    if config.mapper.bundle_model_id != expected_bundle_model_id:
-        raise ValueError(
-            "mapper.bundle_model_id does not match mapper.profile: "
-            f"{config.mapper.bundle_model_id!r} for {profile.name!r}",
-        )
-    if config.mapper.checkpoint_version != profile.checkpoint_version:
-        raise ValueError(
-            "mapper.checkpoint_version does not match mapper.profile: "
-            f"{config.mapper.checkpoint_version!r} for {profile.name!r}",
-        )
-    if config.mapper.model_family != profile.model_family:
-        raise ValueError(
-            "mapper.model_family does not match mapper.profile: "
-            f"{config.mapper.model_family!r} for {profile.name!r}",
-        )
-    if config.mapper.vocab_contract != profile.vocab_contract:
-        raise ValueError(
-            "mapper.vocab_contract does not match mapper.profile: "
-            f"{config.mapper.vocab_contract!r} for {profile.name!r}",
-        )
-    if config.mapper.grammar_contract != profile.grammar_contract:
-        raise ValueError(
-            "mapper.grammar_contract does not match mapper.profile: "
-            f"{config.mapper.grammar_contract!r} for {profile.name!r}",
-        )
 
     protocol = profile.protocol_contract
     if config.protocol.mapper_capability_name != protocol.capability_name:
@@ -236,12 +197,10 @@ def validate_inference_service_config(config: InferenceServiceConfig) -> None:
         raise ValueError("protocol.mapper_manifest_path does not match mapper protocol contract")
 
 
-def _bundle_model_id_for_profile(profile_name: str) -> str:
-    if profile_name == "v2_tuple":
-        return MAPPER_V2_TUPLE_MODEL_ID
-    if profile_name == "v2_1_sparse":
-        return MAPPER_V2_1_SPARSE_MODEL_ID
-    raise ValueError(f"unsupported mapper profile: {profile_name!r}")
+def _mapper_checkpoint_path(config: InferenceServiceConfig) -> Path:
+    if config.mapper.checkpoint_path is not None:
+        return Path(config.mapper.checkpoint_path)
+    return resolve_mapper_profile(config.mapper.profile).default_checkpoint_path
 
 
 def _validate_numeric_bounds(config: InferenceServiceConfig) -> None:

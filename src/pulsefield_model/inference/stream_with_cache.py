@@ -10,7 +10,13 @@ import torch
 
 from pulsefield_model.data.control_windows import normalize_difficulty
 from pulsefield_model.inference.audio_probe import audio_length_ms_from_file
-from pulsefield_model.inference.defaults import DEFAULT_MAPPER_MODEL_ID, DEFAULT_TIMING_MOCK_MODEL_ID
+from pulsefield_model.inference.defaults import (
+    DEFAULT_CONTROL_CHECKPOINT_PATH,
+    DEFAULT_MAPPER_CHECKPOINT_PATH,
+    DEFAULT_MAPPER_MODEL_ID,
+    DEFAULT_TIME_SHIFT_LENGTH_PENALTY,
+    DEFAULT_TIMING_MOCK_MODEL_ID,
+)
 from pulsefield_model.inference.mapper_protocol import (
     HitObjectToken,
     MapperProtocolTranslator,
@@ -49,22 +55,6 @@ from pulsefield_model.timing.providers.beatthis import DEFAULT_BEATTHIS_CHECKPOI
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_MAPPER_V2_CHECKPOINT_PATH = Path(
-    "artifacts/runs/stage2_mapper_v2/"
-    "stage2_mapper_v2_phase_b_global_d768_l8_b1/checkpoint.pt",
-)
-DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH = Path(
-    "artifacts/runs/stage2_mapper_v2_1/"
-    "stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2/checkpoint.pt",
-)
-DEFAULT_MAPPER_CHECKPOINT_PATH = DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH
-DEFAULT_CONTROL_CHECKPOINT_PATH = Path(
-    "artifacts/runs/stage2_control_demo/"
-    "stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt",
-)
-DEFAULT_TIME_SHIFT_LENGTH_PENALTY = 5.2
-
-
 @dataclass(frozen=True)
 class StreamWithCacheConfig:
     decoder_window_ms: int = MAPPER_WRITE_MS

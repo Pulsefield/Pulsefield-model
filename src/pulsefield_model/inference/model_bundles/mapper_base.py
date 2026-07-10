@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from pulsefield_model.inference.mapper_protocol import MapperInferenceProfile
+from pulsefield_model.inference.mapper_protocol import MapperProfileSpec
 from pulsefield_model.inference.model_bundles.base import ModelBundle, RouteBackend
 from pulsefield_model.inference.service_models import InferenceRoute
 from pulsefield_model.inference.stream_with_cache import (
@@ -16,7 +16,7 @@ from pulsefield_model.inference.stream_with_cache import (
 class StreamWithCacheMapperBundle(ModelBundle):
     """Shared lifecycle wrapper for stream-with-cache mapper implementations."""
 
-    profile: MapperInferenceProfile
+    profile: MapperProfileSpec
 
     def __init__(
         self,

@@ -15,6 +15,8 @@ from pulsefield_model.inference.stream_with_cache import StreamWithCacheConfig
 
 
 DEFAULT_MAPPER_MODEL_ID = "mapper/default"
+_MAPPER_BUNDLE_TYPES = (MapperV2TupleBundle, MapperV21SparseBundle)
+_MAPPER_BUNDLE_TYPE_BY_PROFILE = {bundle_type.profile.name: bundle_type for bundle_type in _MAPPER_BUNDLE_TYPES}
 
 
 def mapper_bundle_for_config(
@@ -24,11 +26,11 @@ def mapper_bundle_for_config(
     backend: RouteBackend | None = None,
 ) -> StreamWithCacheMapperBundle:
     profile = resolve_mapper_profile(config.mapper_profile)
-    if profile.name == "v2_tuple":
-        return MapperV2TupleBundle(config, model_id=model_id, backend=backend)
-    if profile.name == "v2_1_sparse":
-        return MapperV21SparseBundle(config, model_id=model_id, backend=backend)
-    raise ValueError(f"unsupported mapper profile: {profile.name!r}")
+    try:
+        bundle_type = _MAPPER_BUNDLE_TYPE_BY_PROFILE[profile.name]
+    except KeyError as exc:
+        raise ValueError(f"unsupported mapper profile: {profile.name!r}") from exc
+    return bundle_type(config, model_id=model_id, backend=backend)
 
 
 class MapperModelBundle:

@@ -1,11 +1,2 @@
 # @package mapper
-route: mapper
-model_id: mapper/default
-bundle_model_id: mapper/v2_tuple
 profile: v2_tuple
-checkpoint_path: artifacts/runs/stage2_mapper_v2/stage2_mapper_v2_phase_b_global_d768_l8_b1/checkpoint.pt
-checkpoint_version: v2
-control_checkpoint_path: artifacts/runs/stage2_control_demo/stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt
-model_family: mapper_v2
-vocab_contract: tuple_event_tokens
-grammar_contract: tuple_event_grammar

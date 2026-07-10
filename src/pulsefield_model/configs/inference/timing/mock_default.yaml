@@ -2,7 +2,4 @@
 enabled: true
 route: timing_mock
 model_id: timing_mock/default
-profile: mock_default
 timing_checkpoint_path: final0
-vocab_contract: tuple_event_tokens
-grammar_contract: timing_grid_mock

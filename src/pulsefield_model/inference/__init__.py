@@ -24,7 +24,7 @@ _EXPORTS = {
     "MapperV21SparseStreamWithCache": "model_bundles",
     "MapperV2TupleBundle": "model_bundles",
     "MapperV2TupleStreamWithCache": "model_bundles",
-    "MapperInferenceProfile": "mapper_protocol",
+    "MapperProfileSpec": "mapper_protocol",
     "ModelBundle": "model_bundles",
     "ModelBundleRegistry": "model_bundles",
     "ModelBundleSnapshot": "model_bundles",

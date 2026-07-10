@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from pulsefield_model.inference.mapper_protocol import MapperProfileName, resolve_mapper_profile
+from pulsefield_model.inference.mapper_protocol import resolve_mapper_profile
 from pulsefield_model.inference.mapper_v2_tuple_rollout import mapper_v2_logits_fn
 from pulsefield_model.inference.model_bundles.base import RouteBackend
 from pulsefield_model.inference.model_bundles.mapper_base import StreamWithCacheMapperBundle
@@ -20,14 +20,14 @@ from pulsefield_model.models.mapper.shared.replay import empty_ln_carry_state
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
 
 
-MAPPER_V2_TUPLE_MODEL_ID = "mapper/v2_tuple"
-MAPPER_V2_TUPLE_PROFILE: MapperProfileName = "v2_tuple"
+MAPPER_V2_TUPLE_PROFILE = resolve_mapper_profile("v2_tuple")
+MAPPER_V2_TUPLE_MODEL_ID = MAPPER_V2_TUPLE_PROFILE.bundle_model_id
 
 
 class MapperV2TupleStreamWithCache(StreamWithCache):
     """Stream-with-cache mapper implementation for v2 tuple EVENT vocab."""
 
-    profile_name: MapperProfileName = MAPPER_V2_TUPLE_PROFILE
+    profile_name = MAPPER_V2_TUPLE_PROFILE.name
 
     def __init__(self, config: StreamWithCacheConfig, **kwargs: Any) -> None:
         super().__init__(_config_for_v2_tuple(config), **kwargs)
@@ -60,7 +60,7 @@ class MapperV2TupleStreamWithCache(StreamWithCache):
 class MapperV2TupleBundle(StreamWithCacheMapperBundle):
     """Concrete mapper v2 tuple model bundle."""
 
-    profile = resolve_mapper_profile(MAPPER_V2_TUPLE_PROFILE)
+    profile = MAPPER_V2_TUPLE_PROFILE
 
     def __init__(
         self,
@@ -77,7 +77,7 @@ class MapperV2TupleBundle(StreamWithCacheMapperBundle):
 
 
 def _config_for_v2_tuple(config: StreamWithCacheConfig) -> StreamWithCacheConfig:
-    return replace(config, mapper_profile=MAPPER_V2_TUPLE_PROFILE)
+    return replace(config, mapper_profile=MAPPER_V2_TUPLE_PROFILE.name)
 
 
 def generate_window_v2_tuple(

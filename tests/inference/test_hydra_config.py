@@ -19,9 +19,11 @@ from pulsefield_model.inference.defaults import (
     DEFAULT_CONTROL_CHECKPOINT_PATH,
     DEFAULT_HOST,
     DEFAULT_MAPPER_CHECKPOINT_PATH,
+    DEFAULT_MAPPER_V2_CHECKPOINT_PATH,
     DEFAULT_PORT,
     DEFAULT_RUNTIME_DEVICE,
 )
+from pulsefield_model.inference.mapper_protocol import resolve_mapper_profile
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -66,14 +68,16 @@ def test_mapping_adapter_rejects_unknown_keys_without_hydra_dependency() -> None
 
 def test_default_hydra_composition_exposes_reviewable_contract() -> None:
     config = _compose()
+    profile = resolve_mapper_profile(config.mapper.profile)
 
     assert config.mapper.model_id == "mapper/default"
-    assert config.mapper.bundle_model_id == "mapper/v2_1_sparse"
     assert config.mapper.profile == "v2_1_sparse"
-    assert config.mapper.checkpoint_path == DEFAULT_MAPPER_CHECKPOINT_PATH.as_posix()
+    assert config.mapper.checkpoint_path is None
     assert config.mapper.control_checkpoint_path == DEFAULT_CONTROL_CHECKPOINT_PATH.as_posix()
-    assert config.mapper.vocab_contract == "sparse_lane_actions"
-    assert config.mapper.grammar_contract == "sparse_lane_action_grammar"
+    assert profile.bundle_model_id == "mapper/v2_1_sparse"
+    assert profile.default_checkpoint_path == DEFAULT_MAPPER_CHECKPOINT_PATH
+    assert profile.vocab_contract == "sparse_lane_actions"
+    assert profile.grammar_contract == "sparse_lane_action_grammar"
     assert config.protocol.mapper_capability_name == "mapper.tuple_tokens"
     assert config.protocol.mapper_token_contract_version == 2
     assert Path(config.protocol.mapper_manifest_path).name == "hitobject_token_manifest_v2.json"
@@ -89,18 +93,29 @@ def test_hydra_configs_are_package_resources() -> None:
 def test_hydra_mapper_groups_select_supported_profiles() -> None:
     v2_config = _compose(["mapper=v2_tuple"])
     v21_config = _compose(["mapper=v2_1_sparse"])
+    v2_profile = resolve_mapper_profile(v2_config.mapper.profile)
+    v21_profile = resolve_mapper_profile(v21_config.mapper.profile)
 
     assert v2_config.mapper.profile == "v2_tuple"
-    assert v2_config.mapper.bundle_model_id == "mapper/v2_tuple"
-    assert v2_config.mapper.checkpoint_version == "v2"
-    assert v2_config.mapper.vocab_contract == "tuple_event_tokens"
-    assert v2_config.mapper.grammar_contract == "tuple_event_grammar"
+    assert v2_config.mapper.checkpoint_path is None
+    assert v2_profile.bundle_model_id == "mapper/v2_tuple"
+    assert v2_profile.checkpoint_version == "v2"
+    assert v2_profile.vocab_contract == "tuple_event_tokens"
+    assert v2_profile.grammar_contract == "tuple_event_grammar"
+    assert project_to_ws_endpoint_config(v2_config).mapper_checkpoint_path == DEFAULT_MAPPER_V2_CHECKPOINT_PATH
 
     assert v21_config.mapper.profile == "v2_1_sparse"
-    assert v21_config.mapper.bundle_model_id == "mapper/v2_1_sparse"
-    assert v21_config.mapper.checkpoint_version == "v2_1"
-    assert v21_config.mapper.vocab_contract == "sparse_lane_actions"
-    assert v21_config.mapper.grammar_contract == "sparse_lane_action_grammar"
+    assert v21_config.mapper.checkpoint_path is None
+    assert v21_profile.bundle_model_id == "mapper/v2_1_sparse"
+    assert v21_profile.checkpoint_version == "v2_1"
+    assert v21_profile.vocab_contract == "sparse_lane_actions"
+    assert v21_profile.grammar_contract == "sparse_lane_action_grammar"
+
+
+def test_explicit_mapper_checkpoint_override_wins_over_profile_default() -> None:
+    config = _compose(["mapper=v2_tuple", "mapper.checkpoint_path=artifacts/custom.pt"])
+
+    assert project_to_ws_endpoint_config(config).mapper_checkpoint_path == Path("artifacts/custom.pt")
 
 
 @pytest.mark.parametrize("override", ("mapper.unexpected=true", "+mapper.unexpected=true"))

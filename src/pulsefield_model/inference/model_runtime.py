@@ -12,8 +12,8 @@ from torch import nn
 
 from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
 from pulsefield_model.inference.mapper_protocol import (
-    MapperInferenceProfile,
     MapperProfileConfig,
+    MapperProfileSpec,
     resolve_mapper_profile,
 )
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
@@ -48,7 +48,7 @@ class ModelRuntime:
     control_model: ControlDemoGlobalEncoder
     mapper_model: nn.Module
     vocab: MapperTupleVocab | MapperV21Vocab
-    mapper_profile: MapperInferenceProfile
+    mapper_profile: MapperProfileSpec
     checkpoint_metadata: Mapping[str, Any]
 
     @classmethod

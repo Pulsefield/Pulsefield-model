@@ -8,16 +8,31 @@ import pytest
 
 from pulsefield_model.inference.stream_with_cache import DecoderWindow, StreamWithCache, StreamWithCacheConfig
 from pulsefield_model.inference.mapper_protocol import (
+    DEFAULT_MAPPER_PROFILE_SPEC,
+    MAPPER_PROFILE_SPECS,
     MapperProtocolContract,
     SparseLaneActionTupleProtocolTranslator,
     TupleEventProtocolTranslator,
     infer_mapper_profile_name_from_vocab,
+    normalize_mapper_profile_name,
     resolve_mapper_profile,
 )
 from pulsefield_model.inference.protocol_adapter import PulsefieldProtocolAdapter
 from pulsefield_model.inference.service_models import HitObjectTokenEvent
 from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
 from pulsefield_model.models.mapper.v2_1 import MapperV21Vocab
+
+
+def test_mapper_profile_specs_are_the_metadata_source_of_truth() -> None:
+    v2 = MAPPER_PROFILE_SPECS["v2_tuple"]
+    v21 = MAPPER_PROFILE_SPECS["v2_1_sparse"]
+
+    assert DEFAULT_MAPPER_PROFILE_SPEC is v21
+    assert v2.bundle_model_id == "mapper/v2_tuple"
+    assert v2.default_checkpoint_path.name == "checkpoint.pt"
+    assert v21.bundle_model_id == "mapper/v2_1_sparse"
+    assert normalize_mapper_profile_name("tuple_event_tokens") == v2.name
+    assert normalize_mapper_profile_name("sparse-lane-actions") == v21.name
 
 
 def test_mapper_profile_resolution_matches_checkpoint_version() -> None:

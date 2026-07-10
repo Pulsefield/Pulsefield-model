@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from pulsefield_model.inference.mapper_protocol import MapperProfileName, resolve_mapper_profile
+from pulsefield_model.inference.mapper_protocol import resolve_mapper_profile
 from pulsefield_model.inference.mapper_v2_1_rollout import (
     carry_from_replay_state_v2_1,
     chart_end_ms_for_generation_v2_1,
@@ -27,14 +27,14 @@ from pulsefield_model.models.mapper.v2_1.replay import (
 from pulsefield_model.models.mapper.v2_1.vocab import MapperV21Vocab
 
 
-MAPPER_V2_1_SPARSE_MODEL_ID = "mapper/v2_1_sparse"
-MAPPER_V2_1_SPARSE_PROFILE: MapperProfileName = "v2_1_sparse"
+MAPPER_V2_1_SPARSE_PROFILE = resolve_mapper_profile("v2_1_sparse")
+MAPPER_V2_1_SPARSE_MODEL_ID = MAPPER_V2_1_SPARSE_PROFILE.bundle_model_id
 
 
 class MapperV21SparseStreamWithCache(StreamWithCache):
     """Stream-with-cache mapper implementation for v2.1 sparse lane-action vocab."""
 
-    profile_name: MapperProfileName = MAPPER_V2_1_SPARSE_PROFILE
+    profile_name = MAPPER_V2_1_SPARSE_PROFILE.name
 
     def __init__(self, config: StreamWithCacheConfig, **kwargs: Any) -> None:
         super().__init__(_config_for_v2_1_sparse(config), **kwargs)
@@ -67,7 +67,7 @@ class MapperV21SparseStreamWithCache(StreamWithCache):
 class MapperV21SparseBundle(StreamWithCacheMapperBundle):
     """Concrete mapper v2.1 sparse model bundle."""
 
-    profile = resolve_mapper_profile(MAPPER_V2_1_SPARSE_PROFILE)
+    profile = MAPPER_V2_1_SPARSE_PROFILE
 
     def __init__(
         self,
@@ -84,7 +84,7 @@ class MapperV21SparseBundle(StreamWithCacheMapperBundle):
 
 
 def _config_for_v2_1_sparse(config: StreamWithCacheConfig) -> StreamWithCacheConfig:
-    return replace(config, mapper_profile=MAPPER_V2_1_SPARSE_PROFILE)
+    return replace(config, mapper_profile=MAPPER_V2_1_SPARSE_PROFILE.name)
 
 
 def generate_window_v2_1_sparse(

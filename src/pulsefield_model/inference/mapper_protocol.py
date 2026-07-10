@@ -37,31 +37,70 @@ class MapperProtocolContract:
 
 
 @dataclass(frozen=True)
-class MapperInferenceProfile:
+class MapperProfileSpec:
     name: MapperProfileName
     checkpoint_version: str
     model_family: str
     vocab_contract: str
     grammar_contract: str
+    bundle_model_id: str
+    default_checkpoint_path: Path
+    aliases: frozenset[str]
+    checkpoint_aliases: frozenset[str]
     protocol_contract: MapperProtocolContract = MapperProtocolContract()
 
 
 DEFAULT_MAPPER_PROTOCOL_CONTRACT = MapperProtocolContract()
-MAPPER_INFERENCE_PROFILES: Mapping[MapperProfileName, MapperInferenceProfile] = {
-    "v2_tuple": MapperInferenceProfile(
+MAPPER_PROFILE_SPECS: Mapping[MapperProfileName, MapperProfileSpec] = {
+    "v2_tuple": MapperProfileSpec(
         name="v2_tuple",
         checkpoint_version="v2",
         model_family="mapper_v2",
         vocab_contract="tuple_event_tokens",
         grammar_contract="tuple_event_grammar",
+        bundle_model_id="mapper/v2_tuple",
+        default_checkpoint_path=Path(
+            "artifacts/runs/stage2_mapper_v2/"
+            "stage2_mapper_v2_phase_b_global_d768_l8_b1/checkpoint.pt",
+        ),
+        aliases=frozenset(("v2", "2", "mapper_v2", "tuple", "tuple_event", "tuple_event_tokens")),
+        checkpoint_aliases=frozenset(("v2", "mapper_v2", "2")),
     ),
-    "v2_1_sparse": MapperInferenceProfile(
+    "v2_1_sparse": MapperProfileSpec(
         name="v2_1_sparse",
         checkpoint_version="v2_1",
         model_family="mapper_v2_1",
         vocab_contract="sparse_lane_actions",
         grammar_contract="sparse_lane_action_grammar",
+        bundle_model_id="mapper/v2_1_sparse",
+        default_checkpoint_path=Path(
+            "artifacts/runs/stage2_mapper_v2_1/"
+            "stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2/checkpoint.pt",
+        ),
+        aliases=frozenset(
+            (
+                "v21",
+                "v2_1",
+                "2_1",
+                "mapper_v2_1",
+                "sparse",
+                "sparse_lane_action",
+                "sparse_lane_actions",
+            ),
+        ),
+        checkpoint_aliases=frozenset(("v2_1", "mapper_v2_1", "2_1")),
     ),
+}
+DEFAULT_MAPPER_PROFILE_SPEC = MAPPER_PROFILE_SPECS[DEFAULT_MAPPER_PROFILE_NAME]
+_MAPPER_PROFILE_BY_ALIAS: Mapping[str, MapperProfileName] = {
+    alias: spec.name
+    for spec in MAPPER_PROFILE_SPECS.values()
+    for alias in (spec.name, *spec.aliases)
+}
+_MAPPER_PROFILE_BY_CHECKPOINT_ALIAS: Mapping[str, MapperProfileName] = {
+    alias: spec.name
+    for spec in MAPPER_PROFILE_SPECS.values()
+    for alias in (spec.checkpoint_version, *spec.checkpoint_aliases)
 }
 
 
@@ -185,41 +224,30 @@ def normalize_mapper_profile_name(value: object) -> MapperProfileConfig:
     raw = str(value).strip().lower().replace("-", "_").replace(".", "_")
     if raw in {"", "auto"}:
         return MAPPER_PROFILE_AUTO
-    if raw in {"v2", "2", "mapper_v2", "v2_tuple", "tuple", "tuple_event", "tuple_event_tokens"}:
-        return "v2_tuple"
-    if raw in {
-        "v21",
-        "v2_1",
-        "2_1",
-        "mapper_v2_1",
-        "v2_1_sparse",
-        "sparse",
-        "sparse_lane_action",
-        "sparse_lane_actions",
-    }:
-        return "v2_1_sparse"
-    raise ValueError(f"unsupported mapper_profile: {value!r}")
+    try:
+        return _MAPPER_PROFILE_BY_ALIAS[raw]
+    except KeyError as exc:
+        raise ValueError(f"unsupported mapper_profile: {value!r}") from exc
 
 
 def mapper_profile_for_checkpoint_version(version: object) -> MapperProfileName:
     normalized = str(version).strip().lower().replace("-", "_").replace(".", "_")
-    if normalized in {"v2_1", "mapper_v2_1", "2_1"}:
-        return "v2_1_sparse"
-    if normalized in {"v2", "mapper_v2", "2"}:
-        return "v2_tuple"
-    raise ValueError(f"unsupported mapper checkpoint version: {version!r}")
+    try:
+        return _MAPPER_PROFILE_BY_CHECKPOINT_ALIAS[normalized]
+    except KeyError as exc:
+        raise ValueError(f"unsupported mapper checkpoint version: {version!r}") from exc
 
 
 def resolve_mapper_profile(
     requested: object = MAPPER_PROFILE_AUTO,
     *,
     checkpoint_version: object | None = None,
-) -> MapperInferenceProfile:
+) -> MapperProfileSpec:
     requested_name = normalize_mapper_profile_name(requested)
     if requested_name == MAPPER_PROFILE_AUTO:
         if checkpoint_version is None:
-            return MAPPER_INFERENCE_PROFILES[DEFAULT_MAPPER_PROFILE_NAME]
-        return MAPPER_INFERENCE_PROFILES[mapper_profile_for_checkpoint_version(checkpoint_version)]
+            return DEFAULT_MAPPER_PROFILE_SPEC
+        return MAPPER_PROFILE_SPECS[mapper_profile_for_checkpoint_version(checkpoint_version)]
 
     if checkpoint_version is not None:
         checkpoint_profile = mapper_profile_for_checkpoint_version(checkpoint_version)
@@ -228,7 +256,7 @@ def resolve_mapper_profile(
                 "mapper_profile does not match checkpoint version: "
                 f"{requested_name!r} requested for {checkpoint_version!r} checkpoint",
             )
-    return MAPPER_INFERENCE_PROFILES[requested_name]
+    return MAPPER_PROFILE_SPECS[requested_name]
 
 
 def infer_mapper_profile_name_from_vocab(vocab: Any) -> MapperProfileName:
@@ -240,13 +268,13 @@ def infer_mapper_profile_name_from_vocab(vocab: Any) -> MapperProfileName:
 
 
 def build_mapper_protocol_translator(
-    profile: MapperInferenceProfile | MapperProfileName | object,
+    profile: MapperProfileSpec | MapperProfileName | object,
     *,
     source_vocab: Any,
     protocol_vocab: MapperTupleVocab | None = None,
 ) -> MapperProtocolTranslator:
     protocol_contract = (
-        profile.protocol_contract if isinstance(profile, MapperInferenceProfile) else DEFAULT_MAPPER_PROTOCOL_CONTRACT
+        profile.protocol_contract if isinstance(profile, MapperProfileSpec) else DEFAULT_MAPPER_PROTOCOL_CONTRACT
     )
     profile_name = _profile_name(profile)
     if profile_name == "v2_tuple":
@@ -264,8 +292,8 @@ def build_mapper_protocol_translator(
     raise ValueError(f"unsupported mapper profile for protocol translation: {profile!r}")
 
 
-def _profile_name(profile: MapperInferenceProfile | MapperProfileName | object) -> MapperProfileName:
-    if isinstance(profile, MapperInferenceProfile):
+def _profile_name(profile: MapperProfileSpec | MapperProfileName | object) -> MapperProfileName:
+    if isinstance(profile, MapperProfileSpec):
         return profile.name
     normalized = normalize_mapper_profile_name(profile)
     if normalized == MAPPER_PROFILE_AUTO:
@@ -289,14 +317,15 @@ def _state_current_ms(state: Any) -> int:
 
 __all__ = [
     "DEFAULT_MAPPER_PROFILE_NAME",
+    "DEFAULT_MAPPER_PROFILE_SPEC",
     "DEFAULT_MAPPER_PROTOCOL_CONTRACT",
     "HITOBJECT_TOKEN_MANIFEST_V2_PATH",
     "HitObjectToken",
-    "MAPPER_INFERENCE_PROFILES",
+    "MAPPER_PROFILE_SPECS",
     "MAPPER_PROFILE_AUTO",
     "MAPPER_PROTOCOL_CAPABILITY_NAME",
     "MAPPER_TOKEN_CONTRACT_VERSION",
-    "MapperInferenceProfile",
+    "MapperProfileSpec",
     "MapperProfileConfig",
     "MapperProfileName",
     "MapperProtocolContract",

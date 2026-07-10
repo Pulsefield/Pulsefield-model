@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from pulsefield_model.inference.mapper_protocol import DEFAULT_MAPPER_PROFILE_SPEC, MAPPER_PROFILE_SPECS
+
 
 DEFAULT_HOST: Final[str] = "localhost"
 DEFAULT_PORT: Final[int] = 8765
@@ -32,28 +34,18 @@ DEFAULT_MAX_CONTROL_BATCH_SIZE: Final[int] = 12
 
 DEFAULT_MAPPER_MODEL_ID: Final[str] = "mapper/default"
 DEFAULT_TIMING_MOCK_MODEL_ID: Final[str] = "timing_mock/default"
-MAPPER_V2_TUPLE_MODEL_ID: Final[str] = "mapper/v2_tuple"
-MAPPER_V2_1_SPARSE_MODEL_ID: Final[str] = "mapper/v2_1_sparse"
+MAPPER_V2_TUPLE_MODEL_ID: Final[str] = MAPPER_PROFILE_SPECS["v2_tuple"].bundle_model_id
+MAPPER_V2_1_SPARSE_MODEL_ID: Final[str] = MAPPER_PROFILE_SPECS["v2_1_sparse"].bundle_model_id
 
-DEFAULT_MAPPER_V2_CHECKPOINT_PATH: Final[Path] = Path(
-    "artifacts/runs/stage2_mapper_v2/"
-    "stage2_mapper_v2_phase_b_global_d768_l8_b1/checkpoint.pt",
-)
-DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH: Final[Path] = Path(
-    "artifacts/runs/stage2_mapper_v2_1/"
-    "stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2/checkpoint.pt",
-)
-DEFAULT_MAPPER_CHECKPOINT_PATH: Final[Path] = DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH
+DEFAULT_MAPPER_V2_CHECKPOINT_PATH: Final[Path] = MAPPER_PROFILE_SPECS["v2_tuple"].default_checkpoint_path
+DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH: Final[Path] = MAPPER_PROFILE_SPECS["v2_1_sparse"].default_checkpoint_path
+DEFAULT_MAPPER_CHECKPOINT_PATH: Final[Path] = DEFAULT_MAPPER_PROFILE_SPEC.default_checkpoint_path
 DEFAULT_CONTROL_CHECKPOINT_PATH: Final[Path] = Path(
     "artifacts/runs/stage2_control_demo/"
     "stage2_control_demo_global_d384_l3_stride16_b6/checkpoints/checkpoint_step_002000.pt",
 )
 
-DEFAULT_MAPPER_PROFILE: Final[str] = "v2_1_sparse"
-DEFAULT_MAPPER_CHECKPOINT_VERSION: Final[str] = "v2_1"
-DEFAULT_MAPPER_MODEL_FAMILY: Final[str] = "mapper_v2_1"
-DEFAULT_MAPPER_VOCAB_CONTRACT: Final[str] = "sparse_lane_actions"
-DEFAULT_MAPPER_GRAMMAR_CONTRACT: Final[str] = "sparse_lane_action_grammar"
+DEFAULT_MAPPER_PROFILE: Final[str] = DEFAULT_MAPPER_PROFILE_SPEC.name
 DEFAULT_MAPPER_DECODER_WINDOW_MS: Final[int] = 8_000
 DEFAULT_MAPPER_MAX_TOKENS: Final[int] = 512
 DEFAULT_MAPPER_TEMPERATURE: Final[float] = 0.0
@@ -72,18 +64,14 @@ __all__ = [
     "DEFAULT_EAGER_LOAD_BEATTHIS",
     "DEFAULT_HOST",
     "DEFAULT_MAPPER_CHECKPOINT_PATH",
-    "DEFAULT_MAPPER_CHECKPOINT_VERSION",
     "DEFAULT_MAPPER_DECODER_WINDOW_MS",
-    "DEFAULT_MAPPER_GRAMMAR_CONTRACT",
     "DEFAULT_MAPPER_MAX_TOKENS",
-    "DEFAULT_MAPPER_MODEL_FAMILY",
     "DEFAULT_MAPPER_MODEL_ID",
     "DEFAULT_MAPPER_PROFILE",
     "DEFAULT_MAPPER_TEMPERATURE",
     "DEFAULT_MAPPER_TOP_P",
     "DEFAULT_MAPPER_V2_1_CHECKPOINT_PATH",
     "DEFAULT_MAPPER_V2_CHECKPOINT_PATH",
-    "DEFAULT_MAPPER_VOCAB_CONTRACT",
     "DEFAULT_MAX_CONTROL_BATCH_SIZE",
     "DEFAULT_PORT",
     "DEFAULT_RESET_AFTER_AUDIO_END_MS",
