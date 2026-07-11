@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
@@ -492,6 +493,11 @@ def zero_control_batch_provider_v2_1(
     return provider
 
 
+def chart_end_ms_for_generation_v2_1(audio_length_ms: int) -> int:
+    audio_length_ms = max(1, int(audio_length_ms))
+    return max(10, int(math.ceil(audio_length_ms / 10.0) * 10))
+
+
 def session_window_batch_provider_v2_1(
     session_runtime: Any,
     *,
@@ -583,13 +589,17 @@ def _carry_batch_v2_1(carry: LNCarryState, *, device: torch.device) -> dict[str,
     return {key: value.unsqueeze(0).to(device=device) for key, value in tensors.items()}
 
 
-def _carry_from_replay_state(state: MapperReplayState) -> LNCarryState:
+def carry_from_replay_state_v2_1(state: MapperReplayState) -> LNCarryState:
     return LNCarryState(
         current_ms=int(state.current_ms),
         open_mask=state.open_mask,
         open_start_ms=state.open_start_ms,
         open_age_ms=state.open_age_ms,
     )
+
+
+def _carry_from_replay_state(state: MapperReplayState) -> LNCarryState:
+    return carry_from_replay_state_v2_1(state)
 
 
 def _initial_replay_state(carry: LNCarryState) -> MapperReplayState:
@@ -677,6 +687,8 @@ __all__ = [
     "MapperV21GenerationError",
     "MapperV21GenerationStep",
     "MapperV21LogitsObserver",
+    "carry_from_replay_state_v2_1",
+    "chart_end_ms_for_generation_v2_1",
     "decoder_input_tokens_for_generation_v2_1",
     "generate_full_song_rollout_v2_1",
     "grammar_constrained_window_generation_v2_1",

@@ -1049,36 +1049,6 @@ def precompute_phase_b_control_teacher_cache_from_control_dataset(
     )
 
 
-def precompute_phase_b_control_teacher_cache(
-    dataset: MapperTupleWindowDataset,
-    *,
-    cache_dir: Path,
-    control_encoder: ControlDemoGlobalEncoder,
-    batch_size: int = 4,
-    device: torch.device,
-    num_workers: int = 0,
-    overwrite: bool = False,
-) -> MapperTupleControlTeacherCachePrecomputeResult:
-    if not isinstance(dataset, MapperTupleWindowDataset):
-        raise TypeError("precompute_phase_b_control_teacher_cache requires a MapperTupleWindowDataset")
-    result = _precompute_phase_b_control_teacher_cache_for_indexed_records(
-        control_dataset=dataset.control_dataset,
-        indexed_records=[
-            (mapper_record.control_record_index, mapper_record.control_record)
-            for mapper_record in dataset.records
-        ],
-        cache_dir=cache_dir,
-        control_encoder=control_encoder,
-        batch_size=batch_size,
-        device=device,
-        num_workers=num_workers,
-        overwrite=overwrite,
-        source_label="mapper_filtered",
-    )
-    dataset.control_teacher_cache_dir = Path(cache_dir)
-    return result
-
-
 def compute_phase_b_loss(
     model_output: MapperTupleModelOutput,
     *,

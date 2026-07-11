@@ -17,6 +17,7 @@ dependencies = [
     "matplotlib==3.10.8",
     "mutagen==1.47.0",
     "flask==3.1.2",
+    "hydra-core==1.3.3",
     "pulsefield-protocol==0.0.3",
     "audioop-lts; python_version >= '3.13'",
 ]
@@ -56,6 +57,7 @@ conflicts = [[{ extra = "mps" }, { extra = "cuda" }]]
 where = ["src"]
 
 [tool.setuptools.package-data]
+"pulsefield_model" = ["configs/**/*.yaml"]
 "pulsefield_model.inference" = ["*.json"]
 
 [tool.pytest.ini_options]

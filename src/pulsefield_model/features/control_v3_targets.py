@@ -9,20 +9,11 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from pulsefield_model.features.control import (
-    mania_hit_objects_to_control_hits,
-    red_timing_points_to_beat_length_fn,
-)
 from pulsefield_model.features.control_v3 import (
     CONFIDENCE_FEATURE_NAMES,
     MODEL_FEATURE_NAMES,
     VALUE_FEATURE_NAMES,
-    FeatureConfigV3,
-    extract_control_features,
 )
-
-from pulsefield_model.osu_core.hitobjects import parse_mania_hit_objects
-from pulsefield_model.osu_core.timing import require_red_timing_points
 
 
 TARGET_WINDOW_SECONDS = 2.0
@@ -55,42 +46,6 @@ class ControlV3TargetWindow:
     target: NDArray[np.float32]
     confidence: NDArray[np.float32] | None = None
     metadata: dict[str, Any] | None = None
-
-
-def compute_control_v3_full_map_features(
-    beatmap_path: str | Path,
-    *,
-    cfg: FeatureConfigV3 | None = None,
-) -> pd.DataFrame:
-    beatmap_path = Path(beatmap_path)
-    hitobjects = parse_mania_hit_objects(beatmap_path, expected_key_count=4)
-    timing_points = require_red_timing_points(beatmap_path)
-    hits = mania_hit_objects_to_control_hits(hitobjects)
-    beat_length_at = red_timing_points_to_beat_length_fn(timing_points)
-    duration_s = max((hit.end if hit.end is not None else hit.start for hit in hits), default=0.0)
-    out = extract_control_features(
-        hits,
-        beat_length_at=beat_length_at,
-        cfg=cfg or FeatureConfigV3(),
-        start_time=0.0,
-        end_time=duration_s,
-        return_debug=True,
-    )
-
-    time_s = np.asarray(out["time"], dtype=np.float32)
-    ln_change_n_eff = np.asarray(out["debug"][LN_CHANGE_N_EFF_FEATURE_NAME], dtype=np.float32)
-    if ln_change_n_eff.shape != time_s.shape:
-        raise ValueError(f"{LN_CHANGE_N_EFF_FEATURE_NAME} must match the control_v3 time grid")
-    if not np.all(np.isfinite(ln_change_n_eff)):
-        raise ValueError(f"{LN_CHANGE_N_EFF_FEATURE_NAME} contains non-finite values")
-
-    frame = pd.DataFrame({TIME_COLUMN: time_s})
-    for name in MODEL_FEATURE_NAMES:
-        frame[name] = np.asarray(out["features"][name], dtype=np.float32)
-    frame[LN_CHANGE_N_EFF_FEATURE_NAME] = ln_change_n_eff
-    frame.attrs["beatmap_path"] = beatmap_path.as_posix()
-    validate_control_v3_timeseries(frame)
-    return frame
 
 
 def load_control_v3_timeseries_rows(

@@ -1,0 +1,15 @@
+defaults:
+  - training_experiment_schema
+  - training/mapper: v2_tuple_d768_l8_phase_b
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+dry_run: false
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

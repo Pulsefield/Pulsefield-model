@@ -10,6 +10,11 @@ from google.protobuf.message import DecodeError
 from pulsefield.protocol.v1 import core_pb2, envelope_pb2, inference_pb2
 
 from pulsefield_model.inference.errors import ProtocolError
+from pulsefield_model.inference.mapper_protocol import (
+    DEFAULT_MAPPER_PROTOCOL_CONTRACT,
+    MAPPER_TOKEN_CONTRACT_VERSION,
+    MapperProtocolContract,
+)
 from pulsefield_model.inference.service_models import (
     AudioCommand,
     EndOfStreamEvent,
@@ -31,7 +36,6 @@ from pulsefield_model.inference.service_models import (
 
 MODEL_SERVICE_NODE_ID = "pulsefield-model.inference"
 MODEL_SERVICE_APP_ID = "pulsefield.model"
-MAPPER_TOKEN_CONTRACT_VERSION = 2
 
 try:
     PROTOCOL_VERSION = version("pulsefield-protocol")
@@ -108,7 +112,12 @@ def outbound_payload_to_envelope(
     return outbound_event_to_envelope(payload, sequence=sequence, source_node_id=source_node_id)
 
 
-def node_hello_envelope(*, sequence: int = 1, source_node_id: str = MODEL_SERVICE_NODE_ID) -> envelope_pb2.Envelope:
+def node_hello_envelope(
+    *,
+    sequence: int = 1,
+    source_node_id: str = MODEL_SERVICE_NODE_ID,
+    mapper_contract: MapperProtocolContract = DEFAULT_MAPPER_PROTOCOL_CONTRACT,
+) -> envelope_pb2.Envelope:
     envelope = _base_envelope(session_id="", sequence=sequence, source_node_id=source_node_id)
     hello = envelope.node_hello
     hello.node_id = source_node_id
@@ -117,8 +126,8 @@ def node_hello_envelope(*, sequence: int = 1, source_node_id: str = MODEL_SERVIC
     hello.app_id = MODEL_SERVICE_APP_ID
     mapper = hello.capabilities.add()
     mapper.kind = core_pb2.NODE_CAPABILITY_KIND_MAPPER
-    mapper.name = "mapper.tuple_tokens"
-    mapper.version = str(MAPPER_TOKEN_CONTRACT_VERSION)
+    mapper.name = mapper_contract.capability_name
+    mapper.version = str(mapper_contract.token_contract_version)
     mapper.direction = core_pb2.NODE_CAPABILITY_DIRECTION_PRODUCER
     timing = hello.capabilities.add()
     timing.kind = core_pb2.NODE_CAPABILITY_KIND_TIMING

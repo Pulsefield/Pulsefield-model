@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import pickle
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import torch
 from torch import nn
 
 from pulsefield_model.models.control.context import TARGET_OFFSET_IN_CONTEXT, TARGET_WINDOW_LENGTH_FRAMES
-from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
 
 from .adapters import LNCloseAdapter, StatePriorAdapter
 from .batch import MapperBatch, MapperFragmentState, MapperTokenContract
@@ -496,31 +493,6 @@ def _stacked_control_teacher_output_8s(output: Any, *, batch_size: int) -> tuple
     density_teacher_8s = density.reshape(batch_size, 4, TARGET_WINDOW_LENGTH_FRAMES, 1)
     density_teacher_8s = density_teacher_8s.reshape(batch_size, 4 * TARGET_WINDOW_LENGTH_FRAMES, 1).contiguous()
     return control_memory_8s, density_teacher_8s
-
-
-def load_frozen_control_encoder_from_checkpoint(checkpoint_path: str | Path) -> ControlDemoGlobalEncoder:
-    path = Path(checkpoint_path)
-    try:
-        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
-    except pickle.UnpicklingError as exc:
-        raise ValueError(
-            "control checkpoint could not be loaded safely with weights_only=True; "
-            "use a checkpoint written by the control trainer"
-        ) from exc
-    if not isinstance(checkpoint, Mapping):
-        raise ValueError(f"control checkpoint must contain a mapping: {path}")
-    raw_config = checkpoint.get("model_config", {})
-    if not isinstance(raw_config, Mapping):
-        raise ValueError("control checkpoint model_config must be a mapping")
-    model = ControlDemoGlobalEncoder(ControlDemoGlobalEncoderConfig(**dict(raw_config)))
-    state = checkpoint.get("model_state_dict")
-    if not isinstance(state, Mapping):
-        raise ValueError("control checkpoint missing model_state_dict")
-    model.load_state_dict(state)
-    model.eval()
-    for parameter in model.parameters():
-        parameter.requires_grad_(False)
-    return model
 
 
 def _time_features(

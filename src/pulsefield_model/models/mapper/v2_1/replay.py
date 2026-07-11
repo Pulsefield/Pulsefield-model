@@ -455,12 +455,6 @@ def open_start_tensor_values_to_tuple(
     return tuple(None if int(value) == int(closed_value) else int(value) for value in values)  # type: ignore[return-value]
 
 
-def open_mask_bits_to_tuple(mask_bits: int) -> tuple[bool, bool, bool, bool]:
-    if not 0 <= int(mask_bits) < 2**KEY_COUNT:
-        raise ValueError(f"open mask outside 4K range: {mask_bits}")
-    return tuple(bool(int(mask_bits) & (1 << lane)) for lane in range(KEY_COUNT))  # type: ignore[return-value]
-
-
 def open_mask_tuple_to_bits(open_mask: Sequence[bool]) -> int:
     if len(open_mask) != KEY_COUNT:
         raise ValueError(f"open mask must contain {KEY_COUNT} lanes: {open_mask}")

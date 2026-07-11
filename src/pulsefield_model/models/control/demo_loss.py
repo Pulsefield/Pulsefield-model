@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import Protocol
 
 import torch
 import torch.nn.functional as F
@@ -12,7 +13,10 @@ from pulsefield_model.data.control_demo_global_windows import (
     DENSITY_CONFIDENCE_TARGET_INDEX,
     DENSITY_LEVEL_TARGET_INDEX,
 )
-from pulsefield_model.models.control.demo import ControlDemoEncoderOutput
+
+
+class _ControlDemoLossOutputLike(Protocol):
+    value_pred: torch.Tensor
 
 
 @dataclass(frozen=True)
@@ -40,7 +44,7 @@ class ControlDemoModelLoss(nn.Module):
 
     def forward(
         self,
-        output: ControlDemoEncoderOutput,
+        output: _ControlDemoLossOutputLike,
         *,
         control_demo_target: torch.Tensor,
         target_valid_mask: torch.Tensor,
@@ -144,7 +148,7 @@ class ControlDemoModelLoss(nn.Module):
 
 
 def _validate_shapes(
-    output: ControlDemoEncoderOutput,
+    output: _ControlDemoLossOutputLike,
     *,
     control_demo_target: torch.Tensor,
     target_valid_mask: torch.Tensor,

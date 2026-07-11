@@ -7,23 +7,30 @@ if importlib.util.find_spec("torch") is None:
     raise unittest.SkipTest("requires torch")
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 import torch
 
 from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
 from pulsefield_model.training import mapper_v2 as mapper_v2_training
-from pulsefield_model.training.mapper_v2 import (
-    initialize_mapper_v2_from_mapper_checkpoint,
-    load_run_config,
+from pulsefield_model.training.hydra_config import (
+    compose_training_experiment_config,
+    training_experiment_config_to_legacy_dict,
 )
+from pulsefield_model.training.mapper_v2 import initialize_mapper_v2_from_mapper_checkpoint
 
 _STALE_ROOT = "train" + "/"
 
 
+def _load_mapper_v2_preset(preset: str) -> dict[str, Any]:
+    config = compose_training_experiment_config(overrides=[f"training/mapper={preset}"])
+    return training_experiment_config_to_legacy_dict(config)
+
+
 class MapperV2PhaseBTrainingTests(unittest.TestCase):
-    def test_phase_b_global_config_loads_v2_fields(self) -> None:
-        config = load_run_config("configs/training/stage2_mapper_v2_phase_b_global_mps.yaml")
+    def test_phase_b_global_preset_loads_v2_fields(self) -> None:
+        config = _load_mapper_v2_preset("v2_tuple_d384_l4_phase_b")
 
         self.assertTrue(config["include_full_song_context"])
         self.assertTrue(config["skip_first_eval_pass"])
@@ -49,8 +56,8 @@ class MapperV2PhaseBTrainingTests(unittest.TestCase):
         )
         MapperV2Config(**config["model"])
 
-    def test_phase_b_large_global_config_loads_v2_fields(self) -> None:
-        config = load_run_config("configs/training/stage2_mapper_v2_phase_b_global_d768_l8_mps.yaml")
+    def test_phase_b_large_global_preset_loads_v2_fields(self) -> None:
+        config = _load_mapper_v2_preset("v2_tuple_d768_l8_phase_b")
 
         self.assertTrue(config["include_full_song_context"])
         self.assertTrue(config["skip_first_eval_pass"])
@@ -87,20 +94,19 @@ class MapperV2PhaseBTrainingTests(unittest.TestCase):
             final_loss=0.0,
             completed_steps=0,
         )
-        with patch.object(
-            mapper_v2_training,
-            "run_mapper_v2_phase_b_training",
-            return_value=train_result,
-            autospec=True,
-        ) as train:
-            mapper_v2_training.main(
-                [
-                    "--config",
-                    "configs/training/stage2_mapper_v2_phase_b_global_mps.yaml",
-                    "--max-steps",
-                    "1",
-                ]
-            )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                mapper_v2_training,
+                "run_mapper_v2_phase_b_training",
+                return_value=train_result,
+                autospec=True,
+            ) as train:
+                mapper_v2_training.main(
+                    [
+                        "run.max_steps=1",
+                        f"output.output_dir={(Path(temp_dir) / 'run').as_posix()}",
+                    ]
+                )
 
         train.assert_called_once()
         kwargs = train.call_args.kwargs
@@ -110,6 +116,11 @@ class MapperV2PhaseBTrainingTests(unittest.TestCase):
         self.assertEqual(kwargs["batch_size"], 2)
         self.assertTrue(kwargs["model_config_overrides"]["use_global_context"])
         self.assertEqual(kwargs["model_config_overrides"]["global_gate_init"], -2.94)
+
+    def test_main_rejects_mapper_group_override(self) -> None:
+        with self.assertRaises(SystemExit) as raised:
+            mapper_v2_training.main(["training/mapper=v2_1_sparse_d384_l4_phase_b", "--dry-run"])
+        self.assertEqual(raised.exception.code, 2)
 
     def test_cache_only_cli_runs_shared_control_teacher_precompute(self) -> None:
         precompute_result = SimpleNamespace(
@@ -133,9 +144,9 @@ class MapperV2PhaseBTrainingTests(unittest.TestCase):
                 with patch.object(mapper_v2_training, "run_mapper_v2_phase_b_training", autospec=True) as train:
                     mapper_v2_training.main(
                         [
-                            "--precompute-control-teacher-cache-only",
-                            "--control-teacher-cache-dir",
-                            str(Path(temp_dir) / "cache"),
+                            "data.precompute_control_teacher_cache_only=true",
+                            f"output.output_dir={(Path(temp_dir) / 'run').as_posix()}",
+                            f"data.control_teacher_cache_dir={Path(temp_dir) / 'cache'}",
                         ]
                     )
 

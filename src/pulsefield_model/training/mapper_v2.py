@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import argparse
 import pickle
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import torch
-import yaml
 from torch.utils.data import DataLoader, Dataset
 
 from pulsefield_model.data.control_windows import DEFAULT_MAX_CACHED_MAPS
@@ -23,13 +21,9 @@ from pulsefield_model.training.common import (
     split_train_eval_dataset,
 )
 from pulsefield_model.training.mapper_common import (
-    CONTROL_MODEL_CONFIG_KEYS,
-    LOSS_CONFIG_KEYS,
     RUN_CONFIG_KEYS as MAPPER_TUPLE_RUN_CONFIG_KEYS,
     MapperTuplePhaseBLossConfig,
     _make_mapper_tuple_phase_b_train_loader,
-    _normalize_config_mapping,
-    _normalized_section,
     _run_training,
     precompute_mapper_tuple_phase_b_control_teacher_cache,
 )
@@ -38,32 +32,6 @@ from pulsefield_model.training.mapper_common import (
 DEFAULT_RUNS_ROOT = Path("artifacts/runs/stage2_mapper_v2")
 DEFAULT_OUTPUT_DIR = DEFAULT_RUNS_ROOT / "phase_b_global_teacher_forced"
 RUN_CONFIG_KEYS = set(MAPPER_TUPLE_RUN_CONFIG_KEYS) | {"include_full_song_context", "skip_first_eval_pass"}
-MODEL_CONFIG_KEYS = {field.name for field in fields(MapperV2Config)}
-
-
-def load_run_config(config_path: str | Path) -> dict[str, Any]:
-    path = Path(config_path)
-    try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        raise ValueError(f"invalid YAML run config: {path}") from exc
-    if loaded is None:
-        return {"model": {}, "control_model": {}, "loss": {}}
-    if not isinstance(loaded, dict):
-        raise ValueError(f"run config must be a mapping: {path}")
-
-    config = _normalize_config_mapping(loaded, source_name="run config")
-    unknown = sorted(set(config) - RUN_CONFIG_KEYS)
-    if unknown:
-        raise ValueError(f"unknown run config keys: {unknown}")
-    config["model"] = _normalized_section(config.get("model", {}), allowed=MODEL_CONFIG_KEYS, name="model config")
-    config["control_model"] = _normalized_section(
-        config.get("control_model", {}),
-        allowed=CONTROL_MODEL_CONFIG_KEYS,
-        name="control model config",
-    )
-    config["loss"] = _normalized_section(config.get("loss", {}), allowed=LOSS_CONFIG_KEYS, name="loss config")
-    return config
 
 
 def run_mapper_v2_phase_b_training(
@@ -332,186 +300,14 @@ def _mapper_v2_model_factory(model_config: MapperV2Config, control_encoder: torc
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    config_parser = argparse.ArgumentParser(add_help=False)
-    config_parser.add_argument("--config", default=None, help="YAML run config; CLI flags override config values")
-    config_args, _ = config_parser.parse_known_args(argv)
-    config_defaults = load_run_config(config_args.config) if config_args.config is not None else {
-        "model": {},
-        "control_model": {},
-        "loss": {},
-    }
-    model_defaults = config_defaults["model"]
-    control_model_defaults = config_defaults["control_model"]
-    loss_defaults = config_defaults["loss"]
+    from pulsefield_model.training.mapper_training_hydra import run_mapper_preset_cli
 
-    parser = argparse.ArgumentParser(description="Train the Stage 2 mapper v2 Phase B global teacher-forced model.")
-    parser.add_argument("--config", default=config_args.config)
-    parser.add_argument("--dataset-root", default=config_defaults.get("dataset_root", "dataset"))
-    parser.add_argument("--index-path", default=config_defaults.get("index_path"))
-    parser.add_argument("--eval-index-path", default=config_defaults.get("eval_index_path"))
-    parser.add_argument("--control-v3-timeseries-path", default=config_defaults.get("control_v3_timeseries_path"))
-    parser.add_argument("--output-dir", default=config_defaults.get("output_dir", DEFAULT_OUTPUT_DIR.as_posix()))
-    parser.add_argument("--max-steps", type=int, default=config_defaults.get("max_steps", 5000))
-    parser.add_argument("--eval-every", type=int, default=config_defaults.get("eval_every", 100))
-    parser.add_argument("--save-every", type=int, default=config_defaults.get("save_every"))
-    parser.add_argument("--log-every", type=int, default=config_defaults.get("log_every"))
-    parser.add_argument("--mps-cleanup-every", type=int, default=config_defaults.get("mps_cleanup_every"))
-    parser.add_argument("--batch-size", type=int, default=config_defaults.get("batch_size", 2))
-    parser.add_argument("--learning-rate", type=float, default=config_defaults.get("learning_rate", 2e-4))
-    parser.add_argument("--weight-decay", type=float, default=config_defaults.get("weight_decay", 0.01))
-    parser.add_argument("--seed", type=int, default=config_defaults.get("seed", 1337))
-    parser.add_argument("--device", default=config_defaults.get("device", "auto"), choices=("auto", "cpu", "cuda", "mps"))
-    parser.add_argument("--run-name", default=config_defaults.get("run_name", "mapper_v2_phase_b_global_teacher_forced"))
-    parser.add_argument("--init-from-control-checkpoint", default=config_defaults.get("init_from_control_checkpoint"))
-    parser.add_argument("--init-from-mapper-checkpoint", default=config_defaults.get("init_from_mapper_checkpoint"))
-    parser.add_argument("--resume-from", default=config_defaults.get("resume_from"))
-    parser.add_argument("--eval-fraction", type=float, default=config_defaults.get("eval_fraction", 0.1))
-    parser.add_argument("--eval-size", type=int, default=config_defaults.get("eval_size"))
-    parser.add_argument(
-        "--final-train-eval-size",
-        type=int,
-        default=config_defaults.get("final_train_eval_size", DEFAULT_FINAL_TRAIN_EVAL_SIZE),
+    run_mapper_preset_cli(
+        argv,
+        mapper_preset="v2_tuple_d384_l4_phase_b",
+        v2_runner=run_mapper_v2_phase_b_training,
+        precompute_runner=precompute_mapper_tuple_phase_b_control_teacher_cache,
     )
-    parser.add_argument("--num-workers", type=int, default=config_defaults.get("num_workers", 0))
-    parser.add_argument("--max-cached-maps", type=int, default=config_defaults.get("max_cached_maps"))
-    parser.add_argument("--mapper-record-cache-path", default=config_defaults.get("mapper_record_cache_path"))
-    parser.add_argument(
-        "--dataset-progress",
-        action=argparse.BooleanOptionalAction,
-        default=config_defaults.get("dataset_progress"),
-    )
-    parser.add_argument(
-        "--length-bucketed-batches",
-        action=argparse.BooleanOptionalAction,
-        default=bool(config_defaults.get("length_bucketed_batches", False)),
-    )
-    parser.add_argument(
-        "--length-bucket-size-multiplier",
-        type=int,
-        default=config_defaults.get("length_bucket_size_multiplier", 32),
-    )
-    parser.add_argument("--control-teacher-cache-dir", default=config_defaults.get("control_teacher_cache_dir"))
-    parser.add_argument(
-        "--precompute-control-teacher-cache",
-        action="store_true",
-        default=bool(config_defaults.get("precompute_control_teacher_cache", False)),
-    )
-    parser.add_argument(
-        "--precompute-control-teacher-cache-only",
-        action="store_true",
-        default=bool(config_defaults.get("precompute_control_teacher_cache_only", False)),
-    )
-    parser.add_argument(
-        "--control-teacher-precompute-batch-size",
-        type=int,
-        default=config_defaults.get("control_teacher_precompute_batch_size"),
-    )
-    parser.add_argument(
-        "--require-control-teacher-cache",
-        action="store_true",
-        default=bool(config_defaults.get("require_control_teacher_cache", False)),
-    )
-    parser.add_argument(
-        "--control-teacher-cache-overwrite",
-        action="store_true",
-        default=bool(config_defaults.get("control_teacher_cache_overwrite", False)),
-    )
-    parser.add_argument(
-        "--include-full-song-context",
-        action=argparse.BooleanOptionalAction,
-        default=bool(config_defaults.get("include_full_song_context", True)),
-    )
-    parser.add_argument(
-        "--skip-first-eval-pass",
-        action=argparse.BooleanOptionalAction,
-        default=bool(config_defaults.get("skip_first_eval_pass", True)),
-    )
-    args = parser.parse_args(argv)
-
-    init_from = Path(args.init_from_control_checkpoint) if args.init_from_control_checkpoint is not None else None
-    init_from_mapper = Path(args.init_from_mapper_checkpoint) if args.init_from_mapper_checkpoint is not None else None
-    resume_from = Path(args.resume_from) if args.resume_from is not None else None
-    if args.precompute_control_teacher_cache_only:
-        result = precompute_mapper_tuple_phase_b_control_teacher_cache(
-            dataset_root=Path(args.dataset_root),
-            index_path=Path(args.index_path) if args.index_path is not None else None,
-            eval_index_path=Path(args.eval_index_path) if args.eval_index_path is not None else None,
-            control_v3_timeseries_path=(
-                Path(args.control_v3_timeseries_path) if args.control_v3_timeseries_path is not None else None
-            ),
-            batch_size=args.batch_size,
-            seed=args.seed,
-            device_name=args.device,
-            init_from_control_checkpoint=init_from,
-            num_workers=args.num_workers,
-            max_cached_maps=args.max_cached_maps,
-            dataset_progress=args.dataset_progress,
-            control_teacher_cache_dir=(
-                Path(args.control_teacher_cache_dir) if args.control_teacher_cache_dir is not None else None
-            ),
-            control_teacher_precompute_batch_size=args.control_teacher_precompute_batch_size,
-            control_teacher_cache_overwrite=args.control_teacher_cache_overwrite,
-            control_model_config_overrides=control_model_defaults,
-        )
-        for report in result.reports:
-            print(
-                "control_teacher_cache_report "
-                f"split={report['split']} total={report['total_entries']} "
-                f"computed={report['computed_entries']} skipped={report['skipped_entries']} "
-                f"elapsed_s={float(report['elapsed_s']):.1f}",
-            )
-        return
-
-    result = run_mapper_v2_phase_b_training(
-        dataset_root=Path(args.dataset_root),
-        index_path=Path(args.index_path) if args.index_path is not None else None,
-        eval_index_path=Path(args.eval_index_path) if args.eval_index_path is not None else None,
-        control_v3_timeseries_path=(
-            Path(args.control_v3_timeseries_path) if args.control_v3_timeseries_path is not None else None
-        ),
-        output_dir=Path(args.output_dir),
-        max_steps=args.max_steps,
-        eval_every=args.eval_every,
-        save_every=args.save_every,
-        log_every=args.log_every,
-        batch_size=args.batch_size,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        seed=args.seed,
-        device_name=args.device,
-        run_name=args.run_name,
-        init_from_control_checkpoint=init_from,
-        init_from_mapper_checkpoint=init_from_mapper,
-        resume_from=resume_from,
-        eval_fraction=args.eval_fraction,
-        eval_size=args.eval_size,
-        final_train_eval_size=args.final_train_eval_size,
-        num_workers=args.num_workers,
-        max_cached_maps=args.max_cached_maps,
-        dataset_progress=args.dataset_progress,
-        mapper_record_cache_path=(
-            Path(args.mapper_record_cache_path) if args.mapper_record_cache_path is not None else None
-        ),
-        length_bucketed_batches=args.length_bucketed_batches,
-        length_bucket_size_multiplier=args.length_bucket_size_multiplier,
-        control_teacher_cache_dir=(
-            Path(args.control_teacher_cache_dir) if args.control_teacher_cache_dir is not None else None
-        ),
-        precompute_control_teacher_cache=args.precompute_control_teacher_cache,
-        control_teacher_precompute_batch_size=args.control_teacher_precompute_batch_size,
-        require_control_teacher_cache=args.require_control_teacher_cache,
-        control_teacher_cache_overwrite=args.control_teacher_cache_overwrite,
-        include_full_song_context=args.include_full_song_context,
-        skip_first_eval_pass=args.skip_first_eval_pass,
-        mps_cleanup_every=args.mps_cleanup_every,
-        model_config_overrides=model_defaults,
-        control_model_config_overrides=control_model_defaults,
-        loss_config_overrides=loss_defaults,
-    )
-    print(f"report_path {result.report_path}")
-    print(f"checkpoint_path {result.checkpoint_path}")
-    print(f"final_loss {result.final_loss:.6f}")
-    print(f"completed_steps {result.completed_steps}")
 
 
 if __name__ == "__main__":

@@ -7,9 +7,14 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
-import yaml
+from pulsefield_model.training.cli_legacy import reject_deprecated_legacy_training_flags
+
+
+_OVERNIGHT_TRAINER_ARG_REPLACEMENTS = {
+    "--config": "--mapper-preset <preset> plus Hydra overrides such as run.max_steps=20",
+}
 
 
 @dataclass(frozen=True)
@@ -18,11 +23,33 @@ class RunProgress:
     is_complete: bool
 
 
-def load_config(config_path: Path) -> dict[str, Any]:
-    loaded = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    if not isinstance(loaded, dict):
-        raise ValueError(f"overnight config must be a YAML mapping: {config_path}")
-    return dict(loaded)
+def load_hydra_training_config(mapper_preset: str, overrides: Sequence[str] = ()) -> dict[str, Any]:
+    from pulsefield_model.training.hydra_config import (
+        compose_training_experiment_config,
+        training_experiment_config_to_legacy_dict,
+    )
+
+    config = compose_training_experiment_config(overrides=[f"training/mapper={mapper_preset}", *overrides])
+    return training_experiment_config_to_legacy_dict(config)
+
+
+def reject_deprecated_overnight_trainer_args(argv: Sequence[str], *, entrypoint: str) -> None:
+    reject_deprecated_legacy_training_flags(
+        argv,
+        entrypoint=entrypoint,
+        argument_name="legacy trainer argument",
+        replacement_overrides=_OVERNIGHT_TRAINER_ARG_REPLACEMENTS,
+    )
+
+
+def hydra_override(key: str, value: object) -> str:
+    if value is None:
+        return f"{key}=null"
+    if isinstance(value, Path):
+        value = value.as_posix()
+    if isinstance(value, str):
+        return f"{key}={json.dumps(value, ensure_ascii=False)}"
+    return f"{key}={value}"
 
 
 def read_progress(report_path: Path, *, max_steps: int) -> RunProgress:
@@ -66,23 +93,6 @@ def next_saved_step_target(*, completed_steps: int, max_steps: int, save_every: 
         return 1
     next_boundary = ((threshold + save_every - 1) // save_every) * save_every
     return min(max_steps, max(next_boundary, completed_steps + 1))
-
-
-def write_child_config(
-    *,
-    base_config: Mapping[str, Any],
-    output_dir: Path,
-    config_path: Path,
-    resume_checkpoint: Path | None,
-) -> None:
-    child_config = dict(base_config)
-    child_config["output_dir"] = output_dir.as_posix()
-    if resume_checkpoint is None:
-        child_config.pop("resume_from", None)
-    else:
-        child_config["resume_from"] = resume_checkpoint.as_posix()
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(yaml.safe_dump(child_config, sort_keys=False), encoding="utf-8")
 
 
 def checkpoint_saved_after(

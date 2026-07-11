@@ -648,7 +648,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await prepare_task
         await reset_task
 
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
         self.assertEqual(route_backend.reset_sessions, ["s1"])
 
     async def test_routed_backend_reset_waits_for_lazy_startup_before_prepare_same_session(self) -> None:
@@ -678,8 +678,8 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await prepare_task
         await reset_task
 
-        self.assertNotIn("s1", backend._session_backends)
-        self.assertNotIn("s1", backend._session_locks)
+        self.assertFalse(backend.registry.has_session("s1"))
+        self.assertFalse(backend.registry.has_session_lock("s1"))
         self.assertEqual(route_backend.reset_sessions, ["s1"])
 
     async def test_reference_time_starts_hitobject_token_stream(self) -> None:
@@ -1694,9 +1694,9 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         await stop_task
 
         self.assertNotIn("s1", endpoint.sessions)
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
         self.assertNotIn("s1", endpoint._session_locks)
-        self.assertNotIn("s1", backend._session_locks)
+        self.assertFalse(backend.registry.has_session_lock("s1"))
         self.assertEqual(route_backend.reset_sessions, ["s1"])
 
     async def test_session_locks_are_released_after_stop(self) -> None:
@@ -1721,14 +1721,14 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             peer,
         )
         self.assertIn("s1", endpoint._session_locks)
-        self.assertIn("s1", backend._session_locks)
+        self.assertTrue(backend.registry.has_session_lock("s1"))
 
         await endpoint.stop_session("s1")
 
         self.assertNotIn("s1", endpoint.sessions)
-        self.assertNotIn("s1", backend._session_backends)
+        self.assertFalse(backend.registry.has_session("s1"))
         self.assertNotIn("s1", endpoint._session_locks)
-        self.assertNotIn("s1", backend._session_locks)
+        self.assertFalse(backend.registry.has_session_lock("s1"))
 
     async def test_mapper_v2_backend_prepares_session_runtime_from_ws_audio(self) -> None:
         loader_configs = []
@@ -1746,6 +1746,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         config = WsEndpointConfig(
             mapper_checkpoint_path="mapper.pt",
             control_checkpoint_path="control.pt",
+            beatthis_checkpoint="custom-beatthis",
             device="cpu",
             token_send_interval_s=0.0,
             canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
@@ -1767,6 +1768,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(backend.models_ready)
         self.assertEqual(loader_configs[0].mapper_checkpoint_path, Path.cwd() / "mapper.pt")
         self.assertEqual(loader_configs[0].control_checkpoint_path, Path.cwd() / "control.pt")
+        self.assertEqual(loader_configs[0].beatthis_checkpoint, "custom-beatthis")
         self.assertEqual(created[0][0], "s1")
         self.assertAlmostEqual(created[0][2].default_normalized_difficulty, normalize_difficulty(5.0))
         self.assertEqual(created[0][2].grid_fitter_config.canonicalization, TIMING_CANONICALIZATION_BPM_80_160)
@@ -1812,6 +1814,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             WsEndpointConfig(
                 decoder_window_ms=1_000,
                 token_send_interval_s=0.0,
+                beatthis_checkpoint="custom-beatthis",
                 beatthis_device="cpu",
                 canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
             ),
@@ -1845,6 +1848,7 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual(fit_calls[0][0], Path("/tmp/song.mp3"))
+        self.assertEqual(fit_calls[0][1]["checkpoint_path"], "custom-beatthis")
         self.assertEqual(fit_calls[0][1]["device"], "cpu")
         self.assertEqual(
             fit_calls[0][1]["fitter_config"].canonicalization,

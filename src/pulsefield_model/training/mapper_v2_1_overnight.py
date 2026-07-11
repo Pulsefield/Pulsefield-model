@@ -11,21 +11,22 @@ from typing import Sequence
 
 from pulsefield_model.training.overnight import checkpoint_saved_after
 from pulsefield_model.training.overnight import existing_resume_checkpoint
-from pulsefield_model.training.overnight import load_config
+from pulsefield_model.training.overnight import hydra_override
+from pulsefield_model.training.overnight import load_hydra_training_config
 from pulsefield_model.training.overnight import next_saved_step_target
 from pulsefield_model.training.overnight import read_progress
+from pulsefield_model.training.overnight import reject_deprecated_overnight_trainer_args
 from pulsefield_model.training.overnight import sleep_until_stop_or_timeout
 from pulsefield_model.training.overnight import terminate_process_group
-from pulsefield_model.training.overnight import write_child_config
 
 
-DEFAULT_CONFIG_PATH = Path("configs/training/stage2_mapper_v2_1_phase_b_sparse_global_mps.yaml")
-DEFAULT_UV_COMMAND = "uv run --extra mps python -m pulsefield_model.training.mapper_v2_1"
+DEFAULT_MAPPER_PRESET = "v2_1_sparse_d384_l4_phase_b"
+DEFAULT_UV_COMMAND = "uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra"
 
 
 def run_supervisor(args: argparse.Namespace, trainer_args: Sequence[str]) -> int:
-    config_path = Path(args.config)
-    base_config = load_config(config_path)
+    base_overrides = [str(arg) for arg in trainer_args]
+    base_config = load_hydra_training_config(str(args.mapper_preset), base_overrides)
     output_dir = Path(args.output_dir or base_config.get("output_dir", "artifacts/runs/stage2_mapper_v2_1/overnight"))
     max_steps = int(args.max_steps or base_config.get("max_steps", 5000))
     save_every = int(args.save_every or base_config.get("save_every") or base_config.get("eval_every", 100))
@@ -37,15 +38,10 @@ def run_supervisor(args: argparse.Namespace, trainer_args: Sequence[str]) -> int
     if steps_per_process <= 0:
         raise ValueError(f"steps_per_process must be positive, got {steps_per_process}")
 
-    base_config["output_dir"] = output_dir.as_posix()
-    base_config["max_steps"] = max_steps
-    base_config["save_every"] = save_every
-
     output_dir.mkdir(parents=True, exist_ok=True)
     supervisor_dir = output_dir / "overnight_supervisor"
     log_dir = Path(args.log_dir) if args.log_dir is not None else supervisor_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    child_config_path = supervisor_dir / "mapper_v2_1_child.yaml"
     checkpoint_path = output_dir / "checkpoint.pt"
     report_path = output_dir / "report.json"
     stop_signal: int | None = None
@@ -76,12 +72,14 @@ def run_supervisor(args: argparse.Namespace, trainer_args: Sequence[str]) -> int
             return 0
 
         resume_checkpoint = existing_resume_checkpoint(base_config, output_dir)
-        write_child_config(
-            base_config=base_config,
-            output_dir=output_dir,
-            config_path=child_config_path,
-            resume_checkpoint=resume_checkpoint,
-        )
+        child_overrides = [
+            f"training/mapper={args.mapper_preset}",
+            *base_overrides,
+            hydra_override("output.output_dir", output_dir),
+            hydra_override("run.max_steps", max_steps),
+            hydra_override("run.save_every", save_every),
+            hydra_override("output.resume_from", resume_checkpoint),
+        ]
         target_step = next_saved_step_target(
             completed_steps=progress.completed_steps,
             max_steps=max_steps,
@@ -92,9 +90,9 @@ def run_supervisor(args: argparse.Namespace, trainer_args: Sequence[str]) -> int
         run_count += 1
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         log_path = log_dir / f"attempt_{run_count:04d}_{stamp}.log"
-        command = [*shlex.split(args.uv_command), "--config", child_config_path.as_posix(), *trainer_args]
+        command = [*shlex.split(args.uv_command), *child_overrides]
         if args.dry_run:
-            print("overnight_dry_run " + " ".join(command), flush=True)
+            print("overnight_dry_run " + shlex.join(command), flush=True)
             return 0
 
         print(
@@ -175,7 +173,7 @@ def parse_args(argv: Sequence[str] | None = None) -> tuple[argparse.Namespace, l
             "restarting each child after a durable checkpoint save."
         )
     )
-    parser.add_argument("--config", default=DEFAULT_CONFIG_PATH.as_posix())
+    parser.add_argument("--mapper-preset", default=DEFAULT_MAPPER_PRESET)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--max-steps", type=int, default=None)
     parser.add_argument("--save-every", type=int, default=None)
@@ -200,6 +198,10 @@ def parse_args(argv: Sequence[str] | None = None) -> tuple[argparse.Namespace, l
         help="Command prefix used to launch the mapper v2.1 trainer.",
     )
     args, trainer_args = parser.parse_known_args(argv)
+    reject_deprecated_overnight_trainer_args(
+        trainer_args,
+        entrypoint="the mapper v2.1 overnight supervisor trainer args",
+    )
     return args, trainer_args
 
 
