@@ -88,8 +88,8 @@ Known weak class:
 - This is why the claim is "high recall for source-verified real multi-BPM
   candidates", not "robust handling of all tempo variation".
 
-Tracked 200-row label index:
-[redline_multibpm_label_index.parquet](../../../artifacts/evals/redline_multibpm_web_audit/redline_multibpm_label_index.parquet).
+The supporting 200-row label index was a local evaluation artifact and is
+intentionally not retained in the repository.
 
 ### Phase error is acceptable as a mapper prior
 

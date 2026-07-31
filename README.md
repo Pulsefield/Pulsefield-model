@@ -144,7 +144,8 @@ The repository keeps durable agent guidance close to the code. A coding agent sh
 2. Use [`.agents/skills/research-triage/`](.agents/skills/research-triage/) for research ideas, novelty questions, and Experiment Cards.
 3. Use [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) for configuration, preset, projection, and Hydra CLI changes.
 4. Inspect the relevant source-of-truth path and nearby tests before editing.
-5. Treat tracked experiment results as evidence and preserve unrelated local or untracked artifacts.
+5. Treat `artifacts/` as ephemeral local state. Do not scan it broadly or load it
+   into agent context unless a specific artifact is explicitly in scope.
 6. Run focused tests for the changed surface, then the full suite with the platform accelerator extra.
 
 Research coding and experiments start with a bounded Experiment Card. Critique may instead end in `KILL` or `MUTATE`. The human owner decides novelty, interpretation, and research direction; agents may propose, implement, verify, and summarize scoped experiments.
@@ -161,7 +162,7 @@ Research coding and experiments start with a bounded Experiment Card. Critique m
 | `src/pulsefield_model/inference/` | Runtime loading, model bundles, sessions, streaming, protocol translation, and `.osu` export |
 | `src/pulsefield_model/training/` | Training runners, Hydra projection, resume logic, and overnight wrappers |
 | `tests/` | Unit tests and focused integration tests |
-| `artifacts/evals/` | Experiment Cards, result logs, metrics, and retained evaluation outputs |
+| `artifacts/evals/` | Local generated evaluation outputs, ignored by Git and not a source of truth |
 | `artifacts/reports/` | Research postmortems and report snapshots |
 | `ref-proj/` | Reference projects used for comparison, never as authority |
 
@@ -177,12 +178,9 @@ The mapper remains the main quality bottleneck. Current evidence shows sparse ou
 
 Timing research includes structural recognition of shapes such as BPM ramps, but a parsed timing-grid result is not audio-ground truth. Treat `.osu` red timing as a diagnostic comparator rather than a musical oracle, and treat runtime measurements as hardware- and checkpoint-specific.
 
-Start with the retained evidence instead of copying claims from this README:
+Start with the curated postmortem instead of scanning raw local artifacts:
 
 - [`artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md`](artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md)
-- [`artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_decode_policy_report.md`](artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_decode_policy_report.md)
-- [`artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_timing_drift_audit.md`](artifacts/evals/pr2_real_riria_policy_sweep/mapper_v21_pr2_real_riria_timing_drift_audit.md)
-- [`artifacts/evals/bpm_ramp_timing_detection/result_log.md`](artifacts/evals/bpm_ramp_timing_detection/result_log.md)
 
 ## Research directions
 
@@ -194,7 +192,10 @@ These directions are connected but remain hypotheses. Use a small, measurable ex
 
 ## Local artifacts and checkpoints
 
-Some evaluation reports and compact outputs are tracked for reproducibility. Datasets, feature stores, caches, audio, and most checkpoints are local and may be absent after cloning.
+Generated evaluations, datasets, feature stores, caches, audio, checkpoints, and
+run snapshots are local artifacts and may be absent after cloning. Durable
+conclusions belong in curated repository documentation rather than raw artifact
+trees.
 
 Do not add a second checkpoint or profile registry to the README. Read the current defaults from `MAPPER_PROFILE_SPECS`, and use Hydra overrides when a local artifact lives elsewhere.
 

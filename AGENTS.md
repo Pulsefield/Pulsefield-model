@@ -37,3 +37,14 @@ Prefer experiments that can fail quickly.
 
 The human owner decides novelty, interpretation, and research direction.
 The agent may propose, compare, implement bounded changes, and summarize evidence.
+
+## Artifact context policy
+
+Treat `artifacts/` as ephemeral local state, not durable research context.
+
+- Do not scan or load `artifacts/` broadly unless the human explicitly places a
+  specific artifact in scope.
+- Do not treat generated eval outputs, caches, checkpoints, or run snapshots as
+  repository sources of truth.
+- Put durable conclusions and reusable research constraints in curated
+  repository documentation.
