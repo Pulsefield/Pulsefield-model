@@ -141,8 +141,8 @@ Mapper inference YAML selects a profile. `MAPPER_PROFILE_SPECS` owns profile-der
 The repository keeps durable agent guidance close to the code. A coding agent should:
 
 1. Read [`AGENTS.md`](AGENTS.md) before changing research code.
-2. Use [`.skills/research-triage/`](.skills/research-triage/) for research ideas, novelty questions, and Experiment Cards.
-3. Use [`.skills/hydra-conventions/`](.skills/hydra-conventions/) for configuration, preset, projection, and Hydra CLI changes.
+2. Use [`.agents/skills/research-triage/`](.agents/skills/research-triage/) for research ideas, novelty questions, and Experiment Cards.
+3. Use [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) for configuration, preset, projection, and Hydra CLI changes.
 4. Inspect the relevant source-of-truth path and nearby tests before editing.
 5. Treat tracked experiment results as evidence and preserve unrelated local or untracked artifacts.
 6. Run focused tests for the changed surface, then the full suite with the platform accelerator extra.
