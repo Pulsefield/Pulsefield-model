@@ -118,7 +118,7 @@ uv run --extra mps --group dev pytest -q \
 Use `cuda` instead of `mps` on Linux.
 Add `--extra render` when changing the optional Reamber-backed rendering surface.
 
-## Sources of truth
+## Canonical code and configuration
 
 Use these paths before adding another constant, config field, or preset:
 
@@ -130,26 +130,29 @@ Use these paths before adding another constant, config field, or preset:
 | Typed training schema and preset projection | [`src/pulsefield_model/training/hydra_config.py`](src/pulsefield_model/training/hydra_config.py) |
 | Training CLI and runner adapter | [`src/pulsefield_model/training/mapper_training_hydra.py`](src/pulsefield_model/training/mapper_training_hydra.py) |
 | Typed inference schema and runtime projection | [`src/pulsefield_model/inference/config.py`](src/pulsefield_model/inference/config.py) |
+| Inference CLI and service startup | [`src/pulsefield_model/inference/hydra_entry.py`](src/pulsefield_model/inference/hydra_entry.py) |
+| WebSocket request handling and streaming | [`src/pulsefield_model/inference/ws_server.py`](src/pulsefield_model/inference/ws_server.py) |
 | Mapper profile metadata and protocol contracts | [`src/pulsefield_model/inference/mapper_protocol.py`](src/pulsefield_model/inference/mapper_protocol.py) |
 | Public token manifest | [`src/pulsefield_model/inference/hitobject_token_manifest_v2.json`](src/pulsefield_model/inference/hitobject_token_manifest_v2.json) |
-| MPS memory and performance troubleshooting | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
-| Research rules | [`AGENTS.md`](AGENTS.md) |
 
 Mapper inference YAML selects a profile. `MAPPER_PROFILE_SPECS` owns profile-derived checkpoint defaults, bundle IDs, aliases, model-family metadata, vocab and grammar contracts, and protocol compatibility.
 
-## Working with coding agents
+## Guides and workflows
 
-The repository keeps durable agent guidance close to the code. A coding agent should:
+These resources apply to specific kinds of work. They are not prerequisites
+for understanding the repository.
 
-1. Read [`AGENTS.md`](AGENTS.md) before changing research code.
-2. Use [`.agents/skills/research-triage/`](.agents/skills/research-triage/) for research ideas, novelty questions, and Experiment Cards.
-3. Use [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) for configuration, preset, projection, and Hydra CLI changes.
-4. Inspect the relevant source-of-truth path and nearby tests before editing.
-5. Treat `artifacts/` as ephemeral local state. Do not scan it broadly or load it
-   into agent context unless a specific artifact is explicitly in scope.
-6. Run focused tests for the changed surface, then the full suite with the platform accelerator extra.
+| Work | Resource |
+| --- | --- |
+| Repository-wide coding-agent entrypoints | [`AGENTS.md`](AGENTS.md) |
+| Hydra configuration, preset, projection, and CLI changes | [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) |
+| Open or still-diffuse research questions and bounded experiment planning | [`.agents/skills/research-triage/`](.agents/skills/research-triage/) |
+| Root-cause analyses, performance investigations, and postmortems | [`docs/guides/technical_analysis_writing.md`](docs/guides/technical_analysis_writing.md) |
+| MPS memory and throughput investigations | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
+| Worked MPS memory root-cause analysis | [`docs/research/mapper_v2_1_mps_memory_root_cause_report.md`](docs/research/mapper_v2_1_mps_memory_root_cause_report.md) |
 
-Research coding and experiments start with a bounded Experiment Card. Critique may instead end in `KILL` or `MUTATE`. The human owner decides novelty, interpretation, and research direction; agents may propose, implement, verify, and summarize scoped experiments.
+Coding agents use `AGENTS.md` as the repository-wide entrypoint. This README
+remains the shared reference for project orientation and runnable commands.
 
 ## Repository map
 
@@ -163,8 +166,7 @@ Research coding and experiments start with a bounded Experiment Card. Critique m
 | `src/pulsefield_model/inference/` | Runtime loading, model bundles, sessions, streaming, protocol translation, and `.osu` export |
 | `src/pulsefield_model/training/` | Training runners, Hydra projection, resume logic, and overnight wrappers |
 | `tests/` | Unit tests and focused integration tests |
-| `artifacts/evals/` | Local generated evaluation outputs, ignored by Git and not a source of truth |
-| `artifacts/reports/` | Research postmortems and report snapshots |
+| `artifacts/` | Local generated evaluations, reports, checkpoints, caches, and run snapshots; not a source of truth |
 | `ref-proj/` | Reference projects used for comparison, never as authority |
 
 Populate the optional reference-project submodules only when that comparison work is needed:
@@ -179,26 +181,13 @@ The mapper remains the main quality bottleneck. Current evidence shows sparse ou
 
 Timing research includes structural recognition of shapes such as BPM ramps, but a parsed timing-grid result is not audio-ground truth. Treat `.osu` red timing as a diagnostic comparator rather than a musical oracle, and treat runtime measurements as hardware- and checkpoint-specific.
 
-Start with the curated postmortem instead of scanning raw local artifacts:
-
-- [`artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md`](artifacts/reports/evals/mapper_v21_44000_decoder_postmortem_2026-05-20.md)
-
-## Research directions
+## Current research focus
 
 - Move the core map representation toward beat-relative positions so timing, subdivisions, phrase structure, and BPM changes are easier to compare.
 - Replace hand-authored control planning with a learned latent planner that can represent global chart flow without depending only on named density features.
 - Study tokenization and embeddings over structured chart units such as measures, anchors, repetitions, long-note phrases, hand balance, and difficulty progression.
 
-These directions are connected but remain hypotheses. Use a small, measurable experiment to decide each change.
-
-## Local artifacts and checkpoints
-
-Generated evaluations, datasets, feature stores, caches, audio, checkpoints, and
-run snapshots are local artifacts and may be absent after cloning. Durable
-conclusions belong in curated repository documentation rather than raw artifact
-trees.
-
-Do not add a second checkpoint or profile registry to the README. Read the current defaults from `MAPPER_PROFILE_SPECS`, and use Hydra overrides when a local artifact lives elsewhere.
+These directions are connected but remain hypotheses rather than committed architecture.
 
 ## License
 

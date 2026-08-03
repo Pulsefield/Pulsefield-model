@@ -1,11 +1,13 @@
 ---
 name: research-triage
-description: Route Pulsefield research ideas into critic, planner, or executor mode with a BES-inspired closed loop of goal decomposition, candidate variants, local verification, and selection pressure. Use whenever the user is stuck on a research idea, unsure about novelty, unsure about implementation choices, delaying experiments, needs source-grounded research workflow triage, needs a KILL/MUTATE/TEST decision, wants one bounded Experiment Card, or asks to implement or run an existing Experiment Card.
+description: Triage open or still-diffuse Pulsefield ML research questions, novelty claims, implementation hypotheses, and existing Experiment Cards into critic, planner, or executor mode. Use for research-direction decisions, bounded experiment planning, or execution of an accepted Experiment Card. Do not use for root-cause analyses, performance investigations, postmortems, technical or design documentation, routine debugging, code review, or ordinary implementation.
 ---
 
 # Pulsefield Research Triage Skill
 
-Use this skill whenever the user is stuck on a research idea, unsure about novelty, unsure about implementation choices, or delaying experiments.
+Use this skill only for open or still-diffuse research questions, explicit
+research-direction decisions, bounded experiment planning, or execution of an
+accepted Experiment Card.
 
 The goal is not to produce a big research plan. The goal is to route the idea into one of three modes:
 
@@ -20,6 +22,17 @@ Use the AI auto-research survey and awesome-ai-auto-research repository as taxon
 When external research is needed, prefer primary sources: project repositories, papers, benchmark pages, release notes, and reproducible traces. Prefer newer repositories only when they have evidence of active maintenance, clear workflows, runnable commands, or benchmark results. Treat stars, README claims, and curated-list placement as weak evidence.
 
 Avoid scope expansion and produce bounded artifacts.
+
+## Scope Boundary
+
+This skill structures research decisions. It does not define the structure or
+voice of a finished analytical document. Once a question has converged into a
+root-cause analysis, performance investigation, or postmortem, follow
+`docs/guides/technical_analysis_writing.md` and write from the evidence rather
+than exposing this skill's role labels, triage modes, or Experiment Card fields.
+
+Do not apply this workflow to design or architecture documents, repository
+orientation, routine debugging, code review, or ordinary implementation work.
 
 ## Core Rule
 
