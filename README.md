@@ -132,6 +132,7 @@ Use these paths before adding another constant, config field, or preset:
 | Typed inference schema and runtime projection | [`src/pulsefield_model/inference/config.py`](src/pulsefield_model/inference/config.py) |
 | Mapper profile metadata and protocol contracts | [`src/pulsefield_model/inference/mapper_protocol.py`](src/pulsefield_model/inference/mapper_protocol.py) |
 | Public token manifest | [`src/pulsefield_model/inference/hitobject_token_manifest_v2.json`](src/pulsefield_model/inference/hitobject_token_manifest_v2.json) |
+| MPS memory and performance troubleshooting | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
 | Research rules | [`AGENTS.md`](AGENTS.md) |
 
 Mapper inference YAML selects a profile. `MAPPER_PROFILE_SPECS` owns profile-derived checkpoint defaults, bundle IDs, aliases, model-family metadata, vocab and grammar contracts, and protocol compatibility.

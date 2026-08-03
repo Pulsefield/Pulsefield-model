@@ -38,6 +38,15 @@ Prefer experiments that can fail quickly.
 The human owner decides novelty, interpretation, and research direction.
 The agent may propose, compare, implement bounded changes, and summarize evidence.
 
+## MPS memory and performance analysis
+
+For model geometry, padding, batching, training lifetime, device cleanup,
+inference session state, or accelerator cache work that may affect MPS memory
+or throughput, use
+`docs/engineering/mps_memory_performance_troubleshooting.md` as the investigation
+frame. Separate Python objects, tensor storage, MPS allocator state, driver
+counters, and process memory before attributing growth.
+
 ## Artifact context policy
 
 Treat `artifacts/` as ephemeral local state, not durable research context.
