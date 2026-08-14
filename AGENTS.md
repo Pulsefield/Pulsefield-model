@@ -13,6 +13,7 @@ Use task-specific guidance only when its scope matches the work.
 | Task | Resource |
 | --- | --- |
 | Agent Note or decision-record supersession, retention, archival, restoration, or deletion | `.agents/skills/pulsf-archive-agent-notes/SKILL.md` |
+| Repository prose writing, review, trimming, restoration, or comment and documentation coverage | `.agents/skills/pulsf-prose-standard/SKILL.md` |
 | Packaged Hydra configs, mapper training presets, inference profiles, config adapters, CLI entrypoints, or Hydra tests | `.agents/skills/hydra-conventions/SKILL.md` |
 | Open or still-diffuse ML research, novelty analysis, bounded experiment planning, or an accepted Experiment Card | `.agents/skills/research-triage/SKILL.md` |
 | Root-cause analyses, performance investigations, or postmortems | `docs/guides/technical_analysis_writing.md` |
