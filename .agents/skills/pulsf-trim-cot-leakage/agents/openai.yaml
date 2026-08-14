@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pulsefield Trim CoT Leakage"
+  short_description: "Remove authoring-session residue from prose."
+  default_prompt: "Use $pulsf-trim-cot-leakage to audit this Pulsefield prose for unresolvable authoring-session residue and fix it without losing facts."

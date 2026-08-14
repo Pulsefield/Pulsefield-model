@@ -90,7 +90,8 @@ Treat successful raw Hydra composition as necessary but not sufficient when type
 uv run --extra mps python -m pulsefield_model.inference.hydra_entry --cfg job
 uv run --extra mps python -m pulsefield_model.inference.hydra_entry --help
 uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --help
-uv run --extra mps --group dev python -m pulsefield_model.training.mapper_training_hydra --dry-run output.output_dir=/tmp/pulsefield-dry-run output.resume_from=null
+pulsf_dry_run_dir="$(mktemp -d /tmp/pulsefield-dry-run.XXXXXX)"
+uv run --extra mps --group dev python -m pulsefield_model.training.mapper_training_hydra --dry-run output.output_dir="$pulsf_dry_run_dir" output.resume_from=null
 ```
 
 Use a new explicit temporary output directory for a dry-run and report what it wrote. Do not point a validation command at an existing run directory or checkpoint tree.
