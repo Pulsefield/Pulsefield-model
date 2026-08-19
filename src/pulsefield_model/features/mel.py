@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 
 from pulsefield_model.features.audio import load_audio_file
 from pulsefield_model.features.mel_base import DEFAULT_MEL_CACHE_CONFIG
+from pulsefield_model.features.mel_base import MUSIC_MEL_CACHE_CONFIG
 from pulsefield_model.features.mel_base import MelCacheConfig
 from pulsefield_model.features.mel_base import compute_log_mel_10ms
 from pulsefield_model.features.mel_base import log_mel_cache_path
@@ -53,6 +54,50 @@ class Stage2MelConfig:
 
 
 DEFAULT_STAGE2_MEL_CONFIG = Stage2MelConfig()
+
+
+def load_cached_music_log_mel(
+    audio_path: str | Path,
+    *,
+    config: MelCacheConfig = MUSIC_MEL_CACHE_CONFIG,
+    mmap_mode: str | None = None,
+) -> NDArray[np.float32]:
+    """Read the 24 kHz / 128-bin music Mel cache without creating it.
+
+    ``audio_path`` is normalized to an absolute path, matching the full5050
+    cache builder.  A missing cache is an error rather than an implicit audio
+    decode so training and evaluation jobs cannot unexpectedly mutate caches.
+    """
+
+    resolved_audio_path = Path(audio_path).expanduser().resolve()
+    cache_path = music_log_mel_cache_path(resolved_audio_path, config=config)
+    if not cache_path.is_file():
+        raise FileNotFoundError(
+            f"music Mel cache is missing for {resolved_audio_path}: {cache_path}",
+        )
+    mel = np.load(cache_path, mmap_mode=mmap_mode)
+    if mel.ndim != 2 or mel.shape[1] != config.mel_bins:
+        raise ValueError(
+            f"expected music log Mel shape [frames, {config.mel_bins}], "
+            f"got {mel.shape} from {cache_path}",
+        )
+    if mel.dtype != np.dtype("float32"):
+        raise ValueError(f"expected float32 music log Mel cache, got {mel.dtype} from {cache_path}")
+    return mel
+
+
+def music_log_mel_cache_path(
+    audio_path: str | Path,
+    *,
+    config: MelCacheConfig = MUSIC_MEL_CACHE_CONFIG,
+) -> Path:
+    """Return the cache path used by the general-music Mel frontend."""
+
+    resolved_audio_path = Path(audio_path).expanduser().resolve()
+    return log_mel_cache_path(
+        resolved_audio_path.as_posix(),
+        config=config,
+    )
 
 
 def load_full_song_packed_mel_20ms(

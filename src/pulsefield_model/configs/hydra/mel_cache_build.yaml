@@ -1,0 +1,16 @@
+defaults:
+  - mel_cache_build_schema
+  - _self_
+
+# The typed schema owns the 24 kHz / 128 Mel / 40 ms frontend defaults. This
+# job binds that frontend to the local full5050 locator manifest.
+manifest_path: artifacts/reports/timing/timing_v3_labels_v1.jsonl
+expected_row_count: 5050
+progress_every: 25
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

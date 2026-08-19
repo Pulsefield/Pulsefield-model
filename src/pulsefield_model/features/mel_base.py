@@ -46,6 +46,20 @@ class MelCacheConfig:
 
 DEFAULT_MEL_CACHE_CONFIG = MelCacheConfig()
 
+# General-music frontend selected after the Mel metamer comparison.  Keep this
+# cache namespace separate from the legacy 16 kHz / 80-bin Stage 2 frontend so
+# both representations can coexist on disk.
+MUSIC_MEL_CACHE_CONFIG = MelCacheConfig(
+    cache_version="mel_music_sr24000_hop10_mel128_win40_v1",
+    sample_rate=24000,
+    mel_bins=128,
+    hop_ms=10,
+    n_fft=960,
+    win_length=960,
+    fmin=20.0,
+    fmax=12000.0,
+)
+
 
 def compute_log_mel_10ms(
     waveform: npt.NDArray[np.float32],
