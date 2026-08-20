@@ -1,5 +1,10 @@
-# @package timing_mock
-enabled: true
-route: timing_mock
-model_id: timing_mock/default
-timing_checkpoint_path: final0
+# @package _global_
+timing:
+  mode: v2
+  max_supported_audio_duration_seconds: 600.0
+
+timing_mock:
+  enabled: true
+  route: timing_mock
+  model_id: timing_mock/default
+  timing_checkpoint_path: final0

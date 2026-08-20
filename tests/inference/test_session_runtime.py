@@ -10,6 +10,22 @@ import torch
 from pulsefield_model.inference.session_runtime import SessionRuntime, SessionRuntimeConfig
 from pulsefield_model.timing.grid_fitting.types import TimingFitDiagnostics, TimingFitResult
 from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
+from pulsefield_model.timing.v3.analytic_curve import (
+    ConstantTempoSection,
+    PhaseContinuousTimingCurve,
+)
+from pulsefield_model.timing.v3.inference import (
+    TimingEvidenceBundle,
+    TimingV3Outcome,
+    TimingV3Telemetry,
+    run_timing_v3_shadow,
+)
+from pulsefield_model.timing.v3.tempo_track import (
+    TempoTrackDiagnostics,
+    TempoTrackProductionSelection,
+    TempoTrackResult,
+    TimingCandidateDiagnostic,
+)
 
 
 class SessionRuntimeTests(unittest.TestCase):
@@ -60,6 +76,9 @@ class SessionRuntimeTests(unittest.TestCase):
         self.assertIs(cache.beatthis_prediction, prediction)
         self.assertIs(cache.timing_fit_result, fitter.result)
         self.assertIs(cache.timing_grid, fitter.result.grid)
+        self.assertIs(cache.timing_v3_outcome.v2_fallback_fit, fitter.result)
+        self.assertEqual(cache.timing_v3_outcome.mode, "v2")
+        self.assertEqual(cache.timing_v3_outcome.telemetry.status, "disabled")
         self.assertEqual(provider.paths, [audio_path])
         self.assertEqual(fitter.predictions, [prediction])
         self.assertIsNotNone(runtime.control_cache)
@@ -286,6 +305,99 @@ class SessionRuntimeTests(unittest.TestCase):
         runtime.prepare_control(start_ms=1_000)
         self.assertIsNone(runtime.mapper_window_cache)
 
+    def test_prepare_audio_consumes_v3_shadow_without_replacing_live_v2_grid(self) -> None:
+        mel = np.arange(3 * 160, dtype=np.float32).reshape(3, 160)
+        fitter = _FakeGridFitter()
+        captured: list[TimingEvidenceBundle] = []
+
+        def shadow_facade(
+            evidence: TimingEvidenceBundle,
+            *,
+            v2_fallback_fit: TimingFitResult,
+            mode: str,
+            max_supported_audio_duration_seconds: float,
+        ):
+            captured.append(evidence)
+            return run_timing_v3_shadow(
+                evidence,
+                v2_fallback_fit=v2_fallback_fit,
+                mode=mode,  # type: ignore[arg-type]
+                max_supported_audio_duration_seconds=max_supported_audio_duration_seconds,
+                candidate_generator=lambda prediction, *, audio_evidence=None: _accepted_tempo_result(),
+            )
+
+        runtime = SessionRuntime(
+            session_id="s1",
+            model_runtime=_fake_model_runtime(_FakeTimingProvider(_prediction(frame_count=200))),
+            config=SessionRuntimeConfig(
+                minimum_frame_count=4,
+                timing_mode="v3_shadow",
+                timing_max_supported_audio_duration_seconds=600.0,
+            ),
+            mel_loader=_fake_mel_loader(mel),
+            grid_fitter=fitter,
+            timing_v3_facade=shadow_facade,
+        )
+
+        cache = runtime.prepare_audio("song.wav", audio_length_ms=4_000)
+
+        self.assertEqual(len(captured), 1)
+        evidence = captured[0]
+        self.assertIs(evidence.beatthis_frame_probabilities, cache.beatthis_prediction)
+        self.assertIsNotNone(evidence.raw_audio_log_mel_10ms)
+        assert evidence.raw_audio_log_mel_10ms is not None
+        self.assertEqual(evidence.raw_audio_log_mel_10ms.shape, (6, 80))
+        self.assertTrue(np.array_equal(evidence.raw_audio_log_mel_10ms[0], mel[0, :80]))
+        self.assertTrue(np.array_equal(evidence.raw_audio_log_mel_10ms[1], mel[0, 80:]))
+        self.assertIs(cache.timing_grid, fitter.result.grid)
+        self.assertIs(cache.timing_v3_outcome.live_timing_grid, fitter.result.grid)
+        self.assertEqual(cache.timing_v3_outcome.telemetry.status, "completed")
+        self.assertIsNotNone(cache.timing_v3_outcome.selected_curve_canonical_bytes)
+        self.assertEqual(cache.timing_v3_outcome.to_observable_dict()["live_timing"], "v2")
+
+    def test_prepare_audio_rejects_failed_v3_shadow_outcome(self) -> None:
+        fitter = _FakeGridFitter()
+
+        def failed_facade(
+            evidence: TimingEvidenceBundle,
+            *,
+            v2_fallback_fit: TimingFitResult,
+            mode: str,
+            max_supported_audio_duration_seconds: float,
+        ) -> TimingV3Outcome:
+            del evidence, max_supported_audio_duration_seconds
+            return TimingV3Outcome(
+                mode=mode,  # type: ignore[arg-type]
+                v2_fallback_fit=v2_fallback_fit,
+                telemetry=TimingV3Telemetry(
+                    mode=mode,  # type: ignore[arg-type]
+                    status="failed",
+                    elapsed_ms=1.0,
+                    candidate_count=0,
+                    selection_status=None,
+                    fallback_reason="timing_v3_shadow_failed",
+                    selected_fingerprint_sha256=None,
+                    error_type="RuntimeError",
+                    error_message="fixture failure",
+                ),
+            )
+
+        runtime = SessionRuntime(
+            session_id="s1",
+            model_runtime=_fake_model_runtime(_FakeTimingProvider(_prediction(frame_count=200))),
+            config=SessionRuntimeConfig(
+                minimum_frame_count=4,
+                timing_mode="v3_shadow",
+            ),
+            mel_loader=_fake_mel_loader(np.zeros((3, 160), dtype=np.float32)),
+            grid_fitter=fitter,
+            timing_v3_facade=failed_facade,
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "fixture failure"):
+            runtime.prepare_audio("song.wav", audio_length_ms=4_000)
+        self.assertIsNone(runtime.audio_cache)
+
     def test_prepare_mapper_window_can_skip_control_attention_cache(self) -> None:
         mapper_model = _FakeMapperModel(control_dim=3, d_model=5)
         mapper_model.control_attention_kv_cache = None  # type: ignore[method-assign]
@@ -378,6 +490,48 @@ def _fake_model_runtime(
         beatthis_provider=provider,
         control_model=_FakeControlModel() if control_model is None else control_model,
         mapper_model=_FakeMapperModel() if mapper_model is None else mapper_model,
+    )
+
+
+def _accepted_tempo_result() -> TempoTrackResult:
+    curve = PhaseContinuousTimingCurve(
+        origin_beat=0,
+        origin_time_ms=0.0,
+        sections=(ConstantTempoSection(0, 8, 120.0),),
+    )
+    return TempoTrackResult(
+        observations=(),
+        candidates=(curve,),
+        candidate_diagnostics=(
+            TimingCandidateDiagnostic(
+                fingerprint_sha256=curve.fingerprint_sha256,
+                curve_class=curve.curve_class,
+                source="fixture",
+                generation_score=1.0,
+            ),
+        ),
+        diagnostics=TempoTrackDiagnostics(
+            version="fixture",
+            beat_peak_count=0,
+            raw_boundary_count=0,
+            pair_seed_count=0,
+            shared_start_beat=0,
+            shared_end_beat=8,
+            primary_origin_time_ms=0.0,
+            primary_bpm=120.0,
+            candidate_count=1,
+        ),
+        production_selection=TempoTrackProductionSelection(
+            status="v3_accepted",
+            selected_candidate_index=0,
+            selected_fingerprint_sha256=curve.fingerprint_sha256,
+            lane="constant",
+            fallback_reason=None,
+            raw_run=None,
+            eligible_candidate_indices=(0,),
+            raw_self_rank_by_candidate=((0, 1),),
+            beatthis_aba_rank_by_candidate=(),
+        ),
     )
 
 

@@ -1750,6 +1750,8 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
             device="cpu",
             token_send_interval_s=0.0,
             canonicalization=TIMING_CANONICALIZATION_BPM_80_160,
+            timing_mode="v3_shadow",
+            timing_max_supported_audio_duration_seconds=480.0,
         )
         backend = StreamWithCache(
             config,
@@ -1773,6 +1775,8 @@ class WsEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(created[0][2].default_normalized_difficulty, normalize_difficulty(5.0))
         self.assertEqual(created[0][2].grid_fitter_config.canonicalization, TIMING_CANONICALIZATION_BPM_80_160)
         self.assertFalse(created[0][2].grid_fitter_config.canonicalize_tempo_aliases)
+        self.assertEqual(created[0][2].timing_mode, "v3_shadow")
+        self.assertEqual(created[0][2].timing_max_supported_audio_duration_seconds, 480.0)
         self.assertEqual(fake_session.prepare_audio_calls, [(Path("/tmp/song.wav"), 1_234, 0)])
 
     async def test_mapper_v2_backend_streams_selected_window_through_music_end(self) -> None:

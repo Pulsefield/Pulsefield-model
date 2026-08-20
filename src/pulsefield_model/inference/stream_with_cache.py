@@ -70,6 +70,8 @@ class StreamWithCacheConfig:
     beatthis_float16: bool = False
     eager_load_beatthis: bool = True
     canonicalization: str = TIMING_CANONICALIZATION_NONE
+    timing_mode: str = "v2"
+    timing_max_supported_audio_duration_seconds: float = 600.0
     default_difficulty: float = 4.0
     max_control_batch_size: int = DEFAULT_MAX_CONTROL_BATCH_SIZE
     max_tokens: int = 512
@@ -162,6 +164,10 @@ class StreamWithCache:
                 default_normalized_difficulty=normalized_difficulty,
                 max_control_batch_size=int(self.config.max_control_batch_size),
                 grid_fitter_config=_grid_fitter_config_for_canonicalization(self.config.canonicalization),
+                timing_mode=self.config.timing_mode,
+                timing_max_supported_audio_duration_seconds=(
+                    self.config.timing_max_supported_audio_duration_seconds
+                ),
             ),
         )
         await asyncio.to_thread(

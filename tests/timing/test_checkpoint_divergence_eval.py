@@ -2,18 +2,11 @@ from __future__ import annotations
 
 import argparse
 import copy
-import importlib.util
 from pathlib import Path
 
 import pytest
 
-
-_MODULE_PATH = Path(__file__).parents[2] / "artifacts" / "evals" / "timing_oracle_checkpoint_divergence_eval.py"
-_SPEC = importlib.util.spec_from_file_location("timing_oracle_checkpoint_divergence_eval", _MODULE_PATH)
-assert _SPEC is not None
-checkpoint_eval = importlib.util.module_from_spec(_SPEC)
-assert _SPEC.loader is not None
-_SPEC.loader.exec_module(checkpoint_eval)
+from pulsefield_model.timing.evaluation import checkpoint_divergence as checkpoint_eval
 
 
 def test_failed_checkpoint_is_not_comparable_divergence() -> None:

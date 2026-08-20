@@ -177,6 +177,37 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(prediction.source_path, "song.wav")
         self.assertEqual(audio_shift_samples_for_ms(5.0, 44100), 221)
 
+    def test_beatthis_load_file_falls_back_to_ffmpeg_pcm(self) -> None:
+        expected_audio = np.asarray([[0.25, -0.25], [-0.5, 0.5], [0.75, -0.75]], dtype=np.float32)
+
+        def failing_loader(_: str | Path) -> tuple[np.ndarray, int]:
+            raise RuntimeError("primary decode failed")
+
+        provider = BeatThisTimingProvider()
+        completed = mock.Mock(
+            returncode=0,
+            stdout=b"",
+            stderr=b"",
+        )
+        with mock.patch.object(
+            beatthis,
+            "_load_beat_this_api",
+            return_value=beatthis.BeatThisAPI(_FakeAudio2Frames, failing_loader),
+        ):
+            with mock.patch.object(beatthis.subprocess, "run", return_value=completed) as run:
+                with mock.patch("soundfile.read", return_value=(expected_audio, 44100)) as read:
+                    audio, sample_rate = provider.load_file("broken.mp3")
+
+        np.testing.assert_array_equal(audio, expected_audio)
+        self.assertEqual(sample_rate, 44100)
+        command = run.call_args.args[0]
+        self.assertEqual(command[0], "ffmpeg")
+        self.assertIn("broken.mp3", command)
+        self.assertEqual(command[-2], "-y")
+        self.assertEqual(Path(command[-1]).suffix, ".wav")
+        self.assertEqual(read.call_args.args[0], Path(command[-1]))
+        self.assertFalse(Path(command[-1]).exists())
+
     def test_oracle_provider_renders_dense_timing_from_osu_red_points(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             osu_path = Path(tmp_dir) / "map.osu"

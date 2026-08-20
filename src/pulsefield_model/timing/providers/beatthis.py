@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -45,7 +47,10 @@ class BeatThisTimingProvider:
         return self._predict_audio(signal, sample_rate, source_path=audio_path)
 
     def load_file(self, audio_path: str | Path) -> tuple[Any, int]:
-        return self._get_api().load_audio(audio_path)
+        try:
+            return self._get_api().load_audio(audio_path)
+        except Exception as primary_error:  # noqa: BLE001 - fallback boundary for third-party decoders.
+            return _load_audio_with_ffmpeg(audio_path, primary_error=primary_error)
 
     def predict_audio(
         self,
@@ -115,6 +120,65 @@ def _load_beat_this_api() -> BeatThisAPI:
         ) from exc
 
     return BeatThisAPI(audio2frames_cls=Audio2Frames, load_audio=load_audio)
+
+
+def _load_audio_with_ffmpeg(
+    audio_path: str | Path,
+    *,
+    primary_error: Exception,
+) -> tuple[NDArray[np.float32], int]:
+    path = Path(audio_path)
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as handle:
+        decoded_path = Path(handle.name)
+    try:
+        command = [
+            "ffmpeg",
+            "-nostdin",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-c:a",
+            "pcm_f32le",
+            "-y",
+            str(decoded_path),
+        ]
+        try:
+            completed = subprocess.run(
+                command,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
+        except OSError as ffmpeg_error:
+            raise RuntimeError(
+                f'Could not load audio from "{path}": primary decoders failed and ffmpeg is unavailable.'
+            ) from ffmpeg_error
+
+        if completed.returncode != 0:
+            stderr = completed.stderr.decode("utf-8", errors="replace").strip()
+            detail = stderr[-1000:] if stderr else f"ffmpeg exited with code {completed.returncode}"
+            raise RuntimeError(
+                f'Could not load audio from "{path}": primary decoders failed; ffmpeg fallback failed: {detail}'
+            ) from primary_error
+
+        try:
+            import soundfile as sf
+
+            audio, sample_rate = sf.read(decoded_path, dtype="float32", always_2d=False)
+        except Exception as decoded_error:
+            raise RuntimeError(
+                f'Could not load audio from "{path}": ffmpeg output could not be read.'
+            ) from decoded_error
+        audio = np.ascontiguousarray(audio, dtype=np.float32)
+        if audio.size == 0:
+            raise RuntimeError(f'Could not load audio from "{path}": ffmpeg produced empty audio.')
+        return audio, int(sample_rate)
+    finally:
+        decoded_path.unlink(missing_ok=True)
 
 
 def audio_shift_samples_for_ms(shift_ms: float, sample_rate: int) -> int:

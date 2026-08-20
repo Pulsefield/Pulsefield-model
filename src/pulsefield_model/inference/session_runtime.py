@@ -18,6 +18,16 @@ from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_DENSITY_FRAME
 from pulsefield_model.timing.grid_fitting import GridFitter, GridFitterConfig, TimingFitResult
 from pulsefield_model.timing.rendering.dense_timing_v2 import render_dense_timing_v2
 from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction
+from pulsefield_model.timing.v3.inference import (
+    TIMING_INFERENCE_MODES,
+    TIMING_MODE_V3_SHADOW,
+    TimingEvidenceBundle,
+    TimingInferenceMode,
+    TimingV3Facade,
+    TimingV3Outcome,
+    run_timing_v3_shadow,
+    unpack_packed_mel_20ms_to_log_mel_10ms,
+)
 
 
 PACKED_MEL_CHANNELS = 160
@@ -46,6 +56,8 @@ class SessionRuntimeConfig:
     default_normalized_difficulty: float = 0.0
     max_control_batch_size: int = DEFAULT_MAX_CONTROL_BATCH_SIZE
     grid_fitter_config: GridFitterConfig = field(default_factory=GridFitterConfig)
+    timing_mode: TimingInferenceMode = "v2"
+    timing_max_supported_audio_duration_seconds: float = 600.0
 
     def __post_init__(self) -> None:
         if isinstance(self.minimum_frame_count, bool) or not isinstance(self.minimum_frame_count, int):
@@ -63,6 +75,22 @@ class SessionRuntimeConfig:
             raise TypeError("max_control_batch_size must be an integer")
         if self.max_control_batch_size <= 0:
             raise ValueError("max_control_batch_size must be positive")
+        if self.timing_mode not in TIMING_INFERENCE_MODES:
+            raise ValueError(
+                f"timing_mode must be one of {TIMING_INFERENCE_MODES}, got {self.timing_mode!r}",
+            )
+        if isinstance(self.timing_max_supported_audio_duration_seconds, bool) or not isinstance(
+            self.timing_max_supported_audio_duration_seconds,
+            (int, float),
+        ):
+            raise TypeError("timing_max_supported_audio_duration_seconds must be numeric")
+        if (
+            not np.isfinite(float(self.timing_max_supported_audio_duration_seconds))
+            or float(self.timing_max_supported_audio_duration_seconds) <= 0.0
+        ):
+            raise ValueError(
+                "timing_max_supported_audio_duration_seconds must be positive and finite",
+            )
 
 
 @dataclass(frozen=True)
@@ -81,6 +109,7 @@ class SessionAudioCache:
     beatthis_prediction: FrameTimingPrediction
     timing_fit_result: TimingFitResult
     timing_grid: FittedTimingGrid
+    timing_v3_outcome: TimingV3Outcome
 
     def as_model_batch(self) -> dict[str, torch.Tensor]:
         return {
@@ -203,6 +232,7 @@ class SessionRuntime:
     config: SessionRuntimeConfig = field(default_factory=SessionRuntimeConfig)
     mel_loader: MelLoader = load_full_song_packed_mel_20ms
     grid_fitter: TimingGridFitter | None = None
+    timing_v3_facade: TimingV3Facade = field(default=run_timing_v3_shadow, repr=False)
     audio_cache: SessionAudioCache | None = field(default=None, init=False)
     control_cache: SessionControlCache | None = field(default=None, init=False)
     control_batch_cache: SessionControlBatchCache | None = field(default=None, init=False)
@@ -244,9 +274,40 @@ class SessionRuntime:
         with torch.inference_mode():
             prediction = provider.predict_file(path)
         fit_result = self.grid_fitter.fit(prediction)
+        raw_audio_log_mel_10ms = None
+        if (
+            self.config.timing_mode == TIMING_MODE_V3_SHADOW
+            and resolved_audio_length_ms
+            <= 1000.0 * self.config.timing_max_supported_audio_duration_seconds
+        ):
+            raw_audio_log_mel_10ms = unpack_packed_mel_20ms_to_log_mel_10ms(
+                packed_mel_cpu.numpy(),
+            )
+        timing_v3_outcome = self.timing_v3_facade(
+            TimingEvidenceBundle(
+                beatthis_frame_probabilities=prediction,
+                audio_duration_seconds=resolved_audio_length_ms / 1000.0,
+                raw_audio_log_mel_10ms=raw_audio_log_mel_10ms,
+            ),
+            v2_fallback_fit=fit_result,
+            mode=self.config.timing_mode,
+            max_supported_audio_duration_seconds=(
+                self.config.timing_max_supported_audio_duration_seconds
+            ),
+        )
+        if not isinstance(timing_v3_outcome, TimingV3Outcome):
+            raise TypeError("timing_v3_facade must return TimingV3Outcome")
+        if timing_v3_outcome.v2_fallback_fit is not fit_result:
+            raise ValueError("Timing-v3 outcome must retain the current v2 fit as fallback")
+        if timing_v3_outcome.telemetry.status == "failed":
+            error_type = timing_v3_outcome.telemetry.error_type or "unknown error"
+            error_message = timing_v3_outcome.telemetry.error_message or "no details"
+            raise RuntimeError(
+                f"Timing-v3 shadow failed ({error_type}): {error_message}",
+            )
         dense_timing_cpu = _as_2d_float32_cpu_tensor(
             render_dense_timing_v2(
-                fit_result.grid,
+                timing_v3_outcome.live_timing_grid,
                 input_start_ms=0.0,
                 frame_count=padded_frame_count,
             ),
@@ -274,7 +335,8 @@ class SessionRuntime:
             padded_frame_count=padded_frame_count,
             beatthis_prediction=prediction,
             timing_fit_result=fit_result,
-            timing_grid=fit_result.grid,
+            timing_grid=timing_v3_outcome.live_timing_grid,
+            timing_v3_outcome=timing_v3_outcome,
         )
         self.audio_cache = cache
         self.prepare_control(start_ms=start_ms)
@@ -644,6 +706,7 @@ class SessionRuntime:
             beatthis_prediction=cache.beatthis_prediction,
             timing_fit_result=cache.timing_fit_result,
             timing_grid=cache.timing_grid,
+            timing_v3_outcome=cache.timing_v3_outcome,
         )
         self.audio_cache = expanded
         self.mapper_window_cache = None

@@ -43,6 +43,8 @@ def test_default_inference_service_projection_matches_current_endpoint_defaults(
     assert endpoint_config.control_checkpoint_path == DEFAULT_CONTROL_CHECKPOINT_PATH
     assert endpoint_config.beatthis_checkpoint == "final0"
     assert endpoint_config.device == DEFAULT_RUNTIME_DEVICE
+    assert endpoint_config.timing_mode == "v2"
+    assert endpoint_config.timing_max_supported_audio_duration_seconds == 600.0
 
 
 def test_inference_identity_and_timing_checkpoint_overrides_reach_endpoint_config() -> None:
@@ -65,6 +67,9 @@ def test_mapping_adapter_rejects_unknown_keys_without_hydra_dependency() -> None
     with pytest.raises(ValueError, match="unknown InferenceMapperConfig key"):
         inference_service_config_from_mapping({"mapper": {"unexpected": True}})
 
+    with pytest.raises(ValueError, match="unknown InferenceTimingConfig key"):
+        inference_service_config_from_mapping({"timing": {"unexpected": True}})
+
 
 def test_default_hydra_composition_exposes_reviewable_contract() -> None:
     config = _compose()
@@ -81,13 +86,33 @@ def test_default_hydra_composition_exposes_reviewable_contract() -> None:
     assert config.protocol.mapper_capability_name == "mapper.tuple_tokens"
     assert config.protocol.mapper_token_contract_version == 2
     assert Path(config.protocol.mapper_manifest_path).name == "hitobject_token_manifest_v2.json"
+    assert config.timing.mode == "v2"
+    assert config.timing.max_supported_audio_duration_seconds == 600.0
 
 
 def test_hydra_configs_are_package_resources() -> None:
     package_root = resources.files("pulsefield_model")
 
     assert package_root.joinpath("configs/inference/service.yaml").is_file()
+    assert package_root.joinpath("configs/inference/timing/mock_default.yaml").is_file()
+    assert package_root.joinpath("configs/inference/timing/v3_shadow.yaml").is_file()
     assert package_root.joinpath("configs/hydra/mapper_training.yaml").is_file()
+
+
+def test_hydra_timing_group_selects_v3_shadow_and_projects_every_field() -> None:
+    config = _compose(
+        [
+            "timing=v3_shadow",
+            "timing.max_supported_audio_duration_seconds=480.0",
+        ],
+    )
+
+    endpoint_config = project_to_ws_endpoint_config(config)
+
+    assert config.timing.mode == "v3_shadow"
+    assert config.timing.max_supported_audio_duration_seconds == 480.0
+    assert endpoint_config.timing_mode == "v3_shadow"
+    assert endpoint_config.timing_max_supported_audio_duration_seconds == 480.0
 
 
 def test_hydra_mapper_groups_select_supported_profiles() -> None:
@@ -118,7 +143,15 @@ def test_explicit_mapper_checkpoint_override_wins_over_profile_default() -> None
     assert project_to_ws_endpoint_config(config).mapper_checkpoint_path == Path("artifacts/custom.pt")
 
 
-@pytest.mark.parametrize("override", ("mapper.unexpected=true", "+mapper.unexpected=true"))
+@pytest.mark.parametrize(
+    "override",
+    (
+        "mapper.unexpected=true",
+        "+mapper.unexpected=true",
+        "timing.unexpected=true",
+        "+timing.unexpected=true",
+    ),
+)
 def test_hydra_composition_rejects_unknown_nested_keys(override: str) -> None:
     from pulsefield_model.inference.hydra_entry import compose_inference_service_config
 
@@ -131,6 +164,13 @@ def test_hydra_composition_rejects_invalid_canonicalization() -> None:
 
     with pytest.raises(ValueError, match="canonicalization must be one of"):
         compose_inference_service_config(["runtime.canonicalization=bogus"])
+
+
+def test_hydra_composition_rejects_unknown_timing_mode() -> None:
+    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+
+    with pytest.raises(ValueError, match="timing.mode must be one of"):
+        compose_inference_service_config(["timing.mode=live_v3"])
 
 
 def test_hydra_composition_rejects_disabled_timing_mock_route() -> None:
@@ -183,6 +223,14 @@ def test_hydra_composition_rejects_auto_mapper_profile() -> None:
         ("runtime.default_difficulty=nan", "runtime.default_difficulty"),
         ("runtime.default_difficulty=7.0", "runtime.default_difficulty"),
         ("runtime.max_control_batch_size=0", "runtime.max_control_batch_size"),
+        (
+            "timing.max_supported_audio_duration_seconds=0",
+            "timing.max_supported_audio_duration_seconds",
+        ),
+        (
+            "timing.max_supported_audio_duration_seconds=nan",
+            "timing.max_supported_audio_duration_seconds",
+        ),
     ),
 )
 def test_hydra_composition_rejects_invalid_numeric_boundaries(override: str, match: str) -> None:

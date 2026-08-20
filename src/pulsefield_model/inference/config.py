@@ -45,6 +45,10 @@ from pulsefield_model.inference.mapper_protocol import (
 )
 
 
+TIMING_INFERENCE_MODE_CHOICES = ("v2", "v3_shadow")
+DEFAULT_TIMING_MAX_SUPPORTED_AUDIO_DURATION_SECONDS = 600.0
+
+
 @dataclass
 class InferenceServerConfig:
     host: str = DEFAULT_HOST
@@ -85,6 +89,14 @@ class InferenceMapperConfig:
 
 
 @dataclass
+class InferenceTimingConfig:
+    mode: str = "v2"
+    max_supported_audio_duration_seconds: float = (
+        DEFAULT_TIMING_MAX_SUPPORTED_AUDIO_DURATION_SECONDS
+    )
+
+
+@dataclass
 class TimingMockConfig:
     enabled: bool = True
     route: str = "timing_mock"
@@ -104,6 +116,7 @@ class InferenceServiceConfig:
     server: InferenceServerConfig = field(default_factory=InferenceServerConfig)
     runtime: InferenceRuntimeConfig = field(default_factory=InferenceRuntimeConfig)
     mapper: InferenceMapperConfig = field(default_factory=InferenceMapperConfig)
+    timing: InferenceTimingConfig = field(default_factory=InferenceTimingConfig)
     timing_mock: TimingMockConfig = field(default_factory=TimingMockConfig)
     protocol: InferenceProtocolConfig = field(default_factory=InferenceProtocolConfig)
 
@@ -157,6 +170,10 @@ def project_to_ws_endpoint_config(config: InferenceServiceConfig) -> "WsEndpoint
         canonicalization=str(config.runtime.canonicalization),
         default_difficulty=float(config.runtime.default_difficulty),
         max_control_batch_size=int(config.runtime.max_control_batch_size),
+        timing_mode=str(config.timing.mode),
+        timing_max_supported_audio_duration_seconds=float(
+            config.timing.max_supported_audio_duration_seconds,
+        ),
         max_tokens=int(config.mapper.max_tokens),
         temperature=float(config.mapper.temperature),
         top_p=config.mapper.top_p,
@@ -180,6 +197,7 @@ def validate_inference_service_config(config: InferenceServiceConfig) -> None:
         _require_nonempty_string(config.mapper.checkpoint_path, "mapper.checkpoint_path")
     _require_nonempty_string(config.timing_mock.model_id, "timing_mock.model_id")
     _require_nonempty_string(config.timing_mock.timing_checkpoint_path, "timing_mock.timing_checkpoint_path")
+    _require_timing_inference_mode(config.timing.mode)
     _require_timing_canonicalization(config.runtime.canonicalization)
     _validate_numeric_bounds(config)
 
@@ -234,6 +252,17 @@ def _validate_numeric_bounds(config: InferenceServiceConfig) -> None:
             f"{SUPPORTED_DIFFICULTY_MIN:.1f}..{SUPPORTED_DIFFICULTY_MAX:.1f} range",
         )
     _require_positive_int(config.runtime.max_control_batch_size, "runtime.max_control_batch_size")
+    _require_positive_finite_float(
+        config.timing.max_supported_audio_duration_seconds,
+        "timing.max_supported_audio_duration_seconds",
+    )
+
+
+def _require_timing_inference_mode(mode: str) -> str:
+    if mode not in TIMING_INFERENCE_MODE_CHOICES:
+        choices = ", ".join(TIMING_INFERENCE_MODE_CHOICES)
+        raise ValueError(f"timing.mode must be one of {choices}, got {mode!r}")
+    return mode
 
 
 def _require_timing_canonicalization(canonicalization: str) -> str:
@@ -300,11 +329,14 @@ def _friendly_structured_config_error(exc: Exception) -> str:
 
 
 __all__ = [
+    "DEFAULT_TIMING_MAX_SUPPORTED_AUDIO_DURATION_SECONDS",
     "InferenceMapperConfig",
     "InferenceProtocolConfig",
     "InferenceRuntimeConfig",
     "InferenceServerConfig",
     "InferenceServiceConfig",
+    "InferenceTimingConfig",
+    "TIMING_INFERENCE_MODE_CHOICES",
     "TimingMockConfig",
     "default_inference_service_config",
     "inference_service_config_from_mapping",

@@ -10,6 +10,15 @@ from pulsefield_model.timing.providers.beatthis import (
     BeatThisTimingProvider,
     audio_shift_samples_for_ms,
 )
+from pulsefield_model.timing.providers.beatthis_cache import (
+    DEFAULT_BEATTHIS_FRAME_PREDICTION_CACHE_CONFIG,
+    BeatThisFramePredictionCacheConfig,
+    BeatThisFramePredictionCacheError,
+    beatthis_audio_cache_key,
+    beatthis_frame_prediction_cache_path,
+    load_beatthis_frame_prediction_cache,
+    save_beatthis_frame_prediction_cache,
+)
 from pulsefield_model.timing.providers.oracle import (
     DEFAULT_ORACLE_DENSE_TIMING_CACHE_CONFIG,
     DEFAULT_ORACLE_TIMING_CONFIG,
@@ -33,15 +42,22 @@ __all__ = [
     "DEFAULT_ORACLE_TIMING_CONFIG",
     "BeatThisAPI",
     "BeatThisDependencyError",
+    "BeatThisFramePredictionCacheConfig",
+    "BeatThisFramePredictionCacheError",
     "BeatThisTimingProvider",
+    "DEFAULT_BEATTHIS_FRAME_PREDICTION_CACHE_CONFIG",
     "audio_shift_samples_for_ms",
+    "beatthis_audio_cache_key",
+    "beatthis_frame_prediction_cache_path",
     "ORACLE_TIMING_PROVIDER_NAME",
     "OracleDenseTimingCacheConfig",
     "OracleTimingConfig",
     "OracleTimingProvider",
     "fitted_timing_grid_from_red_points",
+    "load_beatthis_frame_prediction_cache",
     "load_or_create_oracle_dense_timing_v2_cache",
     "oracle_timing_grid_from_beatmap",
     "oracle_dense_timing_v2_cache_path",
     "render_oracle_dense_timing_v2",
+    "save_beatthis_frame_prediction_cache",
 ]
