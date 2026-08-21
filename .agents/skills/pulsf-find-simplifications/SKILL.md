@@ -120,7 +120,7 @@ Record rejected candidates during a broad audit so repeated searches do not turn
 
 Audit decision records when the user requests consolidation or when an implemented simplification makes a scoped owner obsolete. Do not expand every code survey into a repository-wide documentation cleanup.
 
-Use `pulsf-archive-agent-notes` for semantic retention and archive mechanics. Pulsefield may not have an Agent Note lifecycle tree; do not invent one. For full supersession, transfer every unique rationale, alternative, consequence, verification fact, negative guarantee, and reintroduction condition to the current owner before repairing inbound links and retiring the old record. Keep partial supersessions cross-linked.
+Use `pulsf-archive-agent-notes` for records under `artifacts/agent-notes/`. For full supersession, transfer every unique rationale, alternative, consequence, verification fact, negative guarantee, and reintroduction condition to the current owner before repairing inbound links and archiving the old record. Keep partial supersessions cross-linked.
 
 ## Write the result at the right scale
 
@@ -136,7 +136,7 @@ For each durable candidate, report:
 - smallest verification that could falsify the proposal;
 - risk, confidence, and any evidence gap.
 
-Prefer a compact user-facing audit unless the user requests files. If a lifecycle-managed decision-record system exists and writing is authorized, follow it. Otherwise do not create `.agents/notes/` or a new design-doc taxonomy. Put a durable conclusion in an existing curated `docs/` location only when it is self-contained and the request authorizes documentation changes.
+Prefer a compact user-facing audit unless the user requests files. When a local decision record is requested, use the Agent Note lifecycle under `artifacts/agent-notes/`. Put a repository-wide durable conclusion in an existing curated `docs/` location only when it is self-contained and the request authorizes documentation changes.
 
 Use inline `TODO`/`FIXME`/`XXX` only for a small local cleanup with a clear action. Include a stable tag and the reason it is safe to revisit, for example `TODO(config-owner): remove the fallback after the legacy entrypoint is deleted`. Do not leave speculative complaints or hide a design decision in a TODO.
 

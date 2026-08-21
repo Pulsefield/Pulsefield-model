@@ -146,7 +146,8 @@ for understanding the repository.
 | --- | --- |
 | Repository-wide coding-agent entrypoints | [`AGENTS.md`](AGENTS.md) |
 | Hydra configuration, preset, projection, and CLI changes | [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) |
-| Open or still-diffuse research questions and bounded experiment planning | [`.agents/skills/research-triage/`](.agents/skills/research-triage/) |
+| Research direction, analogue search, experiment design, and result evaluation | [`.agents/skills/research-triage/`](.agents/skills/research-triage/) |
+| Local Agent Note content and lifecycle | [`.agents/skills/pulsf-archive-agent-notes/`](.agents/skills/pulsf-archive-agent-notes/) |
 | Root-cause analyses, performance investigations, and postmortems | [`docs/guides/technical_analysis_writing.md`](docs/guides/technical_analysis_writing.md) |
 | MPS memory and throughput investigations | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
 | Worked MPS memory root-cause analysis | [`docs/research/mapper_v2_1_mps_memory_root_cause_report.md`](docs/research/mapper_v2_1_mps_memory_root_cause_report.md) |
@@ -166,7 +167,7 @@ remains the shared reference for project orientation and runnable commands.
 | `src/pulsefield_model/inference/` | Runtime loading, model bundles, sessions, streaming, protocol translation, and `.osu` export |
 | `src/pulsefield_model/training/` | Training runners, Hydra projection, resume logic, and overnight wrappers |
 | `tests/` | Unit tests and focused integration tests |
-| `artifacts/` | Local generated evaluations, reports, checkpoints, caches, and run snapshots; not a source of truth |
+| `artifacts/` | Local Agent Notes, generated evaluations, reports, checkpoints, caches, and run snapshots; not a repository source of truth |
 | `ref-proj/` | Reference projects used for comparison, never as authority |
 
 Populate the optional reference-project submodules only when that comparison work is needed:

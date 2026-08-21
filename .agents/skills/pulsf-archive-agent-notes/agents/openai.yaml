@@ -1,4 +1,4 @@
 interface:
-  display_name: "Pulsefield Archive Agent Notes"
-  short_description: "Classify and retire stale decision notes."
-  default_prompt: "Use $pulsf-archive-agent-notes to classify and archive these Pulsefield decision notes without losing durable rationale."
+  display_name: "Pulsefield Agent Notes"
+  short_description: "Manage local research and decision records."
+  default_prompt: "Use $pulsf-archive-agent-notes to create or update this Pulsefield Agent Note and apply its lifecycle under artifacts/agent-notes/."

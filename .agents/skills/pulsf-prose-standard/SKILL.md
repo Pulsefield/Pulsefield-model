@@ -1,13 +1,13 @@
 ---
 name: pulsf-prose-standard
-description: Use when writing, reviewing, trimming, restoring, or auditing prose in Pulsefield Model across README and docs, skills and agent instructions, research records, Python comments and docstrings, tests, Hydra YAML comments, diagnostics, prompts, protocol text, and CLI-visible strings. Preserve complete technical contracts, add missing coverage, remove reasoning transcripts and repetition, and route durable facts to their owning source.
+description: Use when writing, reviewing, trimming, restoring, or auditing Pulsefield prose for technical completeness, precision, placement, and readability across docs, skills, comments, diagnostics, prompts, protocol text, and CLI strings. Route authoring-session and reasoning-transcript leakage audits to pulsf-trim-cot-leakage.
 ---
 
 # Pulsefield Prose Standard
 
-Write enough to preserve the contract, then remove reasoning transcripts, repetition, decoration, and stale authoring context. Treat a contract as any obligation, invariant, precondition, postcondition, ownership rule, failure behavior, timing rule, or compatibility promise that a caller, operator, implementer, producer, or consumer relies on.
+Write enough to preserve the contract, then remove repetition and decoration. Treat a contract as any obligation, invariant, precondition, postcondition, ownership rule, failure behavior, timing rule, or compatibility promise that a caller, operator, implementer, producer, or consumer relies on.
 
-Use this skill for editorial judgment and required prose coverage. Use [`technical_analysis_writing.md`](../../../docs/guides/technical_analysis_writing.md) for the structure and evidentiary standard of root-cause analyses, performance investigations, and postmortems. Use [`hydra-conventions`](../hydra-conventions/SKILL.md) when prose describes Hydra ownership or projection. Use [`research-triage`](../research-triage/SKILL.md) for planning artifacts rather than finished technical narrative.
+Use this skill for editorial judgment and required prose coverage. Use [`pulsf-trim-cot-leakage`](../pulsf-trim-cot-leakage/SKILL.md) for authoring-session leakage. Use [`technical_analysis_writing.md`](../../../docs/guides/technical_analysis_writing.md) for root-cause analyses, performance investigations, and postmortems. Use [`hydra-conventions`](../hydra-conventions/SKILL.md) for Hydra ownership or projection, [`research-triage`](../research-triage/SKILL.md) for research direction and evaluation, and [`pulsf-archive-agent-notes`](../pulsf-archive-agent-notes/SKILL.md) for local research-record content and lifecycle.
 
 Prefer the exact API, field, type, validation, phase, counter, component, or failure state over vague nouns such as “shape,” “surface,” “seam,” or “boundary.” Keep an abstract term when it names the precise technical subject, such as a process configuration boundary or a protocol compatibility contract.
 

@@ -7,7 +7,7 @@ Use these searches as probes for the taxonomy in `../SKILL.md`. Every hit requir
 - Replace `<scope>` with the explicit file or directory supplied by the task. Do not default it to the repository root.
 - Use `--hidden --glob '!.git/**'` when `.agents/` belongs to scope; ripgrep otherwise skips hidden paths.
 - Place exclusion globs after inclusion globs so a later include cannot re-admit them.
-- Exclude `.venv/**`, `artifacts/**`, `ref-proj/**`, `**/__pycache__/**`, `.pytest_cache/**`, `*.egg-info/**`, and this skill's own directory unless the user explicitly targets one.
+- Exclude `.venv/**`, `artifacts/**`, `ref-proj/**`, `**/__pycache__/**`, `.pytest_cache/**`, `*.egg-info/**`, and this skill's own directory unless the user explicitly targets one. Remove the `artifacts/**` exclusion when the scope is `artifacts/agent-notes/`.
 - Exclude `pulsf-prose-standard/references/examples.md` during a broad skill audit because it intentionally quotes bad prose for calibration.
 - Do not broadly scan generated datasets, checkpoints, run snapshots, recorded outputs, or notebook outputs. Narrow to authored Markdown or source cells when a notebook is explicitly in scope.
 - Use case-insensitive matching for natural-language probes, but keep identifier probes case-sensitive where capitalization reduces noise.
@@ -76,7 +76,7 @@ Research-triage templates legitimately contain planning labels. Finished analyse
 rg -n --hidden -i 'terminal output above|result above|chat above|local run|notebook cell [0-9]+|/tmp/|artifacts/[^ )]+' <scope> <exclusions>
 ```
 
-An exact artifact path can be valid in a local result log. In curated docs, preserve the claim's evidence and provenance without making a fresh clone depend on unretained state.
+An exact artifact path can be valid in a local result log or Agent Note. In curated docs, preserve the claim's evidence and provenance without making a fresh clone depend on unretained state.
 
 ## Mixed-language and scaffolding battery
 
