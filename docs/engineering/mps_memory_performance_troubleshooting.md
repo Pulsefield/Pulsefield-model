@@ -21,9 +21,13 @@ Each pattern points to a different owner.
 | --- | --- | --- |
 | Python and Autograd | Containers, closures, hooks, batches, outputs, saved tensors, and gradients | Live references, tensor aliases, and saved-tensor inspection |
 | Active allocator blocks (`A`) | Storage currently known as active by the PyTorch MPS allocator | `torch.mps.current_allocated_memory()` |
-| Allocator heap capacity (`H`) | Active blocks plus reusable blocks and slack inside MPS heaps | Diagnostic allocator events |
 | Driver memory (`D`) | Allocator heaps plus other Metal/runtime allocations | `torch.mps.driver_allocated_memory()` |
 | Process memory | Python, native libraries, mappings, graphics, compressed pages, and other overlapping VM ledgers | Physical footprint, RSS, compression, swap, and system pressure |
+
+Allocator heap capacity (`H`) is an advanced diagnostic signal rather than an
+ordinary runtime counter. The worked report reconstructs `H` from heap events
+emitted with `PYTORCH_DEBUG_MPS_ALLOCATOR=31`; see its
+[memory accounting model](../research/mapper_v2_1_mps_memory_root_cause_report.md#memory-accounting-model).
 
 These layers have different release points. `del` removes one Python reference,
 `gc.collect()` handles unreachable cycles, and `torch.mps.synchronize()` waits
@@ -44,7 +48,8 @@ bytes = batch * heads * sequence_length^2 * bytes_per_element
 
 A small shape change can select a much larger allocator class. Allocation order
 also matters: free capacity may exist without one suitable contiguous block.
-When tracing is available, separate request, block, and heap sizes.
+The advanced allocator trace described above can separate request, block, and
+heap sizes.
 
 ## A useful investigation sequence
 
@@ -83,5 +88,5 @@ unload.
 
 The
 [Mapper MPS root-cause report](../research/mapper_v2_1_mps_memory_root_cause_report.md)
-is a worked example. Its investigation method is reusable; its measurements
-are case-specific.
+shows this investigation frame applied to Mapper v2.1. Its measurements and
+conclusions are case-specific.

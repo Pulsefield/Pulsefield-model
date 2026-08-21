@@ -139,21 +139,18 @@ Mapper inference YAML selects a profile. `MAPPER_PROFILE_SPECS` owns profile-der
 
 ## Guides and workflows
 
-These resources apply to specific kinds of work. They are not prerequisites
-for understanding the repository.
+Use [`AGENTS.md`](AGENTS.md) as the repository-wide entrypoint for coding-agent
+task routing. The other resources are human-facing analysis guides and examples;
+they are not prerequisites for understanding the repository.
 
-| Work | Resource |
+| Purpose | Resource |
 | --- | --- |
-| Repository-wide coding-agent entrypoints | [`AGENTS.md`](AGENTS.md) |
-| Hydra configuration, preset, projection, and CLI changes | [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) |
-| Research direction, analogue search, experiment design, and result evaluation | [`.agents/skills/research-triage/`](.agents/skills/research-triage/) |
-| Git-tracked Agent Note lifecycle on the separate `agent-notes` branch | [`.agents/skills/pulsf-archive-agent-notes/`](.agents/skills/pulsf-archive-agent-notes/) |
 | Root-cause analyses, performance investigations, and postmortems | [`docs/guides/technical_analysis_writing.md`](docs/guides/technical_analysis_writing.md) |
 | MPS memory and throughput investigations | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
 | Worked MPS memory root-cause analysis | [`docs/research/mapper_v2_1_mps_memory_root_cause_report.md`](docs/research/mapper_v2_1_mps_memory_root_cause_report.md) |
 
-Coding agents use `AGENTS.md` as the repository-wide entrypoint. This README
-remains the shared reference for project orientation and runnable commands.
+This README remains the shared reference for project orientation and runnable
+commands.
 
 ## Repository map
 
