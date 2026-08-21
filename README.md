@@ -87,7 +87,7 @@ The main entrypoints are:
 | Show inference options | `uv run --extra mps python -m pulsefield_model.inference.hydra_entry --help` |
 | Start the local WebSocket service | `uv run --extra mps python -m pulsefield_model.inference.hydra_entry` |
 | Show mapper training options | `uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --help` |
-| Validate a training preset without training | `uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --dry-run output.output_dir=/tmp/pulsefield-dry-run output.resume_from=null` |
+| Validate a training preset without training | `uv run --extra mps python -m pulsefield_model.training.mapper_training_hydra --dry-run output.output_dir="$(mktemp -d)" output.resume_from=null` |
 
 Inference needs the checkpoints selected by the mapper profile and timing config. Override their Hydra fields when the defaults are not present locally. A training dry run writes `hydra_resolved_config.yaml` and `legacy_run_config.yaml`; the latter is a flattened runner adapter, not a second configuration source.
 
@@ -146,7 +146,8 @@ for understanding the repository.
 | --- | --- |
 | Repository-wide coding-agent entrypoints | [`AGENTS.md`](AGENTS.md) |
 | Hydra configuration, preset, projection, and CLI changes | [`.agents/skills/hydra-conventions/`](.agents/skills/hydra-conventions/) |
-| Open or still-diffuse research questions and bounded experiment planning | [`.agents/skills/research-triage/`](.agents/skills/research-triage/) |
+| Research direction, analogue search, experiment design, and result evaluation | [`.agents/skills/research-triage/`](.agents/skills/research-triage/) |
+| Git-tracked Agent Note lifecycle on the separate `agent-notes` branch | [`.agents/skills/pulsf-archive-agent-notes/`](.agents/skills/pulsf-archive-agent-notes/) |
 | Root-cause analyses, performance investigations, and postmortems | [`docs/guides/technical_analysis_writing.md`](docs/guides/technical_analysis_writing.md) |
 | MPS memory and throughput investigations | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
 | Worked MPS memory root-cause analysis | [`docs/research/mapper_v2_1_mps_memory_root_cause_report.md`](docs/research/mapper_v2_1_mps_memory_root_cause_report.md) |
@@ -166,7 +167,8 @@ remains the shared reference for project orientation and runnable commands.
 | `src/pulsefield_model/inference/` | Runtime loading, model bundles, sessions, streaming, protocol translation, and `.osu` export |
 | `src/pulsefield_model/training/` | Training runners, Hydra projection, resume logic, and overnight wrappers |
 | `tests/` | Unit tests and focused integration tests |
-| `artifacts/` | Local generated evaluations, reports, checkpoints, caches, and run snapshots; not a source of truth |
+| `artifacts/agent-notes/` on `agent-notes` | Git-tracked working decision and research history; absent from product branches and not a product source of truth |
+| Other `artifacts/` | Ignored local evaluations, reports, checkpoints, caches, and run snapshots; not a repository source of truth |
 | `ref-proj/` | Reference projects used for comparison, never as authority |
 
 Populate the optional reference-project submodules only when that comparison work is needed:

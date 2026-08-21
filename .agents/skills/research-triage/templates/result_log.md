@@ -1,73 +1,57 @@
-# Result Log
+### Result Log: <result-log-id>
 
-## Mode
+#### Experiment and Reproduction
 
-- Mode: executor
-- Experiment Card existed before execution: yes | no
-- Route entering executor: TEST
-- Stopped and returned to planner mode: yes | no
-- Source snapshot / evidence grade:
+- Owning Agent Note ID and accepted revision (`none` if exploratory):
+- Experiment Card ID and revision (`none` if no Card):
+- Baseline source revision and worktree state:
+- Intervention source revision and worktree state:
+- Baseline run or evidence IDs:
+- Intervention run IDs:
+- Baseline command or procedure:
+- Intervention command or procedure:
+- Environment, dependencies, and hardware:
+- Baseline and intervention seeds:
+- Dataset slice and identity:
+- Baseline config and checkpoint identities:
+- Intervention identity:
+- Output artifact paths or stable IDs:
+- Output collision, overwrite, and resume disposition:
+- Budget consumed:
+- Stop reason:
 
-## Experiment
+#### Results
 
-- Experiment Card:
-- Date:
-- Commit / run id:
-- Root objective:
-- Goal decomposition:
-- Candidate variants considered:
-- Selected variant:
-- Selection pressure from card:
-- Dataset slice:
-- Baseline / comparator:
-- Runtime:
-- Files changed:
-- Read-only context files consulted:
-
-## Result
-
-- Primary metric value:
-- Secondary metric value:
-- Baseline / comparator:
-- Verify command / result:
-- Guard command / result:
+- Baseline primary-metric value, aggregation, sample count, and uncertainty:
+- Intervention primary-metric value, aggregation, sample count, and uncertainty:
+- Decision threshold result:
+- Regression guard value and bound:
 - Qualitative observations:
-- Positive signal observed:
-- Negative signal observed:
-- Kill criteria triggered:
+- Failures or missing evidence:
 
-## Closed-Loop Outcome
+#### Plan Conformance
 
-- Local verification outcomes:
-- Selected variant passed local verification: yes | no
-- Subgoals satisfied:
-- Subgoals failed:
-- Selection pressure confirmed:
-- Selection pressure contradicted:
-- Variant should be kept, mutated, or killed:
-- Next-loop action: KILL | MUTATE | TEST
+- Planned-versus-actual deviations:
+- Protected fields changed, if any:
+- Deviation disposition: none | behavior-neutral | material
 
-## Commands
+#### Evaluation
 
-- Commands run:
-- Command failures:
-- Reproduction command:
+Leave this section pending for a run-only request. Fill or revise it during Evaluate.
 
-## Verification / Failure Modes
+- Observation:
+- Interpretation:
+- Strongest alternative explanation:
+- Confounders:
+- Scope of the conclusion:
 
-- Checks performed:
-- Failed checks:
-- Suspected confounders:
-- Expected failure modes observed:
-- Unexpected failure modes:
-- Reproducibility notes:
-- Evidence gaps:
+#### Decision
 
-## Interpretation
+Leave this section pending for a run-only request. Fill or revise it during Evaluate.
 
-- What the result supports:
-- What the result does not support:
-- Alternative explanations:
-- Positive / negative / ambiguous classification:
-- Recommended next step: KILL | MUTATE | TEST
-- Human owner decision:
+- Recommended outcome: DROP | REFINE | REPEAT | SUPPORTED
+- Evidence supporting the outcome:
+- Revised question or next discriminating test:
+- Human direction still required:
+
+Without an accepted card and identifiable baseline and guard, or after a material protected-field deviation, do not recommend `SUPPORTED`.

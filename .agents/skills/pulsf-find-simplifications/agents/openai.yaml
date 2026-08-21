@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pulsefield Find Simplifications"
+  short_description: "Find evidence-backed deletions and folds."
+  default_prompt: "Use $pulsf-find-simplifications to survey this Pulsefield scope and return a few well-proven simplification candidates."

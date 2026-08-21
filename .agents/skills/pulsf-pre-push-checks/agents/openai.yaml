@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pulsefield Pre-Push Checks"
+  short_description: "Select focused evidence before a push."
+  default_prompt: "Use $pulsf-pre-push-checks to inspect this outgoing Pulsefield diff and run the smallest credible pre-push evidence."

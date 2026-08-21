@@ -1,7 +1,4 @@
 interface:
   display_name: "Research Triage"
-  short_description: "Turn research ideas into bounded experiments."
-  default_prompt: "Use $research-triage to evaluate this research idea and decide KILL, MUTATE, or TEST."
-
-policy:
-  allow_implicit_invocation: false
+  short_description: "Triage research without inferring execution."
+  default_prompt: "Use $research-triage to compare close analogues and hypotheses, then propose or evaluate a bounded experiment without inferring acceptance or run authority."

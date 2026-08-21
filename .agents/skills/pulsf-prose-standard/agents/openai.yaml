@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pulsefield Prose Standard"
+  short_description: "Preserve contracts while tightening prose."
+  default_prompt: "Use $pulsf-prose-standard to review this Pulsefield prose and preserve every load-bearing technical proposition."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pulsefield Agent Notes"
+  short_description: "Manage Git-tracked notes off product branches."
+  default_prompt: "Use $pulsf-archive-agent-notes to manage this Pulsefield Agent Note in the canonical agent-notes worktree without adding it to a product branch."

@@ -1,262 +1,102 @@
 ---
 name: research-triage
-description: Triage open or still-diffuse Pulsefield ML research questions, novelty claims, implementation hypotheses, and existing Experiment Cards into critic, planner, or executor mode. Use for research-direction decisions, bounded experiment planning, or execution of an accepted Experiment Card. Do not use for root-cause analyses, performance investigations, postmortems, technical or design documentation, routine debugging, code review, or ordinary implementation.
+description: Guide Pulsefield ML research through analogue search, hypothesis branching, bounded experiment design, and evidence-based result evaluation. Use for open or diffuse research questions, novelty assessment, experiment selection, an accepted Experiment Card, or interpretation of experimental results. Route established implementation, routine debugging, causal analysis, and Agent Note lifecycle work to their owning workflows.
 ---
 
-# Pulsefield Research Triage Skill
+# Pulsefield Research Triage
 
-Use this skill only for open or still-diffuse research questions, explicit
-research-direction decisions, bounded experiment planning, or execution of an
-accepted Experiment Card.
+Turn an open research question into a grounded direction, a proposed discriminating experiment, or a defensible interpretation. Keep the human owner responsible for research direction, acceptance, execution authority, and adoption.
 
-The goal is not to produce a big research plan. The goal is to route the idea into one of three modes:
+## Choose the research mode
 
-- `critic`
-- `planner`
-- `executor`
+- **Explore:** the question, novelty, mechanism, or useful implementation family is unclear. Find close analogues, branch plausible hypotheses, and identify evidence that separates them.
+- **Design:** the direction is plausible but needs one bounded experiment. Select a branch and define the smallest test that can change the decision.
+- **Evaluate:** results already exist. Check the planned comparison, guards, deviations, confounders, and scope before deciding what the evidence supports.
 
-Act as a research assistant and critic, not the principal investigator. The human owner decides novelty, interpretation, and research direction.
+Implicit skill invocation selects the reasoning workflow; it does not authorize code changes, a run, card acceptance, discretionary note lifecycle transitions, or publication. Every mode may inspect the repository and author its scoped research output. When this workflow requires persistence, the active research task authorizes the scoped proposed-Note creation or evidence append and its local note-branch commit; it never implies acceptance, another status transition, or a remote push. An explicit request to revise a protected Card field authorizes only the required revision increment, `accepted -> proposed` reset, and local note commit; no other transition is implied. Change experiment code, implement instrumentation, or start a run only when the active task separately and clearly authorizes that action.
 
-Use the AI auto-research survey and awesome-ai-auto-research repository as taxonomy, not as authority.
+Use these transitions:
 
-When external research is needed, prefer primary sources: project repositories, papers, benchmark pages, release notes, and reproducible traces. Prefer newer repositories only when they have evidence of active maintenance, clear workflows, runnable commands, or benchmark results. Treat stars, README claims, and curated-list placement as weak evidence.
+- Explore ends at `DROP`, `REFINE`, or `TEST`. `TEST` authorizes Design, not implementation or execution.
+- Design produces a proposed Experiment Card inside one proposed owning Agent Note. The card becomes accepted only when a human explicitly accepts the exact note revision containing that card ID and revision through the Agent Note lifecycle.
+- Evaluate ends at `DROP`, `REFINE`, `REPEAT`, or `SUPPORTED`. `REPEAT` reruns the same accepted card; changing a protected field returns to Design. `SUPPORTED` is bounded evidence and awaits human direction—it does not authorize adoption, merge, another run, or an Agent Note transition.
 
-Avoid scope expansion and produce bounded artifacts.
+A request may span modes, but every new or revised card remains proposed until its exact revision is explicitly accepted.
 
-## Scope Boundary
+## Ground the question
 
-This skill structures research decisions. It does not define the structure or
-voice of a finished analytical document. Once a question has converged into a
-root-cause analysis, performance investigation, or postmortem, follow
-`docs/guides/technical_analysis_writing.md` and write from the evidence rather
-than exposing this skill's role labels, triage modes, or Experiment Card fields.
+State the research question, current baseline, target improvement, and the decision the evidence should change. Separate:
 
-Do not apply this workflow to design or architecture documents, repository
-orientation, routine debugging, code review, or ordinary implementation work.
+- representation or objective changes;
+- data, sampling, or supervision changes;
+- model or decoding changes;
+- evaluation or measurement changes;
+- engineering changes that do not establish research novelty.
 
-## Core Rule
+Prefer primary papers, project repositories, benchmark definitions, and reproducible local traces. Treat surveys and curated lists as discovery aids. Use [research workflow patterns](references/research_workflow_patterns.md) when analogue selection or evidence grading needs calibration.
 
-Every research idea must end in exactly one of:
+## Find and compare analogues
 
-- `KILL`: do not pursue; explain why.
-- `MUTATE`: reformulate into a smaller or better idea.
-- `TEST`: create one bounded Experiment Card.
+Name the closest analogue for each serious branch. Compare the exact layer, assumptions, data, objective, evaluation, and operational constraints. A nearby name or shared component is not enough; explain the mechanism that transfers and the difference that remains.
 
-Never leave the user with only open-ended suggestions.
+After naming the closest analogues, present a source-bounded novelty assessment. Distinguish a new representation or learning objective from a new combination, adaptation, or implementation, and label the assessment provisional until the human owner adopts it.
 
-Every non-`KILL` route must close this loop:
+## Branch the reasoning
 
-1. Goal decomposition: split the root research objective into checkable subgoals.
-2. Candidate variants: generate 2-4 bounded variants that could satisfy different subgoals or assumptions.
-3. Local verification: define the smallest check for each candidate variant before choosing one.
-4. Selection pressure: pick, reject, or mutate candidates using the local verification results, metric, guard, runtime, and kill criteria.
+Generate only branches that predict meaningfully different observations. For each branch record:
 
-Treat this as a BES-inspired discipline, not as a claim that Pulsefield is implementing BES. The useful pattern is the coupling of backward decomposition with forward candidate variation and score-based selection. If a candidate does not improve the chosen local signal, either `KILL` it or `MUTATE` it before spending more runtime.
+- claim and mechanism;
+- closest analogue;
+- expected supporting and falsifying signals;
+- smallest discriminating probe;
+- cost, confounders, and likely failure mode.
 
-For every research idea, separate the work into:
+Compare branches under the same baseline and decision criteria. Merge equivalent branches and discard branches that no available observation can distinguish.
 
-1. Idea quality
-2. Related work / analogies
-3. Implementation families
-4. Minimal experiment
-5. Verification / failure modes
-6. Result interpretation
+End exploration with one outcome:
 
-Do not claim novelty without:
+- **DROP:** available evidence or repository fit defeats the direction;
+- **REFINE:** a smaller or different question is needed;
+- **TEST:** one bounded experiment can decide between live branches.
 
-- naming the closest analogies,
-- explaining what layer the novelty is in,
-- distinguishing representation novelty from engineering variation.
+## Design one bounded experiment
 
-Do not propose a large rewrite unless a smaller bounded experiment cannot answer the question.
+Use [the Experiment Card](templates/experiment_card.md). Give it one owning Agent Note, an immutable card ID, and an incrementing revision. The owning note's lifecycle is the card's authority state. Define exactly:
 
-Do not start coding until an Experiment Card exists.
+- hypothesis, selected branch, and decision the result can change;
+- closest analogues and remaining difference;
+- clean baseline source revision, configuration or checkpoint, dataset slice, baseline run or evidence identity, and baseline value with aggregation, sample count, and uncertainty;
+- one causal intervention, separate from behavior-neutral instrumentation;
+- primary metric definition, direction, decision threshold, regression guard bound, and qualitative check;
+- exact procedure, paired or independent comparison design, commands, seeds, environment, runtime and resource bounds, fresh output destination, overwrite or resume policy, and early-stop condition;
+- confounders and positive, negative, and ambiguous interpretations.
 
-Prefer experiments that can fail quickly.
+Prefer a fail-fast slice over a full training run. The test must be capable of rejecting the selected branch. Any edit to the question, baseline identity or value, slice, causal intervention, metric, decision threshold, guard, procedure, comparison design, seeds, environment, resource bounds, output or resume policy, or stop condition increments the card revision, returns its owning note to `proposed`, and requires renewed acceptance.
 
-## Research Quality Gates
+## Preserve the execution handoff
 
-Before recommending `TEST`, check these gates:
+The Experiment Card embedded in the accepted owning Note controls implementation and execution. Before implementation or a run, compare its current protected fields with the `Accepted revision`; any difference requires a revised proposed Card rather than silent continuation. Before code edits, require the implementation worktree at the accepted clean baseline OID or an explicitly authorized clean descendant whose existing diff is behavior-neutral to the comparison. Otherwise stop or return to Design. An implementation agent may add only necessary behavior-neutral instrumentation; a change that can affect the causal comparison belongs in the intervention and requires a revised card.
 
-- Source grounding: name closest analogies and label the evidence strength.
-- Goal decomposition: name the root objective and at least 2 checkable subgoals.
-- Candidate variants: compare 2-4 bounded variants, including the chosen one.
-- Local verification: define what evidence would pass or fail each candidate before full execution.
-- Selection pressure: state why the chosen variant beats the rejected variants under the metric, guard, runtime, and kill criteria.
-- Baseline: define the current behavior or comparator before changing anything.
-- Verify: define the metric or command that measures improvement.
-- Guard: define the safety check that must not regress.
-- Scope: name the files likely to change and the files that are read-only context.
-- Runtime: set an expected runtime and a stop condition.
-- Interpretation: define what positive, negative, and ambiguous results would mean.
+Implementation and execution are separate permissions unless the active task clearly includes both. Before a run, record a clean intervention source OID and audit its baseline-to-intervention diff against the accepted card; stop on an unrelated change or undeclared causal difference. Verify the accepted Note and card revisions, exact baseline and inputs, commands, seeds, environment, fresh output destination, overwrite or resume policy, compute, storage, network, and runtime bounds. Stop on the recorded guard, kill condition, authorization limit, or unavailable prerequisite. Return to Design and reacquire Note acceptance when a protected field must change. A run-only request appends reproduction, measurements, and plan-conformance fields, leaving Evaluation and Decision pending; it does not mark the owning Note implemented.
 
-If any gate is missing, prefer `MUTATE` into a smaller measurable question rather than forcing a test.
+## Evaluate results
 
-When asked to improve a research skill or workflow, treat the skill change itself as a bounded experiment: create an Experiment Card before editing, then change only the smallest files needed.
+Use [the Result Log](templates/result_log.md). Verify the accepted Note and card revisions and record clean baseline and intervention source OIDs, separate or paired run IDs and commands, environment and hardware, seeds, inputs, configuration and checkpoint identities, output artifact paths, budget consumed, stop reason, and planned-versus-actual deviations. An Evaluate request fills or revises the Evaluation and Decision fields from recorded evidence. Append each Result Log; never overwrite earlier run evidence.
 
-## Evidence Intake
+Compare baseline and intervention values under the planned metric and guard. Separate observed measurements from interpretation, and state the strongest alternative explanation still compatible with the data.
 
-Use a source ladder:
+A run with no accepted Card or existing owner is exploratory: record it in a proposed owning Note and use `none` for unavailable acceptance or Card fields. When an accepted owner exists, append a dirty, unrecoverable, incomplete, or materially deviated run's exploratory Result Log to that Note without changing its status or Card. Never recommend `SUPPORTED` for these cases. Recommend `REPEAT` only for a conforming rerun of the same accepted Card; otherwise recommend `REFINE` and leave any Card revision to a subsequent Design task. Bound every conclusion to the tested source revisions, checkpoint, dataset slice, runtime, and measurement definition.
 
-1. Local repo behavior and previous run logs.
-2. Primary repo or paper documentation.
-3. Benchmarks, checklists, reproducibility artifacts, and execution traces.
-4. Curated lists, surveys, blog posts, and social claims.
+## Persist only when continuity requires it
 
-Use `references/research_workflow_patterns.md` only when source-derived workflow patterns are needed. Do not load it for ordinary executor tasks that already have an accepted Experiment Card.
+Persist every proposed or accepted card, executed run, direction-changing result, or cross-turn research task in one owning Agent Note. Exploration-only brainstorming may remain ephemeral unless the user asks to retain it. Store raw run outputs in their artifact owner and link stable identifiers from the note. If required note storage is unavailable, return the proposed content and report the persistence blocker; never write an ignored fallback, claim card acceptance, or issue a final `SUPPORTED` recommendation before the required record is committed.
 
-## Mode Selection
+Use [`pulsf-archive-agent-notes`](../pulsf-archive-agent-notes/SKILL.md) for note storage and lifecycle on the separate `agent-notes` branch. Research recommendations never change note lifecycle by themselves. Publish reusable conclusions through the repository prose workflow.
 
-Default to `critic` unless the user provides an accepted idea, asks directly for an Experiment Card, or provides an existing Experiment Card and asks to implement or run it.
+## Output resources
 
-Select exactly one mode.
+- Use [the Idea Critique](templates/idea_critique.md) for Explore.
+- Use [the Experiment Card](templates/experiment_card.md) for Design.
+- Use [the Result Log](templates/result_log.md) for Evaluate.
 
-### critic mode
-
-Use critic mode when:
-
-- the idea is vague,
-- the user asks whether an idea is good,
-- novelty is unclear,
-- implementation choices are unclear,
-- the user is comparing several possible directions.
-
-Critic mode may:
-
-- identify the core research question,
-- decompose the research objective into checkable subgoals,
-- enumerate implementation families,
-- generate bounded candidate variants,
-- compare novelty and feasibility,
-- find likely adjacent prior art,
-- define local verification for each candidate,
-- apply selection pressure before choosing `KILL`, `MUTATE`, or `TEST`,
-- grade the strength of the evidence,
-- recommend `KILL`, `MUTATE`, or `TEST`.
-
-Critic mode must not:
-
-- write production code,
-- start experiments,
-- propose a large rewrite,
-- claim novelty without nearest analogies.
-
-Output format:
-
-1. Core question
-2. Implementation families
-3. Closed-loop decomposition
-4. Novelty source
-5. Feasibility risks
-6. Observability/debuggability
-7. Recommendation: `KILL` / `MUTATE` / `TEST`
-8. If `TEST`, produce one Experiment Card
-
-When using this format, still cover idea quality, related work / analogies, minimal experiment, verification / failure modes, and result interpretation. Keep each section compact.
-
-### planner mode
-
-Use planner mode when:
-
-- the idea is probably worth testing,
-- the user wants to turn it into an experiment,
-- the user is procrastinating because the experiment feels too large.
-
-Planner mode may:
-
-- define one minimal experiment,
-- decompose the objective into checkable subgoals,
-- compare 2-4 candidate variants,
-- choose exactly one selected variant with a stated selection rule,
-- identify files likely to change,
-- define dataset slice,
-- define metrics,
-- define baseline, verify command, and guard command,
-- define kill criteria,
-- define result log template.
-
-Planner mode must not:
-
-- change code,
-- expand into multiple experiments; candidate variants are compared locally and only one is selected for the card,
-- redesign the architecture unless unavoidable.
-
-Output must be exactly one Experiment Card.
-
-### executor mode
-
-Use executor mode only when:
-
-- an Experiment Card already exists,
-- the user explicitly asks to implement or run it.
-
-Executor mode may:
-
-- inspect relevant files,
-- make minimal code changes,
-- run tests or scripts,
-- record local verification results for the selected variant,
-- compare observed results with the original selection pressure,
-- record commands and results,
-- write a result log.
-
-Executor mode must not:
-
-- change the research question,
-- add unrelated refactors,
-- expand beyond the Experiment Card,
-- silently change metrics.
-- silently change baseline, guard, or kill criteria.
-
-If implementation reveals the Experiment Card is invalid, stop and return to planner mode.
-If local verification rejects the selected variant, stop and return `MUTATE` or `KILL`; do not keep expanding the run.
-
-## Experiment Card Template
-
-Every Experiment Card must include:
-
-- Hypothesis
-- Root objective
-- Goal decomposition
-- Candidate variants
-- Local verification matrix
-- Selected variant
-- Selection pressure
-- Minimal change
-- Files likely to change
-- Dataset slice
-- Baseline / comparator
-- Primary metric
-- Secondary metric
-- Verify command or evaluation procedure
-- Guard check
-- Qualitative check
-- Positive signal
-- Negative signal
-- Kill criteria
-- Expected failure modes
-- Expected runtime / runtime budget
-- Confounders
-- Result interpretation plan
-- Result log template
-- Next-loop action
-- Closest analogies and novelty layer, if any
-
-## Research Style
-
-Be skeptical.
-Prefer small experiments.
-Prefer fast negative results.
-Prefer observability over cleverness.
-Do not optimize for sounding novel.
-Do not confuse engineering variation with research novelty.
-Do not confuse a better workflow with a research contribution unless the novelty layer is explicit.
-
-## Templates
-
-- Use `templates/idea_critique.md` in critic mode.
-- Use `templates/experiment_card.md` in planner mode or when critic mode recommends `TEST`.
-- Use `templates/result_log.md` in executor mode after running or reviewing an experiment.
-- Use `references/research_workflow_patterns.md` only for source-derived workflow heuristics, including BES-inspired closed-loop patterns.
-
-Load only the needed template. Keep outputs bounded.
+These are content-section templates, not standalone files in a lifecycle directory. Embed one active Experiment Card in its owning research Note and append each Result Log beneath it. Load only the resource needed for the selected mode.

@@ -1,110 +1,41 @@
-# Idea Critique
+### Idea Critique
 
-## Mode
+#### Research Question
 
-- Mode: critic
-- Route: KILL | MUTATE | TEST
-- Route rationale:
-- Source snapshot / evidence grade:
+- Question:
+- Current baseline:
+- Target improvement:
+- Decision this evidence should change:
 
-## 1. Core Question
+#### Closest Analogues
 
-- Summary:
-- Claimed contribution:
-- Research question:
-- Idea quality:
+- Analogue and evidence source:
+- Shared mechanism:
+- Material difference:
+- Novelty layer, if any:
+- Provisional novelty assessment:
 
-## 2. Implementation Families
+#### Hypothesis Branches
 
-- Family A:
-- Family B:
-- Family C:
-- Lowest-risk family:
-- Minimal experiment implied:
-- Baseline / comparator:
-- Verify gate:
-- Guard gate:
+For each live branch:
 
-## 3. Closed-Loop Decomposition
+- Claim and mechanism:
+- Closest analogue:
+- Expected supporting signal:
+- Expected falsifying signal:
+- Smallest discriminating probe:
+- Cost, confounders, and likely failure mode:
 
-- Root objective:
-- Checkable subgoals:
-- Candidate variants:
-- Local verification matrix:
-- Selection pressure:
-- Selected candidate:
-- Rejected candidates and why:
-- Next-loop action if selected candidate fails:
+#### Comparison
 
-## 4. Novelty Source
+- Branches merged or rejected:
+- Strongest surviving branch:
+- Evidence gap:
 
-- Closest analogies:
-- Relevant taxonomy bucket:
-- What is probably not new:
-- Possible novelty layer:
-- Representation novelty vs engineering variation:
+#### Recommendation
 
-## 5. Feasibility Risks
-
-- Weak assumptions:
-- Simplest counterargument:
-- Confounders:
-- Runtime / data risk:
-- Missing source evidence:
-
-## 6. Observability / Debuggability
-
-- Required instrumentation:
-- Verification checks:
-- Guard checks:
-- Likely false positives:
-- Likely false negatives:
-- Failure modes:
-
-## 7. Recommendation
-
-- Final route: KILL | MUTATE | TEST
-- Why this route:
-- How local verification drove the route:
-- Selection rule used:
-- If KILL, evidence that would revive it:
-- If MUTATE, smallest mutation:
-- If TEST, include exactly one Experiment Card below:
-
-## 8. Experiment Card
-
-Include this section only if the recommendation is TEST.
-
-- Hypothesis:
-- Root objective:
-- Goal decomposition:
-- Candidate variants:
-- Local verification matrix:
-- Selected variant:
-- Selection pressure:
-- Minimal change:
-- Files likely to change:
-- Read-only context files:
-- Dataset slice:
-- Baseline / comparator:
-- Primary metric:
-- Secondary metric:
-- Verify command / evaluation procedure:
-- Guard check:
-- Qualitative check:
-- Positive signal:
-- Negative signal:
-- Kill criteria:
-- Expected failure modes:
-- Confounders:
-- Expected runtime / runtime budget:
-- Result interpretation plan:
-- Result log template:
-- Next-loop action:
-
-## Result Interpretation
-
-- Positive result would suggest:
-- Negative result would suggest:
-- Ambiguous result would require:
-- Human owner decides:
+- Outcome: DROP | REFINE | TEST
+- Basis:
+- If REFINE, revised question:
+- If TEST, selected branch:
+- Authority boundary: TEST proceeds to Design only; it does not authorize implementation or a run.

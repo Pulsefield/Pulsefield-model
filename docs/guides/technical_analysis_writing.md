@@ -127,8 +127,10 @@ promising mitigation from being presented as validated.
 
 A follow-up section can state the remaining question, the smallest comparison
 that preserves it, and how the result would change the interpretation. Full
-research-triage output and Experiment Cards belong with the planning workflow,
-not inside a finished analytical report.
+research branches and Experiment Cards belong in Git-tracked Agent Notes on
+the separate `agent-notes` branch; a finished analytical report states the
+evidence, interpretation, and focused next diagnostic without importing the
+planning structure.
 
 ## Optional document shape
 

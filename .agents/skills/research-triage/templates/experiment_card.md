@@ -1,168 +1,61 @@
-# Experiment Card
-
-## Mode
-
-- Mode: planner
-- Route: TEST
-- Source idea:
-- Acceptance source, if any:
-- Source snapshot / evidence grade:
-
-## Hypothesis
-
-
-## Root Objective
-
-
-## Goal Decomposition
-
-- Subgoal 1:
-- Subgoal 2:
-- Subgoal 3, if needed:
-
-
-## Candidate Variants
-
-- Variant A:
-- Variant B:
-- Variant C, if useful:
-- Variant D, if useful:
-
-
-## Local Verification Matrix
-
-- Variant A:
-- Variant B:
-- Variant C, if useful:
-- Variant D, if useful:
-
-
-## Selected Variant
-
-- Selected:
-- Rejected:
-- Why this is the smallest useful test:
-
-
-## Selection Pressure
-
-- Primary pressure:
-- Guard pressure:
-- Runtime pressure:
-- Kill pressure:
-
-
-## Research Question
-
-
-## Closest Analogies / Novelty Layer
-
-- Closest analogies:
-- Relevant taxonomy bucket:
-- Novelty layer, if any:
-- Representation novelty vs engineering variation:
-
-## Minimal Change
-
-
-## Files Likely to Change
-
-
-## Read-Only Context Files
-
-
-## Dataset Slice
-
-
-## Baseline / Comparator
-
-
-## Primary Metric
-
-
-## Secondary Metric
-
-
-## Verify Command / Evaluation Procedure
-
-
-## Guard Check
-
-
-## Qualitative Check
-
-
-## Positive Signal
-
-
-## Negative Signal
-
-
-## Kill Criteria
-
-
-## Expected Failure Modes
-
-
-## Confounders
-
-
-## Expected Runtime / Runtime Budget
-
-
-## Result Interpretation Plan
-
-- Positive result would suggest:
-- Negative result would suggest:
-- Ambiguous result would require:
-- Human owner decides:
-- Next-loop action if positive:
-- Next-loop action if negative:
-- Next-loop action if ambiguous:
-
-
-## Result Log Template
-
-- Experiment:
-- Date:
-- Commit / run id:
-- Dataset slice:
-- Baseline / comparator:
-- Runtime:
-- Primary metric value:
-- Secondary metric value:
-- Verify command / result:
-- Guard command / result:
-- Qualitative observations:
-- Positive signal observed:
-- Negative signal observed:
-- Kill criteria triggered:
-- Checks performed:
-- Failed checks:
-- Suspected confounders:
-- Selected variant:
-- Candidate variants rejected before execution:
-- Local verification outcomes:
-- Selection pressure observed:
-- Interpretation:
-- Recommended next step:
-- Human owner decision:
-
-## Pre-Execution Gate
-
-- Card complete: yes | no
-- Code execution allowed after this card: yes | no
-- Closed loop complete: yes | no
-- Remaining ambiguity:
-
-## Next-Loop Action
-
-- If positive:
-- If negative:
-- If ambiguous:
-
-## Novelty Notes
-
-- Closest analogies:
-- Novelty layer, if any:
-- Representation novelty vs engineering variation:
+### Experiment Card: <card-id>
+
+#### Identity and Authority
+
+- Owning Agent Note ID:
+- Card ID:
+- Revision:
+
+The owning Note's lifecycle is authoritative. Any protected-field edit increments the card revision and returns the owning Note to `proposed`.
+
+#### Question and Hypothesis
+
+- Research question:
+- Selected hypothesis and mechanism:
+- Decision the result should change:
+
+#### Analogues and Branch Selection
+
+- Closest analogues and sources:
+- Shared mechanism:
+- Remaining difference:
+- Alternative branches rejected:
+- Selection criterion:
+
+#### Fixed Comparison
+
+- Baseline product source revision (full clean OID):
+- Dataset slice and identity:
+- Baseline config and checkpoint identities:
+- Baseline run or evidence identity:
+- Baseline metric value, aggregation, sample count, and uncertainty:
+- One causal intervention:
+- Behavior-neutral instrumentation:
+- Files likely to change:
+- Read-only context:
+
+#### Evidence and Decision Rule
+
+- Primary metric definition and direction:
+- Decision threshold:
+- Regression guard and bound:
+- Qualitative check:
+- Positive result:
+- Negative result:
+- Ambiguous result:
+
+#### Reproduction and Bounds
+
+- Exact command or procedure:
+- Comparison pairing or independence:
+- Seeds:
+- Environment, dependencies, and hardware:
+- Runtime, compute, storage, and network bounds:
+- Fresh output destination:
+- Overwrite and resume policy:
+- Early-stop or kill condition:
+- Expected failure modes:
+- Confounders:
+- Conclusion scope:
+
+Protected fields are the question, baseline identity and value, dataset slice, causal intervention, primary metric, decision threshold, regression guard, procedure, comparison design, seeds, environment, resource bounds, output and resume policy, and stop condition.
