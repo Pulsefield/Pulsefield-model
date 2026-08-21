@@ -1,20 +1,21 @@
-# Idea Critique
+### Idea Critique
 
-## Research Question
+#### Research Question
 
 - Question:
 - Current baseline:
 - Target improvement:
 - Decision this evidence should change:
 
-## Closest Analogues
+#### Closest Analogues
 
 - Analogue and evidence source:
 - Shared mechanism:
 - Material difference:
 - Novelty layer, if any:
+- Provisional novelty assessment:
 
-## Hypothesis Branches
+#### Hypothesis Branches
 
 For each live branch:
 
@@ -25,15 +26,16 @@ For each live branch:
 - Smallest discriminating probe:
 - Cost, confounders, and likely failure mode:
 
-## Comparison
+#### Comparison
 
 - Branches merged or rejected:
 - Strongest surviving branch:
 - Evidence gap:
 
-## Recommendation
+#### Recommendation
 
 - Outcome: DROP | REFINE | TEST
 - Basis:
 - If REFINE, revised question:
 - If TEST, selected branch:
+- Authority boundary: TEST proceeds to Design only; it does not authorize implementation or a run.

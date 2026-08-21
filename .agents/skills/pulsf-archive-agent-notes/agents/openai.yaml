@@ -1,4 +1,4 @@
 interface:
   display_name: "Pulsefield Agent Notes"
-  short_description: "Manage local research and decision records."
-  default_prompt: "Use $pulsf-archive-agent-notes to create or update this Pulsefield Agent Note and apply its lifecycle under artifacts/agent-notes/."
+  short_description: "Manage Git-tracked notes off product branches."
+  default_prompt: "Use $pulsf-archive-agent-notes to manage this Pulsefield Agent Note in the canonical agent-notes worktree without adding it to a product branch."

@@ -12,7 +12,7 @@ Use task-specific guidance only when its scope matches the work.
 
 | Task | Resource |
 | --- | --- |
-| Agent Note content and lifecycle under `artifacts/agent-notes/` | `.agents/skills/pulsf-archive-agent-notes/SKILL.md` |
+| Git-tracked Agent Note content and lifecycle on the separate `agent-notes` branch | `.agents/skills/pulsf-archive-agent-notes/SKILL.md` |
 | Repository prose writing, review, trimming, restoration, or comment and documentation coverage | `.agents/skills/pulsf-prose-standard/SKILL.md` |
 | Evidence-backed simplification surveys, dead or duplicate surface audits, and scoped cleanup proposals | `.agents/skills/pulsf-find-simplifications/SKILL.md` |
 | Outgoing-diff test selection, pre-push evidence, force-with-lease safety, or readiness claims | `.agents/skills/pulsf-pre-push-checks/SKILL.md` |
@@ -24,9 +24,12 @@ Use task-specific guidance only when its scope matches the work.
 
 ## Repository context
 
-- Treat `artifacts/` as local state. Do not scan or load it broadly unless the
-  user names a specific artifact. Manage `artifacts/agent-notes/` through its
-  lifecycle skill.
+- Product branches ignore `artifacts/` and never track `artifacts/agent-notes/`.
+  Agent Notes are Git-tracked only on the orphan `agent-notes` branch and are
+  managed through their lifecycle skill. Never use a product worktree's
+  ignored directory as a note store.
+- Do not scan generated artifacts broadly unless the user names one. The notes
+  branch owns note history, not shipped product behavior.
 - Generated evaluations, caches, checkpoints, datasets, and run snapshots are
   not repository sources of truth and may be absent in a fresh clone.
 - Put durable conclusions and reusable constraints in curated `docs/`

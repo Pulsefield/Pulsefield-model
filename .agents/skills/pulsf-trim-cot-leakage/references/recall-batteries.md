@@ -7,13 +7,15 @@ Use these searches as probes for the taxonomy in `../SKILL.md`. Every hit requir
 - Replace `<scope>` with the explicit file or directory supplied by the task. Do not default it to the repository root.
 - Use `--hidden --glob '!.git/**'` when `.agents/` belongs to scope; ripgrep otherwise skips hidden paths.
 - Place exclusion globs after inclusion globs so a later include cannot re-admit them.
-- Exclude `.venv/**`, `artifacts/**`, `ref-proj/**`, `**/__pycache__/**`, `.pytest_cache/**`, `*.egg-info/**`, and this skill's own directory unless the user explicitly targets one. Remove the `artifacts/**` exclusion when the scope is `artifacts/agent-notes/`.
+- Remove an exclusion when its path is the exact target named by the task.
+- For a product scope, exclude `.venv/**`, `artifacts/**`, `ref-proj/**`, `**/__pycache__/**`, `.pytest_cache/**`, `*.egg-info/**`, and this skill's own directory unless the user explicitly targets one.
+- For an Agent Note scope, use the separate Agent Note tail below. Exclude `artifacts/agent-notes/archived/**` unless the task names an archived note exactly.
 - Exclude `pulsf-prose-standard/references/examples.md` during a broad skill audit because it intentionally quotes bad prose for calibration.
 - Do not broadly scan generated datasets, checkpoints, run snapshots, recorded outputs, or notebook outputs. Narrow to authored Markdown or source cells when a notebook is explicitly in scope.
 - Use case-insensitive matching for natural-language probes, but keep identifier probes case-sensitive where capitalization reduces noise.
 - Test a pattern against a known-positive string before trusting a zero-hit result. Zero hits never replace an unpatterned read.
 
-A reusable exclusion tail is:
+A reusable product-scope exclusion tail is:
 
 ```sh
 --glob '!.git/**' \
@@ -25,6 +27,13 @@ A reusable exclusion tail is:
 --glob '!*.egg-info/**' \
 --glob '!.agents/skills/pulsf-trim-cot-leakage/**' \
 --glob '!.agents/skills/pulsf-prose-standard/references/examples.md'
+```
+
+For a scope on the `agent-notes` branch, use:
+
+```sh
+--glob '!.git/**' \
+--glob '!artifacts/agent-notes/archived/**'
 ```
 
 ## Session-citation battery
@@ -76,7 +85,7 @@ Research-triage templates legitimately contain planning labels. Finished analyse
 rg -n --hidden -i 'terminal output above|result above|chat above|local run|notebook cell [0-9]+|/tmp/|artifacts/[^ )]+' <scope> <exclusions>
 ```
 
-An exact artifact path can be valid in a local result log or Agent Note. In curated docs, preserve the claim's evidence and provenance without making a fresh clone depend on unretained state.
+An exact artifact path can be valid in an Agent Note result log on `agent-notes`. In curated product docs, preserve the claim's evidence and provenance without making the product commit depend on that branch or unretained state.
 
 ## Mixed-language and scaffolding battery
 

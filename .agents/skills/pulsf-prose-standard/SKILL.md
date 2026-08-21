@@ -7,7 +7,7 @@ description: Use when writing, reviewing, trimming, restoring, or auditing Pulse
 
 Write enough to preserve the contract, then remove repetition and decoration. Treat a contract as any obligation, invariant, precondition, postcondition, ownership rule, failure behavior, timing rule, or compatibility promise that a caller, operator, implementer, producer, or consumer relies on.
 
-Use this skill for editorial judgment and required prose coverage. Use [`pulsf-trim-cot-leakage`](../pulsf-trim-cot-leakage/SKILL.md) for authoring-session leakage. Use [`technical_analysis_writing.md`](../../../docs/guides/technical_analysis_writing.md) for root-cause analyses, performance investigations, and postmortems. Use [`hydra-conventions`](../hydra-conventions/SKILL.md) for Hydra ownership or projection, [`research-triage`](../research-triage/SKILL.md) for research direction and evaluation, and [`pulsf-archive-agent-notes`](../pulsf-archive-agent-notes/SKILL.md) for local research-record content and lifecycle.
+Use this skill for editorial judgment and required prose coverage. Use [`pulsf-trim-cot-leakage`](../pulsf-trim-cot-leakage/SKILL.md) for authoring-session leakage. Use [`technical_analysis_writing.md`](../../../docs/guides/technical_analysis_writing.md) for root-cause analyses, performance investigations, and postmortems. Use [`hydra-conventions`](../hydra-conventions/SKILL.md) for Hydra ownership or projection, [`research-triage`](../research-triage/SKILL.md) for research direction and evaluation, and [`pulsf-archive-agent-notes`](../pulsf-archive-agent-notes/SKILL.md) for Agent Note content and lifecycle on the separate `agent-notes` branch.
 
 Prefer the exact API, field, type, validation, phase, counter, component, or failure state over vague nouns such as “shape,” “surface,” “seam,” or “boundary.” Keep an abstract term when it names the precise technical subject, such as a process configuration boundary or a protocol compatibility contract.
 
@@ -31,6 +31,7 @@ Do not inspect unrelated branches.
 ## Respect Pulsefield source boundaries
 
 - Exclude broad `artifacts/` discovery. Inspect only a specifically named artifact needed as evidence.
+- Treat `agent-notes` as the owner of note identity and lifecycle, never as the owner of product behavior. Product prose must preserve required facts in its own commit; do not replace them with a dependency on a note-branch path.
 - Treat generated evaluations, caches, checkpoints, datasets, and run snapshots as derivative local state, not prose authority.
 - Use `ref-proj/` only when comparison is explicitly in scope, and describe it as reference evidence rather than Pulsefield authority.
 - Put reusable constraints and durable conclusions in curated `docs/`; keep raw measurements and run transcripts out of the final narrative unless a concise excerpt is necessary evidence.

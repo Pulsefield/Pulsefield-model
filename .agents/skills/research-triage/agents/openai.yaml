@@ -1,4 +1,4 @@
 interface:
   display_name: "Research Triage"
-  short_description: "Branch and evaluate ML research directions."
-  default_prompt: "Use $research-triage to find close analogues, compare hypotheses, and choose a bounded next experiment."
+  short_description: "Triage research without inferring execution."
+  default_prompt: "Use $research-triage to compare close analogues and hypotheses, then propose or evaluate a bounded experiment without inferring acceptance or run authority."
