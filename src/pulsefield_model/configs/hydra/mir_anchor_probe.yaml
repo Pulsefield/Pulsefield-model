@@ -1,0 +1,26 @@
+defaults:
+  - mir_anchor_probe_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+stage: prepare
+
+data:
+  manifest_path: artifacts/evals/mir_anchor_probe_750_150_150_3seed/manifest.parquet
+  train_audio_count: 750
+  validation_audio_count: 150
+  test_audio_count: 150
+
+probe:
+  seeds: [0, 1, 2]
+
+output:
+  dir: artifacts/evals/mir_anchor_probe_750_150_150_3seed
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null
