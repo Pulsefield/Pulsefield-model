@@ -182,9 +182,11 @@ Timing research includes structural recognition of shapes such as BPM ramps, but
 
 ## Current research focus
 
-- Move the core map representation toward beat-relative positions so timing, subdivisions, phrase structure, and BPM changes are easier to compare.
-- Replace hand-authored control planning with a learned latent planner that can represent global chart flow without depending only on named density features.
-- Study tokenization and embeddings over structured chart units such as measures, anchors, repetitions, long-note phrases, hand balance, and difficulty progression.
+1. Structured generation from rhythmic representations.
+   Instead of collapsing music directly into a fixed beat grid, we investigate a staged generation process: music → rhythmic representation → parallel, context-aware candidate proposal → autoregressive chart realization. The goal is to preserve rhythmic ambiguity while still producing coherent discrete note placements.
+
+2. Player-centric latent representations of chart style.
+   We investigate whether chart style can be represented in terms of latent gameplay states: how different dimensions of player demand are distributed, combined, and evolved throughout a chart. Such a representation could provide a more meaningful basis for style and difficulty conditioning than global labels or scalar difficulty alone.
 
 These directions are connected but remain hypotheses rather than committed architecture.
 
