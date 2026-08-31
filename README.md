@@ -179,6 +179,8 @@ git submodule update --init --recursive
 
 The mapper remains the main quality bottleneck. Current evidence shows sparse output, repetitive patterns, and rhythm placement that can be structurally valid while remaining musically off-grid. Decode-policy work has recovered event density in selected evaluations, but it has not established production-quality chart structure.
 
+Control V3 is not considered a successful player hidden-state representation: its handcrafted, future-dependent window statistics describe completed-chart outcomes rather than a persistent generative state, collapse a multimodal chart problem into pointwise targets, and omit explicit transitions, durations, four-finger relations, and cross-window memory. These are failure hypotheses rather than isolated root causes; the measurements remain diagnostic only.
+
 Timing research includes structural recognition of shapes such as BPM ramps, but a parsed timing-grid result is not audio-ground truth. Treat `.osu` red timing as a diagnostic comparator rather than a musical oracle, and treat runtime measurements as hardware- and checkpoint-specific.
 
 ## Current research focus
