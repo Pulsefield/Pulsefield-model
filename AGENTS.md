@@ -2,9 +2,9 @@
 
 ## Start here
 
-Use `README.md` for the project purpose, supported environments, setup,
-runtime commands, repository map, and canonical source locations. Inspect the
-relevant canonical source and nearby tests before editing.
+Use `README.md` for the project purpose, Pulsefield V3 status, legacy-code
+boundary, and documentation authority. Inspect the relevant canonical source
+and nearby tests before editing.
 
 ## Task routing
 
@@ -39,7 +39,5 @@ Use task-specific guidance only when its scope matches the work.
 
 ## Verification
 
-Run the smallest relevant check first, using the commands in `README.md`. Keep
-accelerator extras explicit for model-backed commands: `mps` on Apple Silicon
-and `cuda` on Linux with NVIDIA. CPU-only setup is suitable for documentation
-and configuration work.
+Run the smallest relevant check first. Keep accelerator extras explicit for
+model-backed commands: `mps` on Apple Silicon and `cuda` on Linux with NVIDIA.
