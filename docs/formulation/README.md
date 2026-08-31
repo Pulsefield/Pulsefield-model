@@ -1,0 +1,1 @@
+Canonical definitions of the Pulsefield generation problem: notation, problem structure, established constraints, open questions, and falsifiable hypotheses. Experimental evidence lives in `docs/research/`; model and implementation choices do not belong here

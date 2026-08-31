@@ -145,6 +145,7 @@ they are not prerequisites for understanding the repository.
 
 | Purpose | Resource |
 | --- | --- |
+| Repository documentation and Markdown math conventions | [`docs/guides/documentation_authoring.md`](docs/guides/documentation_authoring.md) |
 | Root-cause analyses, performance investigations, and postmortems | [`docs/guides/technical_analysis_writing.md`](docs/guides/technical_analysis_writing.md) |
 | MPS memory and throughput investigations | [`docs/engineering/mps_memory_performance_troubleshooting.md`](docs/engineering/mps_memory_performance_troubleshooting.md) |
 | Worked MPS memory root-cause analysis | [`docs/research/mapper_v2_1_mps_memory_root_cause_report.md`](docs/research/mapper_v2_1_mps_memory_root_cause_report.md) |
