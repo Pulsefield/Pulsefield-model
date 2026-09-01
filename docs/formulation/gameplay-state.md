@@ -1,61 +1,159 @@
-# Canonical control-load state and gameplay-demand field
+# Canonical gameplay frontier, demand state, and style semantics
 
-Pulsefield associates every legal chart with a reproducible exact control
-trace, an operational control-load trajectory, and a declared gameplay-demand
-field. These objects are research interfaces for generation and analysis. They
-are not, without a separate player observation model, claims about the hidden
-physiological or psychological state of a particular human player.
+Pulsefield uses one fixed canonical gameplay profile to describe how a legal
+4K chart changes the gameplay situation over time.
 
-The central factorization is
+The central relation is
 
 \[
 H
-\xrightarrow{\operatorname{Replay/Exec}_\lambda}
-\left(x_H(t),u_H\right)
-\xrightarrow{\operatorname{LoadRoll}_\kappa}
-q_H^\kappa(t)
-\xrightarrow{\operatorname{Readout}_\varrho}
-\mathcal D_H^{\Theta}(t),
+\xrightarrow{
+\operatorname{Exec/Replay}_0
+}
+\left(
+u_H,
+x_H(t)
+\right)
+\xrightarrow{
+\operatorname{DemandRoll}_0
+}
+d_H(t),
 \]
 
-where
+followed, for section \(W\), by
 
 \[
-\Theta=(\kappa,\varrho).
-\]
-
-The fixed lane-role map \(\lambda\) is a canonical system convention rather
-than a parameter of \(\Theta\). Within the control-load specification:
-
-- \(\kappa\) owns the operational state space, initial state, event resets,
-  and between-event flow;
-- \(\varrho\) owns the exposed demand basis, readout map, units, and
-  calibration conventions.
-
-A reference specification used by generation is
-
-\[
-\Theta_0=(\kappa_0,\varrho_0).
+\left(
+u_H|_W,
+d_H|_W
+\right)
+\xrightarrow{\Psi}
+r_H(W)
+\xrightarrow{\operatorname{StyleRead}}
+z_H(W)
+\longrightarrow
+\left(
+o_{H,W}^{\mathrm{sec}},
+o_H^{\mathrm{map}}
+\right).
 \]
 
 Here:
 
-- \(x_H(t)\) is exact state determined by chart replay and elapsed time;
-- \(u_H\) is the exact canonical hand-role action trace induced by the fixed 4K
-  role mapping \(\lambda\);
-- \(q_H^\kappa(t)\) is model-dependent operational memory sufficient for the
-  declared future load dynamics;
-- \(\mathcal D_H^\Theta(t)\) is a nonnegative exposed demand readout whose
-  named semantics require calibration;
-- actual player execution, errors, fatigue, adaptation, and subjective burden
-  belong to a later observation model.
+- \(H\) is the materialized chart;
+- \(u_H\) is its exact canonical hand-role action trace;
+- \(x_H(t)\) is exact chart and control state;
+- \(d_H(t)\) is a profile-relative representation of the moving gameplay
+  frontier;
+- \(r_H(W)\) is a section-level action-demand geometry;
+- \(z_H(W)\) is the modeled section-style profile;
+- \(o_{H,W}^{\mathrm{sec}}\) is a section-level style annotation;
+- \(o_H^{\mathrm{map}}\) is a community map-level style observation.
 
-The notation extends the
-[generation notation and structured decision problem](notation.md).
+The intended interpretation is:
 
-## 1. Formal scene and epistemic decomposition
+> A style is not independent of the concrete chart arrangement. A section
+> style describes a salient geometry in how its actions drive, sustain, and
+> transform the canonical gameplay-demand frontier. A style tag is a
+> coarse-grained community name for part of that geometry.
 
-For a legal chart \(H\), write the exact state as
+The demand state is therefore the main mechanistic connection between the
+canonical gameplay profile and style semantics. It is not identical to style,
+and style is not assumed to be recoverable from one instantaneous demand value.
+
+The notation extends [notation.md](notation.md).
+
+## 1. One canonical gameplay profile
+
+Pulsefield currently models exactly one gameplay profile, denoted
+
+\[
+\pi_0.
+\]
+
+The profile fixes:
+
+- the lane-to-hand-role mapping \(\lambda\);
+- successful execution of every legal action;
+- ideal hit timing;
+- the semantics and dynamics of gameplay-demand state;
+- left-right symmetry conventions;
+- calibration references for named demand dimensions.
+
+There is no player-profile variable in the current formulation.
+
+The current scope does not model:
+
+- player-specific capacity;
+- player errors or misses;
+- timing noise;
+- adaptive fingering;
+- alternative physical executions;
+- handedness-specific profiles;
+- multiplayer interaction;
+- physiological fatigue or subjective pain.
+
+The canonical gameplay state is a reproducible chart descriptor under
+\(\pi_0\). It is not a claim about the hidden internal state of an observed
+person.
+
+## 2. Epistemic layers
+
+The formulation separates the following objects.
+
+| Object | Status | Meaning |
+| --- | --- | --- |
+| \(H\) | Observed or generated symbolic object | The materialized chart. |
+| \(u_H\) | Exact under \(\lambda\) | The deterministic canonical action trace. |
+| \(x_H(t)\) | Exact | Replayable chart-format and exact control facts. |
+| \(\mathcal F_H(t)\) | Abstract profile-relative object | The current response surface over possible future actions and continuations. |
+| \(d_H(t)\) | Model-defined but reproducible under \(\pi_0\) | A finite representation of the moving gameplay frontier. |
+| \(r_H(W)\) | Derived section representation | Geometry of actions and demand over a section. |
+| \(z_H(W)\) | Modeled semantic profile | Salience of fixed community style concepts in a section. |
+| \(o_{H,W}^{\mathrm{sec}}\) | Partial annotation | Human-confirmed section-level style evidence. |
+| \(o_H^{\mathrm{map}}\) | Weak aggregate annotation | Community-voted map-level style evidence. |
+| \(d^\star(t)\) | Optional request | Desired gameplay-demand target for generation. |
+| \(c^{\mathrm{style}}\) | Optional request | Desired style tendency or mixture for generation. |
+
+The hard semantic separations are:
+
+1. Chart legality belongs to exact chart-format state.
+2. Canonical action identity belongs to \(u_H\) and exact control state.
+3. Gameplay demand belongs to the profile-relative moving frontier.
+4. Section style belongs to the geometry of chart actions and demand over time.
+5. Style tags are sparse semantic observations, not exact chart state.
+6. Map-level tags are aggregate weak evidence, not labels for every section.
+7. Desired style and desired demand are optional generation controls.
+8. Realized style and realized demand are consequences of the generated chart.
+9. Missing annotation is not automatically a negative annotation.
+10. Neither demand state nor style tag is an observed player's hidden state.
+
+## 3. Exact canonical execution and state
+
+For row \(m_k\), let
+
+\[
+a_k
+=
+\operatorname{Act}_\lambda(m_k)
+=
+(a_k^L,a_k^R)
+\]
+
+be the canonical hand-role action defined in
+[notation.md](notation.md#4-lanes-hands-and-canonical-roles).
+
+The chart induces the exact action trace
+
+\[
+u_H
+=
+\bigl((t_k,a_k)\bigr)_{k=1}^{|H|}.
+\]
+
+Under the fixed 4K mapping, this trace is unique.
+
+Write the exact state as
 
 \[
 x_H(t)
@@ -66,276 +164,21 @@ x_H^{\mathrm{ctrl}}(t)
 \right).
 \]
 
-The two exact components have different responsibilities:
+### Chart-format state
 
-- \(x^{\mathrm{fmt}}\) contains chart-format state required for hard legality,
-  such as long-note occupancy and pending format obligations;
-- \(x^{\mathrm{ctrl}}\) contains exact canonical control-history summaries, such
-  as role-wise action clocks and recent active-role sets.
-
-For hand \(h\in\{L,R\}\), one admissible decomposition is
+The format state contains every fact required for hard legality:
 
 \[
-x_h^{\mathrm{fmt}}(t)
-=
-\omega_h(t),
-\]
-
-\[
-x_h^{\mathrm{ctrl}}(t)
+x_H^{\mathrm{fmt}}(t)
 =
 \left(
-A_h^{\mathrm{last}}(t),
-\chi_h(t),
-c_h(t)
+\omega_L(t),
+\omega_R(t),
+\xi^{\mathrm{fmt}}(t)
 \right),
 \]
 
-where:
-
-- \(\omega_h(t)\) is exact role-wise long-note occupancy;
-- \(A_h^{\mathrm{last}}(t)\subseteq\mathcal R\) is the exact active-role set of
-  the most recent hand action;
-- \(\chi_h(t)\) contains selected exact finite-state summaries;
-- \(c_h(t)\) contains exact deterministic clocks.
-
-Exact cross-hand state is written
-
-\[
-x_\times(t),
-\]
-
-and the aggregate exact state is
-
-\[
-x(t)
-=
-\left(
-x_L(t),x_R(t),x_\times(t)
-\right).
-\]
-
-For fixed load dynamics \(\kappa\), let
-
-\[
-q^\kappa(t)
-=
-\left(
-q_L^\kappa(t),
-q_R^\kappa(t),
-q_\times^\kappa(t)
-\right)
-\in\mathcal Q_\kappa
-\]
-
-be the operational load state. The state space \(\mathcal Q_\kappa\) is not
-required to use named, nonnegative, or uniquely identifiable coordinates.
-
-For fixed readout \(\varrho\), the gameplay-demand field is
-
-\[
-\mathcal D_H^\Theta(t)
-=
-G_\varrho
-\left(
-x_H(t),q_H^\kappa(t)
-\right)
-\in
-\mathbb R_{\ge0}^{C}.
-\]
-
-The epistemic status of the objects is:
-
-| Object | Status | Meaning |
-| --- | --- | --- |
-| \(H\) | Observed or generated symbolic object | The committed complete-row chart. |
-| \(u_H\) | Exact under \(\lambda\) | The deterministic hand-role action trace induced by the chart. |
-| \(x_H(t)\) | Exact | Replayable chart-format and canonical-control facts. |
-| \(q_H^\kappa(t)\) | Model-defined operational state | Deterministic after fixing \(\kappa\), but not uniquely identified by chart syntax. |
-| \(\mathcal D_H^\Theta(t)\) | Declared readout | A chart-induced demand description whose named coordinates require anchoring and calibration. |
-| Player response | Unmodeled in the canonical rollout | Requires player identity, execution, and observed outcomes. |
-
-In the base fixed-lane 4K setting, the admissible canonical execution set is a
-singleton:
-
-\[
-\mathcal E_\lambda(H)
-=
-\{u_H\}.
-\]
-
-There is therefore no base variable \(\alpha(t)\) representing a posterior over
-which canonical role executed the chart. A one-hand chord acts on both canonical
-roles. Uncertainty appears only if the formulation is later extended to allow
-multiple admissible physical executions.
-
-The formulation imposes the following hard separation:
-
-1. Chart legality depends only on \(x^{\mathrm{fmt}}\), never on operational load,
-   demand magnitude, or stylistic preference.
-2. \(u_H\) and \(x_H\) are exact consequences of \(H\) and the declared
-   canonical mapping; they are not learned player beliefs.
-3. \(q^\kappa\) is operational memory for future rollout, not automatically a
-   human-readable gameplay ontology.
-4. Named gameplay semantics belong to the calibrated readout
-   \(\mathcal D^\Theta\), not to arbitrary coordinates of \(q^\kappa\).
-5. The same \(\kappa\) and \(\varrho\) must be used when a branch is optimized
-   and when its demand trajectory is later reported.
-6. The full history \(H_k\) remains available alongside finite state; control
-   state need not summarize motif identity, mapper intent, or every long-range
-   property.
-7. Any fact required for hard legality at a continuation boundary must be exact
-   or exactly derivable. It must not exist only inside an unconstrained neural
-   hidden state.
-
-## 2. Worked example: long-note occupancy and chord continuation
-
-Use the chart prefix
-
-\[
-H_4
-=
-\bigl(
-(29.40,1000),
-(29.70,0020),
-(29.90,0100),
-(30.00,0030)
-\bigr).
-\]
-
-Before the row at \(29.70\), suppose both right-hand roles are closed:
-
-\[
-\omega_R(29.70^-)
-=
-(0,0),
-\]
-
-where right-hand role order is `(outer, inner)` and corresponds to serialized
-lanes \((4,3)\).
-
-For
-
-\[
-y_2=(29.70,0020),
-\]
-
-the right-hand action pair is
-
-\[
-a_2^R=(0,2).
-\]
-
-The exact format transition gives
-
-\[
-\omega_R(29.70^+)
-=
-(0,1).
-\]
-
-At \(29.90\),
-
-\[
-a_3^R=(0,0),
-\]
-
-so `EMPTY` on lane 3 preserves the open long note:
-
-\[
-\omega_R(29.90^+)
-=
-(0,1).
-\]
-
-At \(30.00\),
-
-\[
-a_4^R=(0,3),
-\]
-
-and the exact transition closes it:
-
-\[
-\omega_R(30.00^+)
-=
-(0,0).
-\]
-
-Replacing row 4 with `0020` would attempt a second `LN_START` on an open lane.
-The exact format transition would be undefined, so the replacement is illegal
-regardless of music, style, difficulty, candidate score, or load state.
-
-The same row may produce different operational load updates in different
-histories. Under fixed \(\kappa\),
-
-\[
-q(29.70^+)
-=
-R_\kappa
-\left(
-q(29.70^-),
-x(29.70^-),
-x(29.70^+),
-a_2
-\right).
-\]
-
-The tap at \(29.90\) occurs while right inner remains occupied. Its load update
-may therefore differ from the counterfactual update produced by the same
-`0100` row when no long note is open.
-
-Now append a left-hand chord:
-
-\[
-y_5=(30.25,1100).
-\]
-
-Its left-hand action pair and active-role set are exactly
-
-\[
-a_5^L=(1,1),
-\]
-
-\[
-A_5^L
-=
-\{\mathrm{outer},\mathrm{inner}\}.
-\]
-
-Both left-role recency clocks are reset by the chord. The state does not need to
-choose whether outer or inner was “really last”; both roles acted.
-
-Suppose the next row is
-
-\[
-y_6=(30.37,1000).
-\]
-
-This row deterministically reuses left outer after \(0.12\) seconds. Its load
-update may depend on:
-
-- left outer's exact recency;
-- left inner's simultaneous participation in the preceding chord;
-- the fact that the previous left-hand action was a two-role set;
-- current operational load and recovery;
-- simultaneous or recent right-hand activity.
-
-Several demand mechanisms may be active at once, such as role reuse, chord
-recovery, density, and cross-hand coordination. They are not required to be
-mutually exclusive states whose weights sum to one.
-
-This example separates four objects:
-
-- long-note legality is exact chart-format state;
-- chord participation is exact role-set state;
-- future burden depends on operational dynamics \(q^\kappa\);
-- named descriptions such as repetition pressure or chord burden are demand
-  readouts from \(\mathcal D^\Theta\).
-
-## 3. Exact chart-format and canonical-control state
-
-Per-hand long-note occupancy is
+where
 
 \[
 \omega_h(t)
@@ -345,29 +188,20 @@ Per-hand long-note occupancy is
 \omega_{h,\mathrm{inner}}(t)
 \right)
 \in
-\{0,1\}^2.
+\{0,1\}^2
 \]
 
-`LN_START`, `LN_CLOSE`, `TAP`, and `EMPTY` update occupancy according to the
-action table in [notation.md](notation.md#5-rows-long-notes-and-committed-histories).
+is role-wise long-note occupancy.
 
-The exact state is divided by responsibility:
+The value \(\xi^{\mathrm{fmt}}\) contains any additional exact format
+obligations.
 
-\[
-x^{\mathrm{fmt}}(t)
-=
-\left(
-\omega_L(t),
-\omega_R(t),
-\xi^{\mathrm{fmt}}(t)
-\right),
-\]
+### Exact control state
 
-where \(\xi^{\mathrm{fmt}}\) contains any additional exact format obligations,
-and
+The exact control component may contain:
 
 \[
-x^{\mathrm{ctrl}}(t)
+x_H^{\mathrm{ctrl}}(t)
 =
 \left(
 x_L^{\mathrm{ctrl}}(t),
@@ -376,25 +210,21 @@ x_\times(t)
 \right).
 \]
 
-Possible exact canonical-control summaries include:
+Admissible exact summaries include:
 
-- the most recent active-role set \(A_h^{\mathrm{last}}\);
-- per-role and per-lane action clocks;
-- separate press, close, and release clocks where declared;
-- the most recent hand-action interval;
-- exact recent role-set sequences of bounded length;
-- exact run lengths under an explicitly declared deterministic definition;
-- exact cross-hand simultaneity or alternation clocks;
-- exact pending obligations required by a declared transition rule.
+- the most recent active-role set of each hand;
+- per-role action clocks;
+- press, close, or release clocks;
+- exact recent role-set sequences;
+- exact simultaneity or alternation clocks;
+- persistent cross-hand facts;
+- exact information required to update the declared demand dynamics.
 
-A single-valued “last active role” is not sufficient after a two-role chord. The
-exact object is a set or equivalent multi-hot representation:
+After a one-hand chord, the most recent active-role state is a set:
 
 \[
 A_h^{\mathrm{last}}
 \in
-\mathcal P(\mathcal R)
-=
 \left\{
 \varnothing,
 \{\mathrm{outer}\},
@@ -403,177 +233,239 @@ A_h^{\mathrm{last}}
 \right\}.
 \]
 
-An exact summary belongs in \(x\) when at least one of the following holds:
+It is not a probability distribution over which role was used.
 
-1. it is required to decide hard chart legality;
-2. it is required to continue a declared exact transition without replaying the
-   entire history;
-3. it is intentionally exposed as an exact generation control or diagnostic;
-4. it is required to initialize the operational load dynamics at a branch
-   boundary without ambiguity.
-
-The inventory is not “every statistic computable from history.” Other chart
-facts may remain derivable from \(H_k\), and motif or sectional information may
-remain in a separate history model.
-
-Exact cross-hand state \(x_\times\) is required only for persistent facts that
-cannot be recovered from the two hand states and the current row. A simultaneous
-row does not automatically require stored cross-hand state; it can be consumed
-directly by the event transition.
-
-For row \(y_k=(t_k,m_k)\), let
-
-\[
-a_k
-=
-\operatorname{Act}_\lambda(m_k).
-\]
-
-The chart-format transition is a partial operator
-
-\[
-x_k^{\mathrm{fmt},+}
-=
-E_{\mathrm{fmt}}
-\left(
-x_k^{\mathrm{fmt},-},m_k
-\right).
-\]
-
-If it is undefined, the row is illegal. For a legal row, exact control state
-updates deterministically:
-
-\[
-x_k^{\mathrm{ctrl},+}
-=
-E_{\mathrm{ctrl}}
-\left(
-x_k^{\mathrm{ctrl},-},
-x_k^{\mathrm{fmt},-},
-x_k^{\mathrm{fmt},+},
-a_k,t_k
-\right).
-\]
-
-The aggregate exact transition is
+For row \(y_k=(t_k,m_k)\), exact state updates as
 
 \[
 x_k^+
 =
-E_{\mathrm{exact}}(x_k^-,y_k).
+E_{\mathrm{exact}}
+\left(
+x_k^-,
+y_k
+\right).
 \]
 
-Hard legality reads only the chart-format projection:
+The row is legal if and only if the chart-format transition is defined:
 
 \[
-\text{legal}(x_k^-,y_k)
+\operatorname{legal}(x_k^-,y_k)
 \iff
-E_{\mathrm{fmt}}(x_k^{\mathrm{fmt},-},m_k)
+E_{\mathrm{fmt}}
+\left(
+x_k^{\mathrm{fmt},-},
+m_k
+\right)
 \text{ is defined}.
 \]
 
-This separation is essential:
+Demand and style cannot alter this predicate.
+
+## 4. The moving gameplay frontier
+
+The generation-relevant gameplay object is not only the current value of one
+difficulty scalar. It is the changing response surface over possible future
+actions.
+
+Let
 
 \[
-\text{chart legality}
-\neq
-\text{canonical control history}
-\neq
-\text{gameplay preference}.
+b_H(t)
+=
+\left(
+t,
+x_H(t),
+d_H(t)
+\right)
 \]
 
-A difficult jack, hand imbalance, dense chord, non-alternating continuation, or
-high demand may be undesirable under one scorer, but it remains legal unless an
-explicit chart-format rule forbids it.
+be a canonical gameplay boundary.
 
-## 4. Operational control-load state
-
-For declared load dynamics \(\kappa\), the operational state is
+For a candidate future action \(a\) executed after delay \(\Delta\), define the
+one-action frontier
 
 \[
-q^\kappa(t)
+\mathcal F_H(t;a,\Delta)
+=
+\operatorname{DemandCost}_0
+\left(
+a
+\text{ at }t+\Delta
+\mid
+b_H(t)
+\right).
+\]
+
+The result may contain multiple dimensions such as:
+
+- short-horizon burst demand;
+- accumulated strain;
+- role-reuse pressure;
+- outer-inner transition pressure;
+- one-hand chord demand;
+- sustained long-note control;
+- release demand;
+- cross-hand coordination.
+
+The frontier is not restricted to one action. For a legal continuation \(Y\)
+over horizon \([t,t+L]\), define the continuation-response operator
+
+\[
+\mathfrak C_0
+\left(
+b_H(t),
+Y
+\right)
+=
+\left.
+d_{b_H(t)\oplus Y}
+\right|_{[t,t+L]}.
+\]
+
+This operator answers:
+
+> Starting from the current canonical gameplay situation, how would the demand
+> trajectory evolve under this future continuation?
+
+The abstract moving frontier may therefore be viewed as the map
+
+\[
+\mathcal F_H(t)
+:
+Y
+\longmapsto
+\mathfrak C_0(b_H(t),Y)
+\]
+
+over legal future continuations.
+
+This functional object is too large to use directly. Pulsefield therefore uses
+\(d_H(t)\) as a finite, interpretable, profile-relative representation of it.
+
+## 5. Gameplay-demand state
+
+For the fixed profile \(\pi_0\), define
+
+\[
+d_H(t)
+=
+\operatorname{DemandRoll}_0(H;t)
 \in
-\mathcal Q_\kappa.
+\mathcal D_0.
 \]
 
-A finite-dimensional implementation may use
+A typical decomposition is
 
 \[
-\mathcal Q_\kappa
-\subseteq
-\mathbb R^{Q},
-\]
-
-with a decomposition such as
-
-\[
-q^\kappa(t)
+d_H(t)
 =
 \left(
-q_L^\kappa(t),
-q_R^\kappa(t),
-q_\times^\kappa(t)
-\right).
+d_H^L(t),
+d_H^R(t),
+d_H^\times(t)
+\right),
 \]
 
-The decomposition expresses hand-local and cross-hand computational
-responsibilities. It does not require every coordinate to have an independent
-human-readable meaning.
+where:
 
-The role of \(q^\kappa\) is predictive and operational:
+- \(d_H^L\) and \(d_H^R\) contain corresponding hand-local dimensions;
+- \(d_H^\times\) contains non-additive cross-hand dimensions when needed.
 
-> Given the exact boundary state, \(q^\kappa(t)\) should retain the information
-> required by the declared model to roll out future control load under legal
-> continuations.
-
-It may contain:
-
-- decaying activations;
-- role-specific recovery variables;
-- short-term accumulation or recovery reservoirs;
-- sustained forcing from open long notes;
-- release transients;
-- saturation or gating variables;
-- hand-local interaction memory;
-- cross-hand coordination memory;
-- learned predictive features constrained by the declared rollout contract.
-
-The formulation does not require
+Named exposed dimensions are nonnegative unless another interpretation is
+explicitly declared:
 
 \[
-q^\kappa(t)\ge0.
+d_{H,c}(t)\ge0.
 \]
 
-Signed contrasts, gates, phase-like variables, or other internal coordinates
-may be necessary. Nonnegativity and named channel semantics are imposed only on
-readouts for which those properties are declared.
+The dimensions are not required to be independent, additive, or mutually
+exclusive.
 
-For fixed \(\kappa\), chart \(H\), and initial state \(q_0^\kappa\), the
-operational trajectory is deterministic:
+### State sufficiency contract
+
+The intended operational role of \(d_H(t)\) is to parameterize future frontier
+responses together with exact state.
+
+For two histories \(H\) and \(H'\), if
 
 \[
-q_H^\kappa(t)
-=
-\operatorname{LoadRoll}_\kappa
+x_H(t)=x_{H'}(t)
+\]
+
+and
+
+\[
+d_H(t)=d_{H'}(t),
+\]
+
+then the desired sufficiency property is
+
+\[
+\mathfrak C_0
 \left(
-q_0^\kappa,x_0,H;t
-\right).
+b_H(t),
+Y
+\right)
+=
+\mathfrak C_0
+\left(
+b_{H'}(t),
+Y
+\right)
 \]
 
-This determinism is a property of the canonical simulator, not evidence that
-\(q^\kappa\) is the unique true state of an ideal or actual player.
+for every continuation \(Y\) legal from both exact boundaries.
 
-Operational state and parameter uncertainty are distinct. A posterior or
-ensemble over \(\kappa\) represents model uncertainty. It must not be collapsed
-into one coordinate of \(q^\kappa\).
+In practice this equality may only hold approximately over a declared
+continuation family. Failure under controlled probes means the current demand
+state omits gameplay-relevant history.
 
-## 5. Hybrid exact and load dynamics
+The complete history remains available to the chart generator. Demand state is
+not required to summarize:
 
-The control-load process is a hybrid dynamical system. Rows cause discrete
-event transitions; time between rows advances clocks, occupancy-dependent
-forcing, and continuous or discrete recovery dynamics.
+- musical motif identity;
+- mapper intent;
+- section identity;
+- every long-range style pattern;
+- all information useful for chart generation.
 
-For a row at time \(t_k\), use the right-continuous convention
+Its sufficiency contract concerns canonical gameplay continuation response.
+
+### Demand state is not merely current burden
+
+Two states may have the same current scalar intensity but different future
+frontiers:
+
+\[
+i_H(t)=i_{H'}(t)
+\]
+
+while
+
+\[
+\mathcal F_H(t)\neq\mathcal F_{H'}(t).
+\]
+
+For example, the same current intensity may arise from:
+
+- recent repeated use of left outer;
+- a one-hand chord;
+- sustained long-note occupancy;
+- balanced two-hand density.
+
+Those histories may respond differently to the same next row. The demand state
+must preserve distinctions needed for such continuation behavior.
+
+## 6. Hybrid demand dynamics
+
+The canonical gameplay process is a hybrid dynamical system:
+
+- rows cause discrete state transitions;
+- time between rows causes recovery, decay, sustained forcing, and clock
+  advancement.
+
+Use the right-continuous convention
 
 \[
 x_k^-
@@ -582,28 +474,24 @@ x(t_k^-),
 \qquad
 x_k^+
 =
-x(t_k)
-=
-x(t_k^+),
+x(t_k),
 \]
+
+and
 
 \[
-q_k^-
+d_k^-
 =
-q(t_k^-),
+d(t_k^-),
 \qquad
-q_k^+
+d_k^+
 =
-q(t_k)
-=
-q(t_k^+).
+d(t_k).
 \]
 
-A bare state at \(t_k\) therefore includes row \(k\) exactly once.
+### Event transition
 
-### Exact event transition
-
-For a legal row,
+For legal row \(y_k=(t_k,m_k)\),
 
 \[
 x_k^+
@@ -611,7 +499,7 @@ x_k^+
 E_{\mathrm{exact}}(x_k^-,y_k).
 \]
 
-The action representation used by load dynamics is exact:
+Let
 
 \[
 a_k
@@ -619,51 +507,39 @@ a_k
 \operatorname{Act}_\lambda(m_k).
 \]
 
-### Operational load event transition
-
-The generic load reset is
+Demand state updates as
 
 \[
-q_k^+
+d_k^+
 =
-R_\kappa
+R_0
 \left(
-q_k^-,
+d_k^-,
 x_k^-,
 x_k^+,
 a_k
 \right).
 \]
 
-The same row may therefore produce different load updates after different
-histories.
+The same row may produce different updates after different histories.
 
-An additive event injection
+For example, a tap on right inner may differ depending on whether:
 
-\[
-q_k^+
-=
-q_k^-
-+
-J_\kappa
-\left(
-q_k^-,x_k^-,x_k^+,a_k
-\right)
-\]
-
-is one possible parameterization, not a formulation-level requirement. The
-generic reset permits saturation, redistribution, multiplicative gates,
-release-specific transitions, and other nonlinear effects.
+- right inner was recently repeated;
+- right outer participated in a recent chord;
+- right inner currently sustains a long note;
+- the opposite hand acts simultaneously;
+- the section is inside a dense burst.
 
 ### Between-event flow
 
-Let
+For
 
 \[
-\Delta t_k=t_{k+1}-t_k.
+0<\tau<t_{k+1}-t_k,
 \]
 
-For \(0<\tau<\Delta t_k\), exact state evolves as
+exact state evolves as
 
 \[
 x(t_k+\tau)
@@ -671,320 +547,95 @@ x(t_k+\tau)
 F_{\mathrm{exact},\tau}(x_k^+),
 \]
 
-where deterministic clocks advance and persistent finite state remains fixed
-unless an explicitly declared time-triggered transition occurs.
-
-Operational load evolves as
+and demand state evolves as
 
 \[
-q(t_k+\tau)
+d(t_k+\tau)
 =
-F_{\kappa,\tau}
+F_{0,\tau}
 \left(
-q_k^+,
+d_k^+,
 x(t_k+\tau)
 \right).
 \]
 
-A continuous-time implementation may use
+The implementation may use:
+
+- analytic decay kernels;
+- discrete state-space updates;
+- continuous-time ODEs;
+- neural state-space dynamics;
+- gated recurrent transitions;
+- another causal rollout family.
+
+No particular parameterization is fixed.
+
+### Long-note effects
+
+`LN_START` changes exact occupancy. The demand dynamics may use open occupancy
+to produce sustained forcing.
+
+`LN_CLOSE` ends occupancy and may produce a release transient.
+
+These demand effects are properties of the fixed gameplay profile and its
+validated dynamics. They are not implied by the chart alphabet alone.
+
+### Isolated note responses
+
+For diagnostics, one may define the response to one action under a declared
+no-future-event baseline.
+
+Under nonlinear, history-dependent dynamics, isolated responses are not
+generally additive:
 
 \[
-\frac{d}{dt}q(t)
-=
-f_\kappa(q(t),x(t)),
+d_{H_1\oplus H_2}
+\neq
+d_{H_1}
++
+d_{H_2}.
 \]
 
-but an ODE is not required. Discrete decay, analytic kernels, state-space
-updates, neural flows, or other causal semigroups are admissible if they obey
-the same boundary semantics.
+A realized chart trajectory must be obtained by complete sequential rollout.
 
-`LN_START` changes exact occupancy. The load model may use open occupancy to
-sustain forcing. `LN_CLOSE` ends that occupancy and may produce a release
-transient. These effects are chosen load priors or learned dynamics, not
-consequences of the row alphabet alone.
+## 7. Demand dimensions, intensity, and calibration
 
-Hard legality never reads \(q\). Operational load cannot turn an otherwise legal
-row into an illegal row.
+The final inventory of named demand dimensions is open.
 
-## 6. Hand symmetry and cross-hand communication
+Candidate families include:
 
-The canonical `(outer, inner)` coordinates make left-right symmetry explicit.
-Let \(\mu\) be the mirror operator defined in
-[notation.md](notation.md#4-lanes-hands-physical-roles-and-exact-actions).
-
-The structural prior is imposed on the model family, not inferred separately
-for each hand. For mirrored load dynamics \(\mu\kappa\), mirrored boundary, and
-mirrored continuation,
-
-\[
-\operatorname{Roll}_{\mu\kappa}
-\left(
-\mu b^\kappa,
-\mu Y;t
-\right)
-=
-\mu
-\operatorname{Roll}_\kappa
-\left(
-b^\kappa,Y;t
-\right).
-\]
-
-For mirrored readout \(\mu\varrho\),
-
-\[
-G_{\mu\varrho}(\mu x,\mu q)
-=
-\mu G_\varrho(x,q).
-\]
-
-A symmetric canonical specification satisfies
-
-\[
-\mu\Theta_0=\Theta_0,
-\]
-
-and therefore
-
-\[
-\mathcal D_{\mu H}^{\Theta_0}(t)
-=
-\mu\mathcal D_H^{\Theta_0}(t).
-\]
-
-This is a chosen structural prior, not a claim that every human player is
-left-right symmetric.
-
-Mirror equivariance does not imply hand independence. A hand-local update may
-depend on:
-
-- its own exact state and operational state;
-- the other hand's exact and operational state;
-- the complete simultaneous row;
-- exact cross-hand clocks;
-- symmetric messages exchanged between the two hand representations.
-
-Parameter sharing with symmetric cross-hand message passing is one admissible
-implementation. The formulation fixes equivariant semantics, not a particular
-neural topology.
-
-Handedness asymmetry may enter through an explicitly asymmetric reference
-specification or, more naturally for empirical prediction, through a separate
-player profile. It must not arise from accidentally assigning unrelated
-semantics to corresponding left- and right-hand channels.
-
-## 7. Canonical rollout and continuation boundaries
-
-The exact pre-chart state \(x_0\) contains:
-
-- closed long-note occupancy on every lane;
-- declared exact finite-state sentinels;
-- declared exact clock sentinels.
-
-For each load model \(\kappa\), the operational initial state is
-
-\[
-q_0^\kappa.
-\]
-
-The canonical rollout assumes:
-
-- every chart action is executed successfully;
-- hit timing is ideal;
-- the fixed canonical hand-role mapping \(\lambda\) is used;
-- player errors, misses, timing noise, and adaptive execution are not modeled.
-
-For legal chart \(H\), define
-
-\[
-\left(
-x_H(t),q_H^\kappa(t)
-\right)
-=
-\operatorname{Roll}_\kappa
-\left(
-x_0,q_0^\kappa,H;t
-\right).
-\]
-
-Its exact projection must agree with load-model-independent replay:
-
-\[
-\Pi_x
-\operatorname{Roll}_\kappa
-\left(
-x_0,q_0^\kappa,H;t
-\right)
-=
-\operatorname{Replay}(x_0,H;t).
-\]
-
-Changing \(\kappa\) or \(\varrho\) cannot change whether a chart has an open long
-note or whether a row is legal.
-
-At a continuation time \(t_b\), define the exact boundary
-
-\[
-\beta_b^{\mathrm{exact}}
-=
-(t_b,x_b),
-\]
-
-the load cache
-
-\[
-\sigma_b^\kappa
-=
-(t_b,q_b^\kappa),
-\]
-
-and the runtime boundary
-
-\[
-b_b^\kappa
-=
-(t_b,x_b,q_b^\kappa).
-\]
-
-For continuation \(Y\), branch-local rollout is
-
-\[
-\left(
-\widetilde x_Y(t),
-\widetilde q_Y^\kappa(t)
-\right)
-=
-\operatorname{Roll}_\kappa
-\left(
-b_b^\kappa,Y;t
-\right).
-\]
-
-The boundary includes every committed row at or before \(t_b\) and all silent
-flow from the most recent row to \(t_b\).
-
-The exact boundary is canonical after the exact-state schema is fixed. The load
-cache is tied to \(\kappa\) and must be versioned. If \(\kappa\) changes, the
-cache must be recomputed from a valid earlier checkpoint or from chart history.
-The readout \(\varrho\) need not be stored in the boundary because it has no
-state of its own in the base formulation.
-
-Generation and post-chart analysis must share one rollout semantics:
-
-\[
-\operatorname{Roll}_{\mathrm{generation},\kappa_0}
-=
-\operatorname{Roll}_{\mathrm{analysis},\kappa_0}.
-\]
-
-Otherwise a chart can be optimized against one load definition and reported
-under another.
-
-The complete history remains available beside the boundary. Runtime state is a
-continuation interface, not a replacement for symbolic history.
-
-## 8. Gameplay-demand field and calibrated readouts
-
-Let
-
-\[
-\mathcal C
-=
-\{c_1,\ldots,c_D\}
-\]
-
-be the hand-local demand channel set and
-
-\[
-\mathcal C_\times
-=
-\{c_1^\times,\ldots,c_{D_\times}^\times\}
-\]
-
-be the cross-hand channel set. \(D_\times=0\) is admissible; the value of an
-explicit cross-hand component is an empirical question.
-
-The readout maps exact and operational state to a nonnegative field:
-
-\[
-\mathcal D_H^\Theta(t)
-=
-G_\varrho
-\left(
-x_H(t),q_H^\kappa(t)
-\right).
-\]
-
-For hand-local channels,
-
-\[
-\mathcal D_H^\Theta(h,c,t)
-=
-\left[
-G_\varrho(x_H(t),q_H^\kappa(t))
-\right]_{h,c},
-\qquad
-h\in\{L,R\},
-\quad
-c\in\mathcal C.
-\]
-
-For cross-hand channels,
-
-\[
-\mathcal D_H^\Theta(\times,c^\times,t)
-=
-\left[
-G_\varrho(x_H(t),q_H^\kappa(t))
-\right]_{\times,c^\times}.
-\]
-
-The distinction between \(q\) and \(\mathcal D\) is deliberate:
-
-- \(q\) is internal state chosen for causal rollout sufficiency;
-- \(\mathcal D\) is an exposed semantic and calibrated projection;
-- invertibility between them is neither required nor assumed;
-- several \(q\) states may produce the same current readout while differing in
-  future response.
-
-Possible hand-demand semantics include:
-
-- role repetition or jack pressure;
-- outer-inner alternation speed;
+- burst demand;
+- strain accumulation;
+- same-role repetition pressure;
+- outer-inner transition pressure;
 - local density;
 - one-hand chord control;
-- sustained long-note control;
+- long-note occupancy control;
 - release timing;
-- short-term stamina demand;
-- role-occupancy pressure.
+- short-term recovery;
+- cross-hand synchronization;
+- hand-balance pressure.
 
-Possible cross-hand semantics include:
+A natural-language name does not by itself establish a valid demand dimension.
 
-- coordinated simultaneity;
-- hand-balance pressure;
-- two-hand chord burden;
-- synchronization or alternation demand.
+A named dimension must be anchored by controlled interventions. For example,
+same-role repetition pressure should respond predictably when:
 
-These are proposed meanings, not automatically identified canonical axes.
+- the future action is held fixed;
+- the previously active role is changed;
+- the inter-action interval is varied;
+- chord participation is controlled;
+- long-note occupancy is controlled;
+- the opposite-hand history is controlled.
 
-The field is not a collection of independent scalar note difficulties. A row
-changes state at its event time; recovery, sustained occupancy, nonlinear
-interactions, and later state-conditioned events determine the realized
-trajectory.
-
-A per-note response shape may be defined for diagnostics as a counterfactual
-isolated response under a declared no-future-event baseline. Under nonlinear or
-state-conditioned dynamics, isolated responses are not additive components of
-the realized chart trajectory.
-
-A local intensity readout is
+A local scalar intensity may be defined as
 
 \[
-i_H(t;\Theta)
+i_H(t)
 =
-r_{\mathrm{intensity}}
+R_{\mathrm{intensity}}
 \left(
-\mathcal D_H^\Theta(t);\varrho
+d_H(t)
 \right).
 \]
 
@@ -993,216 +644,884 @@ Section or map difficulty requires a separate aggregation:
 \[
 \operatorname{Diff}
 \left(
-H;W,\Theta
+H;W
 \right)
 =
 \operatorname{Agg}_{t\in W}
-i_H(t;\Theta).
+i_H(t).
 \]
 
-Neither quantity is defined as a raw norm until channel units, interactions,
-and calibration justify that operation.
+Neither operation is a raw vector norm unless channel units, interactions, and
+calibration justify that choice.
 
-The working style hypothesis is that chart style is partly expressed by the
-temporal geometry of the demand field:
+### Representation non-uniqueness
 
-- which channels rise;
-- whether they rise together or alternate;
-- how long they remain elevated;
-- how quickly they recover;
-- whether the two hands are symmetric;
-- how one demand type transitions into another;
-- whether similar demand islands recur.
+The finite representation of the frontier is not automatically unique.
 
-A map-level tag is only a weak observation of this geometry. For example, a
-`jack-heavy` section predicate may take the form
+For an invertible transformation \(T\),
 
 \[
-\frac{1}{|W|}
-\int_W
-\operatorname{Agg}_{h\in\{L,R\}}
-\mathcal D_H^\Theta(h,\mathrm{jack},t)
-\,dt
->
-\tau,
+\widetilde d=T(d),
 \]
 
-together with a minimum-duration condition. It does not imply that the whole
-chart has that style at every time.
+one may transform the dynamics and continuation evaluator while preserving the
+same frontier responses.
 
-Demand magnitude as intensity, demand composition as style mixture, and demand
-field sufficiency for style are hypotheses rather than definitions.
+Therefore:
 
-Most importantly,
+- frontier behavior is the primary operational object;
+- a demand coordinate receives a gameplay name only after semantic anchoring;
+- an unanchored learned coordinate remains latent;
+- style annotations alone must not be used to circularly define a demand
+  channel with the same name.
 
-\[
-\mathcal D_H^\Theta(t)
-\neq
-\text{an observed player's fatigue, pain, attention, or miss probability}.
-\]
+## 8. Hand symmetry and cross-hand interaction
 
-Those quantities require an additional player model and observations.
+The canonical `(outer, inner)` coordinates make mirror structure explicit.
 
-## 9. Realized demand and desired demand are different objects
-
-For a committed chart \(H\),
+For the mirror operator \(\mu\), exact replay satisfies
 
 \[
-\mathcal D_H^\Theta(t)
-\]
-
-is realized chart-induced demand under the declared canonical specification.
-It is a consequence of chart replay and load rollout.
-
-A generation planner may separately provide
-
-\[
-\mathcal D^\star(t)
-\]
-
-or a target set
-
-\[
-\mathfrak T(t)
-\subseteq
-\mathbb R_{\ge0}^{C}.
-\]
-
-These are desired demand plans. They express intended style or intensity and do
-not describe the current player or current chart automatically.
-
-For candidate continuation \(Y\), branch rollout produces
-
-\[
-\widetilde{\mathcal D}_Y^\Theta(t)
+x_{\mu H}(t)
 =
-\operatorname{Readout}_\varrho
+\mu x_H(t).
+\]
+
+A mirror-equivariant demand specification satisfies
+
+\[
+d_{\mu H}(t)
+=
+\mu d_H(t).
+\]
+
+For a mirrored boundary and continuation,
+
+\[
+\mathfrak C_0
 \left(
-\operatorname{Roll}_\kappa(b^\kappa,Y;t)
+\mu b,
+\mu Y
+\right)
+=
+\mu
+\mathfrak C_0(b,Y).
+\]
+
+Mirror equivariance does not imply hand independence.
+
+A hand-local demand update may depend on:
+
+- the same hand's exact and demand state;
+- the opposite hand's exact and demand state;
+- the complete simultaneous row;
+- persistent cross-hand state;
+- symmetric messages exchanged between hand representations.
+
+Parameter sharing with symmetric cross-hand communication is a valid
+implementation.
+
+Most gameplay-style tags are expected to be mirror invariant:
+
+\[
+z_{\mu H}(W)=z_H(W).
+\]
+
+If the final vocabulary contains a genuinely directional tag, its explicit tag
+transformation must be declared rather than emerging accidentally from
+unrelated left- and right-hand semantics.
+
+## 9. Section gameplay geometry
+
+Let
+
+\[
+W=[a,b]
+\]
+
+be a chart section.
+
+Because gameplay demand at section entry depends on preceding history, a
+section cannot always be represented by rows inside \(W\) alone.
+
+Define the canonical section trace
+
+\[
+\mathcal G_H(W)
+=
+\left(
+x_H(a^-),
+d_H(a^-),
+u_H|_W,
+d_H|_W
 \right).
 \]
 
-A target-matching term may compare
+This contains:
+
+- the exact entry boundary;
+- the incoming gameplay frontier representation;
+- the actions chosen inside the section;
+- the realized demand trajectory inside the section.
+
+Define the section gameplay geometry
 
 \[
-\widetilde{\mathcal D}_Y^\Theta
-\quad\text{with}\quad
-\mathcal D^\star,
-\]
-
-but the target cannot override exact legality, candidate support, or long-note
-obligations. Target feasibility is part of generation search.
-
-The operational state \(q\), realized field \(\mathcal D_H\), and desired field
-\(\mathcal D^\star\) therefore have distinct roles:
-
-| Object | Role |
-| --- | --- |
-| \(q^\kappa(t)\) | Internal causal memory for future rollout. |
-| \(\mathcal D_H^\Theta(t)\) | Demand induced by a concrete chart. |
-| \(\mathcal D^\star(t)\) | Optional design target supplied to generation. |
-
-## 10. Continuation-demand operator and predictive state semantics
-
-A current scalar demand value is not enough to characterize continuation
-behavior. The generation-relevant object is the response to possible future
-legal continuations.
-
-For runtime boundary
-
-\[
-b_t^\kappa=(t,x_t,q_t^\kappa)
-\]
-
-and legal continuation \(Y\) over horizon \([t,t+L]\), define the
-continuation-demand operator
-
-\[
-\mathfrak C_\Theta
+r_H(W)
+=
+\Psi
 \left(
-b_t^\kappa,Y
+\mathcal G_H(W)
+\right).
+\]
+
+The representation \(r_H(W)\) may summarize:
+
+- which demand dimensions rise;
+- the actions that cause them to rise;
+- how quickly they rise;
+- how long they remain elevated;
+- how they recover;
+- whether peaks repeat;
+- whether mechanisms alternate or overlap;
+- which hand and role combinations are used;
+- how long-note occupancy interacts with free-role actions;
+- how the two hands coordinate;
+- how similar demand islands recur through the section.
+
+The operator \(\Psi\) is not fixed to one neural architecture or hand-designed
+feature set. Its semantic responsibility is fixed: it represents the temporal
+geometry of how concrete chart actions drive the canonical gameplay frontier.
+
+## 10. Section style and style tags
+
+Let the fixed style vocabulary be
+
+\[
+\mathcal K_{\mathrm{style}}
+=
+\{k_1,\ldots,k_K\},
+\]
+
+where \(K\) is the versioned number of Pulsefield style enum values.
+
+For section \(W\), define the modeled style profile
+
+\[
+z_H(W)
+=
+\left(
+z_{H,1}(W),
+\ldots,
+z_{H,K}(W)
 \right)
+\in
+[0,1]^K.
+\]
+
+The value \(z_{H,k}(W)\) represents the salience or applicability of style
+concept \(k\) in that section.
+
+The coordinates are not required to sum to one:
+
+\[
+\sum_{k=1}^{K}
+z_{H,k}(W)
+\neq 1
+\quad\text{in general}.
+\]
+
+The vocabulary is therefore multi-label rather than one-of-\(K\).
+
+A section may:
+
+- have one dominant style;
+- combine several styles;
+- transition between styles;
+- weakly express several concepts;
+- contain no especially salient named style.
+
+The absence of a strong named tag does not imply the absence of concrete
+gameplay organization.
+
+### Style as section-level action-demand geometry
+
+The central style hypothesis is
+
+\[
+z_H(W)
 =
-\left.
-\mathcal D_{b_t^\kappa\oplus Y}^{\Theta}
-\right|_{[t,t+L]}.
-\]
-
-Here \(b_t^\kappa\oplus Y\) means branch-local continuation from the boundary;
-it does not mutate committed history.
-
-The intended sufficiency contract for runtime state is:
-
-\[
-(x_t,q_t^\kappa)
-=
-(x'_t,q_t^{\prime,\kappa})
-\]
-
-implies
-
-\[
-\mathfrak C_\Theta(b_t^\kappa,Y)
-=
-\mathfrak C_\Theta(b_t^{\prime,\kappa},Y)
-\]
-
-for every continuation \(Y\) legal from both exact boundaries.
-
-Equivalently, define a history relation at time \(t\):
-
-\[
-H\sim_{\Theta,t}H'
-\]
-
-when
-
-\[
-x_H(t)=x_{H'}(t)
-\]
-
-and, for every common legal continuation \(Y\),
-
-\[
-\mathfrak C_\Theta(b_{H,t}^\kappa,Y)
-=
-\mathfrak C_\Theta(b_{H',t}^\kappa,Y).
-\]
-
-A theoretically minimal continuation state represents the equivalence classes
-of \(\sim_{\Theta,t}\). The formulation does not claim that a finite exact
-representation is known. A learned or hand-designed \(q^\kappa\) is an
-approximation whose adequacy must be tested.
-
-This perspective replaces the question
-
-> Which hidden parity state is the ideal player really in?
-
-with the operational question
-
-> Which information about committed control history is required to predict the
-> response to declared future continuations?
-
-For example, the relative preference for a future role can be represented as a
-continuation-conditioned value
-
-\[
-V_h(\rho,\Delta\mid b_t^\kappa)
-=
-\operatorname{Cost}
+\operatorname{StyleRead}
 \left(
-\text{action on role }\rho\text{ at }t+\Delta
+r_H(W)
+\right).
+\]
+
+In words:
+
+> A style tag names a salient, recurring, community-recognizable region or
+> predicate in the space of section action-demand geometries.
+
+This does not require the style concepts to form disjoint clusters. Their
+regions may overlap.
+
+A tag may depend on:
+
+- demand trajectory morphology;
+- action identity;
+- role sequence;
+- timing organization;
+- chord and long-note topology;
+- incoming frontier state;
+- transitions between demand mechanisms.
+
+Style is therefore not merely the value of \(d_H(t)\) at one time.
+
+More strongly,
+
+\[
+z_H(W)
+\not\equiv
+d_H(t)
+\]
+
+and
+
+\[
+z_H(W)
+\not\equiv
+\operatorname{Agg}_{t\in W}d_H(t).
+\]
+
+Two sections may have similar aggregate demand and different styles. The same
+style may appear at different demand intensities.
+
+### Demand as the mechanistic connection point
+
+Although style and demand are not identical, they are intentionally not
+independent.
+
+The intended hierarchy is
+
+\[
+\text{concrete section arrangement}
+\longrightarrow
+\text{moving gameplay frontier}
+\longrightarrow
+\text{demand trajectory}
+\longrightarrow
+\text{section action-demand geometry}
+\longrightarrow
+\text{style semantics}.
+\]
+
+Demand is the main mechanistic representation connecting chart arrangement to
+the fixed gameplay profile.
+
+Style is the higher-level geometry of how the arrangement drives that
+representation.
+
+### Namespaced semantics
+
+Demand dimensions and style tags may share natural-language roots, but they are
+different formal objects.
+
+For example:
+
+\[
+d_{\mathrm{burst}}(t)
+\]
+
+may denote a continuous short-horizon demand dimension, while
+
+\[
+\texttt{STYLE\_BURST}
+\]
+
+denotes a section-level semantic tag.
+
+The style tag may require:
+
+- a sufficiently salient burst-demand island;
+- a characteristic rise and recovery shape;
+- a minimum duration or repetition condition;
+- corresponding concrete note organization.
+
+A high instantaneous value of \(d_{\mathrm{burst}}(t)\) does not by itself make
+the whole section `STYLE_BURST`.
+
+Likewise, a style tag must not be used as the sole definition of a demand
+channel with the same name. Demand channels require independent continuation
+and intervention grounding.
+
+## 11. Is demand sufficient for style?
+
+Pulsefield treats demand mediation as a hypothesis, not a definition.
+
+A strong demand-only hypothesis would be
+
+\[
+z_H(W)
+\perp
+u_H|_W
 \mid
-b_t^\kappa
+d_H|_W.
+\]
+
+Equivalently, after observing the demand trajectory, the symbolic action
+arrangement would add no further information about style.
+
+This may be false.
+
+Some style concepts may retain residual dependence on:
+
+- lane and role grammar;
+- repeated symbolic motifs;
+- long-note topology;
+- rhythmic organization;
+- pattern identity;
+- arrangement conventions not fully represented by current demand channels.
+
+The more conservative formulation is
+
+\[
+z_H(W)
+=
+\operatorname{StyleRead}
+\left(
+u_H|_W,
+d_H|_W,
+x_H(a^-),
+d_H(a^-)
+\right).
+\]
+
+Whether \(u_H|_W\) can eventually be removed is an empirical question.
+
+A direct test compares:
+
+1. a style predictor from demand trajectory only;
+2. a style predictor from symbolic chart arrangement only;
+3. a predictor from both;
+4. matched counterfactual sections with similar demand and different
+   arrangement.
+
+If the combined predictor consistently outperforms the demand-only predictor,
+style contains an arrangement residual not yet captured by \(d\).
+
+## 12. Section-level style annotation
+
+For each annotated section \(W\), define
+
+\[
+o_{H,W}^{\mathrm{sec}}
+=
+\left(
+o_{H,W,1}^{\mathrm{sec}},
+\ldots,
+o_{H,W,K}^{\mathrm{sec}}
 \right),
 \]
 
-rather than as a posterior probability that the current hidden state “is” role
-\(\rho\).
+with
 
-### Controlled continuation probes
+\[
+o_{H,W,k}^{\mathrm{sec}}
+\in
+\{1,0,?\}.
+\]
 
-Because all continuations cannot be enumerated, declare a probe bank
+The values mean:
+
+- \(1\): the annotator confirms style \(k\) is present;
+- \(0\): the annotator explicitly confirms style \(k\) is absent;
+- \(?\): the label is unobserved or not judged.
+
+Beatmap-lens section annotation provides high-resolution supervision of
+\(z_H(W)\).
+
+The annotation workflow must declare whether it is:
+
+- **positive-only**: annotators select confirmed present tags;
+- **exhaustive**: annotators judge every tag as present or absent;
+- **partially exhaustive**: only some tag dimensions receive explicit negative
+  judgments.
+
+Unless an explicit negative judgment is recorded,
+
+\[
+\text{unmarked}
+\neq
+\text{absent}.
+\]
+
+Section annotations may themselves be noisy or ambiguous. They are semantic
+observations of style, not exact chart facts.
+
+An observation model may be written as
+
+\[
+o_{H,W}^{\mathrm{sec}}
+\sim
+p_{\eta,\mathrm{sec}}
+\left(
+o
+\mid
+z_H(W)
+\right).
+\]
+
+## 13. Map-level community style tags
+
+Let
+
+\[
+o_H^{\mathrm{map}}
+\]
+
+denote community-voted map-level style evidence.
+
+When vote counts or ratios are available, preserve them as
+
+\[
+v_{H,k}^{\mathrm{map}}.
+\]
+
+A thresholded enum loses information about confidence and disagreement and
+should be treated as a derived representation.
+
+Partition a map into sections
+
+\[
+W_1,\ldots,W_M.
+\]
+
+For style \(k\), define map-level salience as
+
+\[
+\zeta_{H,k}^{\mathrm{map}}
+=
+\operatorname{Pool}_k
+\left(
+\{
+z_{H,k}(W_j),
+|W_j|,
+q_j
+\}_{j=1}^{M}
+\right),
+\]
+
+where \(q_j\) may contain section prominence, confidence, or structural
+importance.
+
+The pooling operator need not be a mean. A style may receive a map-level tag
+because it:
+
+- appears in a large fraction of the map;
+- persists for a long duration;
+- recurs across several sections;
+- dominates a prominent climax;
+- is unusually salient despite occupying a shorter interval.
+
+Community evidence is modeled as
+
+\[
+o_H^{\mathrm{map}}
+\sim
+p_{\eta,\mathrm{map}}
+\left(
+o
+\mid
+\zeta_H^{\mathrm{map}}
+\right).
+\]
+
+A map-level tag does not imply
+
+\[
+z_{H,k}(W_j)=1
+\qquad
+\text{for every }j.
+\]
+
+Therefore community map tags must not be copied onto every section as local
+ground truth.
+
+The supervision hierarchy is:
+
+\[
+\text{community map tags}
+\rightarrow
+\text{weak aggregate supervision},
+\]
+
+\[
+\text{beatmap-lens section tags}
+\rightarrow
+\text{strong local supervision}.
+\]
+
+Charts without annotations still possess concrete gameplay geometry and
+realized style. Their style labels are merely unobserved.
+
+## 14. Learning the meaning of style tokens
+
+A style token is considered semantically learned only when both recognition and
+intervention contracts hold.
+
+### Recognition contract
+
+For a section manually confirmed to contain style \(k\), the style recognizer
+
+\[
+q_\eta
+\left(
+z_{H,k}(W)
+\mid
+u_H|_W,
+d_H|_W
+\right)
+\]
+
+should assign high salience to \(k\), with calibration appropriate to annotation
+uncertainty.
+
+Recognition must be evaluated separately on:
+
+- section-level human annotations;
+- map-level community tags after section pooling;
+- held-out songs and mappers;
+- sections with mixed styles;
+- negative and unknown labels.
+
+### Intervention contract
+
+For fixed audio, committed history, and compatible demand conditions, changing
+the requested style should change the generated chart distribution in the
+corresponding semantic direction:
+
+\[
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,c_a^{\mathrm{style}},d_W^\star
+\right)
+\neq
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,c_b^{\mathrm{style}},d_W^\star
+\right).
+\]
+
+The difference should be recognized as the requested style by held-out human
+annotations or an independently validated style recognizer.
+
+It is insufficient for a style token merely to change:
+
+- note count;
+- global difficulty;
+- decoding entropy;
+- one superficial token frequency;
+- memorized mapper identity.
+
+A token's meaning is grounded by
+
+\[
+\text{recognition from charts}
++
+\text{controlled effect on generated charts}.
+\]
+
+Explicit style modeling does not require a separate style planner. A model may
+generate chart rows directly while learning style through:
+
+- conditional tokens;
+- an auxiliary recognition objective;
+- contrastive section supervision;
+- latent internal features;
+- branch reranking;
+- another architecture consistent with the same semantics.
+
+## 15. Realized style, requested style, realized demand, and desired demand
+
+The following four objects must remain distinct.
+
+| Object | Meaning |
+| --- | --- |
+| \(z_H(W)\) | Style realized by a materialized section. |
+| \(c_W^{\mathrm{style}}\) | Optional request to favor a style or mixture. |
+| \(d_H(t)\) | Demand state induced by a materialized chart. |
+| \(d_W^\star(t)\) | Optional desired demand trajectory. |
+
+### Requested style
+
+A style request may be represented as
+
+\[
+c_W^{\mathrm{style}}
+=
+(w_W,\gamma_W),
+\]
+
+where
+
+\[
+w_W\in[0,1]^K
+\]
+
+is a requested multi-tag profile and
+
+\[
+\gamma_W\ge0
+\]
+
+is adherence strength.
+
+A single requested enum is a one-hot special case.
+
+The coordinates of \(w_W\) need not sum to one when mixed styles are allowed.
+
+When no request is supplied,
+
+\[
+c_W^{\mathrm{style}}=\varnothing.
+\]
+
+This means “allow the model's natural style distribution,” not a separate
+`STYLE_NONE` class.
+
+### Desired demand
+
+A desired demand trajectory is
+
+\[
+d_W^\star(t),
+\qquad
+t\in W.
+\]
+
+A simpler intensity control is
+
+\[
+i_W^\star(t).
+\]
+
+When no desired demand is supplied, the generator does not receive a mandatory
+demand plan. Every output still induces
+
+\[
+d_{H_k\oplus Y_W}(t).
+\]
+
+### Four generation cases
+
+Without either control:
+
+\[
+Y_W
+\sim
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k
+\right).
+\]
+
+With style only:
+
+\[
+Y_W
+\sim
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,c_W^{\mathrm{style}}
+\right).
+\]
+
+With demand only:
+
+\[
+Y_W
+\sim
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,d_W^\star
+\right).
+\]
+
+With both:
+
+\[
+Y_W
+\sim
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,c_W^{\mathrm{style}},d_W^\star
+\right).
+\]
+
+In the style-only case, the model chooses a compatible demand trajectory.
+
+In the demand-only case, the model may realize the target through several
+different styles.
+
+In the joint case, it searches for a legal continuation in the overlap between
+the requested style region and demand target.
+
+The two controls may conflict. Neither is assumed always feasible.
+
+### Abstract reweighting semantics
+
+An optional control interpretation is
+
+\[
+p
+\left(
+Y_W
+\mid
+X,H_k,c_W^{\mathrm{style}},d_W^\star
+\right)
+\propto
+p_0
+\left(
+Y_W
+\mid
+X,H_k
+\right)
+\exp
+\left[
+\gamma_W
+Q_{\mathrm{style}}
+\left(
+z_{H_k\oplus Y_W}(W),
+w_W
+\right)
+-
+\lambda_d
+L_{\mathrm{demand}}
+\left(
+d_{H_k\oplus Y_W}|_W,
+d_W^\star
+\right)
+\right].
+\]
+
+This equation specifies semantics, not a required energy-model
+implementation.
+
+### Sampling temperature
+
+Sampling temperature \(\tau\) changes decoding entropy.
+
+It is not:
+
+- style composition;
+- style adherence;
+- gameplay intensity;
+- desired demand.
+
+These interfaces must remain separately named.
+
+## 16. Demand and style in generation
+
+For generation boundary \(g\), define
+
+\[
+d_g
+=
+\operatorname{DemandRoll}_0(H_k;g).
+\]
+
+The base semantic target may be written
+
+\[
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,\beta_g,
+[c_W^{\mathrm{style}}],
+[d_W^\star]
+\right).
+\]
+
+Because \(d_g\) is derived from the committed chart, an implementation may
+equivalently use it as a runtime feature:
+
+\[
+p_\theta
+\left(
+Y_W
+\mid
+X,H_k,\beta_g,d_g,
+[c_W^{\mathrm{style}}],
+[d_W^\star]
+\right).
+\]
+
+This does not make demand an independently supplied mandatory input.
+
+For candidate continuation \(Y_W\), branch rollout yields
+
+\[
+\widetilde d_Y(t)
+=
+\operatorname{DemandRoll}_0
+\left(
+\beta_g,d_g,Y_W;t
+\right).
+\]
+
+Its section geometry is
+
+\[
+\widetilde r_Y(W)
+=
+\Psi
+\left(
+\widetilde x_Y(g),
+d_g,
+u_Y,
+\widetilde d_Y|_W
+\right),
+\]
+
+and its realized style profile is
+
+\[
+\widetilde z_Y(W)
+=
+\operatorname{StyleRead}
+\left(
+\widetilde r_Y(W)
+\right).
+\]
+
+These quantities may be used for:
+
+- training supervision;
+- branch evaluation;
+- requested-style matching;
+- requested-demand matching;
+- analysis and visualization;
+- controlled generation tests.
+
+The generator is not required to first materialize an explicit \(d^\star\) plan
+or style plan before producing rows.
+
+## 17. Controlled continuation probes
+
+Because the full frontier cannot be enumerated, define a probe bank
 
 \[
 \mathcal Y_{\mathrm{probe}}
@@ -1210,367 +1529,220 @@ Because all continuations cannot be enumerated, declare a probe bank
 \{Y_1,\ldots,Y_M\}.
 \]
 
-Possible probes include:
+Useful probes include:
 
-- outer-role jack after several controlled intervals;
+- same-role action after controlled intervals;
 - outer-inner alternation;
 - chord-to-single continuation;
+- single-to-chord continuation;
+- controlled one-hand density bursts;
 - long-note hold with free-role taps;
 - long-note release followed by a chord;
-- matched left and right mirror patterns;
+- mirrored left and right patterns;
 - simultaneous two-hand chords;
-- one-hand density bursts;
-- controlled silence and recovery intervals.
+- silence and recovery intervals.
 
-For trajectory summary functionals \(\Psi_i\), define
+For response summaries \(\Omega_i\), define
 
 \[
 p_H(t)
 =
 \left[
-\Psi_1
+\Omega_1
 \left(
-\mathfrak C_\Theta(b_{H,t}^\kappa,Y_1)
+\mathfrak C_0(b_H(t),Y_1)
 \right),
 \ldots,
-\Psi_M
+\Omega_M
 \left(
-\mathfrak C_\Theta(b_{H,t}^\kappa,Y_M)
+\mathfrak C_0(b_H(t),Y_M)
 \right)
 \right].
 \]
 
-Probe responses can be used to:
+Probe responses are used to:
 
-- test whether \(q^\kappa\) preserves relevant future information;
-- anchor named demand channels;
+- test whether \(d_H(t)\) preserves relevant frontier information;
+- anchor named demand dimensions;
 - compare alternative dynamics;
 - validate mirror equivariance;
-- reveal history shortcuts;
+- detect history shortcuts;
+- distinguish current intensity from future response;
 - define interpretable continuation costs.
 
-The probe vector need not itself be the runtime state. It is an observable test
-interface for state adequacy and readout semantics.
+The probe vector need not itself be the runtime demand state.
 
-## 11. Optional extension to multiple physical executions
+## 18. Evaluation contracts
 
-The base Pulsefield setting uses fixed lane-to-role mapping, so
+### Frontier sufficiency
 
-\[
-\mathcal E_\lambda(H)=\{u_H\}.
-\]
-
-Execution ambiguity should be introduced only when the formulation explicitly
-allows alternatives, such as:
-
-- variable fingering for one lane;
-- hand crossing;
-- alternative long-note holding strategies;
-- player-specific role assignment;
-- execution errors or adaptive recovery actions.
-
-Let
+Find histories with matched
 
 \[
-\mathcal E_\pi(H)
+x_H(t),
+\qquad
+d_H(t),
 \]
 
-be the admissible execution-trace set under an extended execution convention
-\(\pi\). For each trace \(e\in\mathcal E_\pi(H)\), roll out independently:
+and test them on held-out continuation probes.
+
+Systematic response differences indicate insufficient demand state.
+
+### State-conditioned demand
+
+Hold the current row fixed while varying:
+
+- prior role use;
+- inter-event interval;
+- chord participation;
+- long-note occupancy;
+- cross-hand history.
+
+The demand update should reflect the controlled history differences.
+
+### Demand mediation of style
+
+Compare section-style prediction from:
+
+1. \(d_H|_W\) only;
+2. \(u_H|_W\) only;
+3. \((u_H|_W,d_H|_W)\);
+4. simple density and event-count baselines.
+
+This measures how much community style semantics are mediated by the current
+demand representation and how much arrangement residual remains.
+
+### Matched-demand style control
+
+Generate with different style requests while matching realized demand
+statistics as closely as possible.
+
+If the outputs are still recognized as distinct styles, style control contains
+information beyond difficulty or intensity.
+
+### Matched-style demand control
+
+Generate at different desired demand levels while holding requested style
+fixed.
+
+This tests whether demand control changes intensity without merely replacing
+the section's style.
+
+### Annotation hierarchy
+
+Evaluate:
+
+- section recognition on beatmap-lens labels;
+- map-tag prediction after section pooling;
+- localization of map-level tags to relevant sections;
+- calibration under mixed and missing labels.
+
+### Mirror consistency
+
+For mirrored audio-independent chart conditions,
 
 \[
-q_{H,e}^\kappa(t)
-=
-\operatorname{LoadRoll}_\kappa(H,e;t),
+d_{\mu H}(t)
+\approx
+\mu d_H(t)
 \]
 
-\[
-\mathcal D_{H,e}^{\Theta}(t)
-=
-\operatorname{Readout}_\varrho
-\left(
-x_{H,e}(t),q_{H,e}^\kappa(t)
-\right).
-\]
+and mirror-invariant style predictions should agree.
 
-Without calibrated execution weights, preserve a set-valued demand object:
+## 19. Falsifiable hypotheses
 
-\[
-\mathfrak D_H^\Theta
-=
-\left\{
-\mathcal D_{H,e}^{\Theta}
-\;\middle|\;
-e\in\mathcal E_\pi(H)
-\right\}.
-\]
+1. **Finite demand state can approximate the moving gameplay frontier.**  
+   Histories mapped to the same exact and demand boundary should produce
+   matched responses on held-out controlled continuations.
 
-If a declared stochastic execution policy provides a measure
+2. **State-conditioned dynamics outperform fixed note kernels.**  
+   The same row after different repetition, chord, occupancy, and recovery
+   histories should produce distinguishable demand updates when gameplay
+   semantics require it.
 
-\[
-\nu_\pi(de\mid H),
-\]
+3. **Demand trajectory mediates a substantial part of section style.**  
+   A demand-based style predictor should outperform density, event-count, and
+   global-difficulty baselines on held-out section annotations.
 
-its pushforward through complete rollout is
+4. **Style retains measurable arrangement geometry.**  
+   A combined symbolic-action and demand predictor may outperform a
+   demand-only predictor. If it does, style cannot yet be reduced to the
+   current demand representation.
 
-\[
-\mathbb Q_H^\Theta
-=
-\left(
-e\mapsto\mathcal D_{H,e}^{\Theta}
-\right)_\#
-\nu_\pi(de\mid H).
-\]
+5. **Section annotation explains map-level tags.**  
+   Pooling section-style salience should predict community map tags better than
+   assigning each map tag uniformly to all sections.
 
-Expectation, worst case, quantiles, or risk-sensitive functionals are applied
-after per-execution rollout. There is generally no valid operation of averaging
-execution traces before nonlinear rollout. In any representation where an
-averaged trace summary \(\overline e\) is defined, one should not assume
+6. **Style tokens support semantic intervention.**  
+   Changing a style token should alter held-out style judgments while
+   controlling for audio, history, and realized demand.
 
-\[
-\operatorname{Roll}_\kappa(\overline e)
-\neq
-\int
-\operatorname{Roll}_\kappa(e)
-\,\nu_\pi(de\mid H).
-\]
+7. **Demand control and style control are distinguishable.**  
+   Matched-demand style interventions and matched-style demand interventions
+   should both produce their intended independent effects.
 
-If execution policy itself depends on accumulating player load, then execution
-and response form a coupled player-control process. That extension requires a
-true player model and is not part of the canonical chart descriptor.
+8. **Structural hand symmetry improves consistency and sample efficiency.**  
+   Mirror-equivariant state and demand dynamics should reduce unjustified
+   left-right discrepancies without preventing cross-hand interaction.
 
-## 12. Player response is a separate observation layer
+9. **An explicit desired-demand plan is not required for ordinary
+   generation.**  
+   A direct generator with derived gameplay state should remain competitive
+   when no \(d^\star\) is provided. Failure would justify a stronger explicit
+   planning layer.
 
-The canonical control-load specification describes a chart under a reference
-execution convention. It does not identify how one concrete person performs or
-feels.
+## 20. Open definitions
 
-Let
+- What is the smallest exact control state needed to update demand without
+  replaying all history?
+- What finite representation of the frontier is sufficient?
+- Which demand dimensions are stable, interpretable, and independently
+  anchorable?
+- Which dynamics best express burst, strain, recovery, long-note occupancy, and
+  release?
+- Is an explicit cross-hand demand component necessary?
+- Which parts of section style are explained by demand trajectory?
+- Which symbolic arrangement residuals remain?
+- How should section boundaries be defined or annotated?
+- How should mixed or transitional section styles be represented?
+- What pooling operator best relates section style to community map tags?
+- Which community vote information should be retained rather than thresholded?
+- Does the annotation workflow provide explicit negatives or only positives?
+- How should incompatible style and demand controls be detected?
+- Which continuation probes best distinguish frontier states?
+- How should local demand aggregate into intensity and map difficulty?
+- When does explicit desired-demand conditioning improve controllability enough
+  to justify its complexity?
 
-\[
-\phi_{\mathrm{player}}
-\]
-
-contain player-specific properties such as:
-
-- handedness and role asymmetry;
-- speed and coordination capacity;
-- stamina and recovery;
-- timing variance;
-- learned execution strategy;
-- adaptation to repeated patterns;
-- sensitivity to subjective burden.
-
-Let \(e_{\mathrm{player}}\) be the player's actual execution trace and
-\(O_{\mathrm{player}}\) observed outcomes such as hit timing, accuracy, misses,
-early long-note releases, or subjective ratings. A future observation model
-may take the form
-
-\[
-O_{\mathrm{player}}
-\sim
-p_\eta
-\left(
-O
-\mid
-H,
-e_{\mathrm{player}},
-\mathcal D_{H,e_{\mathrm{player}}}^\Theta,
-\phi_{\mathrm{player}}
-\right).
-\]
-
-A richer model may introduce a player-capacity state with its own dynamics and
-feedback into execution policy. That state must not be silently identified with
-canonical \(q^\kappa\).
-
-The epistemic boundary is therefore
-
-\[
-H
-\rightarrow
-(x,u_H)
-\rightarrow
-q^\kappa
-\rightarrow
-\mathcal D_{H,e_{\mathrm{player}}}^\Theta
-\rightarrow
-O_{\mathrm{player}}.
-\]
-
-Without player observations, Pulsefield can define and evaluate the earlier
-layers as reproducible chart descriptors. It cannot claim to have recovered an
-actual player's hidden fatigue, pain, attention, or subjective difficulty.
-
-Player data can nevertheless help calibrate \(\kappa\), \(\varrho\), or the
-observation model. Calibration does not erase the conceptual separation between
-chart-induced demand and player-specific response.
-
-## 13. Identifiability and semantic anchoring
-
-The operational state factorization is not unique. For any suitable invertible
-transformation \(T\), define
-
-\[
-\widetilde q=T(q).
-\]
-
-Dynamics and readout can be transformed accordingly:
-
-\[
-\widetilde R
-=
-T\circ R\circ T^{-1},
-\]
-
-\[
-\widetilde F
-=
-T\circ F\circ T^{-1},
-\]
-
-\[
-\widetilde G
-=
-G\circ T^{-1}.
-\]
-
-The same observable demand field and continuation behavior may result. Chart
-reconstruction or one scalar quality score therefore cannot establish that a
-particular coordinate system is the unique natural player state.
-
-The formulation responds by assigning different standards to \(q\) and
-\(\mathcal D\):
-
-- \(q\) is judged by causal rollout sufficiency, stability, efficiency, and
-  predictive tests;
-- a named coordinate of \(\mathcal D\) requires semantic anchoring and
-  calibration;
-- an unanchored learned projection must remain explicitly latent rather than
-  receiving a gameplay name from post-hoc inspection.
-
-Without anchors:
-
-- latent rotations or nonlinear reparameterizations may preserve objectives;
-- channel scale may be arbitrary;
-- several event-response systems may generate similar final scores;
-- models may exploit non-gameplay shortcuts;
-- section-level tags may fail to identify local causal responses;
-- one readout may hide future-response distinctions present in \(q\).
-
-Possible anchors include:
-
-- controlled synthetic continuation probes;
-- expert section annotations;
-- pairwise burden or style comparisons;
-- player timing, error, and miss data;
-- channel-specific monotonicity constraints;
-- mirror and intervention tests;
-- counterfactuals that hold the current row fixed while changing preceding
-  occupancy, recency, or repetition state;
-- explicitly declared units and calibration references.
-
-A demand channel should be treated as either:
-
-1. **named and anchored**, with explicit constraints and validation; or
-2. **free and latent**, without an unsupported human-readable label.
-
-Parameter uncertainty, execution-set uncertainty in an extended model, future
-chart uncertainty, and player-response noise are separate objects. They must
-not be collapsed into one generic “state uncertainty.”
-
-Legacy chart-reconstruction objectives do not by themselves identify a causal
-control-load state or readable demand basis. See the repository
-[legacy code boundary](../../README.md#legacy-code-boundary).
-
-## 14. Falsifiable hypotheses
-
-1. **Exact role-set state is sufficient for base chord semantics.**  
-   Exact multi-role action history plus operational load should match or
-   outperform a belief-valued parity representation on controlled chord
-   continuations. If a separate execution mixture consistently improves
-   prediction under the fixed lane-role mapping, the exact-state schema or base
-   execution assumptions are incomplete.
-
-2. **State-conditioned load is more informative than fixed note kernels.**  
-   The model should distinguish controlled cases where the same row occurs after
-   different occupancy, recency, chord, or repetition histories. Failure on
-   those contrasts rejects the additional state conditioning for the tested
-   channels.
-
-3. **Continuation probes expose state insufficiency.**  
-   Histories mapped to the same runtime state should produce matched responses
-   on held-out probe continuations. Systematic differences imply that the state
-   is not sufficient for the declared rollout family.
-
-4. **Structural hand symmetry is useful.**  
-   Mirror-equivariant exact semantics, dynamics, and readouts should improve
-   mirrored consistency and sample efficiency without preventing explicitly
-   modeled player asymmetry. No controlled benefit, or systematic harm, argues
-   for revising the prior.
-
-5. **Demand trajectories contain information beyond event counts.**  
-   Calibrated trajectories should predict held-out expert comparisons, section
-   annotations, or player outcomes better than matched density, event-count,
-   and global-tag baselines. Otherwise the claimed trajectory information has
-   not been established.
-
-6. **Cross-hand demand may be non-additive.**  
-   An explicit \(q_\times\) or \(\mathcal D_\times\) should improve controlled
-   two-hand coordination predictions beyond hand-local states and exact
-   simultaneous-row facts. No gain supports removing the cross-hand component.
-
-7. **Separating operational state from semantic readout improves robustness.**  
-   Models allowed to retain predictive internal state while constraining only
-   the exposed demand basis should outperform models forced to make every
-   latent coordinate named and nonnegative, without sacrificing readout
-   interpretability.
-
-## 15. Open definitions
-
-- What is the smallest exact chart-format state sufficient for legality?
-- Which exact canonical-control summaries should be cached in \(x^{\mathrm{ctrl}}\),
-  and which should remain derivable from \(H_k\)?
-- What dimension and factorization of \(q^\kappa\) are sufficient for held-out
-  continuation responses?
-- Which event and flow dynamics adequately express recovery, long-note
-  occupancy, chord interaction, and release?
-- Which demand channels can be semantically anchored, and in what units?
-- Which continuation probes best distinguish relevant gameplay histories?
-- Is a nonempty cross-hand operational or demand component necessary?
-- How should local demand aggregate into intensity, section difficulty, and
-  map-level judgments?
-- Should generation use an explicit desired demand plan, a target set, or only
-  implicit control?
-- Under what future extension would multiple physical executions become
-  necessary rather than artificial?
-- Which player observations are required to separate chart-induced demand from
-  player capacity and execution strategy?
-
-## 16. Scope boundary
+## 21. Scope boundary
 
 This page fixes:
 
-- the separation between exact state, operational load, semantic demand, and
-  player response;
-- deterministic base execution under the fixed 4K role mapping;
-- exact role-set semantics for chords;
-- hybrid event and between-event rollout contracts;
-- exact, derived-load, and runtime continuation boundaries;
-- the distinction between realized and desired demand;
-- continuation-response semantics for state sufficiency;
-- the extension contract for multiple admissible executions;
-- identifiability and anchoring requirements for named demand channels.
+- one canonical gameplay profile;
+- deterministic canonical hand-role execution;
+- exact chart and control state;
+- the moving gameplay frontier as the gameplay-relevant abstract object;
+- \(d_H(t)\) as its finite profile-relative representation;
+- hybrid event and recovery dynamics;
+- mirror-equivariant hand structure;
+- section action-demand geometry;
+- the distinction between demand, style, and style tags;
+- multi-label section-style semantics;
+- weak map-level and strong section-level annotation roles;
+- realized versus requested style and demand;
+- controlled probes and validation contracts.
 
 This page does not fix:
 
-- a concrete exact-state inventory beyond required semantics;
-- the architecture or dimension of \(q^\kappa\);
-- a particular ODE, state-space model, neural network, or kernel family;
-- the final demand channel inventory or calibration dataset;
-- a concrete player observation model;
-- candidate proposal, structured decoding, or stable-prefix algorithms.
+- a concrete neural architecture;
+- a final demand dimension inventory;
+- numerical units or calibration datasets;
+- a particular section encoder;
+- a particular style classifier;
+- the final enum names;
+- the candidate proposal or stable-prefix algorithm;
+- player-specific or multiplayer models.
 
-The final group of generation decisions belongs to
-[notation.md](notation.md). Concrete architectures, experiments, and evidence
-belong in `docs/research/` rather than in the formulation layer.
+Candidate generation, legal continuation support, and commit semantics belong to
+[notation.md](notation.md). Concrete architectures, annotation experiments,
+ablation results, and empirical evidence belong in `docs/research/`.
