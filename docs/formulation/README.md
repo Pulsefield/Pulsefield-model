@@ -9,6 +9,10 @@ implementation choices do not belong here.
 
 ## Documents
 
-notation.md：只定义语言、坐标、历史、candidate snapshot、branch 与 commit lifecycle。
-gameplay-state.md：只定义 exact replay、execution belief、continuous demand，以及三者的 epistemic status。
-generation-problem.md：只定义 chart-legal set、model-reachable support、structured distribution、whole-path quality 与 commit decision。
+notation.md：定义 chart language、coordinates、committed history、rolling
+candidate lifecycle、legal/reachable completion spaces、structured
+distribution、whole-completion quality 与 stable-prefix commit。
+
+gameplay-state.md：定义 exact replay/control trace、operational control-load
+state、gameplay-demand field、continuation-response semantics、identifiability
+与 player-response boundary。
