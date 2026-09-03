@@ -55,7 +55,7 @@ x_g
 \]
 
 be the exact continuation state induced by the committed chart under the fixed
-canonical execution convention. Define the exact boundary
+chart semantics and canonical hand-role mapping. Define the exact boundary
 
 \[
 \beta_g=(g,x_g).
@@ -165,6 +165,11 @@ The value \(d_g\) may be recomputed from \(H_k\) or stored as a versioned
 runtime cache. It is not an independent user input and does not change the
 semantic target distribution: it is already determined by the committed chart
 and the declared canonical specification.
+
+The runtime demand state is not a general-purpose embedding of chart history
+and is not expected to preserve every arrangement distinction relevant to
+style. The committed chart \(H_k\), exact boundary \(\beta_g\), and derived
+demand state \(d_g\) remain separate conditioning information.
 
 An implementation may therefore evaluate
 
@@ -349,18 +354,22 @@ a_{k,h,\rho}\neq\mathrm{EMPTY}
 A one-hand chord activates both roles. It does not create uncertainty over
 which role was used.
 
-The canonical execution trace is
+The operator \(\operatorname{Act}_\lambda\) is a deterministic coordinate
+projection of one serialized row. When a sequence-level hand-role view is
+useful, extend it pointwise over any chart interval:
 
 \[
-u_H
+\operatorname{Act}_\lambda(H|_W)
 =
-\operatorname{Exec}_\lambda(H)
-=
-\bigl((t_k,a_k)\bigr)_{k=1}^{|H|}.
+\bigl(
+(t_k,\operatorname{Act}_\lambda(m_k))
+\bigr)_{t_k\in W}.
 \]
 
-Under the base fixed-lane 4K convention, \(u_H\) is uniquely determined by
-\(H\).
+This derived view contains no information beyond \(H|_W\). It is not a separate
+execution state, does not infer fingering or physical player actions, and need
+not be stored as a global chart object. Serialized chart rows remain the source
+of truth.
 
 ### Mirror operator
 
@@ -617,12 +626,17 @@ A style request is written
 c_W^{\mathrm{style}}.
 \]
 
-It asks the generator to favor a section-level style or mixture from the fixed
-Pulsefield style vocabulary. It does not assert that style is otherwise absent.
+It asks the generator to favor one or more concepts from the versioned
+Pulsefield gameplay-style vocabulary defined in gameplay-state.md.
+
+The vocabulary is player- and mapper-facing, chart-intrinsic in the current
+scope, multi-label, and not identified with the complete community-tag
+catalogue. Its coordinates are not assumed to be orthogonal generative
+factors.
 
 The detailed semantics of realized style, requested style, mixtures, and
 annotation are defined in
-[gameplay-state.md](gameplay-state.md#8-style-control-and-demand-control).
+[gameplay-state.md](gameplay-state.md#15-realized-style-requested-style-realized-demand-and-desired-demand).
 
 ### Demand target
 

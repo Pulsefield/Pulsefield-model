@@ -3,63 +3,58 @@
 Pulsefield uses one fixed canonical gameplay profile to describe how a legal
 4K chart changes the gameplay situation over time.
 
-The central relation is
+The central chart-derived objects are
 
 \[
-H
-\xrightarrow{
-\operatorname{Exec/Replay}_0
-}
-\left(
-u_H,
 x_H(t)
-\right)
-\xrightarrow{
-\operatorname{DemandRoll}_0
-}
-d_H(t),
+=
+\operatorname{Replay}_0(H;t),
+\qquad
+d_H(t)
+=
+\operatorname{DemandRoll}_0(H;t),
 \]
 
 followed, for section \(W\), by
 
 \[
 \left(
-u_H|_W,
+\chi_H(W),
+d_H(a^-),
 d_H|_W
 \right)
 \xrightarrow{\Psi}
 r_H(W)
 \xrightarrow{\operatorname{StyleRead}}
-z_H(W)
-\longrightarrow
-\left(
-o_{H,W}^{\mathrm{sec}},
-o_H^{\mathrm{map}}
-\right).
+z_H(W).
 \]
 
 Here:
 
-- \(H\) is the materialized chart;
-- \(u_H\) is its exact canonical hand-role action trace;
+- \(H\) is the materialized chart and source of truth for chart actions;
 - \(x_H(t)\) is exact chart and control state;
 - \(d_H(t)\) is a profile-relative representation of the moving gameplay
   frontier;
+- \(\chi_H(W)\) is exact section chart evidence;
 - \(r_H(W)\) is a section-level action-demand geometry;
 - \(z_H(W)\) is the modeled section-style profile;
 - \(o_{H,W}^{\mathrm{sec}}\) is a section-level style annotation;
-- \(o_H^{\mathrm{map}}\) is a community map-level style observation.
+- \(o_H^{\mathrm{map}}\) is an optional community map-level observation.
 
-The intended interpretation is:
+On this page, gameplay style denotes a versioned Pulsefield vocabulary of
+player- and mapper-facing concepts used to describe chart organization, such
+as drill, jack, technical patterning, stream topology, and long-note
+organization.
 
-> A style is not independent of the concrete chart arrangement. A section
-> style describes a salient geometry in how its actions drive, sustain, and
-> transform the canonical gameplay-demand frontier. A style tag is a
-> coarse-grained community name for part of that geometry.
+The current style module is restricted to concepts whose evidence is determined
+by the materialized chart, its causal history, and the fixed canonical gameplay
+profile over a declared interval. Its initial scope excludes concepts that
+require aligned audio, external assets, provenance, or unobserved mapper intent.
 
-The demand state is therefore the main mechanistic connection between the
-canonical gameplay profile and style semantics. It is not identical to style,
-and style is not assumed to be recoverable from one instantaneous demand value.
+The Pulsefield style vocabulary is not identified with the complete osu!
+community-tag catalogue. Compatible community tags may provide weak
+observations for selected concepts, but they do not define the coordinates of
+the modeled style profile.
 
 The notation extends [notation.md](notation.md).
 
@@ -103,32 +98,44 @@ The formulation separates the following objects.
 
 | Object | Status | Meaning |
 | --- | --- | --- |
-| \(H\) | Observed or generated symbolic object | The materialized chart. |
-| \(u_H\) | Exact under \(\lambda\) | The deterministic canonical action trace. |
+| \(H\) | Observed or generated symbolic object | The materialized chart and source of truth for chart actions. |
 | \(x_H(t)\) | Exact | Replayable chart-format and exact control facts. |
+| \(\chi_H(W)\) | Exact derived view | Exact entry state and materialized chart rows over a section. |
 | \(\mathcal F_H(t)\) | Abstract profile-relative object | The current response surface over possible future actions and continuations. |
 | \(d_H(t)\) | Model-defined but reproducible under \(\pi_0\) | A finite representation of the moving gameplay frontier. |
 | \(r_H(W)\) | Derived section representation | Geometry of actions and demand over a section. |
-| \(z_H(W)\) | Modeled semantic profile | Salience of fixed community style concepts in a section. |
+| \(z_H(W)\) | Modeled semantic profile | Salience of versioned Pulsefield gameplay-style concepts in a section. |
 | \(o_{H,W}^{\mathrm{sec}}\) | Partial annotation | Human-confirmed section-level style evidence. |
-| \(o_H^{\mathrm{map}}\) | Weak aggregate annotation | Community-voted map-level style evidence. |
+| \(o_H^{\mathrm{map}}\) | Optional weak external observation | Community-voted map-level evidence for declared compatible concepts. |
 | \(d^\star(t)\) | Optional request | Desired gameplay-demand target for generation. |
 | \(c^{\mathrm{style}}\) | Optional request | Desired style tendency or mixture for generation. |
+
+Exact chart measurements are deterministic functions of \(H\) and \(x_H\).
+They may be expressed in serialized lane coordinates or after the row-wise
+hand-role projection \(\operatorname{Act}_\lambda\). They are not another
+epistemic layer and are not semantic labels.
+
+A gameplay mechanism is an intervention-grounded regularity in how exact chart
+evidence changes frontier responses. It is not an additional hidden state
+between exact chart state and demand state.
 
 The hard semantic separations are:
 
 1. Chart legality belongs to exact chart-format state.
-2. Canonical action identity belongs to \(u_H\) and exact control state.
+2. Canonical hand-role coordinates are a deterministic view of chart rows, not
+   a separate execution state or latent action sequence.
 3. Gameplay demand belongs to the profile-relative moving frontier.
 4. Section style belongs to the geometry of chart actions and demand over time.
-5. Style tags are sparse semantic observations, not exact chart state.
-6. Map-level tags are aggregate weak evidence, not labels for every section.
+5. Section annotations and compatible community tags are sparse semantic
+   observations, not exact chart state.
+6. Compatible map-level tags are optional weak external observations, not
+   labels for every section.
 7. Desired style and desired demand are optional generation controls.
 8. Realized style and realized demand are consequences of the generated chart.
 9. Missing annotation is not automatically a negative annotation.
 10. Neither demand state nor style tag is an observed player's hidden state.
 
-## 3. Exact canonical execution and state
+## 3. Exact hand-role projection and state
 
 For row \(m_k\), let
 
@@ -140,18 +147,14 @@ a_k
 (a_k^L,a_k^R)
 \]
 
-be the canonical hand-role action defined in
+be its deterministic canonical hand-role view, as defined in
 [notation.md](notation.md#4-lanes-hands-and-canonical-roles).
 
-The chart induces the exact action trace
-
-\[
-u_H
-=
-\bigl((t_k,a_k)\bigr)_{k=1}^{|H|}.
-\]
-
-Under the fixed 4K mapping, this trace is unique.
+The operator \(\operatorname{Act}_\lambda\) changes coordinates only. Under the
+fixed 4K mapping, \(a_k\) contains no information beyond \(m_k\), does not infer
+fingering or physical execution, and is computed from a row whenever hand-role
+coordinates are useful. The materialized chart \(H\) remains the sequence-level
+source of truth; no separate global execution trace is required.
 
 Write the exact state as
 
@@ -382,44 +385,36 @@ d_{H,c}(t)\ge0.
 The dimensions are not required to be independent, additive, or mutually
 exclusive.
 
-### State sufficiency contract
+### Bounded scope of the finite demand state
 
-The intended operational role of \(d_H(t)\) is to parameterize future frontier
-responses together with exact state.
+The abstract frontier may depend on arbitrarily long chart history. The finite
+state \(d_H(t)\) is not required to encode every chart-intrinsic fact, every
+recognizable pattern, or every distinction useful for generation.
 
-For two histories \(H\) and \(H'\), if
-
-\[
-x_H(t)=x_{H'}(t)
-\]
-
-and
+Its current contract is relative to a declared continuation family
+\(\mathcal Y_0\) over horizon \(L_0\), response summaries \(\Omega_0\), and
+tolerance \(\varepsilon\):
 
 \[
-d_H(t)=d_{H'}(t),
+x_H(t)=x_{H'}(t),\quad d_H(t)=d_{H'}(t)
 \]
 
-then the desired sufficiency property is
+should imply
 
 \[
-\mathfrak C_0
-\left(
-b_H(t),
-Y
-\right)
-=
-\mathfrak C_0
-\left(
-b_{H'}(t),
-Y
-\right)
+\sup_{Y\in\mathcal Y_0}
+\left\|
+\Omega_0\!\left(\mathfrak C_0(b_H(t),Y)\right)
+-
+\Omega_0\!\left(\mathfrak C_0(b_{H'}(t),Y)\right)
+\right\|
+\leq\varepsilon.
 \]
 
-for every continuation \(Y\) legal from both exact boundaries.
-
-In practice this equality may only hold approximately over a declared
-continuation family. Failure under controlled probes means the current demand
-state omits gameplay-relevant history.
+A chart-derived distinction is added to the demand state only when controlled
+continuation probes show that the distinction changes canonical gameplay
+response. Improving style recognition alone is not sufficient justification
+for adding a demand coordinate.
 
 The complete history remains available to the chart generator. Demand state is
 not required to summarize:
@@ -602,19 +597,33 @@ A realized chart trajectory must be obtained by complete sequential rollout.
 
 The final inventory of named demand dimensions is open.
 
-Candidate families include:
+Exact chart measurements may include:
 
-- burst demand;
-- strain accumulation;
-- same-role repetition pressure;
-- outer-inner transition pressure;
-- local density;
-- one-hand chord control;
-- long-note occupancy control;
-- release timing;
-- short-term recovery;
-- cross-hand synchronization;
-- hand-balance pressure.
+- inter-event intervals and local event rate;
+- same-lane and same-role recurrence;
+- alternation-run length and lane-span;
+- chord cardinality and lane-set transitions;
+- snap and rhythmic-position statistics;
+- long-note occupancy;
+- head, body, and release topology;
+- simultaneous and staggered actions.
+
+These quantities are deterministic chart evidence. They may drive demand
+dynamics, but they are not demand dimensions by themselves.
+
+Candidate demand-response families include:
+
+- burst accumulation and recovery;
+- same-role reuse response;
+- outer-inner transition response;
+- one-hand chord-control response;
+- sustained long-note control;
+- release-transition response;
+- cross-hand coordination;
+- hand-local imbalance and recovery.
+
+The formulation fixes the provenance of exact measurements, not a final feature
+inventory or threshold-based definition of named styles.
 
 A natural-language name does not by itself establish a valid demand dimension.
 
@@ -744,25 +753,33 @@ be a chart section.
 Because gameplay demand at section entry depends on preceding history, a
 section cannot always be represented by rows inside \(W\) alone.
 
-Define the canonical section trace
+Define the exact section chart evidence
+
+\[
+\chi_H(W)
+=
+\left(
+x_H(a^-),
+H|_W
+\right).
+\]
+
+Every exact recurrence, alternation, timing, chord, lane-set, or long-note
+measurement used by an implementation is a deterministic function of
+\(\chi_H(W)\). The rows \(H|_W\) may be used directly or projected row-wise to
+canonical hand-role coordinates with \(\operatorname{Act}_\lambda\).
+
+Define the canonical section record
 
 \[
 \mathcal G_H(W)
 =
 \left(
-x_H(a^-),
+\chi_H(W),
 d_H(a^-),
-u_H|_W,
 d_H|_W
 \right).
 \]
-
-This contains:
-
-- the exact entry boundary;
-- the incoming gameplay frontier representation;
-- the actions chosen inside the section;
-- the realized demand trajectory inside the section.
 
 Define the section gameplay geometry
 
@@ -774,6 +791,10 @@ r_H(W)
 \mathcal G_H(W)
 \right).
 \]
+
+A gameplay mechanism is not an additional representation layer. It names a
+validated regularity in how controlled changes to \(\chi_H(W)\), entry state,
+or continuation actions change the frontier and demand rollout.
 
 The representation \(r_H(W)\) may summarize:
 
@@ -795,7 +816,7 @@ geometry of how concrete chart actions drive the canonical gameplay frontier.
 
 ## 10. Section style and style tags
 
-Let the fixed style vocabulary be
+Let the versioned style vocabulary be
 
 \[
 \mathcal K_{\mathrm{style}}
@@ -803,7 +824,31 @@ Let the fixed style vocabulary be
 \{k_1,\ldots,k_K\},
 \]
 
-where \(K\) is the versioned number of Pulsefield style enum values.
+where \(K\) is the versioned size of the curated Pulsefield gameplay-style
+vocabulary.
+
+The vocabulary is selected from concepts that players and mappers use to
+describe or request chart organization. It is not required to follow osu!
+catalogue namespaces.
+
+Style coordinates may overlap, correlate, and share the same exact chart
+measurements or demand mechanisms. They are semantic predicates, not an
+orthogonal generative basis.
+
+Every coordinate is read directly from section evidence:
+
+\[
+z_{H,k}(W)
+=
+R_k
+\left(
+r_H(W)
+\right).
+\]
+
+The formulation does not define one style coordinate as a function of another
+style coordinate and does not introduce a first-order versus second-order
+concept hierarchy.
 
 For section \(W\), define the modeled style profile
 
@@ -859,8 +904,8 @@ r_H(W)
 
 In words:
 
-> A style tag names a salient, recurring, community-recognizable region or
-> predicate in the space of section action-demand geometries.
+> A style tag names a salient, recurring, player- and mapper-recognizable region
+> or predicate in the space of section action-demand geometries.
 
 This does not require the style concepts to form disjoint clusters. Their
 regions may overlap.
@@ -896,30 +941,47 @@ z_H(W)
 Two sections may have similar aggregate demand and different styles. The same
 style may appear at different demand intensities.
 
-### Demand as the mechanistic connection point
+### Parallel sources of section evidence
 
-Although style and demand are not identical, they are intentionally not
-independent.
-
-The intended hierarchy is
+The intended structure has two parallel sources of section evidence:
 
 \[
-\text{concrete section arrangement}
+H
 \longrightarrow
-\text{moving gameplay frontier}
-\longrightarrow
-\text{demand trajectory}
-\longrightarrow
-\text{section action-demand geometry}
-\longrightarrow
-\text{style semantics}.
+\chi_H(W),
 \]
 
-Demand is the main mechanistic representation connecting chart arrangement to
-the fixed gameplay profile.
+and
 
-Style is the higher-level geometry of how the arrangement drives that
-representation.
+\[
+H
+\longrightarrow
+\mathcal F_H(t)
+\approx
+d_H(t).
+\]
+
+They meet at the section representation:
+
+\[
+\left(
+\chi_H(W),
+d_H(a^-),
+d_H|_W
+\right)
+\longrightarrow
+r_H(W)
+\longrightarrow
+z_H(W).
+\]
+
+Demand is the main profile-relative representation of gameplay continuation
+response. It is not a universal information bottleneck between chart
+arrangement and style.
+
+Exact chart arrangement reaches the style readout in parallel. A style
+distinction that remains in exact chart evidence is not, by itself, evidence
+that the demand state is insufficient.
 
 ### Namespaced semantics
 
@@ -954,22 +1016,32 @@ Likewise, a style tag must not be used as the sole definition of a demand
 channel with the same name. Demand channels require independent continuation
 and intervention grounding.
 
-## 11. Is demand sufficient for style?
+## 11. What should demand explain about style?
 
-Pulsefield treats demand mediation as a hypothesis, not a definition.
+Demand-only sufficiency is not a target requirement of the current
+formulation.
+
+Some gameplay-style concepts are primarily identified by exact arrangement;
+others additionally depend on history-conditioned gameplay response. The
+purpose of the demand representation is to expose the latter connection, not
+to absorb every chart-intrinsic distinction that is useful for style
+recognition.
 
 A strong demand-only hypothesis would be
 
 \[
 z_H(W)
 \perp
-u_H|_W
+\chi_H(W)
 \mid
-d_H|_W.
+\left(
+d_H(a^-),
+d_H|_W
+\right).
 \]
 
-Equivalently, after observing the demand trajectory, the symbolic action
-arrangement would add no further information about style.
+Equivalently, after observing the incoming and section demand trajectory, exact
+chart evidence would add no further information about style.
 
 This may be false.
 
@@ -989,25 +1061,23 @@ z_H(W)
 =
 \operatorname{StyleRead}
 \left(
-u_H|_W,
-d_H|_W,
-x_H(a^-),
-d_H(a^-)
+r_H(W)
 \right).
 \]
-
-Whether \(u_H|_W\) can eventually be removed is an empirical question.
 
 A direct test compares:
 
 1. a style predictor from demand trajectory only;
-2. a style predictor from symbolic chart arrangement only;
-3. a predictor from both;
+2. a style predictor from exact chart evidence only;
+3. a predictor from exact chart evidence and demand trajectory;
 4. matched counterfactual sections with similar demand and different
    arrangement.
 
 If the combined predictor consistently outperforms the demand-only predictor,
-style contains an arrangement residual not yet captured by \(d\).
+this does not by itself indicate that \(d\) is deficient.
+
+The demand state should be revised only when the residual chart distinction also
+produces a continuation-response difference under controlled probes.
 
 ## 12. Section-level style annotation
 
@@ -1039,6 +1109,14 @@ The values mean:
 
 Beatmap-lens section annotation provides high-resolution supervision of
 \(z_H(W)\).
+
+Section annotations supervise gameplay-style concept salience. Annotators are
+not asked to label exact chart measurements such as recurrence counts,
+alternation runs, chord cardinality, or long-note occupancy; those quantities
+are computed directly from the chart.
+
+The annotation vocabulary is \(\mathcal K_{\mathrm{style}}\), not the complete
+community-tag catalogue.
 
 The annotation workflow must declare whether it is:
 
@@ -1073,6 +1151,28 @@ z_H(W)
 
 ## 13. Map-level community style tags
 
+The Pulsefield gameplay-style vocabulary and the osu! community-tag catalogue
+are not assumed to be identical.
+
+Let \(\mathcal K_{\mathrm{community}}\) denote the versioned osu! community-tag
+catalogue.
+
+Let
+
+\[
+\mathcal A
+\subseteq
+\mathcal K_{\mathrm{community}}
+\times
+\mathcal K_{\mathrm{style}}
+\]
+
+be a versioned set of declared weak-supervision alignments.
+
+Only an aligned community tag may provide weak evidence for a Pulsefield style
+concept. The alignment records the expected scope and pooling semantics. No
+section-level or map-level claim is made for unaligned community tags.
+
 Let
 
 \[
@@ -1084,7 +1184,9 @@ denote community-voted map-level style evidence.
 When vote counts or ratios are available, preserve them as
 
 \[
-v_{H,k}^{\mathrm{map}}.
+v_{H,c}^{\mathrm{map}},
+\qquad
+c\in\mathcal K_{\mathrm{community}}.
 \]
 
 A thresholded enum loses information about confidence and disagreement and
@@ -1096,26 +1198,26 @@ Partition a map into sections
 W_1,\ldots,W_M.
 \]
 
-For style \(k\), define map-level salience as
+For an alignment \((c,k)\in\mathcal A\), define map-level salience as
 
 \[
-\zeta_{H,k}^{\mathrm{map}}
+\zeta_{H,c\leftarrow k}^{\mathrm{map}}
 =
-\operatorname{Pool}_k
+\operatorname{Pool}_{c,k}
 \left(
 \{
-z_{H,k}(W_j),
-|W_j|,
-q_j
-\}_{j=1}^{M}
+z_{H,k}(W_m),
+|W_m|,
+q_m
+\}_{m=1}^{M}
 \right),
 \]
 
-where \(q_j\) may contain section prominence, confidence, or structural
+where \(q_m\) may contain section prominence, confidence, or structural
 importance.
 
-The pooling operator need not be a mean. A style may receive a map-level tag
-because it:
+The pooling operator need not be a mean. An aligned Pulsefield style concept
+may support a community map-level tag because it:
 
 - appears in a large fraction of the map;
 - persists for a long duration;
@@ -1123,36 +1225,40 @@ because it:
 - dominates a prominent climax;
 - is unusually salient despite occupying a shorter interval.
 
-Community evidence is modeled as
+Aligned community evidence is modeled as
 
 \[
-o_H^{\mathrm{map}}
+o_{H,c}^{\mathrm{map}}
 \sim
 p_{\eta,\mathrm{map}}
 \left(
 o
 \mid
-\zeta_H^{\mathrm{map}}
+\left\{
+\zeta_{H,c\leftarrow k}^{\mathrm{map}}
+:
+(c,k)\in\mathcal A
+\right\}
 \right).
 \]
 
-A map-level tag does not imply
+An aligned map-level tag does not imply
 
 \[
-z_{H,k}(W_j)=1
+z_{H,k}(W_m)=1
 \qquad
-\text{for every }j.
+\text{for every }m.
 \]
 
-Therefore community map tags must not be copied onto every section as local
-ground truth.
+Therefore aligned community map tags must not be copied onto every section as
+local ground truth.
 
 The supervision hierarchy is:
 
 \[
-\text{community map tags}
+\text{declared-compatible community map tags}
 \rightarrow
-\text{weak aggregate supervision},
+\text{optional weak aggregate supervision},
 \]
 
 \[
@@ -1178,7 +1284,8 @@ q_\eta
 \left(
 z_{H,k}(W)
 \mid
-u_H|_W,
+\chi_H(W),
+d_H(a^-),
 d_H|_W
 \right)
 \]
@@ -1189,7 +1296,7 @@ uncertainty.
 Recognition must be evaluated separately on:
 
 - section-level human annotations;
-- map-level community tags after section pooling;
+- declared-compatible map-level community tags after section pooling;
 - held-out songs and mappers;
 - sections with mixed styles;
 - negative and unknown labels.
@@ -1283,6 +1390,15 @@ is adherence strength.
 A single requested enum is a one-hot special case.
 
 The coordinates of \(w_W\) need not sum to one when mixed styles are allowed.
+
+The coordinates of a named-style request are semantic predicates, not assumed
+independent generative factors. Requesting one named concept does not assert
+the absence of correlated concepts or mechanisms.
+
+The vector form \((w_W,\gamma_W)\) is one coarse interface to the abstract style
+request space. It does not prevent future structured, exemplar-based, or
+mechanic-oriented controls, and those controls need not be added until their
+axes are empirically validated.
 
 When no request is supplied,
 
@@ -1482,17 +1598,31 @@ For candidate continuation \(Y_W\), branch rollout yields
 \right).
 \]
 
-Its section geometry is
+Its branch-local exact section evidence is
+
+\[
+\widetilde\chi_Y(W)
+=
+\left(
+x_g,
+Y_W
+\right),
+\]
+
+where \(x_g\) is the exact state at the fixed-through boundary and
+\(W=(g,e]\). This is the left-open generation-window counterpart of
+\(\chi_H(W)\). Its section geometry is
 
 \[
 \widetilde r_Y(W)
 =
 \Psi
 \left(
-\widetilde x_Y(g),
+\left(
+\widetilde\chi_Y(W),
 d_g,
-u_Y,
 \widetilde d_Y|_W
+\right)
 \right),
 \]
 
@@ -1600,17 +1730,17 @@ Hold the current row fixed while varying:
 
 The demand update should reflect the controlled history differences.
 
-### Demand mediation of style
+### Exact evidence and demand in style
 
 Compare section-style prediction from:
 
-1. \(d_H|_W\) only;
-2. \(u_H|_W\) only;
-3. \((u_H|_W,d_H|_W)\);
-4. simple density and event-count baselines.
+1. \((d_H(a^-),d_H|_W)\) only;
+2. \(\chi_H(W)\) only;
+3. \((\chi_H(W),d_H(a^-),d_H|_W)\);
+4. density, event-count, and global-difficulty baselines.
 
-This measures how much community style semantics are mediated by the current
-demand representation and how much arrangement residual remains.
+This measures how exact chart evidence and demand contribute to gameplay-style
+recognition.
 
 ### Matched-demand style control
 
@@ -1633,8 +1763,8 @@ the section's style.
 Evaluate:
 
 - section recognition on beatmap-lens labels;
-- map-tag prediction after section pooling;
-- localization of map-level tags to relevant sections;
+- aligned map-tag prediction after section pooling;
+- localization of aligned map-level tags to relevant sections;
 - calibration under mixed and missing labels.
 
 ### Mirror consistency
@@ -1660,32 +1790,42 @@ and mirror-invariant style predictions should agree.
    histories should produce distinguishable demand updates when gameplay
    semantics require it.
 
-3. **Demand trajectory mediates a substantial part of section style.**  
-   A demand-based style predictor should outperform density, event-count, and
-   global-difficulty baselines on held-out section annotations.
+3. **Gameplay-style concepts are recognizable from exact chart evidence and
+   canonical demand rollout.**
+   A joint predictor from exact section evidence and demand trajectory should
+   outperform event-count, density, and global-difficulty baselines on
+   held-out section annotations.
 
-4. **Style retains measurable arrangement geometry.**  
-   A combined symbolic-action and demand predictor may outperform a
-   demand-only predictor. If it does, style cannot yet be reduced to the
-   current demand representation.
+4. **Demand contributes selectively to history-sensitive style concepts.**
+   For concepts whose interpretation depends on incoming repetition,
+   recovery, occupancy, or coordination state, a joint exact-evidence and
+   demand predictor should outperform exact evidence alone. Purely structural
+   concepts need not exhibit this gain.
 
-5. **Section annotation explains map-level tags.**  
-   Pooling section-style salience should predict community map tags better than
-   assigning each map tag uniformly to all sections.
+5. **Exact arrangement and demand carry non-identical information.**
+   Some style distinctions remain identifiable from recurrence, lane grammar,
+   chord topology, timing organization, or long-note structure after demand
+   statistics are matched. This is expected and does not by itself imply that
+   the frontier representation is insufficient.
 
-6. **Style tokens support semantic intervention.**  
+6. **Section annotation explains aligned map-level tags.**
+   Alignment-specific pooling of section-style salience should predict
+   aligned community map tags better than assigning each map tag uniformly to
+   all sections.
+
+7. **Style tokens support semantic intervention.**
    Changing a style token should alter held-out style judgments while
    controlling for audio, history, and realized demand.
 
-7. **Demand control and style control are distinguishable.**  
+8. **Demand control and style control are distinguishable.**
    Matched-demand style interventions and matched-style demand interventions
    should both produce their intended independent effects.
 
-8. **Structural hand symmetry improves consistency and sample efficiency.**  
+9. **Structural hand symmetry improves consistency and sample efficiency.**
    Mirror-equivariant state and demand dynamics should reduce unjustified
    left-right discrepancies without preventing cross-hand interaction.
 
-9. **An explicit desired-demand plan is not required for ordinary
+10. **An explicit desired-demand plan is not required for ordinary
    generation.**  
    A direct generator with derived gameplay state should remain competitive
    when no \(d^\star\) is provided. Failure would justify a stronger explicit
@@ -1705,7 +1845,8 @@ and mirror-invariant style predictions should agree.
 - Which symbolic arrangement residuals remain?
 - How should section boundaries be defined or annotated?
 - How should mixed or transitional section styles be represented?
-- What pooling operator best relates section style to community map tags?
+- What pooling operator best relates section style to aligned community map
+  tags?
 - Which community vote information should be retained rather than thresholded?
 - Does the annotation workflow provide explicit negatives or only positives?
 - How should incompatible style and demand controls be detected?
@@ -1719,16 +1860,17 @@ and mirror-invariant style predictions should agree.
 This page fixes:
 
 - one canonical gameplay profile;
-- deterministic canonical hand-role execution;
+- deterministic canonical hand-role coordinate projection;
 - exact chart and control state;
 - the moving gameplay frontier as the gameplay-relevant abstract object;
 - \(d_H(t)\) as its finite profile-relative representation;
 - hybrid event and recovery dynamics;
 - mirror-equivariant hand structure;
-- section action-demand geometry;
+- joint exact-evidence and demand section geometry;
 - the distinction between demand, style, and style tags;
 - multi-label section-style semantics;
-- weak map-level and strong section-level annotation roles;
+- declared-compatible weak map-level and strong section-level annotation
+  roles;
 - realized versus requested style and demand;
 - controlled probes and validation contracts.
 
