@@ -6,7 +6,7 @@ This page records a local dataset snapshot and public visual references for
 osu!mania 4K `style/*` user tags. It is a research aid, not a Pulsefield V3
 style-enum specification. The canonical distinction between section style and
 map-level community evidence remains in
-[`gameplay-state.md`](../formulation/gameplay-state.md#13-map-level-community-style-tags).
+[`gameplay-state.md`](../formulation/gameplay-state.md#community-observations).
 
 osu! user tags are community-voted map-level labels. A tag can describe a
 prominent or recurring part of a map without applying to every section, and

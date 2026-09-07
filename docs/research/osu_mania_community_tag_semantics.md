@@ -13,9 +13,11 @@ The naming authority is the official
 [osu! beatmap tag catalogue](https://osu.ppy.sh/wiki/en/Beatmap/Beatmap_tags).
 The local frequency evidence uses the same osu!mania 4K snapshot and selection
 rules as the
-[4K style tag reference](osu_mania_4k_style_tag_reference.md). The comparison
-target is the section-style model in
-[`gameplay-state.md`](../formulation/gameplay-state.md#10-section-style-and-style-tags).
+[4K style tag reference](osu_mania_4k_style_tag_reference.md). The formulation
+comparison below uses
+[revision `01633b5`](https://github.com/Pulsefield/Pulsefield-model/blob/01633b5969c58ea495197c0d8519629092879f1b/docs/formulation/gameplay-state.md).
+Current annotation and community-evidence contracts are defined in
+[`gameplay-state.md`](../formulation/gameplay-state.md#style-observations).
 
 The six namespaces are a deliberately bounded slice of the catalogue. The
 snapshot contains 59 tags applicable to osu!mania across 10 namespaces; the
@@ -243,7 +245,7 @@ the map's breadth. It also cannot establish whether the map has the usual
 longer-than-five-minutes characteristic. No individual constituent section
 needs to possess a section-local pattern also named `tiebreaker`.
 
-## Comparison with the V3 formulation
+## Comparison with formulation revision 01633b5
 
 ### Assumptions supported by the tag evidence
 
@@ -260,7 +262,7 @@ snapshot:
 
 ### Difference in predicate domains
 
-The V3 formulation defines a fixed section-level profile $z_H(W)$ and states
+The compared revision defined a fixed section-level profile $z_H(W)$ and stated
 the central hypothesis
 
 $$
@@ -268,9 +270,9 @@ z_H(W)=\operatorname{StyleRead}(r_H(W)),
 $$
 
 where a style coordinate is a predicate over section action-demand geometry.
-The conservative `StyleRead` form conditions on the chart arrangement, demand,
+The conservative `StyleRead` form conditioned on the chart arrangement, demand,
 and incoming frontier state for $W$; the separate recognition contract
-conditions on the chart arrangement and demand for $W$.
+conditioned on the chart arrangement and demand for $W$.
 
 The catalogue coordinates do not all have that domain:
 
@@ -284,14 +286,14 @@ The catalogue coordinates do not all have that domain:
 | `storyboard`, `video`, `tag`, and `inspo` refer to presentation, multiplayer, or provenance context. | The materialized chart $H$ contains timed `TAP`, `LN_START`, and `LN_CLOSE` rows, not those external facts. |
 | `avant-garde`, `o2jam`, and `conceptual` characterize mapping philosophy, convention, or design concept. | Their catalogue meaning is not reducible to a named local topology. |
 
-The complete audio representation $X$ exists elsewhere in the formulation.
-The difference is specifically that $X$ is not an input to the stated
+The complete audio representation $X$ existed elsewhere in that formulation.
+The difference was specifically that $X$ was not an input to the stated
 `StyleRead` or style-recognition contract.
 
 ### Difference in map aggregation
 
-The V3 map-level observation model assigns each tag $k$ a section salience
-$z_{H,k}(W_j)$ and pools those same-tag values across sections. This fits a
+The compared map-level observation model assigned each tag $k$ a section salience
+$z_{H,k}(W_j)$ and pooled those same-tag values across sections. This fits a
 prominent local pattern such as `jumpstream`: a map vote can summarize its
 salience or recurrence without making it true everywhere.
 
@@ -311,15 +313,15 @@ same-named atomic predicate already true inside individual sections.
 
 ### Difference in section-annotation states
 
-The V3 section annotation value has three states: present, explicitly absent,
+The compared section annotation value had three states: present, explicitly absent,
 and unknown or not judged. The catalogue contains predicates with an additional
 scope distinction: some are not defined on an isolated section, or the section
 does not contain the evidence needed to evaluate them.
 
 For an applicable section predicate, “explicitly absent in the judged section”
 and “the section was not judged” are different from “this predicate is not
-defined at section scope.” The existing section states distinguish present,
-absent, and unknown for a section predicate, but they do not carry a map-level
+defined at section scope.” Those section states distinguished present,
+absent, and unknown for a section predicate, but they did not carry a map-level
 truth value or separately encode applicability to the annotation scope.
 `Tiebreaker` has its positive and negative truth conditions at map scope, even
 though its constituent skillsets occur in sections.
