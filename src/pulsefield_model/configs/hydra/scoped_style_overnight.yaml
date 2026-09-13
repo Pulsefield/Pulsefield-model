@@ -1,0 +1,23 @@
+defaults:
+  - scoped_style_train_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+output_dir: artifacts/scoped-style-modeling/overnight-17-29-43
+device: mps
+seeds: [17, 29, 43]
+# Six arm/seed budgets sum to eight hours. Shared preparation is charged twice;
+# final diagnostics and paired-barrier overshoot are additional wall time.
+arm_budget_seconds: 4800
+max_epochs: 30
+patience: 5
+batch_size: 16
+memory_log_every: 20
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

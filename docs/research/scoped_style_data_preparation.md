@@ -3,8 +3,8 @@
 The isolated package `pulsefield_model.research.scoped_style_modeling` implements
 the dataset adapter, source recovery/replay, relation preparation, and fixed
 source-group split for [Evidence-supervised scoped style modeling](scoped_style_witness_generation.md).
-It does not implement the encoder, task heads, trainer, or pilot. The frozen
-study document has SHA-256
+The [model and paired trainer](scoped_style_training.md) consume these artifacts.
+This page reports data preparation only. The frozen study document has SHA-256
 `197ae4c5de62d4f7207200c6892562650a47e3dbc0ea80640ac86776e7ea9bdd`.
 
 ## Run and consume
