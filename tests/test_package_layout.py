@@ -25,6 +25,8 @@ class PackageLayoutTest(unittest.TestCase):
             "pulsefield_model.inference.service_models",
             "pulsefield_model.inference.ws_framing",
             "pulsefield_model.evals",
+            "pulsefield_model.research",
+            "pulsefield_model.research.scoped_style_modeling",
         ]
 
         for module in modules:
