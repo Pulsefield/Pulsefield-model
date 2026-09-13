@@ -1,44 +1,49 @@
-# Scoped style witness generation
+# Evidence-supervised scoped style modeling
 
-This document specifies an exploratory study of label-conditioned selection on
-existing 4K charts. It defines the observation, source-action representation,
-candidate model, discriminating comparisons, and implementation handoff. The
-model has no reported training results. Its architecture and numerical defaults
-are research choices, not Pulsefield V3 requirements.
+This document specifies an exploratory study of section-level style assessment
+on existing 4K charts, using agent-selected evidence notes as weak auxiliary
+supervision. It defines the observations, source-action representation, shared
+encoder and task branches, discriminating comparisons, and implementation handoff.
+The model has no reported training results. Its architecture and numerical
+defaults are research choices, not Pulsefield V3 requirements.
 
 The [generation contract](../formulation/notation.md) owns legal timed rows and
 committed history. The [gameplay formulation](../formulation/gameplay-state.md)
 owns style observations, continuation responses, and demand semantics. This study
-selects source objects; it does not generate a new chart or validate a demand state.
+predicts scoped assessments and can select source objects to accompany them;
+it does not generate a new chart or validate a demand state.
 
 ## 1. Question and scope
 
 The primary question is:
 
-> Given a complete declared chart context and a concept known to be present in
-> a section, does explicit selection history improve held-out witness fitting
-> under the available data and model capacity, and do those gains accompany more
-> reliable highlighting of specific source relationships?
+> Given a complete declared chart context, a section, and a queried style,
+> does weak supervision from agent-selected evidence improve prediction of
+> absent, supporting, and prominent assessments over assessment supervision alone?
 
-A second comparison asks whether explicit hand coordinates and source-action
-relation channels improve this task over an encoder receiving the same source
-facts without those channels. Separate these interventions so their effects can
-be interpreted.
+The primary object is how source actions and their relationships organize the
+complete section. Evidence selections offer locations at which an annotator
+explained a judgment; reproducing that selection process is an auxiliary task.
+The first comparison is `style-only` versus `style+evidence`, with identical
+assessment inputs, encoder/readout architecture, and evaluation.
 
-The study has three distinct possible outcomes:
+Keep the outcomes distinct:
 
-| Outcome | Evidence required |
+| Role | Outcome and evidence required |
 | --- | --- |
-| Learn the recorded selection distribution | Held-out conditional selection likelihood and reference agreement |
-| Generate useful witnesses for a scoped concept | Inspection of generated highlights in the complete source context |
-| Learn a representation useful for style recognition | A separate presence/ordinal-strength prediction comparison |
+| Primary | Better held-out section assessments, with presence and positive-strength distinctions reported separately and concrete relationship contrasts inspected |
+| Auxiliary diagnostic | Fit the agent's recorded evidence distribution, measured by conditional selection likelihood and reference agreement |
+| Optional output use | Generate useful highlights for a supplied or predicted assessment, inspected in the complete source context |
 
-Success at one level does not establish the next. In particular, a selection
-model can learn annotation location and quantity preferences without improving
-the relationships it highlights or style recognition. The first two levels are
-the initial study; recognition is a bounded extension after their results are
-available. The comparison tests the usefulness of explicit selection dependence,
-not whether witnesses or gameplay have structure in the abstract.
+Lower selection loss or more convincing highlights do not establish better
+assessment. Conversely, evidence supervision may improve assessment without
+accurately reproducing the agent's choice of examples. Test its value directly
+through the primary task; witness generation is not a prerequisite stage.
+
+Selection-history and source-representation comparisons are follow-ups. A more
+capable auxiliary decoder may solve selection mostly within its own state,
+without improving the shared chart representation. Evaluate that possibility
+through assessment performance before retaining added decoder complexity.
 
 Inputs are chart-only. The annotation vocabulary concerns organization supported
 by source actions and declared chart context, rather than concepts requiring
@@ -53,7 +58,7 @@ Keep four kinds of objects separate:
 | --- | --- | --- |
 | Source fact | Determined by the chart and exact replay | A lane is occupied before an attack; two groups have disjoint members |
 | Scoped assessment | A semantic observation under a versioned concept definition | Trill is present/supporting on a specified interval |
-| Witness | Source objects selected to explain an assessment in context | Selected members of an alternating episode |
+| Evidence selection (witness) | Objects the agent emphasized while explaining an assessment in context | Selected members locating an alternating episode or its disruption |
 | Learned representation | A computational hypothesis about useful information | A hand embedding or selection-memory state |
 
 A witness is an object selection attached to the complete arrangement. It need
@@ -61,6 +66,21 @@ not be exhaustive, minimal, contiguous, or sufficient when shown in isolation.
 Unselected notes remain part of the explanation's context and can supply
 counterevidence. Replacing a highlight mask changes what is emphasized; deleting
 notes changes the chart and is a different intervention.
+
+Evidence hints at locations and relationships relevant to a judgment. It is not
+an exhaustive importance annotation or a measurement of each object's causal
+contribution.
+An agent can select one of several equivalent examples and omit a decisive
+interruption that remains visible in context. Unselected objects need not be
+irrelevant; selected objects need not support presence. In an absent record,
+they may locate why the queried organization does not hold. The same selected
+objects can support different assessments in different complete arrangements.
+
+The auxiliary mask target records the agent's selection behavior. Its zero bits
+mean unselected in that record, not semantically unimportant. Do not define
+section strength by summing note importance scores, force attention weights to
+match evidence masks, or treat selection, information routing, and causal
+influence as interchangeable quantities.
 
 The five concepts are independently assessed, versioned experimental categories.
 They can overlap, including multiple prominent concepts in one section. The
@@ -112,7 +132,8 @@ from one source and overlapping scopes as correlated observations.
 All machine negative judgments also carry nonempty witnesses. The frozen
 [labeler role](https://github.com/Pulsefield/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/methods/astra-1000-20260912/labeler.md)
 requests simultaneous judgment and selection, including for absent assessments.
-Those objects explain a negative judgment; they are not positive-concept targets.
+Those objects can supervise evidence selection conditioned on absent; they do
+not become evidence for the concept's presence.
 
 Source-level inspection of the machine positives found:
 
@@ -132,16 +153,21 @@ their held-out record and source-group counts alongside concrete outcomes.
 
 ### 3.1 Cohorts and proportionate provenance
 
-The initial training comparison uses the selected machine method's positive
-records. This gives both arms one annotation method and the same cohort. Include
-all five concepts, report each separately, and emphasize the Jack/Trill contrast
-when interpreting recurrence behavior. Tech and LN results have smaller support.
+The initial training comparison uses all resolved records from the selected
+machine method: absent, supporting, and prominent. Both arms receive the same
+assessment cohort and annotation method. The positive-only counts above describe
+the evidence audit, not the full training population. Report each concept and
+assessment class separately, including source-group counts; Tech and LN positive
+judgments have smaller support. Unresolved and unreviewed supply no class target.
 
-Human observations provide a supplementary assessment layer, not an automatic
-note-selection gold set. Human confirmation of a label can retain machine notes
-and rationale. Explicit confidence concerns the assessment. Do not require a new
-selection review, filter by confidence, or repair annotations as a prerequisite
-for this exploratory study.
+Held-out human assessments directly evaluate the primary task. A human-confirmed
+assessment can retain machine notes and rationale without invalidating its use
+as an assessment target. Preserve judgment origin and confirmation mode; do not
+call retained selections independent human evidence gold. Collapse agreeing
+exact-cell duplicates within each judgment origin for evaluation, and report
+unresolved conflicts rather than converting them to absent. Explicit confidence
+concerns the assessment. No new note selection, confidence filter, or annotation
+repair campaign is a prerequisite for this comparison.
 
 Use the following minimal reproducibility and separation rules:
 
@@ -152,11 +178,12 @@ Use the following minimal reproducibility and separation rules:
    Group known duplicate chart versions and known shared-song/audio identities
    when that information is already available. Do not require new audio
    acquisition or a comprehensive similarity investigation to start.
-3. Keep reference membership out of the chart encoder and out of each decoder
-   decision until the declared selection-history update. Teacher forcing supplies
-   preceding target selections only. Exclude rationale, human comments, audit
-   text, assessment strength, source-line numbers, chart titles, and provenance
-   fields from model features. Source-line numbers are output identities only.
+3. Keep reference membership and the true assessment out of the chart encoder
+   and assessment branch. Only the auxiliary selector receives the true
+   assessment and preceding reference masks during training. Exclude rationale,
+   human comments, audit text, source-line numbers, chart titles, and provenance
+   from learned features. Source-line numbers are output identities only.
+   Selector state must not feed back into the encoder or assessment branch.
 4. Record aggregate exposure to calibration examples or consulted human examples
    when available. Such exposure is a limitation of an exploratory result, not
    a default reason to discard every dependent source or construct a transitive
@@ -169,13 +196,17 @@ hash the split seed and stable group ID into these three intervals. Freeze the
 assignment before training; report per-tag support rather than repeatedly
 redrawing splits for favorable results. If a tag has no validation or test
 support, report that limitation and revise the split explicitly before a
-comparison intended to evaluate that tag.
+comparison intended to evaluate that tag. Preserve per-class support; a missing
+positive-strength class limits that distinction even if the concept has records.
 
 Apply the same grouping to supplementary human records. Human records on
 training-group charts can be used for development inspection but do not become
-held-out evidence. A subsequent mixed-source training experiment must use human
-precedence at exact cells and state its sampling weights; it is a distinct cohort
-comparison. The main run need not wait for that extension.
+held-out evidence. Reserve test-group human assessments for final evaluation;
+report them separately from machine assessments without pooling duplicate cells
+across origins as independent observations. A subsequent mixed-source training
+experiment must use human precedence at exact cells and state its sampling
+weights; it is a distinct cohort comparison. The main run need not wait for
+that extension.
 
 Describe the initial result as source-grouped exploratory evaluation. Broader
 claims about unseen songs, independently collected human witnesses, or annotation
@@ -187,14 +218,15 @@ split named `full` supplies no benchmark split by itself.
 Write one observation as
 
 $$
-r=(C,S,Q,\ell,y,E^*,\nu),
+r=(C,S,Q,\ell,y^*,E^*,\nu),
 \qquad S=[a,b)\subseteq Q=[u,v),
 $$
 
 where $C$ is the exact source chart, $S$ the judged section, $Q$ its recorded
-review context, $\ell$ the concept, $y$ the assessment, $E^*$ the witness objects,
-and $\nu$ the identity and origin metadata. The selector receives the chart
-representation of $Q$, the scope markers for $S$, and $\ell$.
+review context, $\ell$ the queried concept, $y^*$ the recorded assessment, $E^*$
+the recorded evidence objects when available, and $\nu$ the identity and origin
+metadata. The assessment model receives only the chart representation of $Q$,
+the scope markers for $S$, and $\ell$.
 
 The first model uses each record's published `review_context`; it does not read
 unbounded chart context. Recover all attacks and releases in $Q$, complete source
@@ -208,32 +240,35 @@ that as proof that the whole chart has no predecessor or successor. Hold age and
 remaining duration may use the preserved endpoints of visible holds. Do not
 quietly expand $Q$ for one model arm.
 
-Write $C_Q$ for the visible representation just defined. The primary selector is
-conditioned on a known positive:
+Write $C_Q$ for this visible representation and $X=(C_Q,S)$. The shared chart
+encoder produces $H=F_\phi(X)$. The primary prediction is
 
 $$
-p_\theta(Z\mid C_Q,S,\ell,\mathrm{present}).
+p_\eta(y\mid R_\omega(H,S,e_\ell^{\mathrm A})),
+\qquad y\in\{\mathrm{absent},\mathrm{supporting},\mathrm{prominent}\}.
 $$
 
-Supporting/prominent are pooled for training this selector and retained for
-stratified evaluation. They are not input features. Negative and unresolved
-records are excluded from this loss, not converted to empty positive witnesses.
+The query asks for an assessment of $\ell$ without supplying presence or strength.
+Each concept has its own three-outcome distribution; the five concepts are not
+mutually exclusive softmax classes. Supporting/prominent remain distinct targets.
 
-Two extensions have different meanings:
+The auxiliary selector explains a supplied assessment:
 
 $$
-\begin{aligned}
-p_\theta(Z\mid C_Q,S,\ell,y)
-&\quad\text{explains a supplied assessment},\\
-p_\eta(y\mid C_Q,S,\ell)\,
-p_\theta(Z\mid C_Q,S,\ell,y)
-&\quad\text{predicts an assessment and explains it}.
-\end{aligned}
+p_\theta(Z\mid H,S,\ell,y).
 $$
 
-Neither is part of the initial selector comparison. A normalized distribution
-over selections does not supply concept presence: its mass sums to one for
-every concept, and its maximum probability measures concentration as well as fit.
+Training supplies $y^*$ to this branch, including absent, and uses $E^*$ only for
+its auxiliary supervision. The encoder is the sole shared trainable component;
+branch embeddings, readouts, and dynamic states are separate. Evidence gradients
+may improve $F_\phi$ during training, but target values cannot enter the assessment
+forward pass through a shared state or cache.
+
+Assessment inference needs no selector, evidence, or true assessment. Optional
+highlight generation can condition on a predicted $\widehat y$; diagnostics using
+$y^*$ must be labeled as supplied-assessment explanation rather than end-to-end
+assessment. A selection distribution's maximum probability is not a presence
+score or a substitute for the assessment branch.
 
 ## 5. Source objects, event rows, and selection decisions
 
@@ -258,9 +293,10 @@ do not repair timing, clip holds, or split simultaneous same-lane actions into
 invented timestamps to force compatibility with the V3 row language.
 
 Build an encoder timeline from the union of visible attack and LN-close times,
-plus boundary markers needed for $Q$ and $S$. At each source timestamp, encode
-all four lanes together. A tap has no additional LN-close action. Synthetic
-boundary markers have a phase flag and do not create source actions.
+plus boundary markers needed for $Q$ and $S$, including $a^-$ and $b^-$ for the
+section readout. At each source timestamp, encode all four lanes together. A tap
+has no additional LN-close action. Synthetic boundary markers have a phase flag
+and do not create source actions.
 
 The decoder timeline starts with a boundary decision at $a^-$, followed by all
 actual event rows with timestamps in $[a,b)$. At $a^-$, only LNs satisfying
@@ -282,8 +318,9 @@ Release-only rows have the single selection mask `0000`. They can update decoder
 state but contribute zero log loss. A boundary with no eligible LNs behaves the
 same way. Padding has neither a loss nor a state update.
 
-Every candidate object has exactly one selection decision. Its target bit is
-one exactly when it appears in $E^*$. Verify $E^*\subseteq\mathcal U_r$ rather
+Every candidate object has exactly one auxiliary selection decision. Its recorded
+target bit is one exactly when it appears in $E^*$. This target fits agent
+selection behavior, not object importance. Verify $E^*\subseteq\mathcal U_r$ rather
 than silently dropping unmatched references. Object selection round-trips to
 source IDs, including entering LNs.
 
@@ -295,8 +332,9 @@ $$
 
 The timeline is known, but $K$ is free. No oracle count or EOS is supplied.
 `0000` is a skip selection, not an empty row materialized in a generated chart.
-The distribution permits an empty output; report its frequency on known-positive
-sections rather than silently imposing a nonempty or fixed-size constraint.
+The distribution permits an empty output; report its frequency by supplied
+assessment rather than imposing a nonempty or fixed-size constraint. An empty
+selection does not predict absent.
 
 ## 6. Exact lane facts and hand coordinates
 
@@ -371,7 +409,7 @@ the neural model to call a boundary a reset, recognize a fixed group as Trill, o
 treat independent releases as strong coordination. Those remain hypotheses to
 evaluate against the scoped judgments.
 
-## 8. Candidate encoder and decoder
+## 8. Shared encoder, assessment readout, and auxiliary selector
 
 ### 8.1 Shared hand encoder and relation attention
 
@@ -379,7 +417,7 @@ For each hand, concatenate ordered lane embeddings and row-time features, then
 apply the same BiGRU parameters to the two separate sequences:
 
 $$
-H^L=F_\phi(X^L),\qquad H^R=F_\phi(X^R).
+B^L=F_{\mathrm{hand}}(X^L),\qquad B^R=F_{\mathrm{hand}}(X^R).
 $$
 
 Apply one relation-aware attention block over the hand-row nodes. For a query
@@ -387,19 +425,69 @@ node $i$ and a visible neighbor $j$ with relation descriptor $R_{ij}$, one head 
 
 $$
 \begin{aligned}
-e_{ij}&=\frac{(W_QH_i)^\top(W_KH_j)}{\sqrt{d_k}}+b_\rho(R_{ij}),\\
+e_{ij}&=\frac{(W_QB_i)^\top(W_KB_j)}{\sqrt{d_k}}+b_\rho(R_{ij}),\\
 \alpha_{ij}&=\operatorname{softmax}_{j\in\mathcal N(i)}e_{ij},\\
-\widetilde H_i&=\sum_{j\in\mathcal N(i)}\alpha_{ij}
-\left(W_VH_j+r_\rho(R_{ij})\right).
+\widetilde B_i&=\sum_{j\in\mathcal N(i)}\alpha_{ij}
+\left(W_VB_j+r_\rho(R_{ij})\right).
 \end{aligned}
 $$
 
 Use residual connections, layer normalization, and a small feed-forward block.
-The resulting $c_d^L,c_d^R$ are chart-context representations at each decoder
-position. They do not depend on any witness mask. Relation values are included
-as well as relation biases so relationship type can affect what is transmitted.
+The resulting $H=\{c_t^L,c_t^R\}_t=F_\phi(X)$ retains two contextual hand vectors
+at every encoded position. Both branches read these immutable vectors. They
+depend on chart facts and scope/context markers, not the queried concept,
+assessment, or evidence mask. Relation values are included as well as relation
+biases so relationship type can affect what is transmitted.
 
-### 8.2 Exact selection history
+### 8.2 Primary section assessment
+
+For the queried concept, compute
+
+$$
+r_\ell=R_\omega(H,S,e_\ell^{\mathrm A}),
+\qquad
+p_\eta(y\mid r_\ell)=\operatorname{softmax}_{y}
+\operatorname{MLP}_\eta(r_\ell).
+$$
+
+The three logits describe absent, supporting, and prominent for this concept.
+Categorical cross-entropy does not assign equal numerical distances to the
+ordered judgments. Presence and the supporting/prominent distinction are
+evaluated separately in Section 11.1.
+
+Use a small temporal readout with the following starting parameterization:
+
+1. At each original event row inside $S$, combine the two contextual hand vectors
+   by averaging a shared nonlinear MLP projection applied to $(c_t^L,c_t^R)$ and
+   to $(c_t^R,c_t^L)$. Each projection sees both ordered hand vectors; this retains
+   capacity for within-row interactions while making the row representation
+   mirror-invariant. Apply the same projection to the boundary markers.
+2. Append the branch's concept embedding, elapsed time since the preceding
+   readout position (zero at $a^-$), section-relative time, and source/boundary
+   phase. Process the full chronological sequence with one small BiGRU. Include
+   synthetic $a^-$ and $b^-$ markers with exact boundary
+   facts to represent entering occupation and time after the last in-scope event.
+   A source row at $b$ is excluded; a source row at $a$ follows $a^-$. Padding
+   neither updates state nor enters aggregation.
+3. Concatenate the terminal forward/backward states, the masked mean of outputs
+   at actual in-scope event rows, and the transformed section duration. Use an
+   explicit empty-row indicator and zero mean when there are no such rows; the
+   boundary states still represent silence or sustained entering holds. A small
+   MLP maps this summary to the assessment logits.
+
+This readout can use the temporal distribution of relationships, repetitions,
+duration, interruptions, and coexistence of organizations. It does not reduce
+the section to its strongest local response or pool only near evidence notes.
+Outer review context influences the contextual vectors, but its rows never
+enter the section aggregation as in-scope activity. Synthetic markers are not
+attacks or evidence candidates. No fixed coverage or duration threshold defines
+prominent; the assessment boundary is learned from the scoped supervision.
+
+Neither $y^*$, $Z^*$, generated selections, nor selection-GRU state enters
+$R_\omega$ or the assessment head. With fixed weights in evaluation mode,
+removing the auxiliary branch must leave all assessment probabilities unchanged.
+
+### 8.3 Auxiliary selection history
 
 Maintain exact selection facts separately from learned memory:
 
@@ -419,19 +507,20 @@ Every beam hypothesis or sampled trajectory owns its learned and exact selection
 histories. Chart context, relation indices, and replay facts are shared immutable
 inputs.
 
-### 8.3 Joint row distribution
+### 8.4 Auxiliary joint row distribution
 
 Let $q_{d-1}^L,q_{d-1}^R$ be selection-memory states, initialized to zero before
 the boundary decision. Build $v_d^h$ from chart context, both prior memory states,
-exact selection history, and concept embedding $e_\ell$. All hand-indexed fields
-use self/other order, retaining outer/inner order within each hand.
+exact selection history, and selector-owned embeddings $e_\ell^{\mathrm E}$ and
+$e_y^{\mathrm E}$ of the queried concept and supplied assessment. All hand-indexed
+fields use self/other order, retaining outer/inner order within each hand.
 For a candidate mask $b=(b^L,b^R)$ in canonical hand-role coordinates, use
 
 $$
 \begin{aligned}
 s_d(b)&=U_\theta(v_d^L,b^L)+U_\theta(v_d^R,b^R)
 +V_\theta(v_d^L,v_d^R,b^L,b^R),\\
-p_\theta(z_d=b\mid z_{<d},C_Q,S,\ell)
+p_\theta(z_d=b\mid z_{<d},H,S,\ell,y)
 &=\frac{\exp s_d(b)}{\sum_{b'\in\mathcal B_d}\exp s_d(b')}.
 \end{aligned}
 $$
@@ -452,7 +541,7 @@ After deciding the complete row, update both hands from the pre-update states:
 $$
 q_d^h=\operatorname{GRU}_\psi\left(
 [c_d^h,q_{d-1}^{\bar h},\operatorname{Emb}(z_d^h),
-\operatorname{Emb}(z_d^{\bar h}),e_\ell,\Delta t_d],q_{d-1}^h\right).
+\operatorname{Emb}(z_d^{\bar h}),e_\ell^{\mathrm E},e_y^{\mathrm E},\Delta t_d],q_{d-1}^h\right).
 $$
 
 The GRU parameters are shared. Do not update one hand from the other hand's
@@ -463,8 +552,8 @@ state and update the selected-active-LN facts through the source release.
 The sequence distribution is
 
 $$
-p_\theta(Z\mid C_Q,S,\ell,\mathrm{present})
-=\prod_{d=0}^{D}p_\theta(z_d\mid z_{<d},C_Q,S,\ell).
+p_\theta(Z\mid H,S,\ell,y)
+=\prod_{d=0}^{D}p_\theta(z_d\mid z_{<d},H,S,\ell,y).
 $$
 
 This gives generation and scoring of complete selections over the same support.
@@ -473,382 +562,450 @@ Autoregression constrains selection history only: the encoder sees the complete
 declared review context, including later source rows. This is retrospective
 selection, not a causal restriction on chart observation.
 
-### 8.4 Mirror behavior
+### 8.5 Mirror behavior
 
 For the mirror $\mu$ that exchanges hands while preserving outer/inner roles,
 require, in deterministic evaluation mode,
 
 $$
-p_\theta(\mu Z\mid\mu C_Q,S,\ell)
-=p_\theta(Z\mid C_Q,S,\ell).
-$$
-
-Check the graph transformation, per-step probabilities with mirrored histories,
-and full-sequence scores. Shared encoders alone are insufficient. Dropout is
-disabled for this check. Tied maxima can produce different single decoded outputs
-under an asymmetric tie-break rule; compare probabilities and mapped tied
-candidates before calling that a distributional symmetry failure. Arbitrary lane
-permutations and playback-rate changes are not label-preserving augmentations.
-
-## 9. Training and decoding
-
-Let $J_r=\{d:|\mathcal B_d|>1\}$ be the nontrivial selection decisions. For a
-positive record, define
-
-$$
-L_r(\theta)=-\frac{1}{|J_r|}\sum_{d\in J_r}
-\log p_\theta(z_d^*\mid z_{<d}^*,C_Q,S,\ell).
-$$
-
-Use teacher forcing with the complete target row mask. This is length-normalized
-supervised conditional likelihood: records with many decision rows do not
-automatically dominate. It differs from an unweighted corpus sum of sequence
-NLL. Also record unnormalized sequence NLL so both quantities remain available.
-Positive records with no eligible decision are a data-contract error, not a
-zero-loss training example.
-
-Sample a concept uniformly, then a split group uniformly among training groups
-with that concept, then one of its eligible records uniformly. Use the same sampled
-record order and batching plan for paired arms. This weighting targets a balanced
-exploratory comparison, not the natural prevalence of concepts in whole charts.
-
-Use ordinary supervised gradients and decoupled AdamW weight decay. There is no
-sampling-gradient estimator and no RL objective. A penalty on $K(E^*)$ would be
-constant in the parameters; a penalty on expected generated count would involve
-the model's own history distribution and is outside this initial objective.
-
-Decode with
-
-$$
-\widehat Z_\lambda\approx\arg\max_Z
-\left[\log p_\theta(Z\mid C_Q,S,\ell)-\lambda K(Z)\right].
-$$
-
-Beam expansion adds the original model log probability and subtracts
-$\lambda\operatorname{popcount}(b)$. Do not subtract the cost from logits and
-then renormalize: history-dependent normalizers generally change the sequence
-objective. Forced decisions retain their zero log probability and zero count.
-
-Use $\lambda=0$ for the primary comparison. An initial sensitivity grid is
-$\{0,0.05,0.1,0.2\}$ nats per object, with beam width 8 and a greedy result for
-reference. Report the grid rather than selecting a favorable test-set point.
-Equal $\lambda$ values need not yield equal counts across models; compare quality
-at overlapping achieved count ranges as an additional analysis. Selections at
-different costs need not be nested. Count is an output preference, not style
-strength, relationship completeness, or a common information cost for taps/LNs.
-It is a post-training decoding preference; this loss does not teach a value for
-concise explanations.
-
-For `relations-context`, probabilities and valid masks do not depend on selected
-history, so maximizing each row's log probability minus its count cost gives
-the exact sequence optimum for every $\lambda$. Greedy therefore attains it;
-beam search cannot improve its score. `relations-history` generally needs
-approximate search. Report this asymmetry when interpreting decoded differences.
-
-Also generate ancestral samples from the original distribution: at $\lambda=0$
-and temperature 1, draw each joint mask from its normalized valid-mask
-probabilities and update history with that sampled mask. Use neither reference
-history nor top-k/top-p truncation, rejection of empty outputs, or count-based
-reranking. Forced decisions still advance state. Section 11.3 fixes the sample
-budget and diagnostics; sampling does not change training or checkpoint selection.
-
-## 10. Discriminating comparisons
-
-### 10.1 Selection history: the first comparison
-
-| Arm | Chart encoder | Decoder history |
-| --- | --- | --- |
-| `relations-context` | Shared hand BiGRU plus source-action relation block | Chart/label recurrence only |
-| `relations-history` | Identical encoder architecture and input facts | Learned and exact selection history |
-
-For `relations-context`, retain the same GRU state sizes, updates, and readout
-dimensions, but replace selected-mask embeddings and exact selection-history
-fields with dedicated constant null inputs. Its hidden states can still process
-the chart and label; they cannot depend on previous selected masks. Consequently
-its row probabilities are conditionally independent given chart and label even
-though it has a recurrent computation. Do not remove an entire processing layer
-and attribute the resulting difference solely to selection history.
-
-Writing $X=(C_Q,S,\ell,\mathrm{present})$, the distinction is
-
-$$
 \begin{aligned}
-p_{\mathrm{context}}(Z\mid X)
-&=\prod_d p_{\mathrm{context}}(z_d\mid X),\\
-p_{\mathrm{history}}(Z\mid X)
-&=\prod_d p_{\mathrm{history}}(z_d\mid z_{<d},X).
+p_{\mathrm A}(y\mid\mu X,\ell)&=p_{\mathrm A}(y\mid X,\ell),\\
+p_\theta(\mu Z\mid F_\phi(\mu X),S,\ell,y)
+&=p_\theta(Z\mid F_\phi(X),S,\ell,y).
 \end{aligned}
 $$
 
-For fixed-length outputs, unlimited capacity, and population-optimal unnormalized
-expected NLL, the entropy chain rule gives
+Here $p_{\mathrm A}$ abbreviates the complete assessment predictor. Check its
+readout symmetry as well as the graph transformation, per-step selection
+probabilities with mirrored histories, and full-sequence scores. Shared encoders
+alone are insufficient. Dropout is disabled for this check. Tied maxima can
+produce different single decoded outputs under an asymmetric tie-break rule;
+compare probabilities and mapped tied
+candidates before calling that a distributional symmetry failure. Arbitrary lane
+permutations and playback-rate changes are not label-preserving augmentations.
+
+## 9. Primary and auxiliary training objectives
+
+For a resolved record, the primary loss is
 
 $$
-\mathcal L_{\mathrm{ind}}^*-\mathcal L_{\mathrm{AR}}^*
-=\sum_d H(Z_d\mid X)-H(Z\mid X)
-=\sum_d I(Z_d;Z_{<d}\mid X).
+L_r^{\mathrm A}
+=-\log p_\eta\left(y^*\mid
+R_\omega(F_\phi(X),S,e_\ell^{\mathrm A})\right).
 $$
 
-This ideal identity describes uncertainty removed by preceding selections. It
-is not an estimator for the measured loss gap with finite models, optimization
-error, finite data, and the record normalization in Section 9.
+Let $J_r=\{d:|\mathcal B_d|>1\}$ be the nontrivial selection decisions. For a
+record with usable evidence, the auxiliary loss is
 
-Selection dependence can reflect source relationships or annotation strategy.
-If a section has two equally useful episodes and the annotator chooses one,
-history can keep that choice consistent while a context-only model mixes their
-marginals. That is useful organization of an explanation, but it need not reveal
-a new gameplay distinction. Conversely, if the witness is a deterministic
-function of $X$, a sufficiently capable context-only model can concentrate on
-that whole witness. An absence of history gain is therefore compatible with
-structured witnesses. Decision-level gains and generated-highlight inspection
-distinguish these explanations more directly than aggregate likelihood alone.
+$$
+L_r^{\mathrm E}
+=-\frac{1}{|J_r|}\sum_{d\in J_r}
+\log p_\theta(z_d^*\mid z_{<d}^*,F_\phi(X),S,\ell,y^*).
+$$
 
-Train both arms independently with paired initialization seeds, minibatch order,
-optimizer settings, and model-selection budget. Verify that changing a preceding
-selection cannot change `relations-context` probabilities. History dependence
-in the other arm is permitted, not guaranteed by merely having the inputs.
+Use teacher forcing with the complete preceding target row masks, confined to
+the auxiliary branch. This is a length-normalized conditional likelihood of
+agent selections: many decision rows do not automatically give a record greater
+weight. Also retain unnormalized sequence NLL for diagnostics.
 
-This intervention tests the learned and exact selection-history bundle. If it
-helps, an exact-history-only or learned-history-only comparison can determine
-which part contributes. Do not claim the first comparison isolates GRU memory
-from those exact history features.
+Validate source and evidence identities before applying an availability mask.
+Write $m_r=1$ when evidence is recorded and has nontrivial decisions; otherwise
+omit the auxiliary term and set its contribution to zero. Missing evidence and
+an explicitly empty recorded selection are distinct: an empty selection with
+eligible objects still has a
+mask target. A section with no eligible objects can retain its assessment loss;
+a nonempty reference with no eligible decision or an unresolved source identity
+is a data-contract error, not missing evidence to silently mask away. Report
+auxiliary eligibility and failures by assessment. Both arms retain the same
+valid assessment cohort regardless of evidence availability.
 
-### 10.2 Source-action representation: a subsequent comparison
+The combined record loss is
 
-Hold the decoder/history choice fixed and compare the structured encoder with
-a generic four-lane row BiGRU and ordinary context interaction. Give both the
-same exact lane facts, context extent, training cohort, and comparable capacity.
-The generic encoder retains four ordered lanes but has no hand parameter sharing
-or typed relation edges. State its attention support and parameter count.
+$$
+L_r=L_r^{\mathrm A}+\beta m_r L_r^{\mathrm E},\qquad\beta\ge0.
+$$
 
-That comparison tests the structure bundle. To attribute a benefit specifically
-to relations, keep shared hand encoding and the sparse neighbor topology while
-removing relation descriptors; separately compare ordinary temporal/full-context
-interaction if testing the topology. The generic baseline need not be exactly
-mirror-equivariant; apply any mirror augmentation equally to compared arms and
-report its measured symmetry behavior. To attribute a benefit to hand sharing,
-change the sharing while holding relation processing fixed. These are follow-up
-interventions, not mandatory arms of the first run.
+Here $L_r^{\mathrm E}$ is defined as zero when $m_r=0$. The two losses update
+the shared encoder; each also updates only its own branch parameters. Assessment
+logits always come from the chart-only forward path. The true assessment enters
+only the auxiliary conditioning, and selection histories never feed back into
+$H$ or the primary readout.
 
-Exact occupation is computable from the chart. Removing it tests the value of
-providing that computation explicitly, not the addition of a new independent
-measurement or proof of a physiological mechanism.
+The evidence term is deliberately biased toward this annotation method's
+selection policy. It penalizes alternative masks even when they could locate
+equally useful relationships. Keeping this ordinary NLL does not assert that
+zero-bit objects lack semantic value. Its justification is improvement on the
+primary validation task, not maximal reference-mask fit. No hard evidence
+bottleneck, attention-mask matching loss, sampling-gradient estimator, or RL
+objective is required.
 
-### 10.3 Diagnostics with distinct purposes
+Sample a concept uniformly, then a training group uniformly among groups with
+that concept, then a resolved record uniformly within that group/concept.
+Do not resample by evidence membership or selection count. Both arms use the
+same assessment records, sampled order, batches, and number of update
+opportunities. This balances concepts and groups without claiming the sampled
+assessment proportions match whole-chart prevalence. Any class reweighting is
+a separately declared change applied equally to both arms.
 
-- On held-out scopes with the same review context and multiple positive concepts,
-  query each of those concepts, compare outputs, and score each recorded witness
-  under all those concepts. Different labels may legitimately share witnesses.
-  An absent concept is outside this known-positive selector's task; failure to
-  reject it is not a presence-detection error. A trained label-null version is a
-  follow-up for attributing a benefit to conditioning, not a third initial arm.
-- Inspect partial-chord cases for the joint mask head. A four-sigmoid comparison
-  is optional; scarce partial-row targets limit a global performance claim.
-- A previous-mask-only finite-state decoder can test whether short output history
-  suffices. A CRF is not required for the initial comparison. An arbitrary
-  selection-dependent GRU hidden state cannot be merged by previous mask for
-  ordinary forward-backward or Viterbi inference.
-- Full-selection, empty-selection, and chart-only position/activity baselines
-  provide count and agreement reference points. They are not semantic ground
-  truth. Fixed-size random candidate ranking is not the primary task.
+Use ordinary supervised gradients and decoupled AdamW weight decay. Start the
+paired pilot with $\beta=0$ for `style-only` and $\beta=0.1$ for `style+evidence`.
+Select checkpoints and decide whether to retain the auxiliary weight using
+validation assessment NLL, with the class distinctions in Section 11.1 as guards.
+If a different positive weight is needed, specify a bounded validation-only
+comparison and its added budget before running it, freeze the weight before
+test evaluation, and report the search. Selection NLL must not select $\beta$
+or the checkpoint. The initial pair does not require a weight sweep.
+
+### 9.1 Optional evidence decoding
+
+Assessment inference runs $F_\phi$, $R_\omega$, and $p_\eta$ only. When evidence
+outputs are also wanted, supply a declared assessment to the auxiliary selector
+and decode
+
+$$
+\widehat Z_\lambda\approx\arg\max_Z
+\left[\log p_\theta(Z\mid H,S,\ell,y)-\lambda K(Z)\right].
+$$
+
+Beam expansion adds original model log probabilities and subtracts
+$\lambda\operatorname{popcount}(b)$. Do not subtract the cost from logits and
+renormalize: history-dependent normalizers generally change the sequence
+objective. Forced decisions retain zero log probability and zero count while
+advancing state. A penalty on reference count would be constant in the trainable
+parameters; a generated-count training objective is outside this initial study.
+
+Use $\lambda=0$ for the default diagnostic, with greedy and beam width 8. An
+optional quantity sensitivity grid is $\{0,0.05,0.1,0.2\}$ nats per object.
+Report the grid without choosing a favorable test-set point, and compare quality
+at overlapping achieved counts. Selections at different costs need not be nested.
+Count cost is a post-training output preference, not learned explanation value,
+style strength, or a reason to change the assessment prediction.
+
+Ancestral diagnostics draw each joint mask from the original normalized valid-mask
+probabilities at $\lambda=0$ and temperature 1, updating history with the sampled
+mask. Use no reference history, top-k/top-p truncation, empty-output rejection,
+or best-sample reranking. Section 11.3 specifies the diagnostic budget. These
+procedures apply to trained auxiliary selectors; `style-only` has no trained
+evidence output to compare.
+
+## 10. Discriminating comparisons
+
+### 10.1 Evidence supervision: the first comparison
+
+| Arm | Training supervision | Assessment inference |
+| --- | --- | --- |
+| `style-only` | $L^{\mathrm A}$ only | Complete chart context, section, and queried concept to three assessment probabilities |
+| `style+evidence` | The same $L^{\mathrm A}$ plus $\beta m L^{\mathrm E}$ | Exactly the same inputs and assessment architecture; selector removed |
+
+Use identical shared-encoder and assessment-readout architecture, initial weights
+for matching components, paired seeds, assessment minibatches, optimizer settings,
+and validation checkpoint rules. Isolate random streams so initializing or
+sampling the auxiliary branch does not change the baseline's chart/assessment
+initialization or data order. Report additional training parameters and runtime;
+inference uses the same components and input information in both arms.
+
+This intervention tests whether agent evidence is useful training supervision
+for section assessment. Evidence is privileged training information in the
+ordinary sense that it is unavailable and unnecessary at assessment inference;
+no teacher-student system is required. A gain supports the utility of this
+auxiliary supervision under the tested cohort and capacity. It does not alone
+identify a particular relation channel as the mechanism or prove semantic
+understanding. If assessment gains occur without clear relationship-specific
+changes, generic auxiliary regularization remains an alternative explanation.
+
+### 10.2 Auxiliary selection history: a follow-up
+
+When evidence supervision helps, or evidence generation has a separate declared
+use, compare two `style+evidence` variants while keeping the primary task,
+assessment readout, cohort, $\beta$, and model-selection rule fixed:
+
+| Auxiliary variant | Selector input history |
+| --- | --- |
+| `relations-context` | Chart/concept/assessment recurrence only |
+| `relations-history` | The same recurrence plus learned and exact selection history |
+
+The initial auxiliary branch uses `relations-history` as specified in Section 8.
+For `relations-context`, keep GRU state sizes, update schedule, and readout
+capacity but replace mask embeddings and exact selection fields with dedicated
+constant null inputs. Verify that changing preceding selections cannot change
+its probabilities. It still sees the complete chart context and supplied
+assessment; its output decisions are conditionally independent given those inputs.
+
+This compares the learned and exact history bundle. Exact-only or learned-only
+history variants can attribute a later benefit, but are not initial arms. In the
+context variant the additive log-probability/count objective can be maximized
+exactly row by row; greedy attains the sequence optimum at every cost. The
+history variant generally uses approximate search, which must be distinguished
+from a difference in the learned distributions.
+
+History can learn to maintain one of several equally valid example choices, or
+to extend a highlight run, without improving gameplay distinctions. Conversely,
+a deterministic evidence mapping from full context can be represented without
+output dependence. Lower selection NLL neither proves better chart representation
+nor determines which variant to retain: assessment improvement remains primary,
+with any separate evidence-output utility reported on its own terms.
+
+### 10.3 Source-action representation and other follow-ups
+
+Hold the task supervision and decoder choice fixed when comparing the structured
+encoder with a generic four-lane row BiGRU and ordinary context interaction.
+Supply the same exact lane facts, context extent, cohort, and comparable capacity.
+The generic encoder retains ordered lanes without hand parameter sharing or typed
+relation edges. State its attention support and parameter count.
+
+That comparison tests a representation bundle. To isolate relation descriptors,
+retain hand sharing and sparse neighbor topology while removing descriptors;
+to isolate hand sharing, hold relation processing fixed. Apply any mirror
+augmentation equally and report measured symmetry behavior. Exact occupation
+is computable from chart input, so supplying it explicitly adds a representation
+of known facts, not an independent physiological measurement.
+
+Other diagnostics have limited purposes:
+
+- On a scope with assessments for multiple concepts, query each independently,
+  including assessed absences, and examine its three-outcome probabilities.
+  Correlated assessments or shared evidence are not failures. A label-null
+  training comparison is a follow-up for attributing conditioning benefits.
+- Inspect partial-chord and entering-LN cases. Scarce targets limit claims about
+  those selection capabilities; an optional independent-lane head comparison
+  is not a prerequisite for the primary experiment.
+- A previous-mask-only decoder can test whether short auxiliary history suffices.
+  Arbitrary selection-GRU states cannot be merged by previous mask for ordinary
+  CRF forward-backward or Viterbi inference. A CRF is not an initial requirement.
+- Training-set assessment priors provide a class-imbalance reference. Empty/full
+  selections and position/activity heuristics are auxiliary agreement references,
+  not semantic labels or substitutes for the primary paired baseline.
 
 ## 11. Evaluation and interpretation
 
-### 11.1 Likelihood and agreement
+### 11.1 Primary assessment performance
 
-Use the record loss $L_r$ for the primary likelihood measure. For each concept,
-average records within a source/group, then average groups, then macro-average
-concepts with test support. Report the same aggregation separately by concept,
-judgment origin, and supporting/prominent assessment. Preserve sample counts.
+Use $L_r^{\mathrm A}$ as the primary metric. For each concept, average record
+losses within each source/group, average groups, then macro-average concepts
+with test support. Apply the same aggregation for validation checkpoint selection.
+Report per-concept and per-assessment results with record and group counts;
+aggregate machine and held-out human assessments separately.
 
 The primary paired quantity is
 
 $$
-\Delta_{\mathrm{history}}=
-\overline L(\mathrm{relations\text{-}context})
--\overline L(\mathrm{relations\text{-}history}).
+\Delta_{\mathrm{evidence}}
+=\overline L^{\mathrm A}(\mathrm{style\text{-}only})
+-\overline L^{\mathrm A}(\mathrm{style\text{+}evidence}).
 $$
 
-Positive values favor selection history. Report each training seed, the mean
+Positive values favor evidence supervision. Report each training seed, the mean
 paired difference, and a 95% paired group-bootstrap interval using 1,000
-resamples. For each resample, compute each seed's paired difference and then
-average the differences across seeds. Preserve all labels, records, and model
-outputs of a sampled group; if a resample lacks a required label, redraw it.
-State that this interval
-conditions on the trained models and does not include every source of training
-variation. Do not treat individual rows or overlapping scopes as independent.
+resamples. Preserve all labels, records, and paired outputs of a sampled group;
+compute each seed's difference and average across seeds within each resample.
+Redraw resamples missing a concept required by that reported aggregate. The
+interval conditions on trained models and does not include every source of
+training variation. Rows, overlapping scopes, and repeated outputs are not
+independent samples. State sparse-support limitations for human comparisons.
 
-Also report reference object precision/recall/F1, predicted and reference count,
-selected-row fraction, empty/full outputs, and greedy/beam differences. With
-nonempty positive references, an empty prediction has F1 zero. Name these as
-reference-agreement measures: an alternative valid witness can disagree with
-the sole recorded selection.
+Do not summarize assessment by total accuracy alone. For each concept, report
+three-way NLL and the absent/supporting/prominent confusion matrix using the
+three-class argmax, with raw counts and within-reference-class rates. Also report
+the following separate distinctions, using the same group aggregation:
 
-The initial decision is exploratory. A positive mean difference with the same
-sign across three paired seeds supports retaining history for selection fitting;
-a group interval entirely above zero strengthens that conclusion. There is no
-predefined universal practical effect threshold in nats. Report effect size and
-uncertainty rather than converting this criterion into a semantic quality claim.
-Mixed seed signs or a broad interval leave the benefit unsettled.
+| Distinction | Prediction and evaluation population |
+| --- | --- |
+| Presence | On all resolved records, use $p_P=p_{\mathrm A}(\mathrm{supporting})+p_{\mathrm A}(\mathrm{prominent})$; report binary NLL and balanced accuracy with threshold 0.5 |
+| Positive strength | On all reference-positive records, use $p_{\mathrm{strong}}=p_{\mathrm A}(\mathrm{prominent})/p_P$; report supporting/prominent conditional NLL and balanced accuracy with threshold 0.5 |
 
-#### 11.1.1 Decision-level history gains
+The positive-strength population includes records the model predicted absent;
+do not evaluate only correctly detected positives. Compute these probabilities
+from the same three-way head, using stable log-space operations. At record
+level, three-way NLL equals presence NLL plus positive-strength NLL when the
+reference is positive. The conditional metric diagnoses strength discrimination;
+its population and weighting differ from the all-record aggregate. For each
+binary task, compute recall separately within each reference class by averaging
+records within represented groups, then groups; balanced accuracy is the mean
+of the two class recalls. It is unavailable when either class has no support.
+NLL remains reportable on a nonempty evaluation population; positive-strength
+NLL is unavailable if there are no reference positives. Do not encode ordinal
+strength as a regression target with assumed equal spacing.
 
-For each held-out reference and paired training seed, save the target mask and
-both arms' log probability at each nontrivial decision under the same preceding
-reference masks. Define
+The initial decision is exploratory. A positive mean $\Delta_{\mathrm{evidence}}$
+with the same sign across three paired seeds supports auxiliary supervision for
+assessment fitting; an interval entirely above zero strengthens that evidence.
+There is no universal practical threshold in nats. Report effect size and
+uncertainty, and examine whether any gain comes only from absent/present while
+supporting/prominent stagnates or regresses. A repeated class-specific regression
+qualifies the result and motivates revising or removing the auxiliary weight,
+not an unqualified success claim. Mixed seed signs or a broad interval leave
+the benefit unsettled.
+
+Report held-out human assessment results even when their evidence was inherited
+from a machine. They test assessment agreement under their recorded confirmation
+mode, not independent human selection fit. Machine-only gains remain evidence
+about that annotation method; conflicting human results or limited human support
+must remain visible rather than being averaged into a more favorable result.
+
+### 11.2 Assessment of concrete relationship distinctions
+
+Prepare a fixed diagnostic sample before inspecting model differences: target
+30 held-out resolved cells, up to six per concept, aiming for two absent, two
+supporting, and two prominent where available. Include existing contrasts in
+complete attack groups, interruptions, recurrence, entering holds, and release
+order. Preserve cell/group identity, original assessments, and judgment origin;
+report missing strata. Additional failure-driven cases are exploratory additions,
+not replacements. These cases support specific interpretations, not a stable
+semantic success-rate estimate for every concept.
+
+Use complete sections and their declared review contexts. First identify the
+source relationships relevant to the recorded assessment without showing model
+identity, predictions, or evidence highlights. Then compare each arm's three
+probabilities in randomized order. Record:
+
+1. The concrete relationship and section-level organization at issue, including
+   its temporal distribution, repetition, interruptions, or coexistence with
+   other organizations. Distinguish source facts from the scoped judgment.
+2. Whether the predicted assessment agrees with the recorded judgment and what
+   contrast it succeeds or fails to distinguish. For example, compare real judged
+   Jack cases with fixed disjoint A/B Trill cases assessed Jack absent despite
+   lane returns; examine overlap-only versus judged LN coordination cases.
+3. Whether the difference concerns presence, positive strength, or both, and
+   whether count/activity, scope/context confusion, or annotation disagreement
+   remains a plausible explanation. Retain unresolved interpretations.
+
+For strength, use already judged cases where a local relationship appears in
+different section organizations; do not assume similar local notes imply equal
+strength. Prefer existing human-assessed contrasts where available. Editing a
+chart does not automatically supply the modified chart's label. Prediction
+contrasts can support a behavioral distinction, but do not reveal a hidden
+state's meaning or establish the model's causal reasoning.
+
+Evidence highlights may be inspected separately after the assessment comparison.
+A convincing auxiliary explanation cannot excuse an incorrect assessment or
+prove that the primary branch used that explanation. Report human inspection
+as human judgment only when a human performed it; machine inspection remains a
+machine assessment.
+
+### 11.3 Auxiliary evidence diagnostics
+
+These metrics describe trained selectors and never replace primary assessment
+evaluation. `style-only` has no trained selector; do not compare its untrained
+head with `style+evidence` or invent a selection-loss gap for the initial pair.
+
+For supplied-reference assessment diagnostics, score $L_r^{\mathrm E}$ using
+$y^*$ and reference histories, with concept/group aggregation on eligible records.
+Report by absent/supporting/prominent and judgment origin, with eligibility
+counts. Add reference object precision/recall/F1, generated and reference count,
+selected-row fraction, empty/full outputs, and greedy/beam differences. If exactly
+one set is empty, precision/recall/F1 are zero; for two empty sets define them
+as one and report their count separately. Alternative useful evidence can
+disagree with the sole recorded selection.
+
+For optional output inspection, show the complete source context, highlights,
+queried concept, and supplied assessment, while hiding model identity, decoding
+method, scores, and original rationale. Record the specific relationship located
+by the highlighted objects, whether full context supports, weakens, or defeats
+that explanation of the supplied assessment, and a verdict of useful, misleading,
+no relevant relationship located, or unresolved. An absent explanation must
+locate evidence relevant to absence, not merely fail to show a positive pattern.
+Recognizing a style elsewhere in the chart does not assess the highlights.
+
+Do not require every selected object to be indispensable, both relationship
+endpoints to be selected, or the selection to be sufficient without context.
+Useful failure categories include manufactured recurrence/alternation after
+ignoring intervening attacks, missing hold/release relationships, wrong-scope
+inference, quantity-only agreement, selection-policy imitation, and decorative
+highlights unconnected to the explanation. Multiple selected runs are allowed;
+attention weights and the $U/V$ score decomposition do not identify reasoning.
+
+If generation quality is examined, freeze a subset of Section 11.2's cells and
+output seeds before viewing differences. Alongside greedy and beam 8, generate
+four ancestral witnesses per cell and trained-selector seed with Section 9.1's
+unmodified temperature-1 procedure. Use sampling seed `0` and reproducible streams
+keyed by cell, supplied assessment, training seed, and sample index; record the
+derivation and share it across any compared selector variants. Keep all draws,
+including duplicates and empty/full outputs, without choosing a best sample.
+
+Report per-cell count distributions, distinct selections, varying source
+locations, and relationship/failure judgments on a predeclared inspection subset.
+Preserve all draws in quantitative summaries and state the inspection denominator;
+samples of one cell are not independent cases. A high-probability point need
+not be typical: 100 independent binary choices with selection probability 0.1
+have expected count 10 but an all-zero MAP vector. Poor greedy/beam highlights
+with useful samples can reflect output choice or approximate search. Good
+teacher-forced fit with poor samples instead exposes difficulty starting or
+maintaining selections under generated histories.
+
+Keep $y^*$-conditioned explanations separate from outputs conditioned on the
+predicted $\widehat y$. In the latter, report assessment correctness separately:
+a selector can produce plausible highlights for an incorrect assessment.
+Neither inspection uses generated evidence as an input to the primary classifier.
+
+#### 11.3.1 Decision-level gains for a history follow-up
+
+Only in the trained-selector comparison of Section 10.2, write
+$\Xi=(X,\ell,y^*)$ and save both arms' log probabilities under the same preceding
+reference masks. Here each probability includes its arm's own chart encoder.
+Define
 
 $$
 \begin{aligned}
 \delta_{r,d}
-&=\log p_{\mathrm{history}}(z_d^*\mid z_{<d}^*,X)
--\log p_{\mathrm{context}}(z_d^*\mid X),\\
-L_r(\mathrm{context})-L_r(\mathrm{history})
+&=\log p_{\mathrm{history}}(z_d^*\mid z_{<d}^*,\Xi)
+-\log p_{\mathrm{context}}(z_d^*\mid\Xi),\\
+L_r^{\mathrm E}(\mathrm{context})-L_r^{\mathrm E}(\mathrm{history})
 &=\frac{1}{|J_r|}\sum_{d\in J_r}\delta_{r,d}.
 \end{aligned}
 $$
 
-Retain record/group identity, original row time and phase, and the following
-diagnostic strata. These are evaluation fields, not new model inputs or labels.
+Keep target masks, record/group IDs, source row time/phase, and these strata as
+evaluation fields rather than model inputs or semantic labels:
 
 | Stratum | Operational definition |
 | --- | --- |
-| Skip / nonempty | Whether the complete target mask is `0000`; forced-zero decisions are excluded from $J_r$ |
-| Run start / continuation | A nonempty attack-row target starts a run when the preceding original in-scope attack row is unselected or absent; otherwise it continues the run. Release-only rows neither start nor end runs; entering-LN boundary choices are separate |
-| Same-lane return | A selected head has an earlier selected in-scope attack in its lane; retain the latest such attack, elapsed time, and all intervening original attack groups |
-| Same-hand role switch | For a hand selected now, compare selected outer/inner role masks with that hand's latest earlier selected attack row; flag use of a previously unselected role and retain both masks |
-| Cross-hand change | Compare the selected-hand sets of this and the latest earlier nonempty attack-row target, retaining left/right/both membership |
-| Selected-active LN | Record which previously selected holds are active immediately before the current row, their original endpoints, and any current releases or actions on other lanes; include boundary-selected entering LNs |
+| Skip / nonempty | Whether the target mask is `0000`; exclude forced-zero decisions from $J_r$ |
+| Run start / continuation | A nonempty attack-row target starts a run when the preceding original in-scope attack row is unselected or absent; otherwise it continues. Release-only rows neither start nor end runs; entering-LN boundary choices are separate |
+| Same-lane return | A selected head has an earlier selected in-scope attack in its lane; retain the latest such attack, time gap, and intervening complete attack groups |
+| Same-hand role switch | Compare current selected roles with that hand's latest earlier selected attack-row mask; flag a newly selected role and retain both masks |
+| Cross-hand change | Compare selected-hand sets at this and the latest earlier nonempty attack-row target, retaining left/right/both membership |
+| Selected-active LN | Previously selected holds active before the current row, including entering LNs, with endpoints and current releases/actions on other lanes |
 
-Use explicit no-predecessor states. Return/role/hand comparisons apply to
-nonempty attack targets; selected-active LN facts also apply at skips. They can
-overlap and do not supply semantic Jack, Trill, or coordination labels. Preserve
-complete source groups and unselected interruptions when relating selected
-objects. A run is only an attack-row statistic, not a semantic episode.
+Use explicit no-predecessor states. Return/role/hand comparisons apply to nonempty
+attack targets; selected-active LN facts also apply at skips. Preserve unselected
+interruptions and complete source groups. A run is an attack-row statistic, not
+a semantic episode, and a return flag does not imply Jack.
 
-For each stratum, report decision, record, and group counts, the descriptive
-arithmetic mean gain over its decisions, and its contribution to the primary gap.
-Compute the contribution by
-zeroing other decisions in the sum above, retaining the original $|J_r|$, then
-using the primary record/group/concept aggregation. Mark an empty stratum's mean
-unavailable. Contributions sum to $\Delta_{\mathrm{history}}$ only for an
-exhaustive disjoint partition, such as skip/nonempty; overlapping relation flags
-must not be added together. Preserve seed and concept breakdowns without treating
-decisions as independent statistical samples.
+Report stratum decision/record/group counts, descriptive mean gain, and its
+contribution to the auxiliary loss gap. For contributions, zero other decisions
+in the sum above, retain the original $|J_r|$, and use the auxiliary aggregation
+on all eligible records. Empty-stratum means are unavailable. Only disjoint
+exhaustive partitions such as skip/nonempty sum to the full auxiliary gap;
+overlapping relation flags must not be added. Retain concept, assessment, and
+seed breakdowns. These gains do not decompose $\Delta_{\mathrm{evidence}}$.
 
-Gains concentrated in skips or run continuation motivate checking count and
-highlight persistence. Gains on returns, hand changes, or hold interactions
-motivate inspecting those source relationships. Neither location alone establishes
-semantic improvement; these diagnostics localize fitting gains without changing
-the loss or requiring new annotation.
-
-### 11.2 Generated-witness inspection
-
-Prepare a compact view with the complete section and its review context,
-highlights, original attack groups, full LN endpoints, and the queried concept.
-Hide model identity, decoding method, model scores, and original rationale;
-randomize display order. Source facts may be displayed; do not show a clipped
-or selection-only replacement chart.
-
-Use a fixed small sample selected before inspecting model differences: a target
-of 30 held-out positive cells, up to six per concept where available. Include
-examples with distributed selections, partial chords, and entering holds as
-separately identified diagnostic cases. Report human judgments if a human performs
-the inspection; machine-only inspection remains a machine assessment. Freeze
-cell IDs and the output/seed subset for inspection before viewing differences.
-Additional failure-driven cases are exploratory additions, not replacements for
-the fixed sample. These 30 cells supply diagnostic case evidence, not a stable
-estimate of semantic success rates across all five concepts. Multiple outputs
-of one cell do not increase the number of independent cases.
-
-For each output, record:
-
-1. The specific relationship located by the highlights, identifying selected
-   source objects and any contextual objects needed to describe it. If the
-   highlights locate none, say so; recognizing the concept elsewhere is not
-   evidence for this witness.
-2. Whether the original context supports, weakens, or defeats that interpretation,
-   citing relevant complete attack groups, interruptions, or hold/release order.
-3. A verdict of useful, misleading, no relevant relationship located, or unresolved,
-   with a short reason tied to the highlights. For paired count-cost outputs,
-   record whether the quantity change loses an essential relationship.
-
-For example, a Trill judgment should identify how the highlights locate fixed
-disjoint A/B groups and whether intervening complete groups sustain that reading.
-Saying only that the section contains Trill does not assess the highlights.
-The highlights must participate in locating the relationship; each selected
-object need not be indispensable, both endpoints need not be selected, and
-the selection need not be sufficient without context. Allow both compared
-outputs to be useful, both to fail, or the comparison to remain unresolved.
-Do not require a unique minimal witness or explanations for every unselected note.
-
-Useful failure categories are:
-
-| Failure | Concrete diagnostic |
-| --- | --- |
-| Manufactured recurrence | A selected subsequence looks Jack-like only after intervening original attacks are ignored |
-| Manufactured alternation | Selected A/B notes conceal changing groups or decisive extra attacks in the source |
-| Missing hold relationship | Selected heads are interpreted without entering occupation or relevant release order |
-| Wrong scope inference | One local gesture is used to claim an organization characterizes the entire section |
-| Quantity-only improvement | Reference agreement improves mainly because count matches, without better relationships |
-| Selection-policy imitation | Likelihood improves while generated relationships remain equally useful or equally misleading |
-| Decorative highlighting | The explanation identifies the concept in the chart but cannot connect the highlighted objects to the claimed relationship |
-
-Multiple selected runs are not a failure category. A relationship can span
-unselected contextual objects, and multiple locations can jointly explain a
-section. Likewise, attention weights and the $U/V$ score decomposition do not
-establish the annotator's reasoning process.
-
-### 11.3 Ancestral-sampling diagnostics
-
-A high-scoring single output and a representative draw answer different
-questions. For 100 independent binary choices with selection probability 0.1,
-the expected count is 10 while the unique MAP vector is all zero. Thus greedy
-or beam outputs alone do not characterize the learned selection distribution.
-
-On the fixed inspection cells, generate four complete ancestral witnesses per
-arm and training seed using Section 9's unmodified sampling procedure. Use
-sampling seed `0` with reproducible streams keyed by cell ID, training seed, and
-sample index; record the stream derivation and share it across arms. Keep every
-draw, including duplicates and empty/full outputs. Do not select the best sample
-by model score, reference agreement, count, or inspection verdict.
-
-Report per-cell count distributions, empty/full frequencies, distinct object
-selections, and which source locations vary across draws, alongside greedy and
-beam 8 at $\lambda=0$. Apply Section 11.2's relationship and failure judgments
-to a predeclared subset of draws if inspecting all is impractical, using the
-same sample indices and training seeds for both arms. Preserve all draws in
-quantitative summaries and report the inspection denominator. Do not pool draws
-as independent cells or equate diversity with semantic quality.
-
-Compare teacher-forced gains with behavior under generated histories: the model
-may score a reference continuation well yet fail to start or maintain a useful
-highlight sequence itself. More useful samples than mode-seeking outputs suggest
-a distribution/search distinction; failures across samples reveal limits hidden
-by a favorable single output. These are case-level diagnostics under a small
-sample budget, not a new aggregate semantic benchmark.
+Skip/run-continuation gains motivate count and persistence inspection; return,
+hand-change, and hold-interaction gains motivate inspection of those relationships.
+Neither proves benefit to the shared representation. Compare primary assessment
+results before attributing value to selection-history capacity.
 
 ### 11.4 What results permit
 
 | Observation | Supported interpretation | Next decision |
 | --- | --- | --- |
-| Better likelihood and better inspected relationships | History helps fitting; inspected cases support improved relationship highlighting | Retain it and identify which relationships improved |
-| Better likelihood only | History improves reference fitting; annotation strategy remains a plausible explanation | Localize decision gains; semantic benefit remains open |
-| Improvement concentrated in count | A quantity or selection-policy explanation remains plausible | Compare overlapping achieved count ranges |
-| Gains concentrated in skips or run continuation | Highlight persistence or quantity may explain the fitting benefit | Inspect run boundaries and count before attributing a gameplay distinction |
-| Better teacher-forced likelihood with poor sampled highlights | Reference-history fitting does not yield reliable generation under the model's own histories | Inspect how selections start and how failures propagate |
-| Useful samples with empty or misleading greedy/beam outputs | A high-scoring point may poorly represent useful mass; history-arm search is also approximate | Separate distribution quality from the choice and search of a representative output |
-| Similar likelihood and useful outputs | This context/model/data combination may not need selection history | Prefer the simpler successful arm unless another measured need appears |
-| Poor results in both arms | Representation, supervision, optimization, and concept ambiguity remain alternatives | Inspect concrete failures before adding model complexity |
-| Benefit limited to Jack/Stream | Evidence is concept-specific under uneven support | Do not infer success for LN coordination or Tech |
+| Better assessment NLL, preserved class distinctions, and better judged relationship contrasts | Evidence supervision helps section assessment in the tested setting | Retain the auxiliary weight and identify the supported concepts/contrasts |
+| Better assessment NLL only for presence | Evidence helps absent/present discrimination; positive strength remains unresolved or regresses | Inspect strength errors and qualify the benefit |
+| Better evidence fitting or highlights without assessment gain | The auxiliary branch learned selection behavior without demonstrated primary-task value | Prefer `style-only` for assessment; retain generation only for a separately useful purpose |
+| Better assessment with imperfect reference-mask agreement | Evidence can help training without reproducing the agent's exact choice | Judge the auxiliary term by assessment outcomes, not mask fidelity alone |
+| Machine-assessment gains with conflicting or inconclusive human results | Method-specific fitting remains an explanation | Report both origins and inspect disagreements before broader claims |
+| A stronger selector improves its NLL but not assessment | Extra capacity may be solving the auxiliary task within the decoder | Do not retain complexity solely for lower selection loss |
+| No stable assessment gain or poor results in both arms | This supervision/representation/optimization combination is not established | Inspect class support and concrete failures; revise the weight or supervision before adding model families |
+| Benefit limited to well-supported concepts | Evidence is concept-specific under uneven support | Do not infer Tech, LN, partial-chord, or entering-LN success from aggregate scores |
 
-A lack of detected gain does not prove that selection dependence or structure
-is absent. Conversely, architectural capacity to represent a dependency does not
-show that training used it meaningfully.
+No detected auxiliary benefit does not show that evidence lacks useful
+relationships. Better classification does not by itself establish understanding
+of style or sufficiency for continuation responses. State the narrowest claim
+supported by the held-out assessments and inspected real cases.
 
 ## 12. Implementation handoff and bounded execution
 
 Implement this study in an isolated research package, for example
-`src/pulsefield_model/research/witness_selection/`, with nearby focused tests.
+`src/pulsefield_model/research/scoped_style_modeling/`, with nearby focused tests.
 These paths name proposed ownership; no implementation is implied. Do not build
 the model on legacy mapper/tokenizer/training behavior. Follow repository config
 guidance where applicable without treating retained mapper presets as V3 designs.
@@ -857,12 +1014,14 @@ Keep the interfaces small:
 
 | Component | Input and output contract |
 | --- | --- |
-| Dataset adapter | Pinned judgments plus exact source objects to immutable record IDs, scopes, review contexts, targets, and split groups |
+| Dataset adapter | Pinned resolved assessments and optional evidence to immutable record IDs, scopes, review contexts, separate targets/availability, and split groups |
 | Replay and relation preparation | Complete visible source facts to lane states, encoder/decoder timelines, candidate masks, relation descriptors, and object-decision mapping |
-| Encoder | Chart facts and relation graph to two contextual hand vectors per decision; no selection input |
-| Row decoder | Context, concept, and per-hypothesis history to valid-mask log probabilities and simultaneous next histories |
-| Trainer | Targets update history under teacher forcing; padding and forced decisions follow the declared loss rules |
-| Decoder/evaluator | Greedy/beam outputs and ancestral samples, original sequence log probability, separate count cost, decision-level gains, agreement metrics, and complete-context inspection records |
+| Shared encoder | Chart facts and relation graph to two contextual hand vectors per encoded position; no assessment or selection input |
+| Assessment readout/head | Complete section sequence and queried concept to absent/supporting/prominent probabilities; no auxiliary states or targets |
+| Auxiliary row decoder | Chart context, concept, supplied assessment, and its own history to valid-mask probabilities and simultaneous next histories |
+| Trainer | Primary assessment loss plus weighted, availability-masked evidence loss; teacher forcing confined to selector; checkpoint selection by assessment validation |
+| Assessment evaluator | Selector-free inference, grouped assessment metrics, per-class distinctions, human comparison, and complete-context relationship cases |
+| Optional evidence evaluator | Declared assessment conditioning, sequence NLL/agreement, greedy/beam and ancestral outputs, count costs, and inspection records; decision gains only for trained-selector comparisons |
 
 Store replay facts separately from selection targets. In particular,
 `context_note_refs` is a delivery complement of witnesses, not a separately
@@ -878,16 +1037,22 @@ These values define a starting preset, not tuned performance claims:
 | Lane embedding | 16 dimensions |
 | Shared hand BiGRU | One layer, 32 hidden dimensions per direction; 64 output dimensions per hand |
 | Relation block | One block, four attention heads, 64 model dimensions, 128 feed-forward dimensions |
-| Concept / hand-mask embedding | 16 / 8 dimensions |
+| Assessment row projection | Symmetrized shared pair MLP, one 64-unit hidden layer and 64 output dimensions |
+| Section readout BiGRU | One layer, 32 hidden dimensions per direction; terminal states plus in-scope mean and duration/empty-row features |
+| Assessment head | One 64-unit hidden layer and three logits per query |
+| Branch-owned concept embeddings | 16 dimensions each, separate for assessment and evidence |
+| Auxiliary assessment / hand-mask embedding | 8 / 8 dimensions |
 | Shared selection GRU | 64 hidden dimensions per hand |
 | $U$ and symmetric $G$ readouts | One 64-unit hidden layer each |
 | Dropout | 0.1 in encoder/readout; disabled in evaluation |
 | Optimizer | AdamW, learning rate $3\times10^{-4}$, weight decay $10^{-4}$, gradient norm cap 1 |
 | Batch and epoch | 16 sampled records; one epoch has the training cohort's record count of draws |
-| Training bound | At most 30 epochs, early stopping after five epochs without validation macro-NLL improvement |
+| Auxiliary weight | $\beta=0$ versus $0.1$ for the initial pair |
+| Training bound | At most 30 epochs, early stopping after five epochs without validation assessment macro-NLL improvement |
 | Training seeds | Pilot seed 17; paired repeats 29 and 43 |
-| Checkpoint selection | Lowest validation macro-NLL, using the same rule for both arms |
-| Inference | Greedy and beam 8; primary $\lambda=0$; four temperature-1 ancestral samples per fixed diagnostic cell/arm/training seed, sampling seed 0 |
+| Checkpoint selection | Lowest validation assessment macro-NLL, using the same rule for both arms |
+| Assessment inference | Shared encoder plus primary readout/head; auxiliary branch removed |
+| Optional evidence inference | Greedy/beam 8 at $\lambda=0$; four temperature-1 ancestral samples per fixed diagnostic cell/selector seed as in Section 11.3 |
 
 First verify one batch and a small overfit slice, then time the paired pilot.
 Use the explicit `mps` extra on Apple Silicon or `cuda` on NVIDIA Linux, and
@@ -913,23 +1078,43 @@ Test the contracts that can change the experiment's meaning:
 3. Relations and strict-neighbor features obey context limits, preserve original
    row adjacency and endpoint identity, and combine multiple edge roles correctly.
 4. Valid-mask probabilities normalize; impossible masks have no support;
-   release-only decisions add zero NLL; padding does not update histories.
-5. `relations-context` is invariant to supplied selection histories; the history
-   arm has independent state per beam hypothesis or sampled trajectory and
-   simultaneous hand updates.
-6. Mirror transformation preserves mapped probabilities and sequence scores.
-7. Exhaustive enumeration on tiny charts agrees with sequence scoring and with
-   sufficiently wide beam search under the original log-probability/count objective.
-   Context-only rowwise maximization attains that exact optimum at every cost.
+   release-only decisions add zero auxiliary NLL; padding does not update states
+   or enter section aggregation. Explicit empty evidence and missing evidence
+   follow their distinct loss rules without deleting assessment examples.
+5. At fixed weights, changing true assessments, reference masks, teacher-forced
+   histories, or generated selections cannot change chart vectors or assessment
+   logits. Removing the selector preserves predictions. Gradient paths connect
+   each loss to its own branch and the shared encoder, not the other branch;
+   the zero-weight model reproduces the assessment-only update under paired RNG.
+6. The primary readout includes all in-scope event rows, boundary occupation,
+   trailing time, and empty-section handling. External context rows and a head
+   at $b$ do not enter its in-scope pooling or event counts. Changing evidence
+   cannot change this membership.
+7. The three probabilities normalize within each queried concept; absent evidence
+   is conditioned on absent, and unresolved/unreviewed are excluded from both
+   supervised class and conditional evidence targets. Presence/strength NLL
+   decomposition and grouped paired assessment aggregation match their definitions.
 8. Dataset grouping has no exact source/cell leakage and the encoder has no
-   target-bearing input channel. Training-only transformations fit training data.
-9. Ancestral sampling uses the original normalized joint probabilities and sampled
-   history, reproduces draws under fixed streams, and retains empty/duplicate
-   draws. On a tiny enumerated distribution, sampled frequencies agree within a
-   declared Monte Carlo tolerance; forced rows still advance state.
-10. Decision-gain sums recover each record's paired loss difference and the
-    primary aggregate. Skip/nonempty partitions reconcile; run boundaries use
-    original attack rows, and overlapping relation flags are not double-counted.
+   target-bearing input channel. Training-only transformations fit training data;
+   both arms use the same assessment cohort, split, and minibatch stream.
+9. Mirror transformations preserve assessment probabilities, mapped auxiliary
+   probabilities, and sequence scores, including the section readout.
+10. Auxiliary hands update simultaneously from their prior states, with fresh
+    state for each record or generated trajectory. Source replay remains shared
+    and immutable.
+
+When implementing optional decoding or a selector comparison, also require:
+
+- Tiny-chart enumeration agrees with sequence scoring and sufficiently wide
+  beam search under the original log-probability/count objective. The context-only
+  variant is invariant to selection history and its rowwise maximum is exact.
+- Ancestral sampling uses original joint probabilities and sampled history,
+  reproduces fixed-stream draws, retains empty/duplicate outputs, and advances
+  forced rows. Tiny enumerated distributions agree with sampled frequencies
+  within a declared Monte Carlo tolerance. Beam/sample histories are isolated.
+- Decision-gain sums recover the auxiliary loss difference, not the primary
+  assessment gap. Skip/nonempty partitions reconcile; run boundaries use original
+  attack rows, and overlapping relation flags are not double-counted.
 
 These tests validate implementation semantics, not pattern accuracy. One-batch
 gradient checks and tiny-slice overfitting diagnose training viability; neither
@@ -938,25 +1123,30 @@ is a held-out result.
 ### 12.3 Run record and deliverables
 
 Each actual comparison records its recoverable source revision, document/config
-revision, dataset and split manifest, arm, seed, actual command, device, parameter
-count, runtime bound, and output location before training. Record the command
-once the research entrypoint has been implemented and its interface verified.
+revision, dataset and split manifest, arm, auxiliary weight, seed, actual command,
+device, training/inference parameter counts, runtime bound, and output location
+before training. Record the command once the research entrypoint has been
+implemented and its interface verified.
 Use a fresh artifact directory per run. Resume only a matching configuration and
 dataset/split identity, and keep checkpoint-selection and budget usage visible.
 Record decoding and sampling runtime separately from the training allocation.
 
-The implementation handoff consists of the adapter, replay/relations, paired
-models, objective-preserving decoder, focused correctness evidence, and a compact
-paired result report. Include cohort flow/counts, validation choice, per-tag and
-aggregate metrics, decision-gain strata, quantity curves, all ancestral draws and
-their sampling manifest, complete-context inspection records, failures, and
-deviations. State the number of distinct cells/groups behind rare-case and
-semantic claims. Raw artifacts remain outside tracked product sources.
+The initial handoff consists of the adapter, replay/relations, shared encoder,
+section readout/head, auxiliary selector, paired training, correctness evidence,
+and a compact assessment report. Include class/group support, evidence
+availability, weight and checkpoint choices, three-way/presence/strength metrics,
+held-out human comparison, and concrete relationship cases. Report auxiliary
+likelihood/agreement separately. If optional evidence generation or history
+comparisons run, include their conditioning mode, quantity curves, all draws and
+sampling manifest, inspections, and decision-gain strata. State the distinct
+cells/groups behind rare-case and semantic claims, failures, and deviations.
+Raw artifacts remain outside tracked product sources.
 
 Numerical instability, incorrect source identity, or representation-contract
 failures stop the affected run. Missing exposure metadata, absent independent
-human selection gold, or an unavailable optional semantic inspection does not
-block the likelihood experiment; report the corresponding interpretation limit.
+human selection gold, or an unavailable optional highlight inspection does not
+block the assessment comparison. Missing human assessments or source-relationship
+inspection limits the resulting claim and must be reported.
 
 A formal accepted Experiment Card and executed Result Logs, when created, belong
 to an owning Agent Note under the repository research workflow. This document
@@ -972,22 +1162,29 @@ alternation or changes group membership, and introduces independent actions or
 releases against existing LN occupation.
 
 Such questions still need scope, horizon, positive/negative/equivalent examples,
-and a declared response comparison. This selector sees later chart context in
+and a declared response comparison. This encoder sees later chart context in
 its declared review window. It is not a causal prefix state; later source rows
 would need to be provisional continuations when used during generation.
 
-The selection states $q$, relation counts, concept probabilities, and witness
-size are not gameplay demand coordinates. Better recognition of a scoped concept
-also does not establish that a state preserves the full continuation-response
-function. The target response specification precedes that adequacy claim.
+The section representation $r_\ell$, selection states $q$, relation counts,
+assessment probabilities, and witness size are not gameplay demand coordinates.
+Better recognition of a scoped concept also does not establish that a state
+preserves the full continuation-response function. The target response
+specification precedes that adequacy claim.
 
 ## 14. Closest research analogues
 
+- [Carton, Kanoria, and Tan (2022), What to Learn, and How](https://aclanthology.org/2022.findings-acl.86/)
+  studies learning label predictions from rationale supervision and finds that
+  maximizing rationale fit need not maximize prediction accuracy. The relevant
+  comparison is the utility of auxiliary evidence for the primary task. Here,
+  agent-selected source objects locate chart relationships and need not provide
+  an independently sufficient input.
 - [Lei, Barzilay, and Jaakkola (2016), Rationalizing Neural Predictions](https://aclanthology.org/D16-1011/)
   compares independent and recurrent history-dependent binary selection from
   bidirectional context. The direct analogue is the selector's factorization and
   memory. Its latent-rationale training and isolated-rationale sufficiency objective
-  differ from this supervised, full-chart-context witness task.
+  differ from this weak auxiliary selection task with a full-chart assessment path.
 - [Shaw, Uszkoreit, and Vaswani (2018), Self-Attention with Relative Position Representations](https://aclanthology.org/N18-2074/)
   motivates transmitting declared relationships through attention. The proposed
   chart graph instantiates domain-specific action relations rather than relying
@@ -995,10 +1192,8 @@ function. The target response specification precedes that adequacy claim.
 - [DeYoung et al. (2020), ERASER](https://aclanthology.org/2020.acl-main.408/)
   separates reference-rationale agreement from faithfulness. Its deletion-based
   measures cannot be imported as unchanged style judgments on an edited chart.
-- [Carton, Kanoria, and Tan (2022), What to Learn, and How](https://aclanthology.org/2022.findings-acl.86/)
-  finds that better rationale supervision fit need not improve label prediction.
-  It motivates measuring any recognition transfer separately.
 
 The provisional contribution is an adaptation to source-linked 4K action
-relationships and evidence about which dependencies help. An encoder/attention/
-GRU combination by itself is not a claim of a new general selection method.
+relationships and evidence about whether agent explanations improve scoped style
+assessment. A shared encoder and auxiliary GRU are an experimental mechanism,
+not a claim of a new general rationale-learning method.
