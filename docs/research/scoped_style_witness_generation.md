@@ -16,8 +16,9 @@ selects source objects; it does not generate a new chart or validate a demand st
 The primary question is:
 
 > Given a complete declared chart context and a concept known to be present in
-> a section, does selection history improve the construction of witnesses whose
-> relationships remain meaningful in the original arrangement?
+> a section, does explicit selection history improve held-out witness fitting
+> under the available data and model capacity, and do those gains accompany more
+> reliable highlighting of specific source relationships?
 
 A second comparison asks whether explicit hand coordinates and source-action
 relation channels improve this task over an encoder receiving the same source
@@ -34,8 +35,10 @@ The study has three distinct possible outcomes:
 
 Success at one level does not establish the next. In particular, a selection
 model can learn annotation location and quantity preferences without improving
-style recognition. The first two levels are the initial study; recognition is
-a bounded extension after their results are available.
+the relationships it highlights or style recognition. The first two levels are
+the initial study; recognition is a bounded extension after their results are
+available. The comparison tests the usefulness of explicit selection dependence,
+not whether witnesses or gameplay have structure in the abstract.
 
 Inputs are chart-only. The annotation vocabulary concerns organization supported
 by source actions and declared chart context, rather than concepts requiring
@@ -122,7 +125,10 @@ Source-level inspection of the machine positives found:
 
 These measurements motivate distributed-witness, partial-chord, and boundary-LN
 inspection slices. None is an automatic quality filter. In particular, leaving
-an entering LN unselected does not remove its occupation from context.
+an entering LN unselected does not remove its occupation from context. Retain
+joint masks and entering-LN decisions to express the task correctly, but do not
+use aggregate gains to claim that these scarce cases have been learned. Report
+their held-out record and source-group counts alongside concrete outcomes.
 
 ### 3.1 Cohorts and proportionate provenance
 
@@ -409,8 +415,9 @@ quantities. Do not invent an attack at the boundary or use the boundary timestam
 as that object's original recurrence position. Object IDs maintain these links;
 their arbitrary numeric source-line values are not embedded.
 
-Every beam hypothesis owns its learned and exact selection histories. Chart
-context, relation indices, and replay facts are shared immutable inputs.
+Every beam hypothesis or sampled trajectory owns its learned and exact selection
+histories. Chart context, relation indices, and replay facts are shared immutable
+inputs.
 
 ### 8.3 Joint row distribution
 
@@ -462,6 +469,9 @@ $$
 
 This gives generation and scoring of complete selections over the same support.
 It does not assign each source note a history-independent semantic importance.
+Autoregression constrains selection history only: the encoder sees the complete
+declared review context, including later source rows. This is retrospective
+selection, not a causal restriction on chart observation.
 
 ### 8.4 Mirror behavior
 
@@ -526,6 +536,21 @@ Equal $\lambda$ values need not yield equal counts across models; compare qualit
 at overlapping achieved count ranges as an additional analysis. Selections at
 different costs need not be nested. Count is an output preference, not style
 strength, relationship completeness, or a common information cost for taps/LNs.
+It is a post-training decoding preference; this loss does not teach a value for
+concise explanations.
+
+For `relations-context`, probabilities and valid masks do not depend on selected
+history, so maximizing each row's log probability minus its count cost gives
+the exact sequence optimum for every $\lambda$. Greedy therefore attains it;
+beam search cannot improve its score. `relations-history` generally needs
+approximate search. Report this asymmetry when interpreting decoded differences.
+
+Also generate ancestral samples from the original distribution: at $\lambda=0$
+and temperature 1, draw each joint mask from its normalized valid-mask
+probabilities and update history with that sampled mask. Use neither reference
+history nor top-k/top-p truncation, rejection of empty outputs, or count-based
+reranking. Forced decisions still advance state. Section 11.3 fixes the sample
+budget and diagnostics; sampling does not change training or checkpoint selection.
 
 ## 10. Discriminating comparisons
 
@@ -543,6 +568,40 @@ the chart and label; they cannot depend on previous selected masks. Consequently
 its row probabilities are conditionally independent given chart and label even
 though it has a recurrent computation. Do not remove an entire processing layer
 and attribute the resulting difference solely to selection history.
+
+Writing $X=(C_Q,S,\ell,\mathrm{present})$, the distinction is
+
+$$
+\begin{aligned}
+p_{\mathrm{context}}(Z\mid X)
+&=\prod_d p_{\mathrm{context}}(z_d\mid X),\\
+p_{\mathrm{history}}(Z\mid X)
+&=\prod_d p_{\mathrm{history}}(z_d\mid z_{<d},X).
+\end{aligned}
+$$
+
+For fixed-length outputs, unlimited capacity, and population-optimal unnormalized
+expected NLL, the entropy chain rule gives
+
+$$
+\mathcal L_{\mathrm{ind}}^*-\mathcal L_{\mathrm{AR}}^*
+=\sum_d H(Z_d\mid X)-H(Z\mid X)
+=\sum_d I(Z_d;Z_{<d}\mid X).
+$$
+
+This ideal identity describes uncertainty removed by preceding selections. It
+is not an estimator for the measured loss gap with finite models, optimization
+error, finite data, and the record normalization in Section 9.
+
+Selection dependence can reflect source relationships or annotation strategy.
+If a section has two equally useful episodes and the annotator chooses one,
+history can keep that choice consistent while a context-only model mixes their
+marginals. That is useful organization of an explanation, but it need not reveal
+a new gameplay distinction. Conversely, if the witness is a deterministic
+function of $X$, a sufficiently capable context-only model can concentrate on
+that whole witness. An absence of history gain is therefore compatible with
+structured witnesses. Decision-level gains and generated-highlight inspection
+distinguish these explanations more directly than aggregate likelihood alone.
 
 Train both arms independently with paired initialization seeds, minibatch order,
 optimizer settings, and model-selection budget. Verify that changing a preceding
@@ -577,9 +636,12 @@ measurement or proof of a physiological mechanism.
 
 ### 10.3 Diagnostics with distinct purposes
 
-- Train a label-null version only when assessing whether concept conditioning
-  improves selection, and inspect scopes with multiple positive concepts.
-  Different labels may legitimately share witnesses.
+- On held-out scopes with the same review context and multiple positive concepts,
+  query each of those concepts, compare outputs, and score each recorded witness
+  under all those concepts. Different labels may legitimately share witnesses.
+  An absent concept is outside this known-positive selector's task; failure to
+  reject it is not a presence-detection error. A trained label-null version is a
+  follow-up for attributing a benefit to conditioning, not a third initial arm.
 - Inspect partial-chord cases for the joint mask head. A four-sigmoid comparison
   is optional; scarce partial-row targets limit a global performance claim.
 - A previous-mask-only finite-state decoder can test whether short output history
@@ -629,23 +691,94 @@ predefined universal practical effect threshold in nats. Report effect size and
 uncertainty rather than converting this criterion into a semantic quality claim.
 Mixed seed signs or a broad interval leave the benefit unsettled.
 
+#### 11.1.1 Decision-level history gains
+
+For each held-out reference and paired training seed, save the target mask and
+both arms' log probability at each nontrivial decision under the same preceding
+reference masks. Define
+
+$$
+\begin{aligned}
+\delta_{r,d}
+&=\log p_{\mathrm{history}}(z_d^*\mid z_{<d}^*,X)
+-\log p_{\mathrm{context}}(z_d^*\mid X),\\
+L_r(\mathrm{context})-L_r(\mathrm{history})
+&=\frac{1}{|J_r|}\sum_{d\in J_r}\delta_{r,d}.
+\end{aligned}
+$$
+
+Retain record/group identity, original row time and phase, and the following
+diagnostic strata. These are evaluation fields, not new model inputs or labels.
+
+| Stratum | Operational definition |
+| --- | --- |
+| Skip / nonempty | Whether the complete target mask is `0000`; forced-zero decisions are excluded from $J_r$ |
+| Run start / continuation | A nonempty attack-row target starts a run when the preceding original in-scope attack row is unselected or absent; otherwise it continues the run. Release-only rows neither start nor end runs; entering-LN boundary choices are separate |
+| Same-lane return | A selected head has an earlier selected in-scope attack in its lane; retain the latest such attack, elapsed time, and all intervening original attack groups |
+| Same-hand role switch | For a hand selected now, compare selected outer/inner role masks with that hand's latest earlier selected attack row; flag use of a previously unselected role and retain both masks |
+| Cross-hand change | Compare the selected-hand sets of this and the latest earlier nonempty attack-row target, retaining left/right/both membership |
+| Selected-active LN | Record which previously selected holds are active immediately before the current row, their original endpoints, and any current releases or actions on other lanes; include boundary-selected entering LNs |
+
+Use explicit no-predecessor states. Return/role/hand comparisons apply to
+nonempty attack targets; selected-active LN facts also apply at skips. They can
+overlap and do not supply semantic Jack, Trill, or coordination labels. Preserve
+complete source groups and unselected interruptions when relating selected
+objects. A run is only an attack-row statistic, not a semantic episode.
+
+For each stratum, report decision, record, and group counts, the descriptive
+arithmetic mean gain over its decisions, and its contribution to the primary gap.
+Compute the contribution by
+zeroing other decisions in the sum above, retaining the original $|J_r|$, then
+using the primary record/group/concept aggregation. Mark an empty stratum's mean
+unavailable. Contributions sum to $\Delta_{\mathrm{history}}$ only for an
+exhaustive disjoint partition, such as skip/nonempty; overlapping relation flags
+must not be added together. Preserve seed and concept breakdowns without treating
+decisions as independent statistical samples.
+
+Gains concentrated in skips or run continuation motivate checking count and
+highlight persistence. Gains on returns, hand changes, or hold interactions
+motivate inspecting those source relationships. Neither location alone establishes
+semantic improvement; these diagnostics localize fitting gains without changing
+the loss or requiring new annotation.
+
 ### 11.2 Generated-witness inspection
 
 Prepare a compact view with the complete section and its review context,
 highlights, original attack groups, full LN endpoints, and the queried concept.
-Hide model identity and original rationale. Source facts may be displayed;
-do not show a clipped or selection-only replacement chart.
+Hide model identity, decoding method, model scores, and original rationale;
+randomize display order. Source facts may be displayed; do not show a clipped
+or selection-only replacement chart.
 
 Use a fixed small sample selected before inspecting model differences: a target
 of 30 held-out positive cells, up to six per concept where available. Include
 examples with distributed selections, partial chords, and entering holds as
 separately identified diagnostic cases. Report human judgments if a human performs
-the inspection; machine-only inspection remains a machine assessment.
+the inspection; machine-only inspection remains a machine assessment. Freeze
+cell IDs and the output/seed subset for inspection before viewing differences.
+Additional failure-driven cases are exploratory additions, not replacements for
+the fixed sample. These 30 cells supply diagnostic case evidence, not a stable
+estimate of semantic success rates across all five concepts. Multiple outputs
+of one cell do not increase the number of independent cases.
 
-Ask whether the highlighted objects locate a real relationship relevant to the
-concept in this scope, whether omitted context defeats that interpretation, and
-whether quantity changes discard an essential part of that relationship. Allow
-both outputs to be useful, both to fail, or the comparison to be unresolved.
+For each output, record:
+
+1. The specific relationship located by the highlights, identifying selected
+   source objects and any contextual objects needed to describe it. If the
+   highlights locate none, say so; recognizing the concept elsewhere is not
+   evidence for this witness.
+2. Whether the original context supports, weakens, or defeats that interpretation,
+   citing relevant complete attack groups, interruptions, or hold/release order.
+3. A verdict of useful, misleading, no relevant relationship located, or unresolved,
+   with a short reason tied to the highlights. For paired count-cost outputs,
+   record whether the quantity change loses an essential relationship.
+
+For example, a Trill judgment should identify how the highlights locate fixed
+disjoint A/B groups and whether intervening complete groups sustain that reading.
+Saying only that the section contains Trill does not assess the highlights.
+The highlights must participate in locating the relationship; each selected
+object need not be indispensable, both endpoints need not be selected, and
+the selection need not be sufficient without context. Allow both compared
+outputs to be useful, both to fail, or the comparison to remain unresolved.
 Do not require a unique minimal witness or explanations for every unselected note.
 
 Useful failure categories are:
@@ -658,19 +791,52 @@ Useful failure categories are:
 | Wrong scope inference | One local gesture is used to claim an organization characterizes the entire section |
 | Quantity-only improvement | Reference agreement improves mainly because count matches, without better relationships |
 | Selection-policy imitation | Likelihood improves while generated relationships remain equally useful or equally misleading |
+| Decorative highlighting | The explanation identifies the concept in the chart but cannot connect the highlighted objects to the claimed relationship |
 
 Multiple selected runs are not a failure category. A relationship can span
 unselected contextual objects, and multiple locations can jointly explain a
 section. Likewise, attention weights and the $U/V$ score decomposition do not
 establish the annotator's reasoning process.
 
-### 11.3 What results permit
+### 11.3 Ancestral-sampling diagnostics
+
+A high-scoring single output and a representative draw answer different
+questions. For 100 independent binary choices with selection probability 0.1,
+the expected count is 10 while the unique MAP vector is all zero. Thus greedy
+or beam outputs alone do not characterize the learned selection distribution.
+
+On the fixed inspection cells, generate four complete ancestral witnesses per
+arm and training seed using Section 9's unmodified sampling procedure. Use
+sampling seed `0` with reproducible streams keyed by cell ID, training seed, and
+sample index; record the stream derivation and share it across arms. Keep every
+draw, including duplicates and empty/full outputs. Do not select the best sample
+by model score, reference agreement, count, or inspection verdict.
+
+Report per-cell count distributions, empty/full frequencies, distinct object
+selections, and which source locations vary across draws, alongside greedy and
+beam 8 at $\lambda=0$. Apply Section 11.2's relationship and failure judgments
+to a predeclared subset of draws if inspecting all is impractical, using the
+same sample indices and training seeds for both arms. Preserve all draws in
+quantitative summaries and report the inspection denominator. Do not pool draws
+as independent cells or equate diversity with semantic quality.
+
+Compare teacher-forced gains with behavior under generated histories: the model
+may score a reference continuation well yet fail to start or maintain a useful
+highlight sequence itself. More useful samples than mode-seeking outputs suggest
+a distribution/search distinction; failures across samples reveal limits hidden
+by a favorable single output. These are case-level diagnostics under a small
+sample budget, not a new aggregate semantic benchmark.
+
+### 11.4 What results permit
 
 | Observation | Supported interpretation | Next decision |
 | --- | --- | --- |
-| Better likelihood and better inspected relationships | History helps fitting and useful generation in the tested cohort | Retain it and identify which relationships improved |
-| Better likelihood only | History helps reproduce selection conventions | Keep any annotation-assistance value; semantic benefit remains open |
+| Better likelihood and better inspected relationships | History helps fitting; inspected cases support improved relationship highlighting | Retain it and identify which relationships improved |
+| Better likelihood only | History improves reference fitting; annotation strategy remains a plausible explanation | Localize decision gains; semantic benefit remains open |
 | Improvement concentrated in count | A quantity or selection-policy explanation remains plausible | Compare overlapping achieved count ranges |
+| Gains concentrated in skips or run continuation | Highlight persistence or quantity may explain the fitting benefit | Inspect run boundaries and count before attributing a gameplay distinction |
+| Better teacher-forced likelihood with poor sampled highlights | Reference-history fitting does not yield reliable generation under the model's own histories | Inspect how selections start and how failures propagate |
+| Useful samples with empty or misleading greedy/beam outputs | A high-scoring point may poorly represent useful mass; history-arm search is also approximate | Separate distribution quality from the choice and search of a representative output |
 | Similar likelihood and useful outputs | This context/model/data combination may not need selection history | Prefer the simpler successful arm unless another measured need appears |
 | Poor results in both arms | Representation, supervision, optimization, and concept ambiguity remain alternatives | Inspect concrete failures before adding model complexity |
 | Benefit limited to Jack/Stream | Evidence is concept-specific under uneven support | Do not infer success for LN coordination or Tech |
@@ -696,7 +862,7 @@ Keep the interfaces small:
 | Encoder | Chart facts and relation graph to two contextual hand vectors per decision; no selection input |
 | Row decoder | Context, concept, and per-hypothesis history to valid-mask log probabilities and simultaneous next histories |
 | Trainer | Targets update history under teacher forcing; padding and forced decisions follow the declared loss rules |
-| Decoder/evaluator | Free-count source-object selections, original sequence log probability, separate count cost, agreement metrics, and complete-context inspection views |
+| Decoder/evaluator | Greedy/beam outputs and ancestral samples, original sequence log probability, separate count cost, decision-level gains, agreement metrics, and complete-context inspection records |
 
 Store replay facts separately from selection targets. In particular,
 `context_note_refs` is a delivery complement of witnesses, not a separately
@@ -721,7 +887,7 @@ These values define a starting preset, not tuned performance claims:
 | Training bound | At most 30 epochs, early stopping after five epochs without validation macro-NLL improvement |
 | Training seeds | Pilot seed 17; paired repeats 29 and 43 |
 | Checkpoint selection | Lowest validation macro-NLL, using the same rule for both arms |
-| Inference | Greedy and beam 8; primary $\lambda=0$ |
+| Inference | Greedy and beam 8; primary $\lambda=0$; four temperature-1 ancestral samples per fixed diagnostic cell/arm/training seed, sampling seed 0 |
 
 First verify one batch and a small overfit slice, then time the paired pilot.
 Use the explicit `mps` extra on Apple Silicon or `cuda` on NVIDIA Linux, and
@@ -749,12 +915,21 @@ Test the contracts that can change the experiment's meaning:
 4. Valid-mask probabilities normalize; impossible masks have no support;
    release-only decisions add zero NLL; padding does not update histories.
 5. `relations-context` is invariant to supplied selection histories; the history
-   arm has independent per-beam state and simultaneous hand updates.
+   arm has independent state per beam hypothesis or sampled trajectory and
+   simultaneous hand updates.
 6. Mirror transformation preserves mapped probabilities and sequence scores.
 7. Exhaustive enumeration on tiny charts agrees with sequence scoring and with
    sufficiently wide beam search under the original log-probability/count objective.
+   Context-only rowwise maximization attains that exact optimum at every cost.
 8. Dataset grouping has no exact source/cell leakage and the encoder has no
    target-bearing input channel. Training-only transformations fit training data.
+9. Ancestral sampling uses the original normalized joint probabilities and sampled
+   history, reproduces draws under fixed streams, and retains empty/duplicate
+   draws. On a tiny enumerated distribution, sampled frequencies agree within a
+   declared Monte Carlo tolerance; forced rows still advance state.
+10. Decision-gain sums recover each record's paired loss difference and the
+    primary aggregate. Skip/nonempty partitions reconcile; run boundaries use
+    original attack rows, and overlapping relation flags are not double-counted.
 
 These tests validate implementation semantics, not pattern accuracy. One-batch
 gradient checks and tiny-slice overfitting diagnose training viability; neither
@@ -768,12 +943,15 @@ count, runtime bound, and output location before training. Record the command
 once the research entrypoint has been implemented and its interface verified.
 Use a fresh artifact directory per run. Resume only a matching configuration and
 dataset/split identity, and keep checkpoint-selection and budget usage visible.
+Record decoding and sampling runtime separately from the training allocation.
 
 The implementation handoff consists of the adapter, replay/relations, paired
 models, objective-preserving decoder, focused correctness evidence, and a compact
 paired result report. Include cohort flow/counts, validation choice, per-tag and
-aggregate metrics, quantity curves, complete-context output examples, failures,
-and deviations. Raw artifacts remain outside tracked product sources.
+aggregate metrics, decision-gain strata, quantity curves, all ancestral draws and
+their sampling manifest, complete-context inspection records, failures, and
+deviations. State the number of distinct cells/groups behind rare-case and
+semantic claims. Raw artifacts remain outside tracked product sources.
 
 Numerical instability, incorrect source identity, or representation-contract
 failures stop the affected run. Missing exposure metadata, absent independent
