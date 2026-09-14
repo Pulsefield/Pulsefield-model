@@ -194,8 +194,7 @@ def fit_matched_probes(model, corpus: SemanticCorpus, *, encoder_seed: int, read
     Supply the seed used to initialize the predictor. Both fits use complete
     original review contexts. Results measure frozen reuse, not generation.
     """
-    from .model import initialize_comparison
-    untrained = initialize_comparison(model.config, encoder_seed)[model.configuration].to(next(model.parameters()).device)
+    untrained = model.initialize_untrained(encoder_seed).to(next(model.parameters()).device)
     result = {}
     for name, candidate in (("trained", model), ("untrained", untrained)):
         head, fit = fit_readout(candidate, corpus, steps=steps, batch_size=batch_size,

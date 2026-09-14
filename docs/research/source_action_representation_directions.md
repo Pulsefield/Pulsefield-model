@@ -19,6 +19,9 @@ software checks for a common prediction task.
 The [prediction and evidence contract](source_action_objective.md) owns the
 implemented joint output family, sequence/row likelihood distinctions,
 sampling risk and fixed-information prefix-routing diagnostics.
+The [time and local-composition comparison](source_action_time_local.md) implements
+independent controls for event adjacency, physical/relative time bases, row
+interaction and repeated source access. Their predictive benefit is unestablished.
 
 The baseline is the scoped classifier examined in the
 [2026-09-14 postmortem](scoped_style_probe_postmortem.md), with implementation

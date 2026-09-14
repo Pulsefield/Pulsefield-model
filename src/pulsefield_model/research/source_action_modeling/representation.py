@@ -90,7 +90,7 @@ class ComposedEncoder(nn.Module):
                            batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(config.dropout)
 
-    def forward(self, observation: ObservationTensors) -> RepresentationBank:
+    def local_states(self, observation: ObservationTensors) -> list[Tensor]:
         valid = valid_rows(observation)
         intrinsic = observation.lanes[..., :4].flatten(-2)
         rows = observation.rows[:, :, None].expand(-1, -1, 2, -1)
@@ -98,6 +98,12 @@ class ComposedEncoder(nn.Module):
         states = [u]
         for block in self.local:
             states.append(block(states[-1], valid))
+        return states
+
+    def forward(self, observation: ObservationTensors) -> RepresentationBank:
+        valid = valid_rows(observation)
+        rows = observation.rows[:, :, None].expand(-1, -1, 2, -1)
+        states = self.local_states(observation)
         r = self.relations(states[-1], observation) * valid[:, :, None, None]
         summary = torch.cat((observation.summaries, observation.summaries.flip(1)), -1)
         facts = torch.cat((observation.lanes.flatten(-2), rows, summary[:, None].expand(-1, rows.shape[1], -1, -1)), -1)

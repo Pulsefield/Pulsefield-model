@@ -217,6 +217,12 @@ class BankPredictor(nn.Module):
         bank = self.encoder(batch.observation)
         return self.decoder(self.reader(bank, batch.queries, access=self.access), batch.queries, batch.targets)
 
+    def initialize_untrained(self, seed: int):
+        """Recreate this architecture and reader access for a frozen reuse control."""
+        model = initialize_comparison(self.config, seed)[self.configuration]
+        model.access = self.access
+        return model
+
 
 def initialize_comparison(config: ModelConfig = ModelConfig(), seed: int = 17) -> dict[str, BankPredictor]:
     """Explicitly match reader, decoder and relation weights; clone the composed arms.

@@ -14,6 +14,8 @@ semantic gain.
 The [prediction and evidence contract](source_action_objective.md) owns the
 training risk and distinguishes reconstruction, context use, semantic reuse
 and matched-information path compatibility.
+The [time and local-composition comparison](source_action_time_local.md) adds
+separate early-representation controls while retaining these baseline arms.
 
 ## Computation and support
 

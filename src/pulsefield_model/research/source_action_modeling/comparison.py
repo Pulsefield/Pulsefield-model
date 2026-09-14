@@ -107,15 +107,18 @@ def parameter_counts(model) -> dict:
     return {name: sum(p.numel() for p in getattr(model, name).parameters()) for name in ("encoder", "reader", "decoder")}
 
 
-def train_paired_step(models, optimizers, sampler: PairedBlockSampler, *, blocks: int, gradient_cap: float = 1.0) -> dict:
+def train_paired_step(models, optimizers, sampler: PairedBlockSampler, *, blocks: int, gradient_cap: float = 1.0,
+                      configurations: tuple[str, ...] = CONFIGURATIONS) -> dict:
     """One common target/view exposure and one optimizer step per configuration.
 
     All three views participate equally in each update. Models must use the same
     device and optimizer settings; caller-owned schedulers advance outside this
     function. Returned manifests include exact tensor/target identities.
     """
-    if set(models) != set(CONFIGURATIONS) or set(optimizers) != set(models):
-        raise ContractError("The comparison requires exactly three models and their optimizers")
+    if not configurations or len(set(configurations)) != len(configurations) or (
+        set(models) != set(configurations) or set(optimizers) != set(models)
+    ):
+        raise ContractError("The comparison requires exactly its named models and their optimizers")
     if not math.isfinite(gradient_cap) or gradient_cap <= 0:
         raise ContractError("Gradient cap must be positive and finite")
     devices = {next(model.parameters()).device for model in models.values()}
@@ -136,7 +139,7 @@ def train_paired_step(models, optimizers, sampler: PairedBlockSampler, *, blocks
     batch = collate([p[view] for p in paired for view in VIEWS]).to(next(iter(devices)))
     result = {"loss_policy": LOSS_POLICY, "sampling_policy": SAMPLING_POLICY, "view_weight": 1 / len(VIEWS),
               "blocks": records, "view_sha256": {view: batch_identity(b) for view, b in separate.items()}, "models": {}}
-    for name in CONFIGURATIONS:
+    for name in configurations:
         model, optimizer = models[name], optimizers[name]
         model.train()
         device = next(model.parameters()).device

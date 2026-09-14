@@ -11,6 +11,8 @@ from pulsefield_model.research.scoped_style_modeling.probe_data import input_ide
 from pulsefield_model.research.source_action_modeling.comparison import pretraining_contexts
 from pulsefield_model.research.source_action_modeling.diagnostics import capture_semantic_response, finish_semantic_response
 from pulsefield_model.research.source_action_modeling.model import initialize_comparison
+from pulsefield_model.research.source_action_modeling.representation_experiments import (
+    initialize_representation_comparison, representation_arms)
 from pulsefield_model.research.source_action_modeling.sampling import SPLIT_SHA256
 from pulsefield_model.research.source_action_modeling.semantic_probe import (SemanticCorpus, evaluate_readout, fit_matched_probes,
                                                                            fit_readout, human_targets, initialize_readout)
@@ -106,6 +108,19 @@ def test_fitted_semantic_margin_linearizes_encoder_updates_and_rejects_head_drif
         next(head.parameters()).add_(.1)
     with pytest.raises(ContractError, match="readout changed"):
         finish_semantic_response(before, model, head, fixed)
+
+
+@pytest.mark.parametrize("access", ["all", "H"])
+def test_matched_probes_recreate_time_local_architecture_and_access(access):
+    arms = {"combined": representation_arms()["combined"]}
+    model = initialize_representation_comparison(arms, seed=29, access=access)["combined"]
+    fresh = model.initialize_untrained(29)
+    assert fresh.policy_identity == model.policy_identity
+    assert all(torch.equal(v, fresh.state_dict()[k]) for k, v in model.state_dict().items())
+    matched = fit_matched_probes(model, SemanticCorpus(corpus_fixture(), []), encoder_seed=29,
+                                readout_seed=43, steps=1, batch_size=5, learning_rate=1e-3)
+    assert matched["trained"]["fit"]["sampled_indices"] == matched["untrained"]["fit"]["sampled_indices"]
+    assert matched["trained"]["predictions"] == matched["untrained"]["predictions"]
 
 
 def test_pretraining_deduplicates_concepts_and_rejects_heldout_and_declared_related_variants():
