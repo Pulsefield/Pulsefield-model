@@ -19,6 +19,7 @@ from .tensors import (BlockQueries, ObservationTensors, ROW_DIM, LANE_DIM, SUMMA
                       EDGE_DIM, RELATION_DIM, observation_relations)
 
 LEVELS = ("U", "L1", "L2", "L3", "R", "H")
+COMPOSITION_LEVELS = ("U", "S1", "S2", "S3", "S4", "H")
 LOCAL_RADII = {"U": 0, "L1": 1, "L2": 3, "L3": 7}
 ARCHITECTURE = "full-row/local-1-2-4/relation/bigru-64-v1"
 READER_POLICY = "shared-hand/row-level/time-relative-v1"
@@ -31,7 +32,8 @@ def valid_rows(observation: ObservationTensors) -> Tensor:
 
 def level_descriptors(levels: tuple[str, ...], dim: int, reference: Tensor) -> Tensor:
     """Fixed sinusoidal identities; no level has its own trainable projection."""
-    positions = reference.new_tensor([LEVELS.index(level) for level in levels])[:, None]
+    identities = {name: i for names in (LEVELS, COMPOSITION_LEVELS) for i, name in enumerate(names)}
+    positions = reference.new_tensor([identities[level] for level in levels])[:, None]
     frequency = torch.exp(torch.arange(0, dim, 2, device=reference.device, dtype=reference.dtype) * (-math.log(10000) / dim))
     return torch.stack(((positions * frequency).sin(), (positions * frequency).cos()), -1).flatten(1)[:, :dim]
 
@@ -102,16 +104,21 @@ class ComposedEncoder(nn.Module):
 
     def forward(self, observation: ObservationTensors) -> RepresentationBank:
         valid = valid_rows(observation)
-        rows = observation.rows[:, :, None].expand(-1, -1, 2, -1)
         states = self.local_states(observation)
         r = self.relations(states[-1], observation) * valid[:, :, None, None]
+        h = self.contextual_state(r, observation)
+        return RepresentationBank(LEVELS, (*states, r, h), observation)
+
+    def contextual_state(self, r: Tensor, observation: ObservationTensors) -> Tensor:
+        valid = valid_rows(observation)
+        rows = observation.rows[:, :, None].expand(-1, -1, 2, -1)
         summary = torch.cat((observation.summaries, observation.summaries.flip(1)), -1)
         facts = torch.cat((observation.lanes.flatten(-2), rows, summary[:, None].expand(-1, rows.shape[1], -1, -1)), -1)
         b, t = r.shape[:2]
         inputs = self.dropout(torch.cat((r, facts), -1).permute(0, 2, 1, 3).reshape(b * 2, t, -1))
         h, _ = packed_gru(self.hand, inputs, observation.lengths.repeat_interleave(2))
         h = h.reshape(b, 2, t, 64).transpose(1, 2) * valid[:, :, None, None]
-        return RepresentationBank(LEVELS, (*states, r, h), observation)
+        return h
 
 
 class ReferenceBankEncoder(nn.Module):

@@ -99,13 +99,14 @@ def joint_distribution_metrics(history: torch.Tensor, observation: torch.Tensor)
     }
 
 
-def evaluate_path_consistency(model, pairs: list[PrefixPathPair], *, batch_size: int = 8) -> dict:
+def evaluate_path_consistency(model, pairs: list[PrefixPathPair], *, batch_size: int = 8, on_batch=None) -> dict:
     """Compare common suffix rows at identical teacher-forced prefixes and legality.
 
     Restore module modes and leave gradients/parameters untouched. Every record
     contains full-distribution differences and true-target costs on the common
     suffix; averages of row divergences are not block-joint divergences. The
     caller fixes population, base visibility and split indices before evaluation.
+    Optional on_batch() may raise to interrupt; module modes are still restored.
     """
     if not pairs or type(batch_size) is not int or batch_size < 1:
         raise ContractError("Path evaluation requires nonempty pairs and a positive batch size")
@@ -116,6 +117,8 @@ def evaluate_path_consistency(model, pairs: list[PrefixPathPair], *, batch_size:
     try:
         with torch.no_grad():
             for start in range(0, len(pairs), batch_size):
+                if on_batch is not None:
+                    on_batch()
                 chunk = pairs[start:start + batch_size]
                 history = collate([p.decoder_history for p in chunk])
                 observed = collate([p.encoder_observation for p in chunk])

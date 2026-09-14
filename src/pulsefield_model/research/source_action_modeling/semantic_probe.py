@@ -163,8 +163,11 @@ def fit_readout(model, corpus: SemanticCorpus, *, steps: int, batch_size: int, l
                      "parameters": sum(p.numel() for p in readout.parameters())}
 
 
-def evaluate_readout(model, readout: ConceptReader, corpus: SemanticCorpus, *, batch_size: int = 16) -> dict:
-    """Report human validation NLL, ranking, 0.5 presence and paired Jack/Stream cases."""
+def evaluate_readout(model, readout: ConceptReader, corpus: SemanticCorpus, *, batch_size: int = 16, on_batch=None) -> dict:
+    """Report human validation NLL, ranking, 0.5 presence and paired Jack/Stream cases.
+
+    Optional on_batch() may interrupt by raising; encoder/head modes are restored.
+    """
     if not corpus.validation_indices or type(batch_size) is not int or batch_size < 1:
         raise ContractError("Semantic evaluation requires human validation cells and positive batch size")
     if model.access != readout.access:
@@ -177,6 +180,8 @@ def evaluate_readout(model, readout: ConceptReader, corpus: SemanticCorpus, *, b
     try:
         with torch.no_grad():
             for start in range(0, len(corpus.validation_indices), batch_size):
+                if on_batch is not None:
+                    on_batch()
                 indices = corpus.validation_indices[start:start + batch_size]
                 batch = corpus.batch(indices).to(device)
                 logits = readout(model.encoder(batch.observation), batch.concepts, batch.input_indices)

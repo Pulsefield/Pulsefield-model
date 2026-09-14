@@ -78,6 +78,8 @@ class BlockSampler:
 
 class PairedBlockSampler:
     """One target draw exposes every evaluated view to every model configuration."""
+    sampling_policy = SAMPLING_POLICY
+
     def __init__(self, contexts: list[TrainingContext], seed: int = 17, *, policy: ViewPolicy = ViewPolicy()):
         self.blocks = BlockSampler(contexts, seed)
         self.policy = policy

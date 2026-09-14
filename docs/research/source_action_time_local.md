@@ -228,6 +228,11 @@ skeleton remain alternative explanations. Persistent slots, `L → R → L`, new
 query formation, calibrated motor priors and loss reweighting are separate
 interventions.
 
+The [relation-composition experiment](source_action_relation_composition.md)
+provides a bounded Hydra runner for the equal-parameter `LLLR` versus `LLRL`
+comparison, with fixed population allocation, frozen reuse and structural
+counterfactual diagnostics.
+
 ## Verification
 
 The focused checks exercise identical hidden inputs across all three views,

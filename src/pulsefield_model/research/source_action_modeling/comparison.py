@@ -17,7 +17,7 @@ from ..scoped_style_modeling.probe_data import input_identity
 from .diagnostics import batch_identity
 from .model import CONFIGURATIONS, LOSS_POLICY
 from .observation import BlockExample, ViewPolicy, paired_views, visible_states
-from .sampling import SAMPLING_POLICY, SPLIT_SHA256, VIEWS, PairedBlockSampler, TrainingContext
+from .sampling import SPLIT_SHA256, VIEWS, TrainingContext
 from .tensors import collate
 
 
@@ -107,7 +107,7 @@ def parameter_counts(model) -> dict:
     return {name: sum(p.numel() for p in getattr(model, name).parameters()) for name in ("encoder", "reader", "decoder")}
 
 
-def train_paired_step(models, optimizers, sampler: PairedBlockSampler, *, blocks: int, gradient_cap: float = 1.0,
+def train_paired_step(models, optimizers, sampler, *, blocks: int, gradient_cap: float = 1.0,
                       configurations: tuple[str, ...] = CONFIGURATIONS) -> dict:
     """One common target/view exposure and one optimizer step per configuration.
 
@@ -137,7 +137,7 @@ def train_paired_step(models, optimizers, sampler: PairedBlockSampler, *, blocks
     separate = paired_batches(paired)
     # Each block has the same three-view multiplicity, preserving block weighting.
     batch = collate([p[view] for p in paired for view in VIEWS]).to(next(iter(devices)))
-    result = {"loss_policy": LOSS_POLICY, "sampling_policy": SAMPLING_POLICY, "view_weight": 1 / len(VIEWS),
+    result = {"loss_policy": LOSS_POLICY, "sampling_policy": sampler.sampling_policy, "view_weight": 1 / len(VIEWS),
               "blocks": records, "view_sha256": {view: batch_identity(b) for view, b in separate.items()}, "models": {}}
     for name in configurations:
         model, optimizer = models[name], optimizers[name]
@@ -209,8 +209,12 @@ def structural_report(rows: list[dict], *, seed: int = 17, bootstrap_samples: in
             "blocks": rows}
 
 
-def evaluate_structure(models, paired, records, *, batch_size: int = 8, bootstrap_samples: int = 1000, seed: int = 17):
-    """Evaluate a fixed paired manifest in bounded batches; restore model modes."""
+def evaluate_structure(models, paired, records, *, batch_size: int = 8, bootstrap_samples: int = 1000, seed: int = 17,
+                       on_batch=None):
+    """Evaluate a fixed paired manifest in bounded batches; restore model modes.
+
+    Optional on_batch() may interrupt evaluation by raising, with mode restoration.
+    """
     if len(paired) != len(records) or not paired or type(batch_size) is not int or batch_size < 1:
         raise ContractError("Structural evaluation requires aligned nonempty blocks/records and a positive batch size")
     for item, record in zip(paired, records):
@@ -233,6 +237,8 @@ def evaluate_structure(models, paired, records, *, batch_size: int = 8, bootstra
         try:
             with torch.no_grad():
                 for start in range(0, len(paired), batch_size):
+                    if on_batch is not None:
+                        on_batch()
                     batches = paired_batches(paired[start:start + batch_size])
                     identities.append({view: batch_identity(b) for view, b in batches.items()})
                     for view, cpu_batch in batches.items():

@@ -143,6 +143,16 @@ class TimeLocalEncoder(ComposedEncoder):
             self.local = nn.ModuleList(ConditionedLocalBlock(d, config.dropout, representation) for d in (1, 2, 4))
 
     def local_states(self, observation: ObservationTensors) -> list[Tensor]:
+        return self.computation_states(observation)
+
+    def computation_states(self, observation: ObservationTensors, *, relation_after: int | None = None) -> list[Tensor]:
+        """Return states in execution order, optionally inserting one relation read.
+
+        A local operator following that read has relation-dependent support.
+        Boundary states retain the preceding computation at those positions.
+        """
+        if relation_after is not None and relation_after not in (1, 2, 3):
+            raise ContractError("Relation placement must follow local operator 1, 2 or 3")
         geometry = event_geometry(observation)
         packet = source_packet(observation, geometry, self.representation)
         valid = valid_rows(observation)
@@ -160,13 +170,16 @@ class TimeLocalEncoder(ComposedEncoder):
                                       for v in (packet.row_facts, packet.row_metadata, packet.time, packet.state_before)))
         values = geometry.gather(u) if compact else u
         source_mask = (observation.rows[..., 5].bool() & valid)[:, :, None, None]
-        for block in self.local:
+        for index, block in enumerate(self.local, 1):
             if isinstance(block, ConditionedLocalBlock):
                 values = block(values, local_valid, packet=local_packet, geometry=geometry)
             else:
                 values = block(values, local_valid)
-            # Boundaries remain addressable U metadata, without consuming an event step.
-            states.append(torch.where(source_mask, geometry.restore(values), u) if compact else values)
+            # Preserve boundary metadata or retrieved content without consuming an event step.
+            states.append(torch.where(source_mask, geometry.restore(values), states[-1]) if compact else values)
+            if index == relation_after:
+                states.append(self.relations(states[-1], observation) * mask)
+                values = geometry.gather(states[-1]) if compact else states[-1]
         return states
 
 
