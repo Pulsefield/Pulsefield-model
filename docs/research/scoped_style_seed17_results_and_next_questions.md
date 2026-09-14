@@ -3,8 +3,10 @@
 Evidence reviewed on 2026-09-14. This report covers seed 17 of the paired
 `style-only` and `style+evidence` experiment, the confirmed direction for its
 next architecture, and supplementary probes using existing models and labels.
-The upgrades and probes below have not been implemented or run. They concern
-the scoped style classifier, not a Pulsefield V3 reference architecture.
+The [probe implementation and run guide](scoped_style_probes.md) supplies A/B/C
+commands; architecture comparisons at the proposed pilot budgets remain
+unmeasured. The probes concern the scoped style classifier, not a Pulsefield V3
+reference architecture.
 The [frozen study](scoped_style_witness_generation.md) and
 [training implementation guide](scoped_style_training.md) describe the seed 17
 contract; the human-inclusive training policy below is a deliberate new contract.
@@ -698,10 +700,11 @@ confirmation requires a fixed decision criterion and adequate evaluation support
 
 ## Implementation work and return to evidence supervision
 
-The existing implementation supplies recoverable checkpoints, per-cell logits,
+The seed 17 implementation supplies recoverable checkpoints, per-cell logits,
 confidence provenance, exact replay, and a callable encoder/assessor split. It
-does not yet supply the new cohort policy, readout cache trainer, five-query
-batch reuse, temporal features, or four-arm runner.
+predates the new cohort policy, readout cache trainer, shared-input batch reuse,
+temporal features, and four-arm runner described in the
+[probe implementation guide](scoped_style_probes.md).
 
 | Owner | Required work | Targeted verification |
 | --- | --- | --- |

@@ -47,7 +47,7 @@ class RelationAttention(nn.Module):
         self.ff = mlp(dim, config.feedforward_dim, dim, config.dropout)
         self.dropout = nn.Dropout(config.dropout)
 
-    def forward(self, x: Tensor, chart: ChartTensors) -> Tensor:
+    def forward(self, x: Tensor, chart: ChartTensors, extra_descriptor: Tensor | None = None) -> Tensor:
         shape = x.shape
         x = x.reshape(-1, shape[-1])
         n, dim = x.shape
@@ -55,6 +55,8 @@ class RelationAttention(nn.Module):
         q, k, v = self.qkv(x).reshape(n, 3, self.heads, dim//self.heads).unbind(1)
         descriptor = self.edge(chart.edge_features)
         descriptor = descriptor.index_add(0, chart.relation_edges, self.relation(chart.relation_features))
+        if extra_descriptor is not None:
+            descriptor = descriptor + extra_descriptor
         scores = (q[query]*k[neighbor]).sum(-1)/math.sqrt(dim//self.heads) + self.bias(descriptor)
         indices = query[:, None].expand(-1, self.heads)
         maxima = scores.new_full((n, self.heads), -torch.inf)
@@ -99,7 +101,7 @@ class AssessmentHead(nn.Module):
         self.dropout = nn.Dropout(config.dropout)
         self.head = mlp(4*config.section_hidden+2, config.head_hidden, 3, config.dropout)
 
-    def forward(self, h: Tensor, chart: ChartTensors, concepts: Tensor) -> Tensor:
+    def summarize(self, h: Tensor, chart: ChartTensors, concepts: Tensor) -> Tensor:
         batch = torch.arange(h.shape[0], device=h.device)[:, None]
         section = h[batch, chart.section_indices]
         row = (self.pair(section.flatten(-2)) + self.pair(section.flip(-2).flatten(-2)))/2
@@ -108,7 +110,10 @@ class AssessmentHead(nn.Module):
         output, terminal = packed_gru(self.section, values, chart.section_lengths)
         count = chart.section_events.sum(1, keepdim=True)
         mean = (output*chart.section_events[:, :, None]).sum(1)/count.clamp_min(1)
-        return self.head(torch.cat((terminal, mean, chart.duration, (count == 0).to(h.dtype)), -1))
+        return torch.cat((terminal, mean, chart.duration, (count == 0).to(h.dtype)), -1)
+
+    def forward(self, h: Tensor, chart: ChartTensors, concepts: Tensor) -> Tensor:
+        return self.head(self.summarize(h, chart, concepts))
 
 
 @dataclass(frozen=True)
