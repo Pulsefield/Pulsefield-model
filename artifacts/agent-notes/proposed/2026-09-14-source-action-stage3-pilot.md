@@ -63,7 +63,9 @@ deduplication.
 
 - Owning Agent Note ID: 2026-09-14-source-action-stage3-pilot.
 - Card ID: source-action-access-local-pilot.
-- Revision: 1.
+- Revision: 2.
+- Revision 2 uses a fresh UTC-named output directory and `caffeinate` for the
+  owner-executed run. Model, data, metrics and resource bounds are unchanged.
 - Exact Card acceptance: none; exploratory execution under the explicit owner
   authorization recorded above.
 - This Card fixes the following choices before model training.
@@ -105,7 +107,7 @@ deduplication.
   initialization with all six levels readable instead of H alone.
 - Contextual reference: `reference_h`, 102,561 parameters, trained with the same
   objective, exposure, dimensions and optimizer settings.
-- Baseline run identity: `artifacts/source-action-modeling/stage3-pilot/20260914T081051Z`, `composed_h-endpoint.pt`.
+- Baseline run identity: `artifacts/source-action-modeling/stage3-pilot/<UTC-run-id>`, `composed_h-endpoint.pt`.
   Its trained baseline value is not yet measured; the paired control is trained
   concurrently. Stage 1 training NLL is not used as a structural baseline.
 - All predictors use default width-64 `ModelConfig`, zero dropout, common
@@ -222,10 +224,15 @@ deduplication.
 Run from the product repository root at the clean executable revision:
 
 ```sh
-uv run --offline --extra mps --group dev python -u - <<'PY'
+caffeinate -i uv run --offline --extra mps --group dev python -u - <<'PY'
+from datetime import datetime, timezone
 from pathlib import Path
 from pulsefield_model.research.source_action_modeling.pilot import run_pilot
-run_pilot(Path('artifacts/source-action-modeling/stage3-pilot/20260914T081051Z'), device='mps')
+
+run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
+out = Path('artifacts/source-action-modeling/stage3-pilot') / run_id
+print(f'Outputs: {out.resolve()}', flush=True)
+run_pilot(out, device='mps')
 PY
 ```
 
@@ -258,7 +265,7 @@ PY
 - Sample MPS driver allocation between steps and abort above 8 GiB; report the
   maximum observed allocation and process peak RSS, not an allocator peak claim.
   Output storage ceiling: 1 GiB. No network downloads or new dependency installs.
-- Fresh output: `artifacts/source-action-modeling/stage3-pilot/20260914T081051Z`. Exclusive creation; no overwrite or resume.
+- Fresh output: `artifacts/source-action-modeling/stage3-pilot/<UTC-run-id>`. Exclusive creation; no overwrite or resume.
   Checkpoints preserve recovery state, but resumption is a separately recorded run.
 - Stop on source/cohort/split mismatch, insufficient valid groups, nonfinite
   training/semantic loss, invalid paired conditions, memory/storage bound or
@@ -278,3 +285,39 @@ hashes, common update count, checkpoints, runtime, metrics, guards, diagnostics,
 failures and deviations. The proposed lifecycle status remains unchanged unless
 the owner explicitly requests a transition.
 
+## Result Log: 20260914T081051Z-preparation-interrupted
+
+### Experiment and Reproduction
+
+- Owning Note: 2026-09-14-source-action-stage3-pilot; accepted revision: none.
+- Card: source-action-access-local-pilot revision 1, recorded at note commit
+  `e772f4fb2293fc6d9fdacdf6a145e29d1c1ec7a7`.
+- Clean executable source: `790add7b07ecf08e1b277797a39ce28e9683a5b8`.
+- Run: `artifacts/source-action-modeling/stage3-pilot/20260914T081051Z`.
+- Command: revision 1's recorded `uv run --offline --extra mps --group dev
+  python -u` invocation, without caffeinate.
+- Environment: the MPS/Python/PyTorch environment specified in the Card.
+- Output disposition: fresh directory, no overwrite or resume.
+- Budget: zero optimizer updates; at most 160.32 seconds through coordinator
+  finalization of the interruption record.
+- Stop: owner requested the command to perform the full run personally.
+  SIGINT terminated the preparation process with exit code 130.
+
+### Results and Plan Conformance
+
+- Local preparation verified 1,024 novel training groups and 128 novel validation
+  groups. Interruption occurred while loading annotation training contexts.
+- No model was initialized or scored; no structural baseline, semantic result,
+  checkpoint or final dataset Parquet file was produced.
+- `report.json` was finalized by the coordinating agent after the process exited;
+  its SHA-256 is
+  `bb597fd4dd05d26495e95561843888188c622b666b462010d73c09660ae60034`.
+- Deviation: execution was interrupted before training. No measured research
+  outcome exists. Card revision 2 changes only the fresh output locator and the
+  caffeinate-wrapped handoff command.
+
+### Evaluation and Decision
+
+No architecture or representation conclusion follows. The owner-executed full
+run remains outstanding; append its measurements under revision 2. The Note
+remains proposed.
