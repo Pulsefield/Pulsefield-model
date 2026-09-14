@@ -190,13 +190,17 @@ uv run --offline --extra mps --group dev pytest -q \
 git diff --check
 ```
 
-## Following comparison
+## Representation-access comparison
 
-The comparison can hold this observation policy, objective, decoder, block draws
-and exposure fixed while replacing only the encoder interface with retained
-source/local/contextual access. It still needs a concrete local operator and
-support definition, capacity control, held-out structural metric, practical
-gain threshold, semantic regression bounds and execution budget. Stage 1 wiring
-does not establish a representation-access gain, semantic improvement or demand
-state. Those questions retain their
+The [composition and access implementation](source_action_stage2.md) adds a
+six-level bank, action and concept readers, complete observations and paired
+near/detailed/coarse views. It preserves this decoder computation and objective.
+Prediction queries are now separate from visibility; the input contract is
+`source-action-visibility-v2`, and snapshot schema 2 rejects older snapshots.
+The Stage 1 smoke API remains a bounded software check.
+
+The comparison still requires a fixed population, held-out structural metric,
+practical gain threshold, semantic regression bounds and execution budget.
+Software verification does not establish a representation-access gain, semantic
+improvement or demand state. Those questions retain their
 [separate research criteria](source_action_representation_directions.md#evidence-of-structure-and-semantic-reuse).

@@ -1,12 +1,14 @@
 """Recorded uniform group/context/feasible-scale/start sampling without labels."""
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import random
 
 from ..scoped_style_modeling.dataset import ContractError, canonical_json, digest
 from ..scoped_style_modeling.replay import PreparedChart
-from .observation import BLOCK_SIZES, EventBlock, declared_entering_occupancy, observe
+from .observation import BLOCK_SIZES, EventBlock, ViewPolicy, declared_entering_occupancy, observe, paired_views
 
 SAMPLING_POLICY = "uniform-group/context/feasible-{4,16,64}/event-start-v1"
+SPLIT_SHA256 = "15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a"
+VIEWS = ("near", "detailed", "coarse")
 
 
 @dataclass(frozen=True)
@@ -69,3 +71,24 @@ class BlockSampler:
             raise ContractError("Invalid snapshot sampling position")
         self.rng.setstate(state["rng"])
         self.position = state["position"]
+
+
+class PairedBlockSampler:
+    """One target draw exposes every evaluated view to every model configuration."""
+    def __init__(self, contexts: list[TrainingContext], seed: int = 17, *, policy: ViewPolicy = ViewPolicy()):
+        self.blocks = BlockSampler(contexts, seed)
+        self.policy = policy
+
+    def draw(self, count=1):
+        examples, records = self.blocks.draw(count)
+        paired = [paired_views(item, self.policy) for item in examples]
+        return paired, [{**r, "views": list(VIEWS), "view_policy": asdict(self.policy)} for r in records]
+
+    def state_dict(self):
+        return {"policy": "paired-all-three-views-v1", "views": list(VIEWS), "view_policy": asdict(self.policy),
+                "blocks": self.blocks.state_dict()}
+
+    def load_state_dict(self, state):
+        if state["policy"] != "paired-all-three-views-v1" or state["views"] != list(VIEWS) or state["view_policy"] != asdict(self.policy):
+            raise ContractError("Paired sampler view policy differs from snapshot")
+        self.blocks.load_state_dict(state["blocks"])

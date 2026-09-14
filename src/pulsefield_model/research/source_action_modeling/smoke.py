@@ -19,10 +19,9 @@ from .checkpoint import save_snapshot
 from .diagnostics import capture_response, finish_response
 from .model import initialize_model
 from .observation import INPUT_CONTRACT, EventBlock, declared_entering_occupancy, observe
-from .sampling import BlockSampler, SAMPLING_POLICY, TrainingContext
+from .sampling import BlockSampler, SAMPLING_POLICY, SPLIT_SHA256, TrainingContext
 from .tensors import collate
 
-SPLIT_SHA256 = "15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a"
 MAX_CONTEXTS, MAX_ROWS, MAX_UPDATES, MAX_SECONDS = 8, 128, 20, 120
 
 

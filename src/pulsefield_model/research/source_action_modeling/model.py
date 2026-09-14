@@ -52,10 +52,12 @@ class ReferenceEncoder(nn.Module):
                                     feedforward_dim=config.feedforward_dim, dropout=config.dropout)
         self.relations = RelationAttention(attention, edge_dim=EDGE_DIM, relation_dim=RELATION_DIM)
 
-    def forward(self, observation: ObservationTensors) -> Tensor:
+    def forward(self, observation: ObservationTensors, *, extra_features: Tensor | None = None) -> Tensor:
         lanes = self.lane(observation.lanes).flatten(-2)
         b, t = lanes.shape[:2]
         values = torch.cat((lanes, observation.rows[:, :, None].expand(-1, -1, 2, -1)), -1)
+        if extra_features is not None:
+            values = values + extra_features
         values = self.dropout(values.permute(0, 2, 1, 3).reshape(b * 2, t, -1))
         states, _ = packed_gru(self.hand, values, observation.lengths.repeat_interleave(2))
         states = self.relations(states.reshape(b, 2, t, -1).transpose(1, 2), observation)
@@ -125,16 +127,18 @@ class JointDecoder(nn.Module):
                 torch.where(active[:, None, None], new_occupancy, occupancy))
 
     def forward(self, encoded: Tensor, queries: BlockQueries, targets: Tensor) -> Prediction:
+        """Consume one already-read context per query; score/advance own the prefix."""
         if targets.shape != queries.indices.shape or targets.dtype != torch.long or (
             (targets < 0) | (targets >= ROW_CLASSES)
         ).any():
             raise ContractError("Targets require one valid joint action token per query")
         states = encoded.new_zeros(encoded.shape[0], 2, self.hidden)
         occupancy = queries.entering_occupancy
-        batch = torch.arange(encoded.shape[0], device=encoded.device)
+        if encoded.shape[:2] != queries.indices.shape:
+            raise ContractError("Decoder contexts must align with prediction queries")
         probabilities = []
         for step in range(queries.indices.shape[1]):
-            context = encoded[batch, queries.indices[:, step]]
+            context = encoded[:, step]
             active = queries.steps[:, step]
             # Current targets are read only after the current distribution exists.
             probabilities.append(self.score(context, states, occupancy, active))
@@ -159,7 +163,9 @@ class SourceActionPredictor(nn.Module):
         self.decoder = JointDecoder(self.encoder.output_dim, config)
 
     def forward(self, batch: BlockBatch) -> Prediction:
-        return self.decoder(self.encoder(batch.observation), batch.queries, batch.targets)
+        encoded = self.encoder(batch.observation)
+        indices = torch.arange(encoded.shape[0], device=encoded.device)[:, None]
+        return self.decoder(encoded[indices, batch.queries.indices], batch.queries, batch.targets)
 
 
 def initialize_model(config: ModelConfig = ModelConfig(), seed: int = 17) -> SourceActionPredictor:
@@ -167,3 +173,53 @@ def initialize_model(config: ModelConfig = ModelConfig(), seed: int = 17) -> Sou
     with torch.random.fork_rng(devices=[]):
         torch.random.default_generator.manual_seed(seed)
         return SourceActionPredictor(config)
+
+
+CONFIGURATIONS = ("reference_h", "composed_h", "composed_all")
+
+
+class BankPredictor(nn.Module):
+    """Fixed architecture/access arms sharing the action-reader/decoder interface."""
+    def __init__(self, configuration: str, config: ModelConfig = ModelConfig()):
+        super().__init__()
+        from .representation import ActionReader, ComposedEncoder, ReferenceBankEncoder
+        if configuration not in CONFIGURATIONS:
+            raise ContractError(f"Unknown bank configuration: {configuration}")
+        self.config, self.configuration = config, configuration
+        self.access = "all" if configuration == "composed_all" else "H"
+        self.encoder = ReferenceBankEncoder(config) if configuration == "reference_h" else ComposedEncoder(config)
+        self.reader = ActionReader(config)
+        self.decoder = JointDecoder(64, config)
+
+    @property
+    def policy_identity(self):
+        from .representation import ARCHITECTURE, READER_POLICY
+        return {"architecture": ARCHITECTURE if self.configuration != "reference_h" else "reference-bank-summary-v1",
+                "reader": READER_POLICY, "access": self.access, "configuration": self.configuration}
+
+    def forward(self, batch: BlockBatch) -> Prediction:
+        bank = self.encoder(batch.observation)
+        return self.decoder(self.reader(bank, batch.queries, access=self.access), batch.queries, batch.targets)
+
+
+def initialize_comparison(config: ModelConfig = ModelConfig(), seed: int = 17) -> dict[str, BankPredictor]:
+    """Explicitly match reader, decoder and relation weights; clone the composed arms.
+
+    The caller's CPU RNG stream is unchanged. The two composed arms differ only
+    in access policy; they start with identical parameters and buffers.
+    """
+    from copy import deepcopy
+    base = initialize_model(config, seed)
+    with torch.random.fork_rng(devices=[]):
+        torch.random.default_generator.manual_seed(seed + 10000)
+        reference = BankPredictor("reference_h", config)
+        torch.random.default_generator.manual_seed(seed + 20000)
+        composed = BankPredictor("composed_h", config)
+    reference.encoder.reference.load_state_dict(base.encoder.state_dict())
+    composed.encoder.relations.load_state_dict(base.encoder.relations.state_dict())
+    for model in (reference, composed):
+        model.decoder.load_state_dict(base.decoder.state_dict())
+    composed.reader.load_state_dict(reference.reader.state_dict())
+    full = deepcopy(composed)
+    full.configuration, full.access = "composed_all", "all"
+    return dict(zip(CONFIGURATIONS, (reference, composed, full)))

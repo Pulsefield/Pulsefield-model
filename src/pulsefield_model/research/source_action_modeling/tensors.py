@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+import math
 
 import torch
 from torch import Tensor
@@ -12,6 +13,7 @@ from ..scoped_style_modeling.replay import HAND_COLUMNS, hand_role, time_feature
 from .observation import BlockExample, LANE_ACTIONS, PartialObservation, visible_states
 
 LANE_DIM, ROW_DIM, EDGE_DIM = 12, 11, 4
+SUMMARY_DIM = 2 * 2 * 9  # side, own-hand lane, eight log counts plus availability
 RELATIONS = ("self", "simultaneous", "event", "attack_1", "attack_2", "recurrence", "ln_identity")
 RELATION_DIM = len(RELATIONS) + 10
 ROW_CLASSES = len(LANE_ACTIONS) ** 4
@@ -139,6 +141,9 @@ class ObservationTensors:
     edge_features: Tensor
     relation_edges: Tensor
     relation_features: Tensor
+    times_ms: Tensor
+    duration: Tensor
+    summaries: Tensor
 
     def to(self, device):
         return ObservationTensors(**{f.name: getattr(self, f.name) if f.name == "lengths" else
@@ -165,18 +170,21 @@ class BlockBatch:
         return BlockBatch(self.observation.to(device), self.queries.to(device), self.targets.to(device))
 
 
-def collate(examples: list[BlockExample]) -> BlockBatch:
-    """Keep encoder tensors, decoder conditions and target tokens separate."""
-    if not examples:
-        raise ContractError("Cannot collate an empty block batch")
-    lengths = torch.tensor([len(e.observation.rows) for e in examples])
+def collate_observations(observations: list[PartialObservation]) -> ObservationTensors:
+    """Tensorize visibility independently of prediction queries, including complete charts."""
+    if not observations:
+        raise ContractError("Cannot collate empty observations")
+    lengths = torch.tensor([len(obs.rows) for obs in observations])
     width = int(lengths.max())
-    values = [observation_features(e.observation) for e in examples]
-    edges, descriptors, relation_edges, relations, indices, targets = [], [], [], [], [], []
-    for b, example in enumerate(examples):
-        obs = example.observation
-        if len(example.targets) != len(obs.target_indices):
-            raise ContractError("Target length differs from observation block")
+    values = [observation_features(obs) for obs in observations]
+    edges, descriptors, relation_edges, relations = [], [], [], []
+    summaries = torch.zeros(len(observations), 2, 2, 2, 9)
+    for b, obs in enumerate(observations):
+        for summary in obs.summaries:
+            side = ("before", "after").index(summary.side)
+            for hand, columns in enumerate(HAND_COLUMNS):
+                for role, lane in enumerate(columns):
+                    summaries[b, hand, side, role] = torch.tensor([*[math.log1p(v) for v in summary.lanes[lane]], 1.0])
         for q, n, kinds in observation_relations(obs):
             edges.append([b * width * 2 + q, b * width * 2 + n])
             a, z = obs.rows[q // 2], obs.rows[n // 2]
@@ -186,12 +194,35 @@ def collate(examples: list[BlockExample]) -> BlockBatch:
                 relation_edges.append(len(edges) - 1)
                 relations.append([*[kind == k for k in RELATIONS], *[qr == r for r in (-1, 0, 1, 2, 3)],
                                   *[nr == r for r in (-1, 0, 1, 2, 3)]])
+    def pad(items):
+        return pad_sequence(items, batch_first=True)
+    return ObservationTensors(pad([v[0] for v in values]), pad([v[1] for v in values]), lengths,
+                              torch.tensor(edges).T, torch.tensor(descriptors, dtype=torch.float32),
+                              torch.tensor(relation_edges), torch.tensor(relations, dtype=torch.float32),
+                              pad([torch.tensor([r.time_ms - obs.context.start_ms for r in obs.rows], dtype=torch.float32)
+                                   for obs in observations]),
+                              torch.tensor([[math.log1p((obs.scope.end_ms - obs.scope.start_ms) / 1000)]
+                                            for obs in observations], dtype=torch.float32), summaries.flatten(2))
+
+
+def collate(examples: list[BlockExample]) -> BlockBatch:
+    """Keep encoder tensors, common decoder conditions and target tokens separate."""
+    if not examples:
+        raise ContractError("Cannot collate an empty block batch")
+    indices, targets, occupation = [], [], []
+    for example in examples:
+        obs = example.observation
+        if not obs.target_indices or len(example.targets) != len(obs.target_indices):
+            raise ContractError("Target length differs from a nonempty observation block")
+        entry = visible_states(obs)[2] if example.query_entering_occupancy is None else example.query_entering_occupancy
+        if len(entry) != 4 or any(v is not None and type(v) is not bool for v in entry):
+            raise ContractError("Query occupation requires four bool-or-unknown values")
+        occupation.append(torch.tensor([[-1 if entry[lane] is None else int(entry[lane]) for lane in columns]
+                                        for columns in HAND_COLUMNS]))
         indices.append(torch.tensor(obs.target_indices))
         targets.append(torch.tensor([row_token(row) for row in example.targets]))
     def pad(items):
         return pad_sequence(items, batch_first=True)
     steps = torch.arange(max(len(t) for t in targets))[None] < torch.tensor([len(t) for t in targets])[:, None]
-    observations = ObservationTensors(pad([v[0] for v in values]), pad([v[1] for v in values]), lengths,
-                                     torch.tensor(edges).T, torch.tensor(descriptors, dtype=torch.float32),
-                                     torch.tensor(relation_edges), torch.tensor(relations, dtype=torch.float32))
-    return BlockBatch(observations, BlockQueries(pad(indices), steps, torch.stack([v[2] for v in values])), pad(targets))
+    return BlockBatch(collate_observations([e.observation for e in examples]),
+                      BlockQueries(pad(indices), steps, torch.stack(occupation)), pad(targets))
