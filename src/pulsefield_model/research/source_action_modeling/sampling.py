@@ -48,7 +48,8 @@ class BlockSampler:
         for _ in range(count):
             group = self.rng.choice(sorted(self.groups))
             context = self.rng.choice(self.groups[group])
-            size = self.rng.choice([s for s in BLOCK_SIZES if s <= context.event_count])
+            scales = [s for s in BLOCK_SIZES if s <= context.event_count]
+            size = self.rng.choice(scales)
             start = self.rng.randrange(context.event_count - size + 1)
             item = observe(context.chart, EventBlock(start, size),
                            entering_occupancy=declared_entering_occupancy(context.chart))
@@ -56,6 +57,8 @@ class BlockSampler:
             examples.append(item)
             records.append({"position": self.position, "group_id": group, "context_key": context.key,
                             "event_start": start, "rows": size, "attack_group_span": item.attack_group_span,
+                            "sampling_probability": 1 / (len(self.groups) * len(self.groups[group]) *
+                                                         len(scales) * (context.event_count - size + 1)),
                             "duration_ms": obs.rows[obs.target_indices[-1]].time_ms - obs.rows[obs.target_indices[0]].time_ms})
             self.position += 1
         return examples, records

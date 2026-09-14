@@ -33,6 +33,11 @@ def test_sampling_reproducible_label_free_feasible_scales_and_position():
     assert {r["rows"] for r in records} == {4, 16}
     assert {r["group_id"] for r in records} == {"group-a", "group-b"}
     assert other.position == 53
+    for record in records:
+        context = next(c for c in sampler.contexts if c.key == record["context_key"])
+        expected = 1 / (2 * len([s for s in (4, 16, 64) if s <= context.event_count]) *
+                        (context.event_count - record["rows"] + 1))
+        assert record["sampling_probability"] == expected
     assert all(r["rows"] <= (9 if r["context_key"] == "a" else 34) for r in records)
     with pytest.raises(ContractError, match="population"):
         BlockSampler(contexts()[:1]).load_state_dict(state)
@@ -57,6 +62,18 @@ def test_64_row_scale_retains_release_only_targets_and_trains():
     output = model(collate([item]))
     output.loss.backward()
     assert output.row_nll.shape == (1, 64) and torch.isfinite(output.row_nll).all()
+
+
+def test_sampling_probability_accounts_for_unequal_context_counts_per_group():
+    population = [TrainingContext("a", "short", fixture_chart()), TrainingContext("a", "long", fixture_chart(long=True)),
+                  TrainingContext("b", "other", fixture_chart())]
+    records = BlockSampler(population).draw(40)[1]
+    assert {r["context_key"] for r in records} == {"short", "long", "other"}
+    for record in records:
+        count = 34 if record["context_key"] == "long" else 9
+        contexts_in_group = 2 if record["group_id"] == "a" else 1
+        scales = 2 if count == 34 else 1
+        assert record["sampling_probability"] == 1 / (2 * contexts_in_group * scales * (count - record["rows"] + 1))
 
 
 @pytest.mark.parametrize("device", ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []))
@@ -158,3 +175,23 @@ def test_actual_update_diagnostic_has_disjoint_ownership_and_checked_residual():
     assert abs(result["linearization_residual"]) < 0.05 * abs(result["actual_change"])
     with pytest.raises(ContractError, match="identical"):
         finish_response(before, model, collate([example(changed=True)]))
+
+
+@pytest.mark.parametrize("mismatch", ["schema", "decoder", "loss"])
+def test_snapshot_rejects_old_decoder_or_risk_before_mutating_state(tmp_path, mismatch):
+    model = initialize_model()
+    sampler = BlockSampler(contexts())
+    optimizer = torch.optim.AdamW(model.parameters())
+    path = tmp_path / "snapshot.pt"
+    save_snapshot(path, model, optimizer, sampler, update=0)
+    payload = torch.load(path, weights_only=False)
+    if mismatch == "schema":
+        payload["schema"] = 2
+    else:
+        payload["model_policy"][mismatch] = "incompatible"
+    torch.save(payload, path)
+    state, rng, sampling = deepcopy(model.state_dict()), torch.random.get_rng_state(), sampler.state_dict()
+    with pytest.raises(ContractError, match="contract"):
+        load_snapshot(path, model, optimizer, sampler)
+    assert all(torch.equal(value, model.state_dict()[key]) for key, value in state.items())
+    assert torch.equal(rng, torch.random.get_rng_state()) and sampling == sampler.state_dict()

@@ -22,7 +22,7 @@ def save_snapshot(path: Path, model, optimizer, sampler, *, update: int, schedul
         rng["mps"] = torch.mps.get_rng_state()
     if device == "cuda":
         rng["cuda"] = torch.cuda.get_rng_state_all()
-    payload = {"schema": 2, "input_contract": INPUT_CONTRACT, "model_config": asdict(model.config),
+    payload = {"schema": 3, "input_contract": INPUT_CONTRACT, "model_config": asdict(model.config),
                "model_policy": getattr(model, "policy_identity", "stage1-position-gather-v1"),
                "encoder_type": f"{type(model.encoder).__module__}.{type(model.encoder).__qualname__}",
                "optimizer_type": f"{type(optimizer).__module__}.{type(optimizer).__qualname__}",
@@ -40,7 +40,7 @@ def load_snapshot(path: Path, model, optimizer, sampler, *, scheduler=None, read
     """Restore on the same device family, including next-sample and next-update state."""
     payload = torch.load(path, map_location="cpu", weights_only=False)
     expected_encoder = f"{type(model.encoder).__module__}.{type(model.encoder).__qualname__}"
-    if payload.get("schema") != 2 or payload.get("input_contract") != INPUT_CONTRACT or (
+    if payload.get("schema") != 3 or payload.get("input_contract") != INPUT_CONTRACT or (
         payload.get("model_config") != asdict(model.config) or payload.get("encoder_type") != expected_encoder or
         payload.get("model_policy") != getattr(model, "policy_identity", "stage1-position-gather-v1")
     ):

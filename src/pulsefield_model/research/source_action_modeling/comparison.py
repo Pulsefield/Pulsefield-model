@@ -15,9 +15,9 @@ import torch
 from ..scoped_style_modeling.dataset import REVISION, ContractError
 from ..scoped_style_modeling.probe_data import input_identity
 from .diagnostics import batch_identity
-from .model import CONFIGURATIONS
+from .model import CONFIGURATIONS, LOSS_POLICY
 from .observation import BlockExample, ViewPolicy, paired_views, visible_states
-from .sampling import SPLIT_SHA256, VIEWS, PairedBlockSampler, TrainingContext
+from .sampling import SAMPLING_POLICY, SPLIT_SHA256, VIEWS, PairedBlockSampler, TrainingContext
 from .tensors import collate
 
 
@@ -134,7 +134,8 @@ def train_paired_step(models, optimizers, sampler: PairedBlockSampler, *, blocks
     separate = paired_batches(paired)
     # Each block has the same three-view multiplicity, preserving block weighting.
     batch = collate([p[view] for p in paired for view in VIEWS]).to(next(iter(devices)))
-    result = {"blocks": records, "view_sha256": {view: batch_identity(b) for view, b in separate.items()}, "models": {}}
+    result = {"loss_policy": LOSS_POLICY, "sampling_policy": SAMPLING_POLICY, "view_weight": 1 / len(VIEWS),
+              "blocks": records, "view_sha256": {view: batch_identity(b) for view, b in separate.items()}, "models": {}}
     for name in CONFIGURATIONS:
         model, optimizer = models[name], optimizers[name]
         model.train()
@@ -176,14 +177,32 @@ def structural_report(rows: list[dict], *, seed: int = 17, bootstrap_samples: in
     """
     if type(bootstrap_samples) is not int or bootstrap_samples < 0:
         raise ContractError("Bootstrap samples must be a nonnegative integer")
-    fields = [f"{view}_{response}" for view in VIEWS for response in ("nll", "first_nll", "later_nll")]
-    fields += [f"{view}_minus_detailed_{response}" for view in ("near", "coarse") for response in ("nll", "first_nll", "later_nll")]
+    responses = ("sequence_nll", "mean_row_nll", "first_nll", "later_nll")
+    fields = [f"{view}_{response}" for view in VIEWS for response in responses]
+    fields += [f"{view}_minus_detailed_{response}" for view in ("near", "coarse") for response in responses]
     def summarize(items):
         return {"blocks": len(items), **{f: _estimate(items, f, seed=seed, bootstrap_samples=bootstrap_samples) for f in fields}}
     durations = (("under-250ms", 0, 250), ("250ms-1s", 250, 1000), ("1-4s", 1000, 4000), ("4s-plus", 4000, math.inf))
-    return {"overall": summarize(rows), "by_scale": {str(size): summarize([r for r in rows if r["rows"] == size])
+    positions = defaultdict(list)
+    for row in rows:
+        for position in range(row["rows"]):
+            item = {"group_id": row["group_id"]}
+            for view in VIEWS:
+                losses = row.get(f"{view}_row_nll")
+                if losses is not None:
+                    item[f"{view}_nll"] = losses[position]
+            for view in ("near", "coarse"):
+                if f"{view}_nll" in item and "detailed_nll" in item:
+                    item[f"{view}_minus_detailed_nll"] = item[f"{view}_nll"] - item["detailed_nll"]
+            positions[position].append(item)
+    position_fields = [f"{v}_nll" for v in VIEWS] + [f"{v}_minus_detailed_nll" for v in ("near", "coarse")]
+    return {"aggregation": "mean-within-group/mean-over-represented-groups", "nll_unit": "nats",
+            "overall": summarize(rows), "by_scale": {str(size): summarize([r for r in rows if r["rows"] == size])
                                                        for size in (4, 16, 64)},
             "by_duration": {name: summarize([r for r in rows if lo <= r["duration_ms"] < hi]) for name, lo, hi in durations},
+            "by_decoder_position": {str(position): {f: _estimate(items, f, seed=seed, bootstrap_samples=0)
+                                                    for f in position_fields}
+                                    for position, items in sorted(positions.items())},
             "blocks": rows}
 
 
@@ -221,7 +240,8 @@ def evaluate_structure(models, paired, records, *, batch_size: int = 8, bootstra
                         for i, losses in enumerate(output.row_nll.cpu().tolist()):
                             record = rows[start + i]
                             losses = losses[:int(batch.queries.steps[i].sum())]
-                            record.update({f"{view}_nll": sum(losses) / len(losses), f"{view}_first_nll": losses[0],
+                            record.update({f"{view}_sequence_nll": sum(losses), f"{view}_mean_row_nll": sum(losses) / len(losses),
+                                           f"{view}_first_nll": losses[0],
                                            f"{view}_later_nll": sum(losses[1:]) / (len(losses) - 1) if len(losses) > 1 else None,
                                            f"{view}_row_nll": losses})
             _synchronize(device)
@@ -229,18 +249,21 @@ def evaluate_structure(models, paired, records, *, batch_size: int = 8, bootstra
             model.train(mode)
         for row in rows:
             for view in ("near", "coarse"):
-                for response in ("nll", "first_nll", "later_nll"):
+                for response in ("sequence_nll", "mean_row_nll", "first_nll", "later_nll"):
                     a, b = row[f"{view}_{response}"], row[f"detailed_{response}"]
                     row[f"{view}_minus_detailed_{response}"] = None if a is None else a - b
         result[name] = {"policy": model.policy_identity, "parameters": parameter_counts(model),
                          "evaluation_seconds": perf_counter() - started, "max_retained_bank_bytes": bank_bytes,
                          "batch_sha256": identities, **structural_report(rows, seed=seed, bootstrap_samples=bootstrap_samples)}
-    contrasts = {}
+    contrasts = {response: {} for response in ("sequence_nll", "mean_row_nll")}
     names = list(models)
     for i, left in enumerate(names):
         for right in names[i + 1:]:
-            changes = [{"group_id": a["group_id"], "nll_gain": a["detailed_nll"] - b["detailed_nll"]}
-                       for a, b in zip(result[left]["blocks"], result[right]["blocks"])]
-            contrasts[f"{left}_minus_{right}"] = _estimate(changes, "nll_gain", seed=seed, bootstrap_samples=bootstrap_samples)
-    return {"models": result, "paired_detailed_nll": contrasts, "uncertainty": "paired source-group bootstrap",
+            for response in contrasts:
+                changes = [{"group_id": a["group_id"], "gain": a[f"detailed_{response}"] - b[f"detailed_{response}"]}
+                           for a, b in zip(result[left]["blocks"], result[right]["blocks"])]
+                contrasts[response][f"{left}_minus_{right}"] = _estimate(changes, "gain", seed=seed, bootstrap_samples=bootstrap_samples)
+    return {"schema": "source-action-structure-v2", "models": result,
+            **{f"paired_detailed_{response}": values for response, values in contrasts.items()},
+            "uncertainty": "paired source-group bootstrap",
             "bootstrap_samples": bootstrap_samples, "seed": seed}

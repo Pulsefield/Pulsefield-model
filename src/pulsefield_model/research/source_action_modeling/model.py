@@ -14,6 +14,9 @@ from ..scoped_style_modeling.model import RelationAttention, mlp, packed_gru
 from .tensors import (BlockBatch, BlockQueries, ObservationTensors, LANE_DIM, ROW_DIM,
                       EDGE_DIM, RELATION_DIM, ROW_CLASSES, action_table)
 
+DECODER_POLICY = "joint-row/context-bilinear-hand-transpose-v1"
+LOSS_POLICY = "equal-block/mean-row-nll-v1"
+
 
 @dataclass(frozen=True)
 class ModelConfig:
@@ -67,9 +70,11 @@ class ReferenceEncoder(nn.Module):
 
 @dataclass(frozen=True)
 class Prediction:
+    """Teacher-forced costs in nats; loss is the equal-block mean of mean_row_nll."""
     log_probs: Tensor
     row_nll: Tensor
-    block_nll: Tensor
+    sequence_nll: Tensor
+    mean_row_nll: Tensor
     loss: Tensor
     final_states: Tensor
     final_occupancy: Tensor
@@ -89,7 +94,8 @@ class JointDecoder(nn.Module):
         self.action = nn.Embedding(36, a)
         self.context = mlp(2 * encoder_dim + 2 * h + 8, h, h)
         self.unary = mlp(h + a, h, 1)
-        self.interaction = nn.Linear(h + a, config.interaction_dim)
+        self.pair_action = nn.Linear(a, config.interaction_dim, bias=False)
+        self.interaction = nn.Linear(h, config.interaction_dim ** 2)
         self.memory = nn.GRUCell(encoder_dim + h + 2 * a, h)
         self.register_buffer("actions", action_table())
         self.register_buffer("hand_tokens", torch.tensor([[i // 36, i % 36] for i in range(ROW_CLASSES)]))
@@ -110,8 +116,12 @@ class JointDecoder(nn.Module):
         embeddings = self.action.weight[None, None].expand(query.shape[0], 2, -1, -1)
         values = torch.cat((query[:, :, None].expand(-1, -1, 36, -1), embeddings), -1)
         unary = self.unary(values).squeeze(-1)
-        pair = self.interaction(values)
-        interactions = torch.matmul(pair[:, 0], pair[:, 1].transpose(1, 2)) / math.sqrt(pair.shape[-1])
+        pair = self.pair_action(self.action.weight)
+        matrices = self.interaction(query).reshape(-1, 2, pair.shape[-1], pair.shape[-1])
+        # Hand exchange transposes B. Its eigenvalues and context dependence
+        # are unconstrained, so pair odds can favor agreement or alternation.
+        matrix = (matrices[:, 0] + matrices[:, 1].transpose(-1, -2)) / 2
+        interactions = (pair @ matrix @ pair.T) / math.sqrt(pair.shape[-1])
         logits = (unary[:, 0, :, None] + unary[:, 1, None, :] + interactions).flatten(1)
         padding = torch.arange(ROW_CLASSES, device=logits.device)[None] == 0
         legal = torch.where(active[:, None], self.legal_rows(occupancy), padding)
@@ -151,8 +161,9 @@ class JointDecoder(nn.Module):
         denominator = queries.steps.sum(1)
         if (denominator == 0).any():
             raise ContractError("Every block must contain at least one target row")
-        block_nll = row_nll.sum(1) / denominator
-        return Prediction(log_probs, row_nll, block_nll, block_nll.mean(), states, occupancy)
+        sequence_nll = row_nll.sum(1)
+        mean_row_nll = sequence_nll / denominator
+        return Prediction(log_probs, row_nll, sequence_nll, mean_row_nll, mean_row_nll.mean(), states, occupancy)
 
 
 class SourceActionPredictor(nn.Module):
@@ -161,6 +172,10 @@ class SourceActionPredictor(nn.Module):
         self.config = config
         self.encoder = ReferenceEncoder(config) if encoder is None else encoder
         self.decoder = JointDecoder(self.encoder.output_dim, config)
+
+    @property
+    def policy_identity(self):
+        return {"architecture": "stage1-position-gather-v1", "decoder": DECODER_POLICY, "loss": LOSS_POLICY}
 
     def forward(self, batch: BlockBatch) -> Prediction:
         encoded = self.encoder(batch.observation)
@@ -195,7 +210,8 @@ class BankPredictor(nn.Module):
     def policy_identity(self):
         from .representation import ARCHITECTURE, READER_POLICY
         return {"architecture": ARCHITECTURE if self.configuration != "reference_h" else "reference-bank-summary-v1",
-                "reader": READER_POLICY, "access": self.access, "configuration": self.configuration}
+                "reader": READER_POLICY, "access": self.access, "configuration": self.configuration,
+                "decoder": DECODER_POLICY, "loss": LOSS_POLICY}
 
     def forward(self, batch: BlockBatch) -> Prediction:
         bank = self.encoder(batch.observation)

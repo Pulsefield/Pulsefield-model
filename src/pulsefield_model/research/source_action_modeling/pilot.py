@@ -362,7 +362,7 @@ def run_pilot(output_dir: Path, *, device: str = "mps") -> dict:
         structure = evaluate_structure(models, paired, records, batch_size=PROTOCOL["evaluation_batch_size"],
                                        bootstrap_samples=PROTOCOL["bootstrap_samples"])
         write("structure-final.json", structure)
-        report["primary"] = structure["paired_detailed_nll"]["composed_h_minus_composed_all"]
+        report["primary"] = structure["paired_detailed_mean_row_nll"]["composed_h_minus_composed_all"]
         heads, semantic_summary = {}, {}
         untrained = initialize_comparison(seed=17)
         for name, model in models.items():

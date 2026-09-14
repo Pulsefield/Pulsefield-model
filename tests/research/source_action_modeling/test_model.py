@@ -1,4 +1,5 @@
 from dataclasses import replace
+import math
 
 import pytest
 import torch
@@ -19,7 +20,8 @@ def test_finite_normalized_joint_probabilities_loss_and_gradients(device):
     torch.testing.assert_close(output.log_probs.exp().sum(-1), torch.ones_like(output.row_nll))
     assert torch.isfinite(output.log_probs.exp()).all()
     expected = output.row_nll.sum(1) / batch.queries.steps.sum(1)
-    torch.testing.assert_close(output.block_nll, expected)
+    torch.testing.assert_close(output.sequence_nll, output.row_nll.sum(1))
+    torch.testing.assert_close(output.mean_row_nll, expected)
     torch.testing.assert_close(output.loss, expected.mean())
     assert not torch.isclose(output.loss, output.row_nll.sum() / batch.queries.steps.sum())
     output.loss.backward()
@@ -59,7 +61,8 @@ def test_padding_preserves_valid_outputs_per_block_loss_and_decoder_state(device
         assert hp[0, hs.shape[1]:].count_nonzero() == 0
         a, b = model(short), model(padded)
     torch.testing.assert_close(a.log_probs[0], b.log_probs[0, :4], atol=3e-6, rtol=3e-5)
-    torch.testing.assert_close(a.block_nll[0], b.block_nll[0])
+    torch.testing.assert_close(a.sequence_nll[0], b.sequence_nll[0])
+    torch.testing.assert_close(a.mean_row_nll[0], b.mean_row_nll[0])
     torch.testing.assert_close(a.final_states[0], b.final_states[0], atol=3e-6, rtol=3e-5)
     assert b.row_nll[0, 4:].count_nonzero() == 0
     assert torch.equal(a.final_occupancy[0], b.final_occupancy[0])
@@ -102,3 +105,60 @@ def test_invalid_config_fails_and_initialization_preserves_rng():
     assert torch.equal(state, torch.random.get_rng_state())
     with pytest.raises(ContractError):
         ModelConfig(hand_hidden=3, attention_heads=4)
+
+
+@pytest.mark.parametrize("device", DEVICES)
+def test_context_can_reverse_joint_hand_log_odds_with_all_four_choices_legal(device):
+    decoder = initialize_model().decoder.to(device)
+    # One active coordinate realizes the two four-combination distributions
+    # in the objective contract. Shared Gram scoring cannot realize the second.
+    with torch.no_grad():
+        for parameter in decoder.parameters():
+            parameter.zero_()
+        decoder.action.weight[6, 0] = 1  # tap on the outer lane
+        decoder.action.weight[12, 0] = -1  # head on the outer lane
+        decoder.pair_action.weight[0, 0] = 1
+        decoder.context[0].weight[0, 0] = 1
+        decoder.context[-1].weight[0, 0] = 1
+        query_values = torch.nn.functional.gelu(torch.tensor([1., -1.], device=device))
+        magnitude = math.sqrt(8) * math.log(3)
+        slope = 2 * magnitude / (query_values[0] - query_values[1])
+        decoder.interaction.weight[0, 0] = slope
+        decoder.interaction.bias[0] = magnitude - slope * query_values[0]
+    context = torch.zeros(2, 2, 64, device=device)
+    context[:, :, 0] = torch.tensor([1., -1.], device=device)[:, None]
+    scores = decoder.score(context, torch.zeros(2, 2, 32, device=device),
+                           torch.zeros(2, 2, 2, dtype=torch.long, device=device),
+                           torch.ones(2, dtype=torch.bool, device=device)).reshape(2, 36, 36)
+    odds = scores[:, 6, 6] + scores[:, 12, 12] - scores[:, 6, 12] - scores[:, 12, 6]
+    table = scores[:, [6, 6, 12, 12], [6, 12, 6, 12]].softmax(-1)
+    torch.testing.assert_close(table, torch.tensor([[.45, .05, .05, .45], [.05, .45, .45, .05]], device=device),
+                               atol=2e-7, rtol=2e-6)
+    expected = torch.tensor([math.log(81), -math.log(81)], device=device)
+    torch.testing.assert_close(odds, expected, atol=3e-6, rtol=3e-5)
+    assert odds[0] > 0 and odds[1] < 0
+    odds.sum().backward()
+    assert decoder.interaction.weight.grad.abs().sum() > 0
+
+
+def test_one_shared_fair_bit_has_constant_sequence_cost_and_diluted_row_cost(monkeypatch):
+    model = initialize_model()
+    batch = collate([example(size=1), example(long=True, size=16)])
+    chosen, alternative = row_token((1, 0, 0, 0)), row_token((0, 1, 0, 0))
+    batch = replace(batch, targets=torch.where(batch.queries.steps, chosen, 0))
+    step = 0
+    def shared_bit(context, states, occupancy, active):
+        nonlocal step
+        values = context.new_full((context.shape[0], ROW_CLASSES), -torch.inf)
+        values[:, chosen] = -math.log(2) if step == 0 else 0
+        if step == 0:
+            values[:, alternative] = -math.log(2)
+        values[~active] = -torch.inf
+        values[~active, 0] = 0
+        step += 1
+        return values
+    monkeypatch.setattr(model.decoder, "score", shared_bit)
+    output = model(batch)
+    torch.testing.assert_close(output.sequence_nll, torch.full((2,), math.log(2)))
+    torch.testing.assert_close(output.mean_row_nll, torch.tensor([math.log(2), math.log(2) / 16]))
+    torch.testing.assert_close(output.loss, output.mean_row_nll.mean())

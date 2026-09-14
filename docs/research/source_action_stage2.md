@@ -11,6 +11,9 @@ chart context and style assessment do not implement the
 [V3 generation contract](../formulation/notation.md). The architecture is a
 research hypothesis; software verification does not establish a structural or
 semantic gain.
+The [prediction and evidence contract](source_action_objective.md) owns the
+training risk and distinguishes reconstruction, context use, semantic reuse
+and matched-information path compatibility.
 
 ## Computation and support
 
@@ -98,9 +101,9 @@ identical initial parameters and buffers, with distinct access policies.
 
 | Configuration | Encoder | Reader access | Encoder parameters | Action reader | Decoder | Predictor total |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| `reference_h` | Lane projection → shared-hand BiGRU → relation attention | `H` | 61,612 | 17,484 | 23,465 | 102,561 |
-| `composed_h` | `U → L1 → L2 → L3 → R → H` | `H` | 171,652 | 17,484 | 23,465 | 212,601 |
-| `composed_all` | Same composed encoder | All six levels | 171,652 | 17,484 | 23,465 | 212,601 |
+| `reference_h` | Lane projection → shared-hand BiGRU → relation attention | `H` | 61,612 | 17,484 | 25,313 | 104,409 |
+| `composed_h` | `U → L1 → L2 → L3 → R → H` | `H` | 171,652 | 17,484 | 25,313 | 214,449 |
+| `composed_all` | Same composed encoder | All six levels | 171,652 | 17,484 | 25,313 | 214,449 |
 
 Counts use default `ModelConfig`: width 64, four attention heads and zero dropout.
 The reference adds a 3,096-parameter projection of both hands' far summaries to
@@ -150,7 +153,17 @@ checks that views match their recorded visibility/summary policy.
 start sampler. Each draw exposes all three views of the same 4-, 16- or 64-event
 block to every predictor. Its state retains target RNG/position, population and
 view policy. Manifests record event start, scale, actual duration, realized attack
-count and policy; update/evaluation reports add exact tensor-and-target hashes.
+count and policy; sampled training blocks also record the exact marginal draw
+probability. Update reports identify the loss, sampling and equal-view weights;
+update/evaluation reports add exact tensor-and-target hashes.
+
+For cross-mask comparisons, `prefix_path_pair` moves a fixed prefix from decoder
+history into encoder observations while preserving the base view's other facts
+and common suffix legality. It requires an unsummarized base because far-summary
+source ranges are not explicit in the model inputs. It does not call `paired_views` again.
+`evaluate_path_consistency` compares complete joint-row distributions and target
+costs on the shared suffix, with no added training regularizer. See the
+[fixed-information protocol](source_action_objective.md#fixed-information-prefix-routing).
 
 ## Population and evaluation APIs
 
@@ -176,12 +189,19 @@ settings. It returns losses, gradient norms, synchronized update times, paramete
 counts and a common manifest. The caller owns the update horizon and schedulers.
 
 `evaluate_structure(models, paired, records)` reports every block's row losses,
-mean row NLL, first-row NLL and later-row mean NLL. Raw losses appear beside
-near-minus-detailed and coarse-minus-detailed gains, overall and by event scale
-and actual duration. It also compares detailed-view NLL between arms. Means are
+`sequence_nll`, `mean_row_nll`, first-row NLL and later-row mean NLL. Raw losses
+appear beside near-minus-detailed and coarse-minus-detailed gains in both units,
+overall and by event scale and actual duration. A separate breakdown retains
+every decoder position's group means, without position-specific bootstrap
+intervals. It also compares detailed-view costs between arms via
+`paired_detailed_sequence_nll` and `paired_detailed_mean_row_nll`. The report
+schema is `source-action-structure-v2`; ambiguous block-level `*_nll` fields
+are replaced with explicit sequence/mean-row names. Means are
 computed within source groups before averaging groups. Confidence intervals
 bootstrap group means of paired differences; one group yields no interval.
-The default 1,000 bootstrap draws use a private seed-17 RNG.
+The default 1,000 bootstrap draws use a private seed-17 RNG. These means describe
+the supplied evaluation manifest; they need not estimate the training sampler's
+distribution over contexts and feasible scales.
 
 `SemanticCorpus(corpus, issues)` reuses the effective-human confidence/conflict
 policy and then explicitly excludes machine fallback. `issues` must come from
@@ -222,8 +242,9 @@ parameters, and changes to the fitted head or its policy are rejected.
 `save_snapshot(..., readout=head)` optionally stores that fitted head alongside
 model, optimizer, scheduler, RNGs, sampler and update position. Loading requires
 the same architecture, access, view population/policy and semantic policy. The
-input contract is `source-action-visibility-v2` and snapshot schema is 2; older
-schema-1 snapshots are rejected. The Stage 1 Python smoke API and model defaults
+input contract is `source-action-visibility-v2` and snapshot schema is 3; older
+snapshots are rejected. Both model families record the context-bilinear decoder
+and equal-block mean-row loss policies. The Stage 1 Python smoke API and model defaults
 remain available. Snapshots are exclusively created and trusted-local-only.
 
 ## Software verification and measurements
@@ -238,9 +259,11 @@ uv run --offline --extra mps --group dev pytest -q \
 git diff --check
 ```
 
-On 2026-09-14, this command passed 78 tests in 15.49 seconds with PyTorch 2.11.0
-and available CPU/MPS devices. CUDA was unavailable. These measurements cover
-software fixtures; a held-out structural/semantic comparison has not been run.
+The initial composition implementation passed 78 tests in 15.49 seconds on
+2026-09-14 with PyTorch 2.11.0 and CPU/MPS devices; those measurements preceded
+the context-bilinear decoder and prefix-routing diagnostics. CUDA was
+unavailable. Software fixtures do not establish held-out structural/semantic
+improvement.
 
 The tests cover hidden-target invariance in every view, strict local action
 support, equal-count order changes, visible early-state gradients through direct

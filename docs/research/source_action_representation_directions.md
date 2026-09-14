@@ -16,6 +16,9 @@ need separate evidence even when they form one research direction.
 The [source-action block prediction foundation](source_action_stage1.md) owns
 the implemented partial-observation contract, reference predictor and bounded
 software checks for a common prediction task.
+The [prediction and evidence contract](source_action_objective.md) owns the
+implemented joint output family, sequence/row likelihood distinctions,
+sampling risk and fixed-information prefix-routing diagnostics.
 
 The baseline is the scoped classifier examined in the
 [2026-09-14 postmortem](scoped_style_probe_postmortem.md), with implementation
@@ -434,9 +437,15 @@ a specific unresolved mechanism.
 
 ## Focused development direction
 
-The first decision concerns **direct representation access under a common
-source-action objective**. Build the masked-observation contract and compact
-decoder once, then compare a reference contextual encoder with the smallest
+Before comparing representation access, the output family must express
+context-dependent positive and negative hand coupling, and evaluation must
+distinguish total sequence cost, mean row cost and the sampled risk. The
+[implemented contract](source_action_objective.md) supplies these distinctions
+and a small prefix-routing diagnostic. Matched-information agreement supports
+compatibility but cannot replace prediction quality or semantic reuse.
+
+The architecture decision concerns **direct representation access under a common
+source-action objective**. Compare a reference contextual encoder with the smallest
 operator composition that retains early and local states. Both receive the
 same source facts, target blocks, decoder capacity, and training risk. The
 reference must receive the new prediction objective too; otherwise an apparent

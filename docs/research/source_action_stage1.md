@@ -6,6 +6,9 @@ observation contract, contextual reference encoder, joint decoder, sampling
 policy and update diagnostics needed by the
 [representation-access comparison](source_action_representation_directions.md).
 It does not implement the [V3 generation contract](../formulation/notation.md).
+The [prediction and evidence contract](source_action_objective.md) defines
+conditional dependence, sequence/row costs, sampling risk and prefix-routing
+diagnostics separately from semantic reuse.
 The [2026-09-14 verification report](source_action_stage1_verification.md)
 records the contract checks and bounded real-input observations.
 
@@ -60,8 +63,11 @@ right `(3, 2)`, so mirroring exchanges hands without changing outer/inner roles.
 
 The decoder scores one categorical distribution over $6^4=1296$ joint rows.
 Each lane has silence, tap, head, close, close-plus-tap and close-plus-head
-actions. Each hand's 36 action pairs have learned embeddings; bilateral
-interactions couple the two hands. Shared recurrent hand states incorporate
+actions. Each hand's 36 action pairs have learned embeddings. A context-generated
+bilinear matrix couples their projected embeddings, with unrestricted signs;
+hand exchange transposes the matrix and the joint score table. This removes a
+positive-semidefinite Gram constraint while retaining a low-rank output family.
+Shared recurrent hand states incorporate
 preceding chosen rows. The encoder receives neither targets nor decoder state.
 Teacher forcing reads a row only after scoring its distribution.
 
@@ -82,6 +88,12 @@ $$
 \log p(a_j\mid A_{I_b,<j},V_b,\Gamma_b).
 $$
 
+`Prediction.sequence_nll` is the sum of chain-rule row costs;
+`mean_row_nll` divides that sum by the actual target-row count. `loss` is the
+equal-block mean above. All costs use nats; `block_nll` is no longer a field.
+See the [risk contract](source_action_objective.md#sequence-cost-row-cost-and-training-risk)
+for length dependence and the distribution under which this objective is averaged.
+
 Padding contributes no loss and does not update decoder state. This weighting
 differs from pooling all target rows. A likelihood improvement can result from
 teacher-forced prefix use; it is not sufficient evidence of encoder reuse.
@@ -93,8 +105,8 @@ layer. The decoder has 32 recurrent units per hand, eight-dimensional action
 embeddings and eight-dimensional bilateral interactions. Dropout is zero for
 the bounded wiring check. Evaluation commutes with hand exchange; stochastic
 dropout during other training runs need not match samplewise under mirroring.
-The default model has 58,516 encoder parameters and 23,465 decoder parameters,
-81,981 in total.
+The default model has 58,516 encoder parameters and 25,313 decoder parameters,
+83,829 in total.
 
 ## Sampling, diagnostics and restoration
 
@@ -104,10 +116,12 @@ feasible scales from `{4, 16, 64}`, then valid starting event indices. Sampling
 uses replacement and never reads action values or labels to choose a block.
 Contexts must contain at least four real events. Short contexts redistribute
 scale probability uniformly over their feasible sizes. Sampler state includes
-the policy identifier, population identity, RNG state and draw position.
+the policy identifier, population identity, RNG state and draw position. Each
+draw records its exact group/context/scale/start probability. The sampler
+distribution and equal-block training weights have separate meanings.
 
 [`diagnostics.py`](../../src/pulsefield_model/research/source_action_modeling/diagnostics.py)
-captures a fixed mean block log likelihood and its gradient before an actual
+captures the negative equal-block mean row NLL and its gradient before an actual
 optimizer step. It then measures parameter displacement, the resulting response
 change, and the gradient-displacement dot product, separately for the disjoint
 encoder and decoder parameter owners. Their sum is compared with the actual
@@ -119,7 +133,7 @@ do not attribute an update to individual training examples or latent slots.
 creates new snapshot files exclusively. Snapshots retain model parameters and
 buffers, optimizer state, optional scheduler state, Python/NumPy/PyTorch RNGs,
 the active accelerator RNG, training mode, sampling position and update count.
-Restoration checks the versioned partial-input contract, model configuration,
+Restoration checks the versioned partial-input, decoder and loss contracts, model configuration,
 encoder/optimizer/scheduler types and sampler population. Exact RNG restoration
 requires the same device family. Only trusted local snapshots may be loaded.
 
@@ -194,9 +208,11 @@ git diff --check
 
 The [composition and access implementation](source_action_stage2.md) adds a
 six-level bank, action and concept readers, complete observations and paired
-near/detailed/coarse views. It preserves this decoder computation and objective.
-Prediction queries are now separate from visibility; the input contract is
-`source-action-visibility-v2`, and snapshot schema 2 rejects older snapshots.
+near/detailed/coarse views. All arms share the decoder computation and objective.
+Prediction queries are separate from visibility; the input contract is
+`source-action-visibility-v2`. Snapshot schema 3 rejects older snapshots,
+including the static-Gram decoder family. Exact continuation requires matching
+decoder and loss policy identities.
 The Stage 1 smoke API remains a bounded software check.
 
 The comparison still requires a fixed population, held-out structural metric,

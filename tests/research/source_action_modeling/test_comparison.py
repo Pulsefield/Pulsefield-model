@@ -76,21 +76,27 @@ def test_common_updates_and_structural_raw_losses_scales_durations_and_group_unc
     paired, records = sampler.draw(6)
     result = evaluate_structure(models, paired, records, batch_size=2, bootstrap_samples=40)
     assert all(m.training for m in models.values())
-    assert len(result["paired_detailed_nll"]) == 3
+    assert len(result["paired_detailed_mean_row_nll"]) == 3
+    assert len(result["paired_detailed_sequence_nll"]) == 3
     for name, report in result["models"].items():
         assert report["max_retained_bank_bytes"] > 0
         for row in report["blocks"]:
-            assert row["near_minus_detailed_nll"] == row["near_nll"] - row["detailed_nll"]
+            assert row["near_minus_detailed_mean_row_nll"] == row["near_mean_row_nll"] - row["detailed_mean_row_nll"]
+            assert row["near_minus_detailed_sequence_nll"] == row["near_sequence_nll"] - row["detailed_sequence_nll"]
+            assert row["detailed_sequence_nll"] == sum(row["detailed_row_nll"])
+            assert row["detailed_sequence_nll"] / row["rows"] == row["detailed_mean_row_nll"]
             assert row["coarse_minus_detailed_first_nll"] == row["coarse_first_nll"] - row["detailed_first_nll"]
             assert len(row["detailed_row_nll"]) == row["rows"]
         assert set(report["by_scale"]) == {"4", "16", "64"}
+        first = report["by_decoder_position"]["0"]["detailed_nll"]
+        assert first["group_means"] == report["overall"]["detailed_first_nll"]["group_means"]
     assert result["models"]["reference_h"]["batch_sha256"] == result["models"]["composed_all"]["batch_sha256"]
     mismatched = [dict(r, view_policy={**r["view_policy"], "near_radius": 0}) for r in records]
     with pytest.raises(ContractError, match="recorded visibility"):
         evaluate_structure(models, paired, mismatched)
-    rows = [{"group_id": "a", "rows": 4, "duration_ms": 100, "near_nll": 1}] * 9
-    rows += [{"group_id": "b", "rows": 4, "duration_ms": 100, "near_nll": 5}]
-    estimate = structural_report(rows, bootstrap_samples=100)["overall"]["near_nll"]
+    rows = [{"group_id": "a", "rows": 4, "duration_ms": 100, "near_mean_row_nll": 1}] * 9
+    rows += [{"group_id": "b", "rows": 4, "duration_ms": 100, "near_mean_row_nll": 5}]
+    estimate = structural_report(rows, bootstrap_samples=100)["overall"]["near_mean_row_nll"]
     assert estimate["mean"] == 3 and estimate["group_bootstrap_95"] is not None
 
 

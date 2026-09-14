@@ -34,7 +34,7 @@ class ResponseBefore:
 
 
 def capture_response(model, fixed_batch: BlockBatch) -> ResponseBefore:
-    """Capture eval-mode mean block log likelihood without changing .grad or mode."""
+    """Capture negative equal-block mean row NLL without changing .grad or mode."""
     training = model.training
     model.eval()
     try:

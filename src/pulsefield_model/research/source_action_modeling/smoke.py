@@ -94,7 +94,8 @@ def _metrics(model, batch):
         later[:, 0] = False
         return {"mean_block_row_nll": float(output.loss), "first_row_nll": float(output.row_nll[:, 0].mean()),
                 "later_row_nll": float(output.row_nll[later].mean()),
-                "per_block_row_nll": output.block_nll.cpu().tolist()}
+                "per_block_row_nll": output.mean_row_nll.cpu().tolist(),
+                "per_block_sequence_nll": output.sequence_nll.cpu().tolist()}
     finally:
         model.train(mode)
 
