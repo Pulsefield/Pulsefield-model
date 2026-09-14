@@ -6,6 +6,8 @@ observation contract, contextual reference encoder, joint decoder, sampling
 policy and update diagnostics needed by the
 [representation-access comparison](source_action_representation_directions.md).
 It does not implement the [V3 generation contract](../formulation/notation.md).
+The [2026-09-14 verification report](source_action_stage1_verification.md)
+records the contract checks and bounded real-input observations.
 
 ## Information access
 
