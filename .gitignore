@@ -1,0 +1,6 @@
+/*
+!/.gitignore
+!/artifacts/
+/artifacts/*
+!/artifacts/agent-notes/
+!/artifacts/agent-notes/**
