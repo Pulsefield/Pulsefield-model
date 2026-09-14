@@ -151,3 +151,80 @@ and teacher forcing remain explicit alternative explanations.
 Do not infer player demand, calibrated motor thresholds, improved Trill detection
 or a need for persistent slots from these software checks. The proposed research
 direction has no acceptance or implemented lifecycle transition.
+
+## Result Log: Concrete untrained forward examples
+
+### Reproduction and scope
+
+- Date: 2026-09-14. The owner requested concrete examples explaining the model
+  changes and the scope of valid claims.
+- Accepted revision and Experiment Card: none. This is an explanatory forward
+  demonstration on synthetic fixtures, with zero optimizer updates or corpus
+  evaluations. It is not a result supporting predictive superiority.
+- Product HEAD: `84b02a3037d26dae301854bbf9cf0717edd907a7` with the uncommitted
+  implementation described above. Tracked-diff SHA-256:
+  `09f2e821b62ebb239b9ba3086edb13a7ec963972b52ee23819a64ded43a52868`.
+  The result artifact includes hashes of the seven directly used source owners.
+- Artifact owner: `artifacts/source-action-modeling/time-local-examples/example-ZjY6Id/`.
+  `examples.py` contains all source-exact fixtures, assertions and interventions;
+  `results.json` contains the measured values and source identities.
+- Script SHA-256:
+  `e2be2aff9ca34fcaed783eeebe4b5d7f3aa55cb5eceb669523d5a756e955b5ec`.
+- Command: `uv run --offline --extra mps --group dev python
+  artifacts/source-action-modeling/time-local-examples/example-ZjY6Id/examples.py`.
+- Environment: CPU, one Torch thread, Python 3.10.20, PyTorch 2.11.0. Model seed
+  17; the frozen kernel-content tensor uses a private seed 901. All models are
+  untrained and evaluated without dropout. Runtime was approximately 0.64 seconds.
+  Results were exclusively created in a fresh directory; rerunning requires a
+  fresh copy of the script/output location.
+
+### Observations
+
+Hidden-state differences below are maximum absolute channel differences, not
+NLL, accuracy, importance or comparable quality scores across architectures.
+
+1. Source events at 0, 100 and 200 ms, with an otherwise inert boundary row
+   inserted at 150 ms and unchanged scope/context: original timeline L1/L3
+   differences were 0.186062/0.352876. The event and combined branches had exact
+   zero differences at every source-anchored U/L1/L2/L3 state. Event-branch R/H
+   differences remained 0.206778/0.320954; whole-model invariance is false.
+2. Holding all learned local content fixed, doubling physical event gaps and
+   independently changing a same-lane endpoint into a same-hand lane switch gave:
+
+   | Kernel condition | Time-change difference | Lane-change difference | Difference of time effects across lane conditions |
+   | --- | ---: | ---: | ---: |
+   | Constant | 0 | 0 | 0 |
+   | Time only | 0.007658 | 0 | 0 |
+   | Actions only | 0 | 0.019178 | 0 |
+   | Time and actions | 0.006735 | 0.020073 | 0.001357 |
+
+   All four gates shared their parameter tensors and initialization. The
+   nonzero interaction shows that timing sensitivity can depend on endpoint
+   actions. It supplies no evidence that the untrained preference is useful.
+3. With learned local content set to zero, changing a tap into an LN head at
+   the same event changed a raw-access block by 0.115891. This isolates the
+   direct fact route; it is not a proof of lossless fact preservation.
+4. With source events every 100 ms, L3 at 1800 ms had action support 1100–2500
+   ms and time support 1000–2600 ms. Changing a tap at 0 ms into a hold lasting
+   beyond the context left combined U/L1/L2/L3 unchanged. With state conditions,
+   U stayed unchanged while L1/L3 changed by 0.119453/0.237513. Occupation thus
+   has a real prefix dependency and cannot be labeled intrinsic local content.
+5. Middle-event gap pairs 40/80 and 80/160 ms had identical relative coordinates
+   `(-0.405465, 0.287682)`, while 80/80 ms gave `(0, 0)`. Physical coordinates
+   still differed between the first two cases. A two-weight linear combination
+   of the even 256-ms and 64-ms bases produced a broad interval-band response:
+   0 at 0 ms, 0.097851 at 32 ms, 0.447214 at 128 ms, 0.464571 at 256 ms and
+   0.046755 at 4096 ms.
+
+### Interpretation
+
+The examples support explicit dependencies and invariances of the implemented
+computations. A single affine function of signed log time cannot reproduce the
+nonmonotonic band above, but the original network's nonlinear layers could
+learn such a response. Basis expansion adds coordinates, not new observations;
+its value for finite-budget learning remains unmeasured. The old whole encoder
+already read time and full row actions. The additional local gates and raw route
+make these dependencies directly available at specified operations.
+
+No trained comparison, new model adoption or Note lifecycle transition follows.
+The previously recorded REFINE recommendation and corpus evidence gaps remain.
