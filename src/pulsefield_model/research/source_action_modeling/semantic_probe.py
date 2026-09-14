@@ -123,12 +123,14 @@ def initialize_readout(access: str, seed: int = 17) -> ConceptReader:
 
 
 def fit_readout(model, corpus: SemanticCorpus, *, steps: int, batch_size: int, learning_rate: float,
-                seed: int = 17) -> tuple[ConceptReader, dict]:
+                seed: int = 17, on_step=None) -> tuple[ConceptReader, dict]:
     """Fit only the readout, with fixed concept/group/cell draws and encoder eval.
 
     Requires explicit update exposure and learning rate. The encoder's parameters,
     buffers, gradients and training mode are preserved. Training consumes only
     eligible human targets; all five concepts must have training support.
+    Optional on_step(step, readout, optimizer) runs after each update for bounded
+    execution and checkpoints; callback exceptions propagate after mode restore.
     """
     if any(type(v) is not int or v < 1 for v in (steps, batch_size)) or not math.isfinite(learning_rate) or learning_rate <= 0:
         raise ContractError("Readout fitting requires positive steps, batch size and learning rate")
@@ -152,6 +154,8 @@ def fit_readout(model, corpus: SemanticCorpus, *, steps: int, batch_size: int, l
             loss.backward()
             optimizer.step()
             losses.append(float(loss.detach()))
+            if on_step is not None:
+                on_step(start // batch_size + 1, readout, optimizer)
     finally:
         model.encoder.train(mode)
     readout.fitted = True
