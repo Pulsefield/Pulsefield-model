@@ -1,19 +1,22 @@
 # Scoped style seed 17: results, unresolved mechanisms, and next questions
 
 Evidence reviewed on 2026-09-14. This report covers seed 17 of the paired
-`style-only` and `style+evidence` experiment. It records experimental evidence
-and architecture proposals; it does not define a Pulsefield V3 architecture or
-an accepted next experiment. The [frozen study](scoped_style_witness_generation.md)
-and [training implementation guide](scoped_style_training.md) retain their
-respective scope.
+`style-only` and `style+evidence` experiment, the confirmed direction for its
+next architecture, and supplementary probes using existing models and labels.
+The upgrades and probes below have not been implemented or run. They concern
+the scoped style classifier, not a Pulsefield V3 reference architecture.
+The [frozen study](scoped_style_witness_generation.md) and
+[training implementation guide](scoped_style_training.md) describe the seed 17
+contract; the human-inclusive training policy below is a deliberate new contract.
 
 The evidence arm has slightly lower machine validation NLL and higher human
 validation NLL. Both arms miss every human Trill and Tech positive at the declared
-presence threshold. Stream and Jack have some predictive signal,
-but this experiment does not establish that the model distinguishes their
-organizing relationships at matched pace and density. The priority is to locate
-the failure between temporal representation, local structure encoding, and
-section readout before broadly increasing parameter count.
+presence threshold. Stream and Jack have predictive signal, but aggregate
+per-concept scores do not establish joint selectivity on the same input.
+The next model adds physical-time/local-pace features and multiscale readout
+with a direct path from short local expression to section assessment. Existing
+human judgments supply its targets. Probes determine implementation choices and
+remaining bottlenecks before broadly increasing parameter count.
 
 ## Experiment and measurement scope
 
@@ -119,12 +122,13 @@ Each arrow below is style-only to style+evidence. BA is expressed as a percentag
 | Tech | 96/53 | 0.3459 → 0.3927 | 63.6 → 53.2 | 24/23 | 1.6365 → 1.8423 | 50.0 → 50.0 |
 | LN coordination | 95/53 | 0.3584 → 0.2724 | 91.5 → 78.8 | 16/16 | 0.5495 → 0.5376 | 95.0 → 86.7 |
 
-**Stream/Jack remain unproven as structural distinctions.** Their machine
-results show predictive signal, and human Stream presence BA is 75%. However,
-there is no controlled comparison holding pace, density, and chord composition
-approximately fixed while changing repetition, flow, or alternation. Separate
-label scores cannot establish this ability, and a mutually exclusive
-Stream-versus-Jack task would omit legitimate coexistence.
+**Stream/Jack joint selectivity has not been evaluated in these aggregate
+results.** Their machine results show predictive signal, and human Stream
+presence BA is 75%. Existing human sections with both readouts directly test
+which concepts the model detects on the same input, including coexistence.
+The next audit uses those judgments. Additional controls holding pace or density
+fixed could investigate mechanisms, but are not prerequisites for assessing
+agreement with the human labels.
 
 **Trill and Tech positive detection fail on this human validation slice.**
 For both arms, all 14 human Trill cells and all 24 human Tech cells have absent
@@ -240,9 +244,10 @@ require distinctions that should guide the next diagnostics:
 - Stream involves flow, direction, chord placement, continuity, and resets.
   Continuous activity and fixed alternation alone are insufficient.
 - Trill uses repeated alternation of fixed disjoint groups, which can be chords
-  and can lie within or across hands. A short A/B fragment is not automatically
-  a sustained expression; pace, duration, and entry/exit context matter without
-  a universal row-count or millisecond threshold.
+  and can lie within or across hands. A clear expression may occupy a very
+  short part of a section. The reviewed judgment determines its meaning;
+  neither a brief A/B fragment alone nor a minimum section-coverage threshold
+  supplies the label.
 - Tech concerns concrete sequence, rhythm, and articulation relationships.
   Density, variation, entropy, model surprise, or failure to fit another label
   are insufficient definitions.
@@ -250,202 +255,492 @@ require distinctions that should guide the next diagnostics:
   under this Foundation, but overlap alone is insufficient. Exact release
   placement and continuing occupancy must remain available.
 
-## Representation and architecture directions
+## Confirmed direction for the next model
 
-### Preserve physical time, beat coordinates, and local pace
+Physical-time/local-pace enhancement and multiscale readout are part of the
+next architecture. The supplementary experiments determine their implementation,
+connections, and remaining bottlenecks. Their adoption as research directions
+is distinct from evidence that a particular implementation improves accuracy.
 
-The most direct temporal proposal is to supply three complementary views:
+Style judgments describe gameplay experience. Existing human section judgments
+supply the targets, including simultaneous readouts of different concepts and
+Trill expressed in a very short part of a larger section. A local expression
+need not occupy much of the section to affect its label. Presence and
+supporting/prominent remain learned judgments, without a minimum coverage rule.
 
-| View | Candidate features | Distinction to preserve |
+| Target problem | Required upgrade | What the probes must determine |
 | --- | --- | --- |
-| Physical time | Signed event gaps, LN durations, release-to-attack offsets; exact source grouping | Performed speed and fine before/after relationships |
-| Score timing | Integrated beat distance, local beat length, phase relative to the active timing anchor | Placement and duration relative to the chart's timing |
-| Local pace | Adjacent attack-gap ratios, gaps relative to several local pulse estimates, ordered changes | Local acceleration, interruption, and pulse organization beyond BPM |
+| Stream/Jack need selective predictions on the same input | Preserve action order, recurrence versus return, and interval magnitudes/ratios; assess both on the same human-labeled input | Which errors reflect poor ranking, calibration, or inaccessible temporal relationships? |
+| A clear short Trill must influence a larger section's assessment | Expose representations at several scales directly to concept readout, alongside ordered section context | Can existing encoder states support this path, and which composition/pooling implementation generalizes? |
+| Interval ratios have no explicit representation in the current input | Supply performed-time, adjacent-gap ratios, local-pace ratios, and redline local-BPM normalization during encoding | How do enhanced time features interact with local composition? |
+| Tech supervision must follow High-confidence human judgments | Train Tech only from those judgments, using shared temporal representations | Does the new supervision improve the old architecture, and what remains for architecture to improve? |
+| Better local detection must preserve specificity and strength/LN judgments | Let local and whole-section paths jointly determine the three-class distribution | How much context and capacity are needed to qualify local responses? |
 
-For source time $t$ in milliseconds and active positive uninherited beat length
-$L(t)$ in milliseconds per beat, a signed beat distance is
+Local BPM is a normalization reference obtained directly from redlines at
+inference. Learning beat grids, fractional-beat prediction, and audio timing
+inference are outside this iteration. The modeling emphasis is on action order,
+interval size, and multiplicative pace relationships. The missing timing-point
+input in seed 17 does not establish timing metadata as its dominant failure.
+
+Observed readout stability under some playback-rate changes remains a useful
+sensitivity hypothesis. Neither unchanged nor changed labels under arbitrary
+rate transformations are prescribed. Rate inspection is optional and does not
+become a prerequisite for the architecture work.
+
+## Supervision, shared inputs, and evaluation
+
+### Use the existing human multi-readout sections
+
+A read-only inventory of the pinned seed 17 cohort establishes immediate probe
+support. Counts below cover training and validation only. A shared input has
+identical source bytes, section, review context, and playback rate; `chart_key`
+identifies the first three in this 1x-only preparation.
+
+| Human support in the existing cohort | Training | Validation |
+| --- | ---: | ---: |
+| Resolved concept cells | 466 | 79 |
+| Distinct source groups | 150 | 26 |
+| Distinct input contexts | 174 | 31 |
+| Inputs with all five human readouts | 73 | 12 |
+| Inputs with one human readout | 101 | 19 |
+| Jack present / Stream present | 41 | 6 |
+| Jack present / Stream absent | 8 | 3 |
+| Jack absent / Stream present | 23 | 2 |
+| Jack absent / Stream absent | 1 | 1 |
+
+The last four rows count inputs with both labels, rather than independent source
+groups. The 12 validation pairs already cover all four combinations, with very
+small support in some combinations. Evaluate these existing judgments directly;
+no additional contrast-labeling campaign is required to begin. Retain both
+concepts' supporting/prominent targets and report constituent class errors as
+well as joint correctness. No comparison requires Jack probability to exceed
+Stream probability, or vice versa.
+
+Human Trill support is 100 training cells (64 absent, 18 supporting, 18 prominent)
+and 14 validation cells (10 absent, one supporting, three prominent). Use the
+actual reviewed examples to identify the short-local-expression inspection
+slice. A known human-localized interval can support position/scale inspection;
+a section-only judgment supports section classification. Evidence selection
+is not an episode annotation: its first and last selected notes cannot define
+an exhaustive interval, particularly for distributed witnesses. The count of
+explicitly localized short Trill examples has not been established by this
+inventory and must be reported when the slice is assembled.
+
+### Human-priority targets and High-confidence Tech
+
+The next training cohort uses the following target policy:
+
+- For Jack, Stream, Trill, and LN coordination, use the effective resolved human
+  judgment where it exists; otherwise retain the selected machine method's
+  eligible judgment. Retain confidence as an evaluation stratum rather than
+  silently discarding historical human judgments with missing confidence.
+- For Tech, admit only effective human judgments with explicit
+  `human_confidence="high"`, including absent, supporting, and prominent.
+  Low or unspecified confidence supplies no Tech target. Other labels on the
+  same input remain usable.
+- Resolve human precedence at exact source/section/concept/rate identity.
+  Preserve the chosen observation's context and provenance. Unresolved or
+  conflicting human observations do not authorize a machine fallback; inspect
+  the publication's exclusions as well as its resolved cohort.
+- Use the current effective observation and its confidence, not any historical
+  High in its ancestry. Confidence is per concept, independent of salience,
+  and never becomes a model input or a prominence target.
+
+The confidence semantics are owned by the pinned [human-confidence contract](https://github.com/Pulsefield/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/docs/annotation/human-confidence.md).
+The existing prepared records preserve `human_confidence` in `provenance_json`;
+no confidence inference from rationale, origin, or model scores is needed.
+
+| Existing High-confidence human Tech | Absent | Supporting | Prominent | Cells / groups |
+| --- | ---: | ---: | ---: | ---: |
+| Training | 16 | 5 | 5 | 26 / 26 |
+| Validation | 5 | 0 | 1 | 6 / 6 |
+
+This support permits a training-fit diagnostic and six-case held-out inspection.
+It cannot estimate supporting-versus-prominent Tech validation discrimination:
+there is no supporting validation example. Strength balanced accuracy is
+unavailable; conditional NLL and prominent recall describe just the one positive.
+A single changed positive prediction is not a robust generalization result.
+Use any subsequently frozen existing human judgments to update the support
+inventory before stronger claims; do not repurpose test groups to fill gaps.
+
+On the pinned preparation, human and machine exact cells do not overlap.
+Applying the policy above therefore yields 3,200 training cells: 811 Jack,
+778 Stream, 804 Trill, 26 Tech, and 781 LN coordination. This is a derived
+eligibility count, not an already prepared new training artifact. The original
+trainer samples only machine records and must be adapted to the selected target
+pool. Human training-group labels now become supervision, so retrain the old
+architecture on this cohort. Seed 17 remains a historical reference, not a
+control that isolates architecture from this supervision change.
+
+### Encode once without changing the loss distribution
+
+Share encoding only for identical source, scope, review context, and rate. Do
+not widen a context to combine five labels. Group all rates and related sources
+under the existing source-group split. Missing readouts remain masked, not absent.
+
+Continue concept/group/cell sampling over eligible training targets, uniformly
+at each level, for all comparisons. A batch may encode its distinct inputs once
+and evaluate five concept queries, while gathering the sampled concept losses
+with their original multiplicities. This preserves the sampling objective.
+A naive mean over every available label in every sampled input would overweight
+some complete five-label sections and change the objective; it is not merely a
+throughput optimization.
+
+Primary assessment reporting uses human labels for the four non-Tech concepts
+and High-confidence human labels for Tech, with concept/group weighting as
+previously defined. Retain the broader historical human and machine views as
+separate diagnostics; they do not supply Tech training targets. Report presence
+ranking and operating-point errors, conditional strength on all true positives,
+per-class/source-group support, and paired changes on the same inputs. The small
+Tech slice must remain visible beside any five-concept macro result.
+
+The four common evaluation views are same-input Stream/Jack selectivity, reviewed
+short-local Trill, High-confidence human Tech, and LN/positive-strength guards.
+They use one frozen cohort and inspection inventory. Existing validation remains
+development evidence after it has guided design; test stays outside probe and
+pilot selection.
+
+## Architecture specification for the first implementation
+
+### Temporal features encode magnitude and ratios early
+
+For distinct complete attack groups at source times $t_i$, let playback rate be
+$r$, performed gap $d_i=(t_i-t_{i-1})/r>0$, and active local performed beat length
+$L_i=L_{\mathrm{source}}(t_i)/r$. Let $\widehat d_i^{(s)}$ be a robust reference
+gap at local scale $s$, computed from positive attack gaps within the declared
+review context. The temporal feature family contains
 
 $$
-\Delta b_{ij}=\int_{t_i}^{t_j}\frac{dt}{L(t)}.
+\left[d_i,\quad \log\frac{d_i}{d_{i-1}},\quad
+\frac{d_i}{\widehat d_i^{(s)}},\quad \frac{d_i}{L_i}\right].
 $$
 
-Compute this across tempo changes. Keep cumulative beat distance separate from
-phase reanchored at a timing point; phase alone aliases integer-beat separations.
-Inherited negative beat lengths describe scroll-velocity changes and must not
-be integrated as tempo. This distinction follows the [osu! timing-point format](https://osu.ppy.sh/wiki/en/Client/File_formats/osu_%28file_format%29).
+Numerical embeddings can transform these values while retaining physical
+magnitude and availability. Median positive gaps in two overlapping short/medium
+neighborhoods are a simple starting reference; their window sizes are tunable
+implementation choices. Retrospective context is allowed, but no statistic may
+consume notes outside the declared review context. Missing predecessors or
+references remain unavailable. Simultaneous notes belong to one attack group;
+zero event gaps and signed release offsets retain separate exact representations
+rather than entering logarithms of positive attack-gap ratios.
 
-A 125 ms gap is a quarter beat at 120 BPM and a half beat at 240 BPM. Conversely,
-equal beat gaps at different tempos have different physical speeds. Beat features
-should therefore supplement physical time. For playback-rate variants, retain
-source coordinates for identity and scale performed time by the reciprocal
-rate; tempo scales by the rate and beat distance remains unchanged.
+Apply comparable performed-time and pace-relative descriptors to per-lane
+recurrence, same/other-hand interactions, and LN release-to-attack relationships.
+Global attack pace alone cannot distinguish these action assignments. Feed the
+features into lane/row encoding and relation-attention bias/value messages,
+where actions are combined, as well as local composition metadata.
 
-Start with continuous beat distance, cyclic phase features, physical-time
-features, and local gap ratios. Test fractional-grid compatibility as a soft
-feature with residual and unavailable/uncertain cases. A reduced fraction can
-belong to several subdivision grids, so its denominator is not a unique rhythm
-class. Do not hard-snap notes, merge near-simultaneous events, or alter LN release
-order to make a grid fit. Meter and redline anchors are candidate coordinates,
-not guaranteed semantic phrase boundaries.
+Use the active redline at the query event for local normalization. Across a
+redline change, a gap divided by that local beat length is a local coordinate,
+not an integrated beat count. Scroll velocity does not define BPM. The new
+representation does not require beat phase, metrical quantization, or a learned
+beat estimator. Exact simultaneity, event order, LN occupancy, and original
+source identities remain intact.
 
-When trustworthy redlines are available at inference, compute these facts
-directly before introducing beat prediction. Adding them changes the available
-information as well as its representation; a stronger physical-time embedding
-is a necessary control. Local gap ratios are derived from existing note times,
-so they change representation without adding redline information. If timing
-must instead be inferred from audio or notes,
-treat that as a separate uncertain estimator with half/double-tempo ambiguity
-and an oracle-timing comparison. A masked fractional-beat or pulse objective is
-a later option, with all algebraically revealing dependent features masked as
-well. Style assessment remains the downstream criterion.
+Retain absolute performed-time channels: the model can learn stability in a
+range of rates without being forced to ignore speed. Local-BPM normalization
+and ratios do not replace those channels. [Time2Vec](https://arxiv.org/abs/1907.05321)
+is an analogue for a learnable time embedding, but the first implementation's
+main change is to expose the relevant magnitude and ratio relationships.
 
-[REMI / Pop Music Transformer](https://arxiv.org/abs/2002.00212) is a close
-analogue for exposing metrical structure and local tempo to a music model.
-Its piano-generation representation does not validate a quantized mania action
-representation. [Time2Vec](https://arxiv.org/abs/1907.05321) supplies a related
-family of learnable time representations; it motivates an embedding control,
-not a demonstrated solution to these style errors.
+### Shared multiscale composition preserves positions and hand roles
 
-### Local structure followed by episode and section composition
+Keep the existing hand BiGRU and relation-attention backbone initially. Add a
+small concept-independent temporal composition module to its per-event,
+per-hand output. It retains the hand axis and exposes intermediate scales to
+assessment. Shared parameters across hands and the current symmetric hand-pair
+projection provide a starting point without a separate fusion search.
 
-The candidate below is untested. Each changed component should be compared
-separately before evaluating their interaction.
+A recommended initial module is a residual temporal convolution at width 64,
+with one kernel-size-3 convolution per block, dilation sequence 1, 2, 4,
+stride 1, and no temporal pooling. Retain the incoming states and all three
+block outputs. These blocks combine neighborhoods of 3, 7, and 15 source-event
+positions; releases and
+boundary events are included. They are additional composition spans over
+already contextual BiGRU states, not raw-input receptive-field limits or
+semantic episode boundaries. Exact widths and dilations remain probe choices.
+
+Attach physical span, attack count, and section-relative position to the scale
+representations. The enhanced temporal setting also supplies its local-pace
+descriptors. Keep padding and boundary availability explicit. If errors track
+release density or equal event counts at very different attack paces, compare
+attack-anchored neighborhoods or explicit time
+spans as a focused follow-up. An attack-anchored variant must retain the complete
+release/occupancy event path; LN information cannot disappear between anchors.
+
+[Temporal Convolutional Networks](https://arxiv.org/abs/1608.08242) provide an
+analogue for combining several temporal scales. This proposal adapts that
+mechanism to section judgments and contextual hand states. The module does not
+claim to discover fully localized style episodes.
+
+### Local responses and ordered section context meet at the classifier
+
+The assessment branch applies concept queries to each exposed scale, producing
+internal responses $a_{\ell,i,s}$ and associated local vectors. Its local path
+keeps, for each scale, a strongest-response scalar and an attention-weighted
+vector. The scalar supplies a route for a short expression that does not first
+pass through an average over the entire section. The vectors supply its content
+and context. Responses are not calibrated local style probabilities.
+
+A separate section path processes a learned mixture of scale representations
+in temporal order, initially reusing the section BiGRU and its summaries. The
+final concept-conditioned three-class head receives both paths, duration/span
+information, and the empty-scope state. It learns how local expression relates
+to section presence and strength. Presence is not defined as a maximum, and
+prominence is not defined as coverage.
+
+The local candidate mask admits anchors in the target section. Context informs
+those anchors but does not become an extra pool of positive instances. Handle
+empty scopes explicitly and inspect windows crossing section boundaries.
+A max response can increase with the number of candidate positions; attention
+can still dilute a short response. Check section-length strata and false
+positives rather than assuming either aggregation solves the problem alone.
+
+[Attention-based multiple-instance learning](https://proceedings.mlr.press/v80/ilse18a.html)
+is a close analogue for learning a global label from local instances. Here,
+ordered encoding precedes aggregation, a separate ordered section path remains,
+and each concept has three assessment classes. Attention weights are not
+witness targets or causal explanations.
 
 ```mermaid
 flowchart TD
-    A["Exact presses, releases, occupancy and complete attack groups"] --> E
-    T["Physical time, score timing and local pace"] --> E
-    E["Event and relation encoder retaining hand roles"] --> L
-    L["Local temporal composition: small convolution or local attention"] --> M
-    M["Ordered episode composition at several time and event scales"] --> S
-    S["Section assessment for five independent three-class concepts"]
-    L -->|Fine-scale features| S
+    X["Complete source events, releases and occupancy"] --> E
+    T["Performed time, pace ratios and local-BPM normalization"] --> E
+    E["Shared hand BiGRU and relation attention"] --> M
+    M["Shared multiscale composition retaining per-hand states"] --> L
+    M --> G
+    L["Concept queries: local maxima and attended vectors"] --> A
+    G["Ordered section composition and summary"] --> A
+    A["Five independent absent / supporting / prominent distributions"]
+    M --> C["Concept-independent per-event, per-hand memory"]
+    C --> W["Evidence selector in the later auxiliary comparison"]
+    Y["Reference assessment and selection history: training only"] --> W
 ```
 
-Temporal features should participate in local encoding and relation bias/value
-messages, where actions are combined. A BPM scalar appended only at the final
-head would not directly provide these relationships.
+A concept-independent projection of the shared scales supplies fixed-width
+per-event, per-hand memory to the selector. This keeps the existing selector's
+basic interface and lets a later auxiliary loss reach the new composition
+module. Concept-conditioned aggregation belongs to the assessment branch.
+Reference assessment, masks, and teacher-forced history remain isolated from
+assessment inputs. Evidence selection is never a dense activation-map target.
 
-The central Trill hypothesis is that fixed A/B alternation may be locally
-available but its sustained expression is not successfully read out. Probe
-these separately: fixed groups and disjointness, repeated alternation, then
-duration, pace, interruptions, and resumption. A model must distinguish one
-continuous episode from separated fragments with the same total motif coverage.
-Max or mean pooling alone cannot specify that order. Existing recurrent readout
-could encode it, so its failure must be tested rather than assumed.
+If residual errors concentrate on cross-time hand correspondence, test later
+hand fusion as one conditional branch. Whole-chart mirror consistency does not
+require independent hand-swap invariance at every instant. The current backbone
+already carries temporal hand context, so this remains an implementation
+comparison rather than an established defect.
 
-Use both event-count scales and physical/beat spans: the same number of rows
-can occupy very different durations. Retain fine-resolution features alongside
-longer summaries. Window sizes are computational choices, not semantic Trill
-thresholds. [Temporal Convolutional Networks for action segmentation](https://arxiv.org/abs/1608.08242)
-provide an analogue for composing temporal structure across scales; transferring
-this mechanism to section-level style supervision leaves episode localization
-and strength learning unresolved.
+## Supplementary probes and the decisions they support
 
-Tech motivates ordered composition across several scales, including how local
-rhythmic and articulation changes interact with recurring organization. A Tech
-head should retain access to those representations instead of being constrained
-to a weighted sum of the other four style predictions. Local activation maps
-may aid inspection, but section labels and selected evidence do not provide
-dense ground-truth style labels.
+### Probe A: audit existing scores and same-input readouts
 
-Hand fusion is another separate hypothesis. The current per-event averaging
-over hand order may make later access to hand-specific trajectories harder,
-although earlier recurrent states already carry context. Compare preserving
-both trajectories until a later globally mirror-invariant readout. Whole-chart
-mirroring should remain consistent; arbitrary hand swaps at individual moments
-are not an equivalent invariance requirement. No such comparison has been run.
+**Available now:** both seed 17 arms save logits for all 79 human validation
+cells, including all five labels on the 12 complete inputs. Join predictions
+to the prepared cohort by layer/cell identity to recover exact context, rate,
+and confidence. No forward pass is needed for these labeled comparisons.
+Complete five-query outputs on the other 19 inputs require additional inference;
+unlabeled outputs would remain inspection-only.
 
-These proposals adapt existing temporal representation and composition families.
-Their usefulness and any contribution specific to this task remain unestablished.
+For each concept inspect
 
-## Diagnostics before scaling
+$$
+p_P=p_{\mathrm{supporting}}+p_{\mathrm{prominent}},\qquad
+p_{\mathrm{strong}\mid P}=\frac{p_{\mathrm{prominent}}}
+{p_{\mathrm{supporting}}+p_{\mathrm{prominent}}}.
+$$
 
-The next evaluation must test relationships directly. Assemble human-reviewed
-Stream/Jack/Trill contrasts with approximately matched note count, NPS, column
-histograms, chord sizes, and timing where feasible, while changing action order
-or group recurrence. Include coexistence cases and near misses. Do not assign
-style labels mechanically from a motif generator. Use source-disjoint groups
-and freeze judgments before examining model differences. Previously selected
-illustrative cases are exploratory examples, not an estimate of contrast accuracy.
+Plot labeled score distributions, ranking metrics such as AUROC/AP where both
+classes exist, and the existing 0.5-threshold false positives/negatives. For
+weighted ranking, give cells equal total weight within each source group before
+computing the concept's curve. Report support, and retain conditional-strength
+scores for all reference positives, including missed ones.
 
-| Possible bottleneck | Smallest useful diagnostic | Interpretation and main limitation |
+For the 12 joint Stream/Jack inputs, show each reference/predicted presence pair,
+both three-class distributions, and errors within each of the four combinations.
+Inspect the existing short-local Trill examples with section length and scale
+context. This is a score and error audit, not a new semantic labeling exercise.
+
+If Trill positives outrank negatives while all scores stay below 0.5, zero
+recall alone does not establish absent representation. If ranking and concept
+selectivity are poor, a threshold shift cannot repair them. Do not optimize a
+threshold on these validation cases and count the resulting recall as an
+architecture gain; report any operating-point analysis separately.
+
+**Deliverable:** one section-level error table and compact score/joint-readout
+plots, with checkpoint, target, context, confidence, and source-group identities.
+Probe A requires only a small analysis adapter and the saved files. It informs
+interpretation of B/C rather than deciding whether the two upgrades proceed.
+
+### Probe B: frozen backbone, two newly trained readouts
+
+Use the style-only seed 17 best checkpoint as the initial backbone. Cache its
+`model.encoder(chart)` output in evaluation mode, before the assessor's hand-pair
+projection. Preserve the full `[event, hand, 64]` tensor, valid lengths, section
+masks, and chart-derived timing sidecars. Cache keys include checkpoint hash,
+input identity/rate, and tensorization version. No assessment or evidence target
+enters these features. Cache on CPU/disk and stream batches to the accelerator.
+
+Both variants use the same frozen states, new supervision policy, sampled cells,
+update budget, and matched initialization of common readout components. Keep
+the temporal setting at seed 17's features: R1 may compute the multiscale spans
+from existing source facts, but does not add the gap-ratio/local-BPM package.
+
+| Variant | Trainable part |
+| --- | --- |
+| R0 | Reinitialize and train the current assessor, including pair projection, concept embedding, section GRU, and head |
+| R1 | Train the proposed multiscale composition plus local/ordered assessment paths on the same frozen backbone output |
+
+The new composition module is trainable in R1 and later becomes part of the
+shared encoder in the end-to-end architecture. Reuse that implementation in C.
+Do not compare an old machine-trained assessor directly against a new
+human-supervised R1 and attribute the difference to readout structure.
+
+| Observation | Consequence for implementation |
+| --- | --- |
+| R1 improves short-local Trill and concept selectivity without strength/LN regression | Existing contextual position states contain useful information for the new path; prioritize temporal features and composition over broad backbone expansion |
+| Training fit improves but validation does not | Inspect source support and generalization; more readout width is not the default next action |
+| Neither readout fits clear training positives | Check targets, sampling exposure, optimization, and whether frozen states hide the needed distinctions; C must allow joint adaptation |
+| R1 increases recall together with false positives or strength errors | Refine how local responses interact with ordered section context; inspect candidate-count effects |
+
+Success establishes usefulness of contextual position states, not a pure local
+Trill detector: the cached BiGRU has already read the whole review context.
+Failure cannot prove that the backbone contains no relevant information. If R1
+wins, a single capacity-matched R0 extension can distinguish extra capacity
+from the proposed path before making a mechanism claim. Hand-fusion variants
+are conditional on specific remaining errors, not an initial grid.
+
+**Deliverable:** paired training/development curves, the four common evaluation
+views, and per-position/scale responses on reviewed examples. Local plots must
+show their composition spans and section boundaries, without labeling them as
+causal attribution or dense ground truth.
+
+### Pilot C: time by multiscale, trained end to end
+
+Run all four arms on the same new cohort at $\beta=0$:
+
+| Arm | Temporal representation | Composition/readout |
 | --- | --- | --- |
-| Local facts are poorly encoded | Probe frozen event states for exact group relationships, repeat versus return, and release placement | Failure motivates encoder/time changes; probe capacity and source leakage must be controlled. Success on source facts does not establish style recognition. |
-| Timing is difficult to use | Compare richer physical-time/local-pace features, then add beat metadata in a separate comparison with similar capacity and fixed readout | Improvement from new timing information differs from improvement from a richer embedding; metadata quality and tempo notation are confounders. |
-| Sustained expression is lost at readout | Hold encoder fixed and compare current readout with a small ordered multiscale readout on pace/duration/interruption contrasts | Improvement with decodable local facts favors a readout bottleneck; a larger readout alone is a necessary capacity control. |
-| Supervision or sampling dominates | Inspect reviewed positive support and compare against constant and simple chart-feature baselines | This tests shortcut explanations without assuming imbalance is the primary cause; changing data and architecture together obscures attribution. |
-| Evidence gradients contribute little useful signal | Measure encoder gradient alignment and assessment changes under a separately controlled auxiliary comparison | Small norms alone cannot distinguish a weak useful signal from an irrelevant or conflicting one. |
+| C0 | Seed 17 time features | Current assessor |
+| CT | Performed time + local pace + local-BPM normalization | Current assessor |
+| CM | Seed 17 time features | Proposed multiscale local/ordered paths |
+| CTM | Enhanced temporal representation | Proposed multiscale local/ordered paths |
 
-A sensible first comparison uses $\beta=0$, fixes the current readout, and tests
-an enhanced physical-time/local-pace representation using the existing input
-information. A separate comparison adds beat metadata while retaining that
-representation and matching trainable capacity as closely as possible.
-Introduce the multiscale readout subsequently; if both timing and readout
-branches remain plausible, test their interaction. Do not simultaneously change
-timing, readout, class balance, and evidence weight and interpret the result as
-a causal test of one of them.
+This pilot implements both confirmed upgrades and tests how they work together.
+It does not make their research direction contingent on a single short run.
+Local BPM is part of the temporal feature package; this comparison does not
+attempt to attribute gains to every individual timing channel. CM receives
+the multiscale module's span/count metadata but no new gap-ratio or local-BPM
+descriptors; those belong to CT and CTM.
 
-Report matched-contrast errors, positive recall, and supporting/prominent
-distinctions alongside group-macro NLL. Keep independent held-out human cases
-for evaluation after validation has informed architecture choices. Seeds 29
-and 43 can test variability of the original paired objective, but cannot by
-themselves identify a timing or readout mechanism. Practical improvement
-thresholds, regression bounds, compute budget, and the exact seed/slice plan
-remain to be agreed before a next experiment is specified.
+Use seed 17 initially, matching sampled cell streams, optimizer settings, and
+common update counts. Match initialization of identical components explicitly;
+architecture changes can alter random-number consumption, so a shared integer
+seed alone is insufficient. Extra modules receive their own deterministic
+initialization. Record parameter count, throughput, training fit, and both final
+common-update and selected-checkpoint results. This 2x2 comparison estimates
+practical module effects, including added capacity, rather than a pure effect
+of inductive bias at identical parameter count.
 
-### Where additional parameters would go
+| Pilot observation | Architecture decision |
+| --- | --- |
+| CM improves short-local Trill; CT improves pace-related confusions | Keep both components and the initial backbone width |
+| CTM improves while the single-module arms show little gain | Investigate dependence between temporal features and composition; retain their early connection and repeat the comparison before claiming an interaction |
+| CM improves presence but damages strength or false-positive rates | Strengthen the joint use of local and ordered summaries instead of making a max response the final decision |
+| C0 improves Tech under the new supervision | Establish the new-cohort baseline and measure CT/CM/CTM gains relative to it; the historical comparison does not isolate architecture or supervision alone |
+| All arms struggle to fit High-confidence Tech training targets | Audit target exposure, loss masks, optimization, and relation inputs before adding complexity |
+| Training fits but validation is unstable | Treat independent source support as a limitation; do not make a strong architecture claim from the single High-confidence Tech validation positive |
 
-The following are parameter counts from model instantiation, not measured
-quality or runtime improvements. Inference excludes the evidence selector.
+C0 is the architecture control on the new training contract. The original seed
+17 checkpoint is not that control. Short-pilot learning curves may be immature;
+a negative pilot result is not evidence that multiscale representation or pace
+features are unnecessary.
 
-| Change from the seed 17 baseline | Inference parameters | Increase | Question it could test |
-| --- | ---: | ---: | --- |
-| Baseline | 106,423 | — | Reference |
-| Relation feedforward dimension 128 → 256 | 122,935 | 15.5% | Is within-block feature mixing too narrow? |
-| Row dimension 64 → 128 | 139,319 | 30.9% | Is hand-pair projection/readout input too narrow? |
-| Section hidden size 32 → 64 | 149,367 | 40.4% | Is section recurrent capacity a bottleneck? |
-| Add a second relation block | 154,107 estimated | 44.8% | Does repeated relational composition help? |
-| Hand hidden size 32 → 64 | 238,391 | 124.0% | Is early temporal state capacity insufficient? |
+CTM outperforming both single-module arms can also reflect additive gains.
+For a loss $L$ at a common comparison point, inspect the interaction contrast
+$I=(L_{CM}-L_{CTM})-(L_{C0}-L_{CT})$: positive $I$ means the temporal package
+helps more with multiscale composition. Report its per-concept behavior and
+seed uncertainty before interpreting it as a reproducible interaction.
 
-A second relation block requires an architecture change; it is not an existing
-configuration switch. Increasing hand width affects several dependent layers
-and more than doubles inference parameters. Prefer a targeted change after
-probing where information becomes inaccessible. Better time coordinates and
-local episode composition may matter more than uniform width, but this remains
-a hypothesis. Enlarging the selector solely to lower selection NLL has no
-demonstrated assessment benefit in seed 17.
+### Execution order, bounds, and checkpoint selection
 
-## Questions for the next design discussion
+These are proposed small-run bounds for implementation planning, not results
+or executable commands supplied by the existing trainer:
 
-1. **What proves Stream/Jack separation?** Which matched families, near misses,
-   and coexistence cases are mandatory? Which mistakes would reject a model
-   despite a lower aggregate NLL?
-2. **Which temporal changes should preserve style?** Equivalent half/double-BPM
-   notation can leave performed actions unchanged; genuine time stretching can
-   change expression. Decide which transformations are nuisance controls and
-   which require a new human judgment. Beat coordinates must not silently
-   redefine the labels.
-3. **What makes Trill an episode?** How should pace, continuous duration,
-   fragmentation, resumption, and section entry/exit affect presence and
-   strength? Retain calibrated examples instead of imposing one hard threshold.
-4. **Where is the information lost?** Can frozen local states recover fixed A/B
-   structure and articulation while section predictions fail? Would a stronger
-   current readout explain the gain of a multiscale alternative?
-5. **What temporal precision matters?** Which release/attack offsets distinguish
-   articulation, and which reflect source noise? A universal jitter tolerance
-   is unsafe as a semantic assumption: even a small offset can split an exact
-   simultaneous group or change occupancy ordering.
-6. **What timing is available at inference?** Are redlines supplied, estimated
-   from audio, or inferred from notes? How should missing timing, uncertain
-   tempo, and inconsistent meter be represented and evaluated?
-7. **What supervision is needed for Tech?** Can section judgments teach the
-   relevant interactions across scales, or are more reviewed temporal
-   contrasts needed? Avoid equating unpredictability to one model with Tech.
-8. **What counts as a worthwhile result?** Specify per-concept positive-recall
-   and strength guards, a practical effect size, source-disjoint evaluation,
-   seed variability, and a resource limit. Choose these before inspecting the
-   next comparison's outputs.
+| Stage | Initial scope | Proposed cap |
+| --- | --- | --- |
+| A | Saved train/validation metadata and saved validation logits | No training; optional completion of five-query outputs on the 31 human validation inputs |
+| B | One cached backbone, R0/R1, seed 17 | At most 1,000 matched updates and 15 charged minutes per arm; cache construction reported separately |
+| C | C0/CT/CM/CTM, seed 17 | At most 1,000 common updates and 30 charged minutes per arm |
+| Confirmation | C0 and the selected combined implementation only | Paired seeds 29 and 43 under a fixed configuration and a separately recorded feasible convergence budget |
+
+Before B/C, use a bounded throughput check to set one feasible common update
+count within these caps. Include preparation/validation in time accounting and
+record cache time, storage, and peak device memory separately. A cap-triggered
+stop must retain a common comparison point and report incomplete convergence;
+it must not silently give a faster arm more training. These bounds do not
+promise that 1,000 updates can reproduce seed 17's best epochs.
+
+For B/C, select checkpoints by human group-macro three-class NLL under the new
+supervision/evaluation policy, with a fixed evaluation cadence and earliest
+checkpoint on ties. Report the final common-update result as well. Presence
+ranking, joint selectivity, Trill misses, false positives, and LN/strength are
+required companion views; one scalar cannot approve the model. Supporting versus
+prominent Tech balanced accuracy remains unavailable on the current High slice;
+its conditional NLL describes the single reference-positive cell.
+
+A improves error interpretation; B identifies useful access to existing states;
+C tests joint adaptation. Confirmation focuses on C0 versus the selected combined
+implementation, instead of repeating the full grid. Before confirmation, freeze
+its budget, primary practical effect threshold, regression tolerances, and
+checkpoint rule. This document does not invent statistically reliable thresholds
+from the sparse validation counts. Pilot caps bound implementation cost;
+confirmation requires a fixed decision criterion and adequate evaluation support.
+
+## Implementation work and return to evidence supervision
+
+The existing implementation supplies recoverable checkpoints, per-cell logits,
+confidence provenance, exact replay, and a callable encoder/assessor split. It
+does not yet supply the new cohort policy, readout cache trainer, five-query
+batch reuse, temporal features, or four-arm runner.
+
+| Owner | Required work | Targeted verification |
+| --- | --- | --- |
+| `dataset.py`, `prepare.py`, `corpus.py` | Version the selected targets, effective confidence policy, shared-input identity, and human-inclusive sampler; retain frozen group assignments | Per-label masks, human precedence, confidence revisions, no duplicate target weighting, and split/context/rate identity |
+| `replay.py`, `tensors.py`, `relations.py` | Parse redline local BPM and add physical/ratio descriptors without changing source actions | Exact grouping/releases, ratio availability, local tempo changes, context limits, and mirror-relative features |
+| `model.py` | Add shared multiscale states, local/ordered aggregation, and fixed-width shared selector memory | Padding and scope masks, empty sections, short-local gradient path, all-scale access, mirror behavior, and branch isolation |
+| `metrics.py` and analysis adapter | Join exact same-input outputs and report ranking, joint cases, confidence strata, and sparse support | Metrics requiring missing classes stay unavailable; strength retains missed positives; all compared rows retain matching identities |
+| `train.py`, typed config and packaged presets | Add frozen-backbone and four-arm comparisons, matched sampling/initialization, common-budget accounting, and the new checkpoint criterion | Human cells reach the loss; masks preserve the sampling denominator; B freezes only the backbone; paired comparison points are reproducible |
+
+Prepared seed 17 graph files omit redline timing, but the preparation config
+points to hash-verified original `.osu` files under
+`artifacts/scoped-style-modeling/sources/`. A read-only check found all 496
+training/validation source files present, matching their hashes and containing
+`TimingPoints` sections. Regenerate a versioned preparation with parsed timing
+fields from those sources. Do not infer BPM from a graph that
+contains no redline data or mutate the saved seed 17 preparation in place.
+The current adapter is restricted to 1x and its cache key omits rate because
+of that restriction; rate sensitivity requires explicit adapter/tensor support.
+
+Once the selected structure can be inspected for short-local expression,
+compare style-only and style+evidence again on the same new cohort and
+architecture. Keep assessment targets fixed between the pair. Attach evidence
+only through its correct record provenance and explicit availability; a human
+assessment does not automatically certify the witness inherited with it.
+
+The question is whether evidence supervision improves concept selectivity,
+use of relevant local relationships, or supporting/prominent judgment on the
+new shared representations. Preserve source-local case inspection, the LN guard,
+and the separation between teacher-forced evidence NLL and assessment quality.
+The selector must receive the new shared memory so its gradients can train
+multiscale composition. Reference labels/history remain auxiliary-only. This
+comparison can proceed before all five styles are solved, without enlarging
+the decoder or starting a broad $\beta$ search.
+
+Full episode segmentation, dense style annotation, CRF/HSMM readout, audio timing
+inference, fractional-grid prediction, and uniform backbone widening are deferred.
+Optional rate sweeps show five readouts against performed speed; score accuracy
+only where actual rate-specific human judgments exist. Otherwise they are
+sensitivity plots, with no invariance loss or automatic label transfer.
 
 ## Evidence identity and reproducibility limits
 
@@ -486,6 +781,7 @@ The harness inventory records source commit
 `eb233598c6d0fcf5e9931416948d105f23ca8a71`; all eight listed tool-file hashes
 match the inspected files. Pinned inspection links above identify
 `beatmap-lens` revision `ee71da102a604df4d3673fd19b66263c3f739625`.
-This report does not establish a clean accepted experiment execution record.
-Its single-seed results and proposed explanations remain exploratory, with
-structural contrast evaluation and controlled architecture comparisons pending.
+The seed 17 measurements remain exploratory single-seed evidence. The next
+architecture direction is confirmed, while its concrete implementation choices
+and assessment gains remain to be established by the probes and comparisons
+specified above.
