@@ -391,6 +391,12 @@ The next diagnostics should address the observed failure modes:
 These are proposed diagnostics. No further training, threshold search, new
 annotation, or model adoption is part of the completed experiments.
 
+[Source-action representation directions](source_action_representation_directions.md)
+develops the broader architectural question: learning action-block structure
+with direct access to source, local, and contextual representations, while
+using scoped style as a semantic readout. It preserves the findings and limits
+of these results as the empirical baseline.
+
 ## Evidence locations and reproducibility
 
 All run paths below are relative to `artifacts/scoped-style-modeling/`. They
