@@ -2,7 +2,9 @@
 
 The probe entrypoint implements A, B, and C from
 [the seed 17 report](scoped_style_seed17_results_and_next_questions.md).
-It belongs to the scoped-style research classifier. The
+The [experiment postmortem](scoped_style_probe_postmortem.md) records the
+completed seed 17 A/B/C results, detection failures, and interpretation limits.
+The entrypoint belongs to the scoped-style research classifier. The
 [original paired trainer](scoped_style_training.md) retains its machine-only
 training contract and checkpoints.
 
