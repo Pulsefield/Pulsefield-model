@@ -13,6 +13,10 @@ easier to learn and reuse. Multiple residual slots are a possible extension;
 their benefit is unestablished. The learning objective and the access paths
 need separate evidence even when they form one research direction.
 
+The [source-action block prediction foundation](source_action_stage1.md) owns
+the implemented partial-observation contract, reference predictor and bounded
+software checks for a common prediction task.
+
 The baseline is the scoped classifier examined in the
 [2026-09-14 postmortem](scoped_style_probe_postmortem.md), with implementation
 inspection at source revision `32e2c60c8b437884e9c45c634b1d22d6a7bfaef3`.

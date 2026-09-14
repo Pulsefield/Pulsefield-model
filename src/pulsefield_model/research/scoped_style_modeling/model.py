@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Protocol
 
 import torch
 from torch import Tensor, nn
@@ -31,14 +32,21 @@ def packed_gru(gru: nn.GRU, values: Tensor, lengths: Tensor) -> tuple[Tensor, Te
     return output, terminal.transpose(0, 1).flatten(1)
 
 
+class RelationInputs(Protocol):
+    edge_index: Tensor
+    edge_features: Tensor
+    relation_edges: Tensor
+    relation_features: Tensor
+
+
 class RelationAttention(nn.Module):
-    def __init__(self, config: ModelConfig):
+    def __init__(self, config: ModelConfig, *, edge_dim: int = EDGE_DIM, relation_dim: int = RELATION_DIM):
         super().__init__()
         dim = 2*config.hand_hidden
         self.heads = config.attention_heads
         self.qkv = nn.Linear(dim, 3*dim)
-        self.edge = nn.Linear(EDGE_DIM, dim)
-        self.relation = mlp(RELATION_DIM, dim, dim)
+        self.edge = nn.Linear(edge_dim, dim)
+        self.relation = mlp(relation_dim, dim, dim)
         self.bias = nn.Linear(dim, self.heads)
         self.value = nn.Linear(dim, dim)
         self.output = nn.Linear(dim, dim)
@@ -47,7 +55,7 @@ class RelationAttention(nn.Module):
         self.ff = mlp(dim, config.feedforward_dim, dim, config.dropout)
         self.dropout = nn.Dropout(config.dropout)
 
-    def forward(self, x: Tensor, chart: ChartTensors, extra_descriptor: Tensor | None = None) -> Tensor:
+    def forward(self, x: Tensor, chart: RelationInputs, extra_descriptor: Tensor | None = None) -> Tensor:
         shape = x.shape
         x = x.reshape(-1, shape[-1])
         n, dim = x.shape
