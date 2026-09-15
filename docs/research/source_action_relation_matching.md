@@ -6,6 +6,74 @@ tests whether query-dependent relation preference improves held-out source-actio
 prediction. It uses the four-action schema and the existing
 [composition runner](source_action_relation_composition.md).
 
+## Pilot result and decision
+
+**Retain additive as the reference; defer adopting query matching.** The candidate
+remains selectable. Run `pilot-20260915-01` completed every declared stage at
+clean source `643f50519f6000e986cea6f40d36e93172de9159`, with one seed, the serial
+schedule and 300 paired updates. The common initializer and zero recovery were
+checked against baseline `a7ab19f26cd8dd05480c8376060aaced1af4f2a7`.
+
+All NLL values below are lower-is-better, in nats. Action values average mean-row
+NLL within song group and then across 32 groups (192 paired blocks). Human values
+use the existing concept/group macro aggregation on 61 cells from 18 groups.
+
+| Measurement | Additive | Query |
+| --- | ---: | ---: |
+| Initial detailed action NLL | 4.335291 | 4.335291 |
+| Final detailed action NLL | 2.633393 | 2.633629 |
+| First-position action NLL | 2.914092 | 2.914599 |
+| 4-row block NLL | 2.729764 | 2.730039 |
+| 16-row block NLL | 2.543504 | 2.543722 |
+| 64-row block NLL | 2.626912 | 2.627126 |
+| Frozen human macro NLL | 0.954595 | 0.955000 |
+| Matched untrained human macro NLL | 0.943776 | 0.943776 |
+
+The paired action gain is **−0.00023594**, with group-bootstrap 95% interval
+**[−0.00051673, 0.00000713]**. It misses the predeclared 0.02 improvement threshold
+and the positive interval-lower-bound requirement. The data do not establish a
+reliable difference in either direction. First-position and scale regressions
+remain below 0.000507, versus the 0.05 guard. Human macro regression is 0.000405;
+the largest concept regression is 0.000991, both within their guards. The short
+human readers do not show a gain over matched untrained controls.
+
+Both arms received 2,400 block draws, 7,200 block/view exposures and 190,836
+target-row exposures. These counts include repeated views and possibly overlapping
+windows. Training sampled 1,690 of 3,169 groups and 2,061 of 11,564 beatmaps.
+Common tensors matched exactly before training; the maximum initial per-row NLL
+difference was 9.54e-7 on MPS. The candidate matrix ended with Frobenius norm
+0.960672, confirming that it received updates without establishing useful
+query-dependent retrieval.
+
+The auxiliary results give no reason to override the primary measurement.
+For S4, immediately after serial relation attention, the query arm's combination
+holdout MSE is slightly higher for all four fixed structural targets. Equal-pair
+prefix-route TV is 0.128975/0.129360 for additive/query across the 12 selected
+pairs. These are synthetic readout and routing measurements, with the limitations
+of the [existing protocols](source_action_relation_composition.md).
+
+Training took 964.62 seconds; the full run took 1,309.47 seconds. Sampled MPS
+driver peak was 2.289 GiB and process peak RSS 2.786 GiB. All time, memory and
+storage limits passed. Recorded model-update time over updates 11–300 was
+178.19 seconds for additive and 156.06 for query. The runner always executes
+additive first; cache and shape warmup can favor the second arm, so these timings
+do not isolate intrinsic operator cost or establish a speedup.
+
+The result is limited to one seed, this short training exposure, these validation
+groups and teacher-forced action prediction. It cannot exclude gains at another
+training horizon or establish generated beatmap quality. This pilot does not
+justify replacing the additive reference.
+
+Local evidence is under
+`artifacts/source-action-relation-matching/pilot-20260915-01/`: `summary.json`,
+the reproducible saved-output auditor `analyze.py`, `report.json`, source/config
+snapshots and `seed-17/` measurements/checkpoints. Source aggregate SHA256 is
+`a2fdb902dc406a11e82db4fc7a10807a549756866af9dd5372f5e408f6091871`;
+validation-manifest SHA256 is
+`717e10ecbea9f7228f2bf7b444474f2513d8405a2e6fdafb6256fc5c11fe0254`.
+Raw local artifacts may be absent in a fresh clone; the measurements, controls
+and decision are preserved here.
+
 ## Operator and controls
 
 For head $h$ with width $d_h$, the additive operator computes
