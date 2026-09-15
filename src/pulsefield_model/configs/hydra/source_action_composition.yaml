@@ -4,6 +4,8 @@ defaults:
   - override hydra/job_logging: disabled
   - override hydra/hydra_logging: disabled
 
+comparison: operator_order
+backbone_schedule: null
 output_dir: artifacts/source-action-composition/overnight
 prepared_dir: artifacts/scoped-style-modeling/prepare-v1
 dataset_dir: artifacts/scoped-style-modeling/dataset-b22a7a4

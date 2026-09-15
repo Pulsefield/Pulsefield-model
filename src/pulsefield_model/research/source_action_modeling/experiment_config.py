@@ -8,6 +8,8 @@ from .model import ModelConfig
 
 @dataclass
 class CompositionExperimentConfig:
+    comparison: str = "operator_order"
+    backbone_schedule: str | None = None
     output_dir: str = "artifacts/source-action-composition/overnight"
     prepared_dir: str = "artifacts/scoped-style-modeling/prepare-v1"
     dataset_dir: str = "artifacts/scoped-style-modeling/dataset-b22a7a4"
@@ -50,6 +52,14 @@ class CompositionExperimentConfig:
 
     def validate(self):
         self.model.__post_init__()
+        if self.comparison not in ("operator_order", "relation_matching"):
+            raise ContractError("comparison must be operator_order or relation_matching")
+        if self.comparison == "operator_order" and self.backbone_schedule is not None:
+            raise ContractError("backbone_schedule applies only to relation_matching")
+        if self.comparison == "relation_matching" and self.backbone_schedule not in ("serial", "interleaved"):
+            raise ContractError("relation_matching requires one explicit backbone_schedule")
+        if self.comparison == "relation_matching" and self.warm_start_dir is not None:
+            raise ContractError("relation_matching uses paired fresh initialization; warm_start_dir must be null")
         if self.warm_start_dir is not None and not self.warm_start_dir.strip():
             raise ContractError("warm_start_dir must be a nonempty checkpoint directory or null")
         if self.model.hand_hidden != 32:
@@ -57,7 +67,7 @@ class CompositionExperimentConfig:
         if self.model.lane_dim != 16:
             raise ContractError("lane_dim is fixed at 16 for the shared baseline initializer")
         if self.model.dropout != 0:
-            raise ContractError("Matched operator-order comparison requires dropout=0")
+            raise ContractError("Matched two-arm comparison requires dropout=0")
         if self.device not in ("cpu", "mps"):
             raise ContractError("This bounded runner supports explicit cpu or mps")
         if not self.seeds or len(set(self.seeds)) != len(self.seeds) or any(type(s) is not int or s < 0 for s in self.seeds):

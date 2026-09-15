@@ -21,12 +21,13 @@ from ..scoped_style_modeling.dataset import ContractError, canonical_json, diges
 from ..scoped_style_modeling.probe_metrics import paired_changes
 from .checkpoint import save_snapshot, warm_start_snapshot
 from .comparison import evaluate_structure, train_paired_step, parameter_counts
-from .composition import initialize_composition, ORDERS
+from .composition import initialize_composition
 from .consistency import evaluate_path_consistency, prefix_path_pair
 from .experiment_config import CompositionExperimentConfig
 from .pilot import fixed_validation
 from .full_corpus import load_population, export_allocation, FullCorpusSampler
 from .observation import ViewPolicy
+from .relation_matching import initialize_relation_matching
 from .semantic_probe import fit_readout, evaluate_readout
 from .structural_probe import evaluate_structural_reuse
 
@@ -107,6 +108,14 @@ def run_experiment(config: CompositionExperimentConfig, *, resolved_yaml: str) -
             payload = path.read_bytes()
             (source_dir / path.name).write_bytes(payload)
             hashes[path.name] = digest(payload)
+        for name in ("model.py", "config.py"):
+            path = sources.parent / "scoped_style_modeling" / name
+            relative = Path("scoped_style_modeling") / name
+            destination = source_dir / relative
+            destination.parent.mkdir(exist_ok=True)
+            payload = path.read_bytes()
+            destination.write_bytes(payload)
+            hashes[str(relative)] = digest(payload)
         report["source_sha256"] = digest(canonical_json(hashes).encode())
         write("source/manifest.json", hashes)
         progress("population")
@@ -135,8 +144,23 @@ def run_experiment(config: CompositionExperimentConfig, *, resolved_yaml: str) -
             random.seed(seed)
             np.random.seed(seed)
             torch.manual_seed(seed)
-            models = {n: m.to(config.device) for n, m in initialize_composition(config.model, seed).items()}
+            models = (initialize_composition(config.model, seed) if config.comparison == "operator_order" else
+                      initialize_relation_matching(config.model, seed, backbone_schedule=config.backbone_schedule))
+            names = tuple(models)
+            contrast = f"{names[0]}_minus_{names[1]}"
             initialization = {"policy": "from-scratch", "weights": {}}
+            if config.comparison == "relation_matching":
+                left, right = (m.state_dict() for m in models.values())
+                extra = set(right) - set(left)
+                common_equal = all(torch.equal(value, right[key]) for key, value in left.items())
+                zero = not right["encoder.relations.relation_key"].count_nonzero().item()
+                if extra != {"encoder.relations.relation_key"} or not common_equal or not zero:
+                    raise ContractError("Relation comparison must share every common tensor with zero W_rel")
+                initialization.update(common_tensors_equal=common_equal, relation_key_zero=zero,
+                    common_state_sha256=digest(canonical_json({k: digest(v.contiguous().numpy().tobytes())
+                                                              for k, v in left.items()}).encode()),
+                    parameter_dtypes={n: sorted({str(p.dtype) for p in m.parameters()}) for n, m in models.items()})
+            models = {n: m.to(config.device) for n, m in models.items()}
             if config.warm_start_dir is not None:
                 initialization = {"policy": "warm-start", "weights": {
                     name: warm_start_snapshot(Path(config.warm_start_dir) / f"seed-{seed}" / f"{name}-latest.pt", model)
@@ -167,7 +191,7 @@ def run_experiment(config: CompositionExperimentConfig, *, resolved_yaml: str) -
                         seed_report["training_stop_reason"] = "common-time-bound"
                         break
                     result = train_paired_step(models, optimizers, sampler, blocks=config.blocks_per_update,
-                                               gradient_cap=config.gradient_cap, configurations=tuple(ORDERS))
+                                               gradient_cap=config.gradient_cap, configurations=names)
                     stream.write(canonical_json({"update": update, **result}) + "\n")
                     stream.flush()
                     seed_report["updates"] = update
@@ -191,7 +215,7 @@ def run_experiment(config: CompositionExperimentConfig, *, resolved_yaml: str) -
             structure = evaluate_structure(models, paired, records, batch_size=config.evaluation_batch_size,
                                             bootstrap_samples=config.bootstrap_samples, on_batch=guard)
             write(f"seed-{seed}/structure-final.json", structure)
-            seed_report["paired_gain_nats"] = structure["paired_detailed_mean_row_nll"]["serial_minus_interleaved"]
+            seed_report["paired_gain_nats"] = structure["paired_detailed_mean_row_nll"][contrast]
             human_order = {}
             for name, model in models.items():
                 guard()
@@ -229,7 +253,8 @@ def run_experiment(config: CompositionExperimentConfig, *, resolved_yaml: str) -
                     if config.device == "mps":
                         torch.mps.empty_cache()
                 write(f"seed-{seed}/{name}-human-reuse.json", paired_changes(predictions["untrained"], predictions["trained"]))
-            write(f"seed-{seed}/human-order-comparison.json", paired_changes(human_order["serial"], human_order["interleaved"]))
+            comparison_file = "human-order-comparison.json" if config.comparison == "operator_order" else "human-matching-comparison.json"
+            write(f"seed-{seed}/{comparison_file}", paired_changes(human_order[names[0]], human_order[names[1]]))
             seed_report["elapsed_seconds"] = monotonic() - seed_started
             del models, optimizers, model
             gc.collect()

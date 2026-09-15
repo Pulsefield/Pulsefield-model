@@ -80,7 +80,7 @@ class LocalBlock(nn.Module):
 class ComposedEncoder(nn.Module):
     output_dim = 64
 
-    def __init__(self, config: ModelConfig):
+    def __init__(self, config: ModelConfig, *, relation_matching: str = "additive"):
         super().__init__()
         if config.hand_hidden != 32:
             raise ContractError("The fixed composed architecture requires 32 GRU units per direction")
@@ -92,7 +92,8 @@ class ComposedEncoder(nn.Module):
         self.local = nn.ModuleList(LocalBlock(d, config.dropout) for d in (1, 2, 4))
         attention = AttentionConfig(hand_hidden=32, attention_heads=config.attention_heads,
                                     feedforward_dim=config.feedforward_dim, dropout=config.dropout)
-        self.relations = RelationAttention(attention, edge_dim=EDGE_DIM, relation_dim=RELATION_DIM)
+        self.relations = RelationAttention(attention, edge_dim=EDGE_DIM, relation_dim=RELATION_DIM,
+                                           matching=relation_matching)
         self.hand = nn.GRU(64 + 2 * LANE_DIM + ROW_DIM + 2 * SUMMARY_DIM, 32,
                            batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(config.dropout)

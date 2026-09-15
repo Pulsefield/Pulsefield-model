@@ -40,8 +40,17 @@ class RelationInputs(Protocol):
 
 
 class RelationAttention(nn.Module):
-    def __init__(self, config: ModelConfig, *, edge_dim: int = EDGE_DIM, relation_dim: int = RELATION_DIM):
+    """Sparse attention with shared relation bias/value and optional query matching.
+
+    ``query`` adds q^T W_rel e / sqrt(head_dim) using the complete descriptor
+    already read by bias/value. W_rel starts at zero without consuming RNG, so
+    identical common tensors recover the additive operator at initialization.
+    """
+    def __init__(self, config: ModelConfig, *, edge_dim: int = EDGE_DIM, relation_dim: int = RELATION_DIM,
+                 matching: str = "additive"):
         super().__init__()
+        if matching not in ("additive", "query"):
+            raise ContractError("Relation matching must be additive or query")
         dim = 2*config.hand_hidden
         self.heads = config.attention_heads
         self.qkv = nn.Linear(dim, 3*dim)
@@ -54,6 +63,7 @@ class RelationAttention(nn.Module):
         self.norm2 = nn.LayerNorm(dim)
         self.ff = mlp(dim, config.feedforward_dim, dim, config.dropout)
         self.dropout = nn.Dropout(config.dropout)
+        self.relation_key = nn.Parameter(torch.zeros(dim, dim)) if matching == "query" else None
 
     def forward(self, x: Tensor, chart: RelationInputs, extra_descriptor: Tensor | None = None) -> Tensor:
         shape = x.shape
@@ -66,6 +76,9 @@ class RelationAttention(nn.Module):
         if extra_descriptor is not None:
             descriptor = descriptor + extra_descriptor
         scores = (q[query]*k[neighbor]).sum(-1)/math.sqrt(dim//self.heads) + self.bias(descriptor)
+        if self.relation_key is not None:
+            relation_keys = F.linear(descriptor, self.relation_key).reshape(-1, self.heads, dim//self.heads)
+            scores = scores + (q[query]*relation_keys).sum(-1)/math.sqrt(dim//self.heads)
         indices = query[:, None].expand(-1, self.heads)
         maxima = scores.new_full((n, self.heads), -torch.inf)
         maxima.scatter_reduce_(0, indices, scores.detach(), reduce="amax", include_self=True)

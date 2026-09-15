@@ -14,8 +14,8 @@ COMPOSITION_POLICY = "same-modules/LLLR-vs-LLRL/chronological-bank-v1"
 
 
 class CompositionEncoder(TimeLocalEncoder):
-    def __init__(self, config, representation, arm):
-        super().__init__(config, representation)
+    def __init__(self, config, representation, arm, *, relation_matching="additive"):
+        super().__init__(config, representation, relation_matching=relation_matching)
         self.arm = arm
 
     def forward(self, observation):
@@ -28,7 +28,7 @@ class CompositionPredictor(RepresentationPredictor):
     @property
     def policy_identity(self):
         return {**super().policy_identity, "architecture": COMPOSITION_POLICY,
-                "order": list(ORDERS[self.configuration]), "storage": list(COMPOSITION_LEVELS),
+                "order": list(ORDERS[self.encoder.arm]), "storage": list(COMPOSITION_LEVELS),
                 "post_relation_support": "relation-conditioned; not strictly event-local"}
 
     def initialize_untrained(self, seed):

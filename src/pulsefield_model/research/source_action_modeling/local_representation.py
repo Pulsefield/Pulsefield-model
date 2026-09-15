@@ -135,8 +135,8 @@ class ConditionedLocalBlock(LocalBlock):
 
 class TimeLocalEncoder(ComposedEncoder):
     """Retain U/L1/L2/L3 while changing only the configured early computation."""
-    def __init__(self, config: ModelConfig, representation: LocalRepresentationConfig):
-        super().__init__(config)
+    def __init__(self, config: ModelConfig, representation: LocalRepresentationConfig, *, relation_matching="additive"):
+        super().__init__(config, relation_matching=relation_matching)
         self.representation = representation
         self.source_time = None if representation.time_basis == "legacy" else nn.Linear(
             2 * time_basis_dim(representation.time_basis) + 4, 64, bias=False)
