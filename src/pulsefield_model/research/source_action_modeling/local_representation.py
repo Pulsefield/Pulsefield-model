@@ -71,6 +71,9 @@ class SourcePacket:
 def source_packet(observation: ObservationTensors, geometry: EventGeometry,
                   config: LocalRepresentationConfig) -> SourcePacket:
     valid = valid_rows(observation)
+    # TODO(row-visibility): share one action-visible flag across the four lanes
+    # (row_facts 16 -> 13); update source/raw/gate inputs and checkpoint mappings.
+    # Whole-row masking makes this lossless; state/gap validity remains per lane.
     intrinsic = observation.lanes[..., :4].flatten(-2)
     facts = torch.cat((intrinsic, intrinsic.flip(2)), -1)
     metadata = observation.rows.clone()

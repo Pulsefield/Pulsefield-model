@@ -128,16 +128,17 @@ def test_dynamic_window_preserves_entering_long_note_and_detects_source_mutation
         catalog.window(entry, 5)
 
 
-def test_catalog_preserves_simultaneous_close_and_new_head(source_fixture):
+@pytest.mark.parametrize("head", [b"64,192,1000,1,0,0:0:0:0:\n", b"64,192,1000,128,0,1100:0:0:0:0:\n"])
+def test_catalog_rejects_simultaneous_close_and_new_attack(source_fixture, head):
     kwargs, _, _ = source_fixture
-    data = source_bytes("A", 12, 1, hold=True) + b"64,192,1000,1,0,0:0:0:0:\n"
+    data = source_bytes("A", 12, 1, hold=True) + head
     sha = digest(data)
     assert parse_source(data, sha).row_incompatibilities
     (kwargs["dataset_root"] / "s/12.osu").write_bytes(data)
-    catalog, _, _ = build_catalog(**kwargs, max_source_rows=16)
-    chart = catalog.window(catalog.by_sha[sha], 8).chart
-    example = observe(chart, EventBlock(0, 4), entering_occupancy=declared_entering_occupancy(chart))
-    assert any(target[0] == 5 for target in example.targets)
+    catalog, _, report = build_catalog(**kwargs, max_source_rows=16)
+    assert sha not in catalog.by_sha
+    rejection = next(r for r in report["source_assignments"] if r["source_sha256"] == sha)
+    assert rejection["status"] == "rejected" and "SourceActionSchemaError" in rejection["rejection"]
 
 
 def test_full_sampler_checkpoint_continues_identical_updates(source_fixture, tmp_path):

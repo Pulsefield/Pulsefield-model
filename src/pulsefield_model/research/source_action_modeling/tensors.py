@@ -10,20 +10,20 @@ from torch.nn.utils.rnn import pad_sequence
 
 from ..scoped_style_modeling.dataset import ContractError
 from ..scoped_style_modeling.replay import HAND_COLUMNS, hand_role, time_feature
-from .observation import BlockExample, LANE_ACTIONS, PartialObservation, visible_states
+from .actions import ATTACK_ACTIONS, HAND_CLASSES, LANE_ACTIONS, LN_CLOSE, LN_START, ROW_CLASSES, TAP
+from .observation import BlockExample, PartialObservation, visible_states
 
 LANE_DIM, ROW_DIM, EDGE_DIM = 12, 11, 4
 SUMMARY_DIM = 2 * 2 * 9  # side, own-hand lane, eight log counts plus availability
 RELATIONS = ("self", "simultaneous", "event", "attack_1", "attack_2", "recurrence", "ln_identity")
 RELATION_DIM = len(RELATIONS) + 10
-ROW_CLASSES = len(LANE_ACTIONS) ** 4
 
 
 def row_token(actions: tuple[int, ...]) -> int:
-    if len(actions) != 4 or any(a not in LANE_ACTIONS for a in actions):
+    if len(actions) != 4 or any(type(a) is not int or a not in LANE_ACTIONS for a in actions):
         raise ContractError("Invalid joint action row")
-    a = [LANE_ACTIONS.index(v) for v in actions]
-    return (a[0] * 6 + a[1]) * 36 + a[3] * 6 + a[2]
+    a = actions
+    return (a[0] * len(LANE_ACTIONS) + a[1]) * HAND_CLASSES + a[3] * len(LANE_ACTIONS) + a[2]
 
 
 def action_table() -> Tensor:
@@ -49,7 +49,7 @@ def _attack_intervals(observation, reverse=False):
         result[i] = [time_feature(None if t is None else abs(row.time_ms - t)) for t in latest]
         if row.phase == "source":
             for lane, action in enumerate(row.actions):
-                if action & 3:
+                if action in ATTACK_ACTIONS:
                     latest[lane] = row.time_ms
     return result
 
@@ -62,7 +62,7 @@ def observation_features(observation: PartialObservation):
         lane_values = []
         for lane in range(4):
             action = 0 if row.actions is None else row.actions[lane]
-            lane_values.append([*[bool(action & bit) for bit in (1, 2, 4)], row.actions is not None,
+            lane_values.append([*[action == kind for kind in (TAP, LN_START, LN_CLOSE)], row.actions is not None,
                                 *_known(before[i][lane]), *_known(after[i][lane]),
                                 *previous[i][lane], *following[i][lane]])
         lanes.append([[lane_values[lane] for lane in columns] for columns in HAND_COLUMNS])
@@ -73,6 +73,10 @@ def observation_features(observation: PartialObservation):
                      row.phase == "source" and observation.scope.contains(row.time_ms),
                      *[name in row.markers for name in ("context_start", "section_start", "section_end", "context_end")]])
     occupation = [[-1 if entry[lane] is None else int(entry[lane]) for lane in columns] for columns in HAND_COLUMNS]
+    # TODO(action-storage): keep categorical actions and visibility compact through
+    # collation/device transfer, expanding or gathering only at learned inputs.
+    # Binary flags currently occupy FP32 channels alongside continuous timing;
+    # retain unknown/EMPTY distinctions and lane-specific state/gap validity.
     return torch.tensor(lanes, dtype=torch.float32), torch.tensor(rows, dtype=torch.float32), torch.tensor(occupation)
 
 
@@ -110,24 +114,24 @@ def observation_relations(observation: PartialObservation):
         if row.actions is None:
             attacks, lane_previous, holds = [], [None] * 4, [None] * 4
             continue
-        if any(a & 3 for a in row.actions):
+        if any(a in ATTACK_ACTIONS for a in row.actions):
             for offset in (1, 2):
                 if len(attacks) >= offset:
                     connect(attacks[-offset], i, f"attack_{offset}")
             attacks.append(i)
         for lane, action in enumerate(row.actions):
             h, role = hand_role(lane)
-            if action & 4:
+            if action == LN_CLOSE:
                 if holds[lane] is not None:
                     for a, b in ((holds[lane], i), (i, holds[lane])):
                         add(2 * a + h, 2 * b + h, "ln_identity", role)
                 holds[lane] = None
-            if action & 3:
+            if action in ATTACK_ACTIONS:
                 if lane_previous[lane] is not None:
                     for a, b in ((lane_previous[lane], i), (i, lane_previous[lane])):
                         add(2 * a + h, 2 * b + h, "recurrence", role)
                 lane_previous[lane] = i
-            if action & 2:
+            if action == LN_START:
                 holds[lane] = i
     return tuple((q, n, tuple(sorted(kinds))) for (q, n), kinds in sorted(pairs.items()))
 

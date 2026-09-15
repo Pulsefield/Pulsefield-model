@@ -14,6 +14,7 @@ from ..scoped_style_modeling.config import ModelConfig as AttentionConfig
 from ..scoped_style_modeling.dataset import ContractError
 from ..scoped_style_modeling.model import RelationAttention, packed_gru
 from .model import ModelConfig, ReferenceEncoder
+from .actions import source_actions
 from .observation import PartialObservation
 from .tensors import (BlockQueries, ObservationTensors, ROW_DIM, LANE_DIM, SUMMARY_DIM,
                       EDGE_DIM, RELATION_DIM, observation_relations)
@@ -83,6 +84,10 @@ class ComposedEncoder(nn.Module):
         super().__init__()
         if config.hand_hidden != 32:
             raise ContractError("The fixed composed architecture requires 32 GRU units per direction")
+        # TODO(action-projection): evaluate role-indexed gathers of action-weight
+        # columns to avoid expanded FP32 indicators while preserving this affine
+        # map and hand-mirror sharing. Measure allocations and parameter counts;
+        # compact input storage alone does not shrink the 64-wide hidden context.
         self.source = nn.Sequential(nn.Linear(4 * 4 + ROW_DIM, 64), nn.GELU())
         self.local = nn.ModuleList(LocalBlock(d, config.dropout) for d in (1, 2, 4))
         attention = AttentionConfig(hand_hidden=32, attention_heads=config.attention_heads,
@@ -197,8 +202,7 @@ def support_report(observation: PartialObservation, *, complete_chart=None) -> d
             [(r.time_ms, r.phase, r.markers) for r in source_rows] != [(r.time_ms, r.phase, r.markers) for r in rows]
         ):
             raise ContractError("Support reporting requires the exact aligned complete chart")
-        if any(r.actions is not None and r.actions != tuple(int(l.tap) | (int(l.ln_start) << 1) | (int(l.ln_close) << 2)
-                                                            for l in source.lanes)
+        if any(r.actions is not None and r.actions != source_actions(source)
                for r, source in zip(rows, source_rows)):
             raise ContractError("Support reporting chart contradicts visible source actions")
         attacks = {i for i, r in enumerate(source_rows) if r.phase == "source" and any(l.tap or l.ln_start for l in r.lanes)}

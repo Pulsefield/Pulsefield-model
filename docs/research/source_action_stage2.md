@@ -74,7 +74,7 @@ projection, contextual residual and LayerNorm give one 64-wide context per targe
 and hand.
 
 Target-index gathering occurs before `JointDecoder.forward`. Its `score` and
-`advance` operations, 1,296-class joint alphabet, legality rules and recurrent
+`advance` operations, 256-index joint alphabet, legality rules and recurrent
 prefix computation remain common to all predictors. The reader sees no chosen
 action, teacher-forced prefix or target value. The decoder scores each row before
 reading that row's target. Loss averages row NLL within each block and then
@@ -103,9 +103,9 @@ identical initial parameters and buffers, with distinct access policies.
 
 | Configuration | Encoder | Reader access | Encoder parameters | Action reader | Decoder | Predictor total |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| `reference_h` | Lane projection → shared-hand BiGRU → relation attention | `H` | 61,612 | 17,484 | 25,313 | 104,409 |
-| `composed_h` | `U → L1 → L2 → L3 → R → H` | `H` | 171,652 | 17,484 | 25,313 | 214,449 |
-| `composed_all` | Same composed encoder | All six levels | 171,652 | 17,484 | 25,313 | 214,449 |
+| `reference_h` | Lane projection → shared-hand BiGRU → relation attention | `H` | 61,612 | 17,484 | 25,153 | 104,249 |
+| `composed_h` | `U → L1 → L2 → L3 → R → H` | `H` | 171,652 | 17,484 | 25,153 | 214,289 |
+| `composed_all` | Same composed encoder | All six levels | 171,652 | 17,484 | 25,153 | 214,289 |
 
 Counts use default `ModelConfig`: width 64, four attention heads and zero dropout.
 The reference adds a 3,096-parameter projection of both hands' far summaries to
@@ -244,8 +244,11 @@ parameters, and changes to the fitted head or its policy are rejected.
 `save_snapshot(..., readout=head)` optionally stores that fitted head alongside
 model, optimizer, scheduler, RNGs, sampler and update position. Loading requires
 the same architecture, access, view population/policy and semantic policy. The
-input contract is `source-action-visibility-v2` and snapshot schema is 3; older
-snapshots are rejected. Both model families record the context-bilinear decoder
+input contract is `source-action-visibility-v3-four-actions` and snapshot schema
+is 4; older snapshots are rejected for exact continuation. Compatible bilinear
+weights can initialize a new run through
+[checkpoint reuse](source_action_checkpoint_reuse.md). Both model families
+record the context-bilinear decoder
 and equal-block mean-row loss policies. The Stage 1 Python smoke API and model defaults
 remain available. Snapshots are exclusively created and trusted-local-only.
 

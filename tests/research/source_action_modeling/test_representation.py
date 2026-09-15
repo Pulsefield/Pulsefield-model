@@ -49,7 +49,7 @@ def test_shared_initialization_all_levels_mirror_padding_and_both_heads(device):
             torch.testing.assert_close(head(a, concepts, indices), head(b, concepts, indices), atol=3e-6, rtol=1e-5)
             torch.testing.assert_close(head(a, concepts, indices)[0], head(one, concepts[:1], indices[:1])[0], atol=3e-6, rtol=1e-5)
             out, mirrored = model(batch), model(mirror)
-            permutation = torch.arange(1296, device=device).reshape(36, 36).T.flatten()
+            permutation = torch.arange(256, device=device).reshape(16, 16).T.flatten()
             torch.testing.assert_close(out.log_probs[:, :, permutation], mirrored.log_probs, atol=5e-6, rtol=1e-5)
             torch.testing.assert_close(out.final_states.flip(1), mirrored.final_states, atol=3e-6, rtol=1e-5)
             torch.testing.assert_close(out.log_probs[0], model(single).log_probs[0], atol=4e-6, rtol=1e-5)

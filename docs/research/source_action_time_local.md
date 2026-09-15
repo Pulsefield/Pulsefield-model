@@ -154,21 +154,21 @@ stages.
 
 | Arm | Intervention from the named control | Total parameters |
 | --- | --- | ---: |
-| `baseline` | Exact `composed_all` initialization and computation | 214,449 |
-| `event` | `baseline`: source-event adjacency and preceding source gap | 214,449 |
-| `scalar` | `event`: physical gap scalars and relative coordinates | 214,961 |
-| `smooth` | `scalar`: smooth basis expansion of the same information | 217,521 |
-| `row` | `smooth`: residual row interaction | 234,097 |
-| `time` | `smooth`: pair-conditioned local kernel | 235,857 |
-| `time_kernel` | `time`: zero action/availability inputs to the kernel gate | 235,857 |
-| `action_kernel` | `time`: zero physical/relative time inputs to the kernel gate | 235,857 |
-| `constant_kernel` | `time`: zero both gate input groups | 235,857 |
-| `row_time` | `smooth`: both row interaction and conditioned kernel | 252,433 |
-| `combined` | `row_time`: raw source access in every local block | 262,801 |
-| `state` | `combined`: visible-prefix occupation conditions | 265,873 |
+| `baseline` | Exact `composed_all` initialization and computation | 214,289 |
+| `event` | `baseline`: source-event adjacency and preceding source gap | 214,289 |
+| `scalar` | `event`: physical gap scalars and relative coordinates | 214,801 |
+| `smooth` | `scalar`: smooth basis expansion of the same information | 217,361 |
+| `row` | `smooth`: residual row interaction | 233,937 |
+| `time` | `smooth`: pair-conditioned local kernel | 235,697 |
+| `time_kernel` | `time`: zero action/availability inputs to the kernel gate | 235,697 |
+| `action_kernel` | `time`: zero physical/relative time inputs to the kernel gate | 235,697 |
+| `constant_kernel` | `time`: zero both gate input groups | 235,697 |
+| `row_time` | `smooth`: both row interaction and conditioned kernel | 252,273 |
+| `combined` | `row_time`: raw source access in every local block | 262,641 |
+| `state` | `combined`: visible-prefix occupation conditions | 265,713 |
 
 Counts use default `ModelConfig`. All arms retain the same 17,484-parameter
-action reader and 25,313-parameter decoder. The event control has identical
+action reader and 25,153-parameter decoder. The event control has identical
 capacity to the baseline. The smooth/row/time/row_time square separates row
 composition, temporal conditioning and their combination. Compare combined
 against row_time before attributing a gain to raw access; compare state against

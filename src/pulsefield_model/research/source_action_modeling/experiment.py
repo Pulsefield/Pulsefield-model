@@ -19,7 +19,7 @@ import torch
 
 from ..scoped_style_modeling.dataset import ContractError, canonical_json, digest
 from ..scoped_style_modeling.probe_metrics import paired_changes
-from .checkpoint import save_snapshot
+from .checkpoint import save_snapshot, warm_start_snapshot
 from .comparison import evaluate_structure, train_paired_step, parameter_counts
 from .composition import initialize_composition, ORDERS
 from .consistency import evaluate_path_consistency, prefix_path_pair
@@ -136,10 +136,16 @@ def run_experiment(config: CompositionExperimentConfig, *, resolved_yaml: str) -
             np.random.seed(seed)
             torch.manual_seed(seed)
             models = {n: m.to(config.device) for n, m in initialize_composition(config.model, seed).items()}
+            initialization = {"policy": "from-scratch", "weights": {}}
+            if config.warm_start_dir is not None:
+                initialization = {"policy": "warm-start", "weights": {
+                    name: warm_start_snapshot(Path(config.warm_start_dir) / f"seed-{seed}" / f"{name}-latest.pt", model)
+                    for name, model in models.items()}}
             optimizers = {n: torch.optim.AdamW(m.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
                           for n, m in models.items()}
             sampler = FullCorpusSampler(training, seed=seed, policy=policy)
-            seed_report = {"updates": 0, "models": {n: {"parameters": parameter_counts(m), "policy": m.policy_identity}
+            seed_report = {"updates": 0, "initialization": initialization,
+                           "models": {n: {"parameters": parameter_counts(m), "policy": m.policy_identity}
                                                      for n, m in models.items()}}
             report["seeds"][str(seed)] = seed_report
             progress("initial-structure", seed=seed)

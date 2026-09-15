@@ -5,11 +5,10 @@ from dataclasses import dataclass, replace
 
 from ..scoped_style_modeling.dataset import ContractError, Interval
 from ..scoped_style_modeling.replay import PreparedChart
+from .actions import ATTACK_ACTIONS, EMPTY, LANE_ACTIONS, LN_CLOSE, LN_START, TAP, source_actions
 
-# Bit fields preserve a close simultaneous with either kind of new head.
-LANE_ACTIONS = (0, 1, 2, 4, 5, 6)
 BLOCK_SIZES = (4, 16, 64)
-INPUT_CONTRACT = "source-action-visibility-v2"
+INPUT_CONTRACT = "source-action-visibility-v3-four-actions"
 
 
 @dataclass(frozen=True)
@@ -77,8 +76,12 @@ class PartialObservation:
                 raise ContractError("Unknown observation phase")
             if i in self.target_indices and row.actions is not None:
                 raise ContractError("Prediction targets must have unknown actions")
-            if row.actions is not None and (len(row.actions) != 4 or any(a not in LANE_ACTIONS for a in row.actions)):
+            if row.actions is not None and (len(row.actions) != 4 or any(
+                type(a) is not int or a not in LANE_ACTIONS for a in row.actions
+            )):
                 raise ContractError("Invalid four-lane source actions")
+            if row.phase == "source" and row.actions == (EMPTY,) * 4:
+                raise ContractError("Real source events require a nonempty action row")
             if row.phase == "boundary" and row.actions != (0, 0, 0, 0):
                 raise ContractError("Synthetic boundaries carry no source actions")
 
@@ -114,19 +117,18 @@ def observe(chart: PreparedChart, block: EventBlock, *,
     indices = tuple(source[block.start:block.start + block.size])
     targets, rows = [], []
     for i, row in enumerate(chart.inputs.rows):
-        actions = tuple(int(l.tap) | (int(l.ln_start) << 1) | (int(l.ln_close) << 2) for l in row.lanes)
+        actions = source_actions(row)
         if i in indices:
             targets.append(actions)
         rows.append(ObservedRow(row.time_ms, row.phase, row.markers, None if i in indices else actions))
     observation = PartialObservation(chart.inputs.scope, chart.inputs.context, tuple(rows), indices, entering_occupancy)
-    return BlockExample(observation, tuple(targets), sum(any(a & 3 for a in row) for row in targets))
+    return BlockExample(observation, tuple(targets), sum(any(a in ATTACK_ACTIONS for a in row) for row in targets))
 
 
 def observe_complete(chart: PreparedChart, *,
                      entering_occupancy: tuple[bool | None, ...] = (None,) * 4) -> PartialObservation:
     """Expose the original complete scope/context without creating prediction queries."""
-    rows = tuple(ObservedRow(r.time_ms, r.phase, r.markers,
-                            tuple(int(l.tap) | (int(l.ln_start) << 1) | (int(l.ln_close) << 2) for l in r.lanes))
+    rows = tuple(ObservedRow(r.time_ms, r.phase, r.markers, source_actions(r))
                  for r in chart.inputs.rows)
     return PartialObservation(chart.inputs.scope, chart.inputs.context, rows, (), entering_occupancy)
 
@@ -166,7 +168,7 @@ def paired_views(example: BlockExample, policy: ViewPolicy = ViewPolicy()) -> di
     for side, indices in far.items():
         counts = []
         for lane in range(4):
-            actions = [sum(bool(obs.rows[i].actions[lane] & bit) for i in indices) for bit in (1, 2, 4)]
+            actions = [sum(obs.rows[i].actions[lane] == action for i in indices) for action in (TAP, LN_START, LN_CLOSE)]
             counts.append((*actions, sum(before[i][lane] is True for i in indices),
                            sum(before[i][lane] is not None for i in indices),
                            sum(after[i][lane] is True for i in indices),
@@ -182,12 +184,14 @@ def advance_occupancy(state: tuple[bool | None, ...], actions: tuple[int, ...] |
     """Propagate only visible facts; hidden rows invalidate every lane's state."""
     if actions is None:
         return (None,) * 4
+    if len(state) != 4 or len(actions) != 4:
+        raise ContractError("Occupation and actions require four lanes")
     result = []
     for occupied, action in zip(state, actions):
-        close, attack = bool(action & 4), bool(action & 3)
-        if action not in LANE_ACTIONS or (close and occupied is False) or (attack and not close and occupied is True):
+        close, attack = action == LN_CLOSE, action in ATTACK_ACTIONS
+        if type(action) is not int or action not in LANE_ACTIONS or (close and occupied is False) or (attack and occupied is True):
             raise ContractError("Source action contradicts declared or observed lane occupation")
-        result.append(bool(action & 2) if close or attack else occupied)
+        result.append(action == LN_START if close or attack else occupied)
     return tuple(result)
 
 

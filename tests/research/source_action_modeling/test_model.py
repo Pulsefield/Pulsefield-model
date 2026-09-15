@@ -41,7 +41,7 @@ def test_mirror_encoder_queries_legal_masks_distribution_and_prefix_states(devic
     with torch.no_grad():
         torch.testing.assert_close(model.encoder(a.observation).flip(2), model.encoder(b.observation), atol=3e-6, rtol=3e-5)
         x, y = model(a), model(b)
-    permutation = torch.arange(ROW_CLASSES, device=device).reshape(36, 36).T.flatten()
+    permutation = torch.arange(ROW_CLASSES, device=device).reshape(16, 16).T.flatten()
     torch.testing.assert_close(x.log_probs, y.log_probs[:, :, permutation], atol=3e-6, rtol=3e-5)
     torch.testing.assert_close(x.loss, y.loss)
     torch.testing.assert_close(x.final_states.flip(1), y.final_states, atol=3e-6, rtol=3e-5)
@@ -82,21 +82,48 @@ def test_teacher_forcing_changes_only_future_decoder_outputs():
     assert not torch.equal(x.final_states, y.final_states)
 
 
-def test_prefix_legality_retains_close_plus_tap_and_close_plus_head():
+def test_prefix_legality_uses_v3_four_action_transitions():
     model = initialize_model()
     occupied = torch.tensor([[[1, 0], [0, 0]]])
     legal = model.decoder.legal_rows(occupied)[0]
-    for action in (4, 5, 6):
-        assert legal[row_token((action, 0, 0, 0))]
+    assert legal[row_token((3, 0, 0, 0))]
     for action in (1, 2):
         assert not legal[row_token((action, 0, 0, 0))]
     assert not legal[0]
+    assert legal.sum() == 2 * 3 ** 3 - 1
+    for action in (4, 5, 6):
+        with pytest.raises(ContractError, match="Invalid joint"):
+            row_token((action, 0, 0, 0))
+    assert model.decoder.legal_rows(torch.zeros(1, 2, 2, dtype=torch.long)).sum() == 3 ** 4 - 1
+    assert model.decoder.legal_rows(torch.ones(1, 2, 2, dtype=torch.long)).sum() == 2 ** 4 - 1
     unknown = model.decoder.legal_rows(torch.full((1, 2, 2), -1))[0]
     assert unknown.sum() == ROW_CLASSES - 1
     batch = collate([example()])
     invalid = replace(batch, targets=torch.zeros_like(batch.targets))
     with pytest.raises(ContractError, match="legality"):
         model(invalid)
+
+
+def test_v3_row_tokens_round_trip_and_sampled_actions_replay_legally():
+    from itertools import product
+    from pulsefield_model.research.source_action_modeling.actions import LANE_ACTIONS
+    from pulsefield_model.research.source_action_modeling.observation import advance_occupancy
+    decoder = initialize_model().decoder
+    assert LANE_ACTIONS == (0, 1, 2, 3) and ROW_CLASSES == 256
+    for actions in product(LANE_ACTIONS, repeat=4):
+        assert decoder.actions[row_token(actions)].flatten().tolist() == [actions[i] for i in (0, 1, 3, 2)]
+    state = (False,) * 4
+    occupancy = torch.zeros(1, 2, 2, dtype=torch.long)
+    context, memory = torch.randn(1, 2, 64), torch.zeros(1, 2, 32)
+    for _ in range(50):
+        scores = decoder.score(context, memory, occupancy, torch.tensor([True]))
+        chosen = torch.multinomial(scores.exp(), 1).squeeze(1)
+        hand_actions = decoder.actions[chosen[0]].flatten().tolist()
+        actions = tuple(hand_actions[i] for i in (0, 1, 3, 2))
+        assert any(actions) and set(actions) <= set(LANE_ACTIONS)
+        state = advance_occupancy(state, actions)
+        memory, occupancy = decoder.advance(context, memory, occupancy, chosen, torch.tensor([True]))
+        assert occupancy.flatten().tolist() == [int(state[i]) for i in (0, 1, 3, 2)]
 
 
 def test_invalid_config_fails_and_initialization_preserves_rng():
@@ -115,8 +142,8 @@ def test_context_can_reverse_joint_hand_log_odds_with_all_four_choices_legal(dev
     with torch.no_grad():
         for parameter in decoder.parameters():
             parameter.zero_()
-        decoder.action.weight[6, 0] = 1  # tap on the outer lane
-        decoder.action.weight[12, 0] = -1  # head on the outer lane
+        decoder.action.weight[4, 0] = 1  # tap on the outer lane
+        decoder.action.weight[8, 0] = -1  # head on the outer lane
         decoder.pair_action.weight[0, 0] = 1
         decoder.context[0].weight[0, 0] = 1
         decoder.context[-1].weight[0, 0] = 1
@@ -129,9 +156,9 @@ def test_context_can_reverse_joint_hand_log_odds_with_all_four_choices_legal(dev
     context[:, :, 0] = torch.tensor([1., -1.], device=device)[:, None]
     scores = decoder.score(context, torch.zeros(2, 2, 32, device=device),
                            torch.zeros(2, 2, 2, dtype=torch.long, device=device),
-                           torch.ones(2, dtype=torch.bool, device=device)).reshape(2, 36, 36)
-    odds = scores[:, 6, 6] + scores[:, 12, 12] - scores[:, 6, 12] - scores[:, 12, 6]
-    table = scores[:, [6, 6, 12, 12], [6, 12, 6, 12]].softmax(-1)
+                           torch.ones(2, dtype=torch.bool, device=device)).reshape(2, 16, 16)
+    odds = scores[:, 4, 4] + scores[:, 8, 8] - scores[:, 4, 8] - scores[:, 8, 4]
+    table = scores[:, [4, 4, 8, 8], [4, 8, 4, 8]].softmax(-1)
     torch.testing.assert_close(table, torch.tensor([[.45, .05, .05, .45], [.05, .45, .45, .05]], device=device),
                                atol=2e-7, rtol=2e-6)
     expected = torch.tensor([math.log(81), -math.log(81)], device=device)

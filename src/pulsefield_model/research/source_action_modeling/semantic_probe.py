@@ -12,8 +12,9 @@ from ..scoped_style_modeling.probe_metrics import prediction_rows, views, paired
 from .observation import observe_complete, declared_entering_occupancy
 from .representation import RepresentationBank, level_descriptors, valid_rows
 from .tensors import ObservationTensors, collate_observations
+from .actions import ACTION_SCHEMA
 
-SEMANTIC_POLICY = f"source-action/human-only/{TARGET_POLICY}/complete-1x-v1"
+SEMANTIC_POLICY = f"source-action/human-only/{TARGET_POLICY}/complete-1x/{ACTION_SCHEMA}"
 
 
 def human_targets(records, issues, *, split: str) -> list[int]:

@@ -10,6 +10,7 @@ import math
 import torch
 
 from ..scoped_style_modeling.dataset import ContractError
+from .actions import ATTACK_ACTIONS
 from .diagnostics import batch_identity
 from .observation import BlockExample, advance_occupancy, visible_states
 from .tensors import collate
@@ -39,7 +40,7 @@ def _reveal_prefix(example: BlockExample, prefix_rows: int) -> BlockExample:
         rows[index] = replace(rows[index], actions=actions)
     targets = example.targets[prefix_rows:]
     observation = replace(obs, rows=tuple(rows), target_indices=obs.target_indices[prefix_rows:])
-    return BlockExample(observation, targets, sum(any(a & 3 for a in row) for row in targets), entry)
+    return BlockExample(observation, targets, sum(any(a in ATTACK_ACTIONS for a in row) for row in targets), entry)
 
 
 @dataclass(frozen=True)

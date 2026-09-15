@@ -61,9 +61,10 @@ can supply this interface and `output_dim` to `SourceActionPredictor` while
 retaining the decoder. Source columns map to hand roles as left `(0, 1)` and
 right `(3, 2)`, so mirroring exchanges hands without changing outer/inner roles.
 
-The decoder scores one categorical distribution over $6^4=1296$ joint rows.
-Each lane has silence, tap, head, close, close-plus-tap and close-plus-head
-actions. Each hand's 36 action pairs have learned embeddings. A context-generated
+The decoder scores a $4^4=256$-index joint table using V3 lane codes
+`EMPTY=0`, `TAP=1`, `LN_START=2`, `LN_CLOSE=3`. The all-empty index is padding
+only and is masked at every real event. Each hand's 16 action pairs have learned
+embeddings. A context-generated
 bilinear matrix couples their projected embeddings, with unrestricted signs;
 hand exchange transposes the matrix and the joint score table. This removes a
 positive-semidefinite Gram constraint while retaining a low-rank output family.
@@ -72,12 +73,13 @@ preceding chosen rows. The encoder receives neither targets nor decoder state.
 Teacher forcing reads a row only after scoring its distribution.
 
 Legality masks depend on declared entering occupation and the decoded prefix.
-A held lane can remain held or close, with an optional simultaneous new tap or
-head. An unheld lane can remain absent, tap or start a hold. Unknown occupation
+A held lane can remain held or close. An unheld lane can remain absent, tap or
+start a hold. Unknown occupation
 permits the union of those possibilities until the prefix resolves it. The
 all-silent joint row is excluded at every real event position. No hidden suffix
-or complete post-block state constrains the mask. These are source-action
-rules: same-lane close/head coincidences are retained without retiming.
+or complete post-block state constrains the mask. Source-action uses the V3
+single-action schema. Source parsing and prepared observations
+reject same-lane close/tap and close/head coincidences without retiming.
 
 The loss first averages target-row negative log likelihood within each block,
 then averages blocks:
@@ -105,8 +107,8 @@ layer. The decoder has 32 recurrent units per hand, eight-dimensional action
 embeddings and eight-dimensional bilateral interactions. Dropout is zero for
 the bounded wiring check. Evaluation commutes with hand exchange; stochastic
 dropout during other training runs need not match samplewise under mirroring.
-The default model has 58,516 encoder parameters and 25,313 decoder parameters,
-83,829 in total.
+The default model has 58,516 encoder parameters and 25,153 decoder parameters,
+83,669 in total.
 
 ## Sampling, diagnostics and restoration
 
@@ -210,8 +212,10 @@ The [composition and access implementation](source_action_stage2.md) adds a
 six-level bank, action and concept readers, complete observations and paired
 near/detailed/coarse views. All arms share the decoder computation and objective.
 Prediction queries are separate from visibility; the input contract is
-`source-action-visibility-v2`. Snapshot schema 3 rejects older snapshots,
-including the static-Gram decoder family. Exact continuation requires matching
+`source-action-visibility-v3-four-actions`. Snapshot schema 4 rejects older
+snapshots for exact continuation. Compatible bilinear weights can initialize
+a new run through the [checkpoint reuse API](source_action_checkpoint_reuse.md).
+Exact continuation requires matching
 decoder and loss policy identities.
 The Stage 1 smoke API remains a bounded software check.
 

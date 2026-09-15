@@ -12,7 +12,8 @@ import unicodedata
 import pyarrow.parquet as pq
 
 from ..scoped_style_modeling.dataset import ContractError, Interval, canonical_json, digest
-from ..scoped_style_modeling.replay import parse_source, prepare_chart
+from ..scoped_style_modeling.replay import prepare_chart
+from .actions import parse_source
 from .sampling import TrainingContext
 
 

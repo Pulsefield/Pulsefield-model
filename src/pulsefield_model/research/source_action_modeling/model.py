@@ -11,10 +11,11 @@ from torch import Tensor, nn
 from ..scoped_style_modeling.config import ModelConfig as AttentionConfig
 from ..scoped_style_modeling.dataset import ContractError
 from ..scoped_style_modeling.model import RelationAttention, mlp, packed_gru
+from .actions import EMPTY, HAND_CLASSES, LN_CLOSE, LN_START, TAP
 from .tensors import (BlockBatch, BlockQueries, ObservationTensors, LANE_DIM, ROW_DIM,
                       EDGE_DIM, RELATION_DIM, ROW_CLASSES, action_table)
 
-DECODER_POLICY = "joint-row/context-bilinear-hand-transpose-v1"
+DECODER_POLICY = "joint-row/v3-four-actions/context-bilinear-hand-transpose-v2"
 LOSS_POLICY = "equal-block/mean-row-nll-v1"
 
 
@@ -81,9 +82,9 @@ class Prediction:
 
 
 class JointDecoder(nn.Module):
-    """One categorical distribution over 6^4 exact joint source-action rows.
+    """V3 lane actions in a 4^4 table; the all-empty index is padding only.
 
-    Each hand has 36 action pairs. Learned bilateral interactions couple the
+    Each hand has 16 action pairs. Learned bilateral interactions couple the
     hands, and a shared recurrent update reads only preceding chosen rows.
     All operations commute with exchanging the two hands in evaluation mode.
     """
@@ -91,21 +92,21 @@ class JointDecoder(nn.Module):
         super().__init__()
         h, a = config.decoder_hidden, config.action_dim
         self.hidden = h
-        self.action = nn.Embedding(36, a)
+        self.action = nn.Embedding(HAND_CLASSES, a)
         self.context = mlp(2 * encoder_dim + 2 * h + 8, h, h)
         self.unary = mlp(h + a, h, 1)
         self.pair_action = nn.Linear(a, config.interaction_dim, bias=False)
         self.interaction = nn.Linear(h, config.interaction_dim ** 2)
         self.memory = nn.GRUCell(encoder_dim + h + 2 * a, h)
         self.register_buffer("actions", action_table())
-        self.register_buffer("hand_tokens", torch.tensor([[i // 36, i % 36] for i in range(ROW_CLASSES)]))
+        self.register_buffer("hand_tokens", torch.tensor([[i // HAND_CLASSES, i % HAND_CLASSES] for i in range(ROW_CLASSES)]))
 
     def legal_rows(self, occupancy: Tensor) -> Tensor:
         """Use only declared occupation and the decoded prefix; no suffix constraints."""
         actions = self.actions[None]
         occupied = occupancy[:, None]
-        invalid = (((actions & 4) != 0) & (occupied == 0)) | (
-            ((actions & 3) != 0) & ((actions & 4) == 0) & (occupied == 1))
+        invalid = ((actions == LN_CLOSE) & (occupied == 0)) | (
+            ((actions == TAP) | (actions == LN_START)) & (occupied == 1))
         legal = ~invalid.flatten(2).any(-1)
         # Every supplied real event has an action, including release-only events.
         return legal & (self.actions.flatten(1).any(-1)[None])
@@ -114,7 +115,7 @@ class JointDecoder(nn.Module):
         facts = torch.stack(((occupancy == 1).to(context.dtype), (occupancy >= 0).to(context.dtype)), -1).flatten(-2)
         query = self.context(torch.cat((context, context.flip(1), states, states.flip(1), facts, facts.flip(1)), -1))
         embeddings = self.action.weight[None, None].expand(query.shape[0], 2, -1, -1)
-        values = torch.cat((query[:, :, None].expand(-1, -1, 36, -1), embeddings), -1)
+        values = torch.cat((query[:, :, None].expand(-1, -1, HAND_CLASSES, -1), embeddings), -1)
         unary = self.unary(values).squeeze(-1)
         pair = self.pair_action(self.action.weight)
         matrices = self.interaction(query).reshape(-1, 2, pair.shape[-1], pair.shape[-1])
@@ -132,7 +133,7 @@ class JointDecoder(nn.Module):
         embeddings = self.action(self.hand_tokens[chosen])
         inputs = torch.cat((context, states.flip(1), embeddings, embeddings.flip(1)), -1)
         updated = self.memory(inputs.flatten(0, 1), states.flatten(0, 1)).reshape_as(states)
-        new_occupancy = torch.where(actions != 0, ((actions & 2) != 0).long(), occupancy)
+        new_occupancy = torch.where(actions != EMPTY, (actions == LN_START).long(), occupancy)
         return (torch.where(active[:, None, None], updated, states),
                 torch.where(active[:, None, None], new_occupancy, occupancy))
 

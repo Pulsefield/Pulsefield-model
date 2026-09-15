@@ -17,10 +17,11 @@ from ..scoped_style_modeling.corpus import PreparedCorpus
 from ..scoped_style_modeling.dataset import (CONCEPTS, REVISION, ContractError, Interval,
     adapt_records, canonical_json, digest, load_snapshot)
 from ..scoped_style_modeling.probe_data import support
-from ..scoped_style_modeling.replay import parse_source, prepare_chart
+from ..scoped_style_modeling.replay import prepare_chart
+from .actions import ACTION_SCHEMA, parse_source
 from .local_corpus import grouping, header_metadata, normalized
 from .observation import (BLOCK_SIZES, EventBlock, ViewPolicy, declared_entering_occupancy,
-                          observe, paired_views)
+                          observe, observe_complete, paired_views)
 from .sampling import SPLIT_SHA256, VIEWS, TrainingContext
 from .semantic_probe import SemanticCorpus
 
@@ -62,7 +63,7 @@ class SourceCatalog:
         if set(self.groups["train"]) & set(self.groups["validation"]):
             raise ContractError("Source catalog groups overlap across training and validation")
         self.signature = digest(canonical_json({"sources": [asdict(e) for e in self.entries],
-            "window_policy": WINDOW_POLICY, "max_source_rows": max_source_rows}).encode())
+            "window_policy": WINDOW_POLICY, "max_source_rows": max_source_rows, "action_schema": ACTION_SCHEMA}).encode())
         self.source = lru_cache(maxsize=source_cache_charts)(self._source)
 
     def _source(self, sha):
@@ -294,7 +295,8 @@ def load_population(prepared_dir, dataset_dir, *, index_path, dataset_root, sour
         if guard is not None:
             guard()
         row = corpus.records[i]
-        corpus.chart(row["chart_key"], row["chart_sha256"])
+        chart, _ = corpus.chart(row["chart_key"], row["chart_sha256"])
+        observe_complete(chart, entering_occupancy=declared_entering_occupancy(chart))
     corpus.chart.cache_clear()
     validation, windows = validation_contexts(catalog, validation_groups)
     population = {"dataset_revision": REVISION, "split_sha256": SPLIT_SHA256,

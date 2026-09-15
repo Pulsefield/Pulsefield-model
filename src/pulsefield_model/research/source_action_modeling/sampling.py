@@ -4,6 +4,7 @@ import random
 
 from ..scoped_style_modeling.dataset import ContractError, canonical_json, digest
 from ..scoped_style_modeling.replay import PreparedChart
+from .actions import ACTION_SCHEMA, source_actions
 from .observation import BLOCK_SIZES, EventBlock, ViewPolicy, declared_entering_occupancy, observe, paired_views
 
 SAMPLING_POLICY = "uniform-group/context/feasible-{4,16,64}/event-start-v1"
@@ -16,6 +17,10 @@ class TrainingContext:
     group_id: str
     key: str
     chart: PreparedChart
+
+    def __post_init__(self):
+        for row in self.chart.inputs.rows:
+            source_actions(row)
 
     @property
     def event_count(self):
@@ -37,7 +42,8 @@ class BlockSampler:
         self.groups = {}
         for c in self.contexts:
             self.groups.setdefault(c.group_id, []).append(c)
-        self.signature = digest(canonical_json([(c.group_id, c.key, c.event_count) for c in self.contexts]).encode())
+        self.signature = digest(canonical_json({"action_schema": ACTION_SCHEMA,
+            "contexts": [(c.group_id, c.key, c.event_count) for c in self.contexts]}).encode())
         self.rng = random.Random(seed)
         self.position = 0
 

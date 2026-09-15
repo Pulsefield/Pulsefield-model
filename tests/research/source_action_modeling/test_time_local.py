@@ -96,7 +96,7 @@ def test_interventions_preserve_mirror_padding_hidden_targets_and_gradients(devi
             torch.testing.assert_close(x.flip(2), y, atol=6e-6, rtol=2e-5)
             torch.testing.assert_close(x[0, :length], z[0], atol=6e-6, rtol=2e-5)
             assert not x[0, length:].count_nonzero()
-        permutation = torch.arange(1296, device=device).reshape(36, 36).T.flatten()
+        permutation = torch.arange(256, device=device).reshape(16, 16).T.flatten()
         torch.testing.assert_close(model(batch).log_probs[..., permutation], model(mirrored).log_probs,
                                    atol=8e-6, rtol=2e-5)
         head = initialize_readout("all").to(device)

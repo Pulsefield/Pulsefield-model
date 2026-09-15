@@ -267,9 +267,10 @@ conceal failure on longer organization.
 Each $a_j$ is a joint four-lane action row, including taps, LN heads, and closes.
 A joint categorical output or a conditional within-row factorization can
 preserve dependencies; four independent lane classifiers would not express
-the same distribution. Source close/head coincidences must remain explicit,
-as in [source replay](scoped_style_witness_generation.md#5-source-objects-event-rows-and-selection-decisions),
-rather than being retimed into invented V3-compatible rows. Legality masks may
+the same distribution. Source-action uses the V3 single-action lane schema.
+Same-lane close/tap and close/head coincidences are rejected without retiming;
+the [checkpoint guide](source_action_checkpoint_reuse.md) describes the exact
+codes and their training/inference implications. Legality masks may
 use declared conditions and the decoded prefix, never undisclosed target state.
 
 A compact autoregressive decoder permits likelihood evaluation, but teacher

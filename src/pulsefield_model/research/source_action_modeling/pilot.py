@@ -30,7 +30,7 @@ from .diagnostics import (capture_response, finish_response, capture_semantic_re
                           finish_semantic_response)
 from .model import initialize_comparison
 from .local_corpus import load_local_corpus
-from .observation import EventBlock, ViewPolicy, declared_entering_occupancy, observe, paired_views
+from .observation import EventBlock, ViewPolicy, declared_entering_occupancy, observe, observe_complete, paired_views
 from .sampling import TrainingContext, PairedBlockSampler, VIEWS
 from .semantic_probe import SemanticCorpus, fit_readout, evaluate_readout
 from .tensors import collate
@@ -150,7 +150,8 @@ def load_population(prepared_dir, dataset_dir, *, allocation_dir=None):
     # the final probe into an unrecorded subset after pretraining has finished.
     for i in semantic.train_indices + semantic.validation_indices:
         row = corpus.records[i]
-        corpus.chart(row["chart_key"], row["chart_sha256"])
+        chart, _ = corpus.chart(row["chart_key"], row["chart_sha256"])
+        observe_complete(chart, entering_occupancy=declared_entering_occupancy(chart))
     population.update(song_audit=song_audit, excluded_inputs=rejected,
         semantic_support=support(corpus.records, sorted(semantic.eligible)),
         semantic_train_indices=semantic.train_indices, semantic_validation_indices=semantic.validation_indices,

@@ -57,7 +57,7 @@ def test_64_row_scale_retains_release_only_targets_and_trains():
     samples, records = BlockSampler([TrainingContext("group", "128-event-context", chart)]).draw(30)
     assert {r["rows"] for r in records} == {4, 16, 64}
     item = observe(chart, EventBlock(1, 64), entering_occupancy=(False,) * 4)
-    assert item.targets[0] == (4, 0, 0, 0) and item.attack_group_span == 32
+    assert item.targets[0] == (3, 0, 0, 0) and item.attack_group_span == 32
     model = initialize_model()
     output = model(collate([item]))
     output.loss.backward()

@@ -17,8 +17,9 @@ effort, success probability or a demand state.
 ## Prediction object and conditions
 
 Let $A=(a_1,\ldots,a_N)$ be complete source-event action rows, including
-release-only events. Each lane has silence, tap, LN head, close, close-plus-tap,
-or close-plus-head. The supplied skeleton $\Gamma$ contains the union of real
+release-only events. Each lane uses the V3 action codes `EMPTY=0`, `TAP=1`,
+`LN_START=2`, `LN_CLOSE=3`. Same-lane close/tap and close/head coincidences are
+rejected. The supplied skeleton $\Gamma$ contains the union of real
 attack and release times, with declared scope/context and synthetic markers.
 It reveals event existence and timing, but not hidden attack/release types,
 lane membership, attack ranks or LN identities. This task predicts arrangement
@@ -55,13 +56,14 @@ its true action. Padding neither contributes loss nor advances state.
 This defines a normalized conditional block distribution under prefix-only
 legality. It does not enforce compatibility with every visible suffix fact or
 guarantee that conditionals for different masks derive from one global chart
-distribution. Its legal alphabet is the source-action alphabet, including
-coincident close/head actions, rather than the V3 output grammar.
+distribution. Its lane alphabet and local occupation transitions match V3; supplied
+event times and incomplete-context conditions still differ from the complete
+V3 generation contract.
 
 ## Joint hand output family
 
 [`JointDecoder`](../../src/pulsefield_model/research/source_action_modeling/model.py)
-scores 36 candidates per hand with shared unary terms and a bilinear potential.
+scores 16 candidates per hand with shared unary terms and a bilinear potential.
 Let $e_a$ be a shared projected action embedding, and $q_L,q_R$ the hand queries
 formed from both encoded contexts, both recurrent states and permitted
 occupation. The pair term is
@@ -83,7 +85,7 @@ $$
 
 This contrast can change sign with context. Unary terms and the softmax
 normalizer cancel. The default interaction dimension is eight; the interaction
-table remains rank-bounded by the projected embeddings. A 1,296-class softmax
+table remains rank-bounded by the projected embeddings. A 256-index softmax
 therefore provides joint normalization without claiming an arbitrary categorical
 family. Mirror, gradient, padding and legality checks verify the decoder
 contract. The construction below verifies an expressible distinction; it does
@@ -344,7 +346,7 @@ common decoder entry remains permissible.
 
 `evaluate_path_consistency(model, pairs, batch_size=...)` evaluates without
 parameter or gradient updates and restores module modes. For every common
-suffix row it compares the full 1,296-class distributions using Jensen–Shannon
+suffix row it compares the full 256-index distributions using Jensen–Shannon
 divergence, total variation and both KL directions. Illegal classes contribute
 zero. It also records both routes' target NLLs, suffix sequence/mean-row costs,
 legal class counts, position alignment, duration and batch hashes. Target NLL

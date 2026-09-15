@@ -26,7 +26,7 @@ def test_order_is_only_parameter_matched_intervention_and_preserves_mirror_paddi
     assert all(torch.equal(v, right.state_dict()[k]) for k, v in left.state_dict().items())
     baseline = initialize_representation_comparison({"combined": representation_arms()["combined"]})["combined"].to(device).eval()
     batch = collate([example(), example(long=True)]).to(device)
-    permutation = torch.arange(1296, device=device).reshape(36, 36).T.flatten()
+    permutation = torch.arange(256, device=device).reshape(16, 16).T.flatten()
     values = {}
     for name, model in models.items():
         model.to(device).eval()
@@ -82,6 +82,10 @@ def test_packaged_config_projects_and_rejects_ineffective_or_unknown_fields():
     assert config.seeds == [17, 29] and config.model.decoder_hidden == 64
     assert config.max_seconds == 39600 and config.model.hand_hidden == 32
     assert config.train_group_limit is None and config.source_cache_charts == 16
+    assert config.warm_start_dir is None
+    assert compose_config(["warm_start_dir=/tmp/source-action-old"]).warm_start_dir == "/tmp/source-action-old"
+    with pytest.raises(Exception, match="warm_start_dir"):
+        compose_config(["warm_start_dir="])
     assert compose_config(["train_group_limit=32"]).train_group_limit == 32
     for override in ("+unused=true", "+model.unused=1", "model.hand_hidden=64", "model.lane_dim=32", "model.dropout=0.1",
                      "seeds=[17,17]", "min_updates=999999", "max_source_rows=64", "train_group_limit=0",

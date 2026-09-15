@@ -14,6 +14,7 @@ class CompositionExperimentConfig:
     index_path: str = "artifacts/indexes/beatmap_index_4k.parquet"
     dataset_root: str = "dataset"
     source_cache: str = "artifacts/scoped-style-modeling/sources"
+    warm_start_dir: str | None = None
     device: str = "mps"
     seeds: list[int] = field(default_factory=lambda: [17, 29])
     train_group_limit: int | None = None
@@ -49,6 +50,8 @@ class CompositionExperimentConfig:
 
     def validate(self):
         self.model.__post_init__()
+        if self.warm_start_dir is not None and not self.warm_start_dir.strip():
+            raise ContractError("warm_start_dir must be a nonempty checkpoint directory or null")
         if self.model.hand_hidden != 32:
             raise ContractError("Composition banks currently require hand_hidden=32 (64 channels)")
         if self.model.lane_dim != 16:

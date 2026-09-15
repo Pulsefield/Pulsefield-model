@@ -24,7 +24,7 @@ def fixture_chart(*, changed=False, mirror=False, long=False):
     def note(line, lane, start, end=None):
         return NoteRef(line, lane, "normal" if end is None else "long", start, start if end is None else end)
     objects = (note(1, 0, -100, 300 if changed else 200), note(2, 1, 0, 200 if changed else 100),
-               note(3, 1, 200 if changed else 100, 300), note(4, 2, 100), note(5, 3, 200),
+               note(3, 1, 300 if changed else 200, 400), note(4, 2, 100), note(5, 3, 200),
                note(6, 2, 400 if changed else 300, 500), note(7, 0, 400), note(8, 3, 500),
                note(9, 1, 600), note(10, 0, 700, 2200), note(11, 2, 800))
     if long:

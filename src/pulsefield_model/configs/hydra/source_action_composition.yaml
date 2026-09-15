@@ -10,6 +10,8 @@ dataset_dir: artifacts/scoped-style-modeling/dataset-b22a7a4
 index_path: artifacts/indexes/beatmap_index_4k.parquet
 dataset_root: dataset
 source_cache: artifacts/scoped-style-modeling/sources
+# Optional trusted run root containing seed-<seed>/<arm>-latest.pt; weights only.
+warm_start_dir: null
 device: mps
 seeds: [17, 29]
 train_group_limit: null

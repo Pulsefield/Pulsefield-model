@@ -67,9 +67,10 @@ arm still has nonlinear relation attention and a contextual GRU; it may already
 learn the same useful distinction. The experiment can reject a practical benefit
 from this reorder. It cannot prove that the serial family lacks that function.
 
-Both arms have exactly 341,233 parameters under the preset: 236,516 encoder,
-17,484 action reader and 87,233 decoder. Every initial tensor is identical within
-a seed. The bank width remains 64; the feedforward layer is 256, decoder hidden
+Both arms have exactly 340,913 parameters under the preset: 236,516 encoder,
+17,484 action reader and 86,913 decoder. Every initial tensor is identical within
+a seed when training from scratch. The bank width remains 64; the feedforward
+layer is 256, decoder hidden
 size 64, action embedding 16 and interaction rank 16. There are no added slots,
 retrieval rounds, losses or synthetic training examples. Changed effective
 support and optimization conditioning are consequences of the reorder and remain
@@ -91,8 +92,9 @@ retain the existing identity-hash 80/10/10 split. Every candidate in training an
 validation is verified against original bytes, metadata and 4K action replay.
 Exact source/arrangement duplicates are counted once, with validation processed
 first to prevent training overlap. Invalid replay and fewer than four events
-receive explicit rejection records. Simultaneous close/head events retain their
-combined lane actions. Grouping does not establish audio deduplication or
+receive explicit rejection records. Same-lane close/tap and close/head
+coincidences are rejected under the V3 single-action lane schema. Grouping does
+not establish audio deduplication or
 content deduplication against unopened test payloads.
 
 Each training draw selects uniformly at five levels: song group, beatmap within
@@ -242,7 +244,11 @@ Snapshots are atomically replaced every 500 updates or five minutes. Each seed
 keeps `serial-latest.pt`, `interleaved-latest.pt`, final endpoints and fitted
 readouts. A stopped run writes `status: incomplete` and raises; `completed` means
 all declared seeds and evaluations finished. The CLI does not automatically
-resume. The existing trusted-local checkpoint API restores training state on the
+resume. Optional `warm_start_dir` imports compatible per-seed, per-arm weights
+before initial evaluation; it starts fresh optimizer and sampler state. See
+[checkpoint reuse](source_action_checkpoint_reuse.md) for six-action migration,
+required file names and the interpretation of inherited training exposure.
+The existing trusted-local checkpoint API restores training state on the
 same device family; it does not resume the entire evaluation workflow.
 
 A short verification run can lower execution exposure while retaining the full

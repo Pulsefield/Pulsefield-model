@@ -14,7 +14,8 @@ import torch
 
 from ..scoped_style_modeling.dataset import (ContractError, Interval, REVISION, MANIFEST_SHA256,
                                            canonical_json, checked_bytes, digest)
-from ..scoped_style_modeling.replay import parse_source, prepare_chart
+from ..scoped_style_modeling.replay import prepare_chart
+from .actions import parse_source
 from .checkpoint import save_snapshot
 from .diagnostics import capture_response, finish_response
 from .model import initialize_model
