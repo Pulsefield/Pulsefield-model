@@ -114,14 +114,140 @@ tests/research/scoped_style_modeling/test_model.py tests/test_package_layout.py.
 Hydra --cfg job/--help, four local documentation links and git diff --check
 also passed. No CUDA coverage is claimed.
 
-## Result log
+## Result Log: pilot-20260915-01
 
-Pending the single bounded run. Evaluation and adoption decision will use the
-recorded endpoint and guards without enlarging the experiment.
+### Experiment and reproduction
+
+- Owning Note: 2026-09-15-source-action-relation-matching. Accepted Note revision:
+  none. Experiment Card ID/revision: none. The exploratory protocol was committed
+  before launch as a997051fdf8bfcede71da709e719c1e9d34b66f2.
+- Pre-intervention baseline: a7ab19f26cd8dd05480c8376060aaced1af4f2a7, clean.
+  Both executable arms launched at 643f50519f6000e986cea6f40d36e93172de9159,
+  clean. The command and configuration above were used without overrides.
+- Run root: artifacts/source-action-relation-matching/pilot-20260915-01.
+  Arm endpoints: seed-17/additive-endpoint.pt and seed-17/query-endpoint.pt.
+  Common initialization SHA256:
+  0f557d7ad0538a03d8f087d0ac4d47cbdee6a8f69224e16d59d3e84f8c9b9a78.
+- Saved source aggregate SHA256:
+  a2fdb902dc406a11e82db4fc7a10807a549756866af9dd5372f5e408f6091871.
+  The snapshot includes the shared RelationAttention source and config as well
+  as the source-action modules. All copied-module hashes were rechecked.
+- Verified population SHA256:
+  e56d8eaf3b40bbe9fe79bea56a8f4d67c4a775440358e049bc4c50235d2f5484.
+  Training population: 3,169 groups, 11,564 beatmaps. Validation: 32 groups,
+  61 source windows and 192 paired blocks. Human fitting/validation: 382/61
+  cells, with 18 human validation groups.
+- Fixed validation manifest SHA256:
+  717e10ecbea9f7228f2bf7b444474f2513d8405a2e6fdafb6256fc5c11fe0254.
+  Population/allocation/manifest hashes and identical evaluation batch identities
+  across arms were verified. Test payloads remained unopened.
+- Environment: MPS, macOS 26.6.2 arm64, Python 3.10.20, PyTorch 2.11.0, FP32,
+  one CPU thread. Launch: 2026-09-15T12:20:47.028686+00:00.
+- Fresh destination, no overwrite or resume. Both arms completed exactly 300
+  paired updates. Stop reason: update-bound. Training 964.619 seconds; full run
+  1,309.469 seconds (21.82 minutes). All declared auxiliary stages completed.
+- Peak observed MPS driver allocation: 2,457,796,608 bytes (2.289 GiB).
+  Peak process RSS: 2,991,325,184 bytes (2.786 GiB). These overlap on unified
+  memory. Outputs occupy approximately 31.8 MiB. All guards remained within bounds.
+- Each arm received 2,400 draws and 7,200 block/view exposures, containing
+  190,836 target-row exposures across three views. Scale draw counts were
+  835/831/734 for 4/16/64 rows. Training reached 1,690 groups and 2,061 beatmaps.
+  Exposures include repeated views and overlapping windows, not independent rows.
+
+### Results
+
+Action NLL uses mean within group, then mean across groups. Positive paired gain
+is additive minus query. Human NLL uses the frozen concept/group macro metric.
+
+| Measurement | Additive | Query |
+| --- | ---: | ---: |
+| Initial detailed NLL | 4.335290690 | 4.335290693 |
+| Final detailed NLL | 2.633393463 | 2.633629405 |
+| First-position detailed NLL | 2.914092300 | 2.914598928 |
+| Later-position detailed NLL | 2.604718710 | 2.604904800 |
+| 4-row block detailed NLL | 2.729763863 | 2.730039398 |
+| 16-row block detailed NLL | 2.543504278 | 2.543722485 |
+| 64-row block detailed NLL | 2.626912249 | 2.627126331 |
+| Near minus detailed mean-row NLL | 0.008303006 | 0.008364062 |
+| Coarse minus detailed mean-row NLL | 0.000953691 | 0.001054649 |
+| Frozen trained human macro NLL | 0.954594672 | 0.954999663 |
+| Matched untrained human macro NLL | 0.943775508 | 0.943775513 |
+
+Primary paired gain: -0.0002359414 nats per row; 95% paired group-bootstrap
+interval [-0.0005167263, 0.00000712845], from 500 draws over 32 groups. This fails
+both the >=0.02 practical gain and positive lower-bound criteria. The interval
+does not establish a reliable difference in either direction.
+
+First-position and scale regressions are at most 0.000506628, below 0.05. Human
+macro regression is 0.000404991, below 0.05. Concept regressions, query minus
+additive, are Jack +0.000391011, LN +0.000990658, Stream +0.000927727,
+Tech -0.000785038 and Trill +0.000500600; all are below the 0.10 limit. The
+short frozen readers do not outperform the matched untrained macro result.
+Tech retains only one positive and no supporting validation cell.
+
+At serial S4, combination-holdout MSE for the four structural facts is:
+
+| Fact | Additive trained | Query trained | Matched untrained, approximately |
+| --- | ---: | ---: | ---: |
+| Adjacent same-lane recurrence | 0.045072 | 0.045088 | 0.006304 |
+| Two-step return without repeat | 0.044743 | 0.044797 | 0.006520 |
+| Lag-16 lane match | 0.041875 | 0.041920 | 0.062396 |
+| Adjacent hand transition | 0.096646 | 0.097867 | 0.025319 |
+
+All four query values are slightly higher at the relation output. The full
+320-case factorial, all stages, pace holdout and counterfactual reports are
+retained; these synthetic statistics are not human concepts. Both arms use the
+same structural manifest. The 12 fixed-prefix route pairs yield equal-pair mean
+TV 0.128974898/0.129360097 and JS 0.022244098/0.022315982 nats for additive/query.
+Their history/observation batch hashes and row indices match across arms.
+
+Measured model-update seconds for updates 11–300 are 178.187289/156.063702,
+giving query overhead -12.42%, within the +15% bound. The runner always executes
+additive first; cache/shape warmup can favor query. This measurement does not
+isolate intrinsic operator cost, and no speedup claim or extra timing run follows.
+
+The initial maximum per-row NLL difference was 9.536743e-7 on MPS. Every common
+initial tensor matched exactly and W_rel was zero. Its final Frobenius norm is
+0.960672319; the matrix was updated. This confirms training of the added matrix,
+not beneficial use of the added capacity.
+
+### Plan conformance and evidence audit
+
+No protected setting changed. There was one seed, one schedule, one budget and
+one run. Initialization/dtype, all 300 update indices, 2,400 draw indices, shared
+views, finite update metrics, equal final sampler states, four-action checkpoint
+contracts, common evaluation identities, matched frozen-reader fitting indices
+and saved hashes passed the audit. Initial/final NLL and bootstrap estimates were
+recomputed from saved per-block values. No additional model forward or training
+was used for this audit. The script and compact result are analyze.py and
+summary.json under the run root. Deviation disposition: none.
+
+### Evaluation and decision
+
+Observation: both arms learn prediction from the common initial NLL, but query
+matching supplies no practical held-out gain under the fixed pilot exposure.
+Regression limits pass; auxiliary measurements do not reverse that conclusion.
+The capability constraints pass independently of these empirical results.
+
+Interpretation: **retain additive as the reference and defer adopting query
+matching**. Keep the candidate selectable. Recommended evidence classification:
+REFINE, bounded to an exploratory pilot; no formal SUPPORTED recommendation.
+This does not reject the mechanism at every training horizon or establish that
+it is universally redundant. The strongest remaining alternative is insufficient
+training exposure for useful query-dependent retrieval to develop. One seed,
+partial corpus exposure, 32 validation groups, short human fitting, synthetic
+transfer and teacher-forced prediction limit the claim. None authorizes another
+run, added search or an unbounded diagnostic investigation.
+
+All requested deliverables are complete: optional implementation, module
+constraints, paired results and a defer decision. This milestone has no active
+follow-up. The learning-signal audit remains closed; decoder-state zeroing is
+neither a prerequisite nor a deferred obligation. Any further research needs
+new human direction.
 
 ## Next lifecycle condition
 
-Preserve measurements and a scoped recommendation after this exploratory pilot.
-No formal SUPPORTED recommendation or lifecycle transition follows without the
-required human revision acceptance. Additional research requires new direction;
-insufficient pilot evidence does not authorize a diagnostic backlog.
+Results and the operational defer decision are recorded. The Note stays proposed
+because no exact revision was formally accepted; there is no automatic lifecycle
+transition or publication. Further research requires new direction, not completion
+of any residual audit prerequisite.
