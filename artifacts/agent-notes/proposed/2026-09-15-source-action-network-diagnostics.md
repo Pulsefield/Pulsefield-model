@@ -332,3 +332,42 @@ free-running sampling should measure prefix error accumulation and long-horizon
 structure under the same supplied timing/entry conditions. The next experiment's
 scope remains for human direction; this evidence append grants no acceptance,
 training or lifecycle transition.
+
+#### Interpretation clarification: lag and synthetic validity
+
+Reinspection of mechanism-20260915-b confirms 320 structural cases but only
+64 distinct lane sequences, each presented at five constant event gaps. These
+are variants of eight generator-factor combinations with phase and mirror
+changes, not 320 independent real-corpus patterns. Neither exact corpus matches
+nor the frequency of this synthetic family in training have been established.
+The remote-edit experiment uses this same synthetic tap family. Both omit
+chords, LN and within-case gap changes; the structural probe also observes a
+complete input, whereas the action task predicts hidden rows.
+
+Lag is source-event position difference: lag 16 pairs event 1 with event 17,
+not sixteen beats. At a 120-ms event gap this spans 1.92 seconds. The target
+measures equal lanes across those pairs. A period-two alternation can have
+perfect lag-16 agreement, so the statistic does not uniquely identify a
+sixteen-event motif or phrase-level organization. Lagged probe features add
+explicit separated-position comparisons to a separate fitted readout; they do
+not modify or train the action encoder.
+
+The trained H response exceeds numerical repeats, but untrained H also responds
+(mean query-relative RMS approximately 0.00097–0.00149 across checkpoints).
+The experiment therefore establishes a working remote influence path under
+these stimuli, not learned musically appropriate long-range use. Full-edit TV
+0.0021–0.0117 measures redistribution of prediction probability, not accuracy
+improvement. Removing all H residual context is a different intervention from
+changing the remote contribution to that context; its large effect cannot be
+assigned wholly to distant information.
+
+The structural probe remains useful as a controlled measurement check. Its
+negative result means these fixed readouts fail on this synthetic family;
+distribution mismatch, readout restrictions and irrelevant synthetic targets
+remain alternatives to information loss. The real validation-block intervention
+offers more direct evidence of fixed-model prediction dependence, while retaining
+the activation-distribution and no-retraining caveats. Before architectural
+decisions, prioritize checking these measurements on real held-out song groups,
+initially with matching tap-only definitions and both visible/masked conditions,
+then define suitable chord/LN measurements. This refines interpretation and the
+next question only; no Card field, executed comparison or lifecycle state changes.
