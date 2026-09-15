@@ -27,6 +27,7 @@ class PackageLayoutTest(unittest.TestCase):
             "pulsefield_model.evals",
             "pulsefield_model.research",
             "pulsefield_model.research.scoped_style_modeling",
+            "pulsefield_model.research.oracle_time_continuation",
         ]
 
         for module in modules:

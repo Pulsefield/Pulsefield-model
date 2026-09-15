@@ -340,6 +340,9 @@ dense/step parity 在固定参数、eval mode、相同 memory 更新规则下比
 
 ## 9. 里程碑与依赖
 
+实现状态：M0 的因果数据、seed、逐行 exact replay 与终点规则已实现，接口与真实谱面验证见
+[因果数据与回放说明](oracle_time_continuation.md)。M1–M4 尚待实现。
+
 | Milestone | 实现内容 | 完成条件 | 不允许替代成交付 |
 | --- | --- | --- | --- |
 | M0：因果数据与 state 合同 | skeleton、30-note seed、ExactReplay、pre/post state、终点规则 | 真实谱面逐行 teacher replay 与 prefix 构造正确；未来信息隔离 | 再写一份旧 run audit |
