@@ -4,7 +4,7 @@ Note ID: 2026-09-14-source-action-relation-composition
 Status: proposed
 Kind: research
 Created: 2026-09-14
-Updated: 2026-09-14
+Updated: 2026-09-15
 Product revision: 7adc7986379c913bd48be8afb8888024d008b852 with uncommitted composition, runner, configuration, diagnostics, tests and documentation changes
 Scope: Equal-parameter source-action local/relation order comparison and a complete bounded MPS experiment
 Related: 2026-09-14-source-action-time-local-representation, 2026-09-14-source-action-stage3-pilot
@@ -396,3 +396,226 @@ Commit and review the recoverable product implementation and exact proposed card
 before revision-specific acceptance. Overnight results must retain source/input
 identities, paired endpoints, per-seed metrics and deviations. A short software
 check does not complete the proposed research experiment or accept its direction.
+
+
+## Result Log: overnight-all-songs-01-evaluation-20260915
+
+### Experiment and reproduction
+
+- Owning Note: 2026-09-14-source-action-relation-composition. Accepted revision:
+  none. Associated Card: source-action-relation-order-overnight revision 2,
+  still proposed. The owner requested interpretation of the completed run and
+  priorities for investigating networks and sampling.
+- Run: `artifacts/source-action-composition/overnight-all-songs-01`; both arms
+  started fresh under the manual full-corpus command recorded above. Saved
+  configuration matches the full population, seeds 17/29, eight blocks per
+  update, three views, 600 frozen-human-reader steps and 1,000 bootstrap draws.
+- Recorded launch revision: `7adc7986379c913bd48be8afb8888024d008b852`, dirty.
+  All saved source-action Python modules pass their saved SHA256 checks and
+  exactly match the corresponding files in clean product commit
+  `e8226324c6f05ffa28dc4ee435e98935e799496c`. This recovers those modules; it
+  does not retroactively establish a clean launch or Card acceptance. Saved
+  source aggregate SHA256:
+  `637540f51abc3fc7e50b4a92e9a1811e45c76b2f1a182d39ff0b0f31ec38f4f7`.
+- Population SHA256:
+  `8d84be31e416d35eabf0a83d04d642d2be32350a9f32df8b762155bd0918a62a`.
+  Training: 3,169 groups, 11,564 beatmaps, 11,522,113 source events. Action
+  evaluation: 384 paired blocks from 64 groups. Human fitting/validation:
+  382/61 cells; validation contains 18 groups. Tech has six validation cells,
+  including only one positive and no supporting example.
+- Environment: saved report records MPS, macOS 26.6.2 arm64, Python 3.10.20,
+  PyTorch 2.11.0. The proposed environment identifies the owner's M5/24 GB host;
+  the report does not independently identify its processor model.
+- Status completed. Total 31,277.49 seconds (8.69 hours), below 39,600 seconds.
+  Seeds 17/29 completed 4,467/4,196 paired updates in 14,297.03/14,400.01
+  training seconds. Both stopped at their common time endpoint, without
+  validation checkpoint selection. The dynamic reservation set seed 17's
+  training budget to 14,295.26 seconds; checking between updates permits the
+  small overshoot. Update counts differ across seeds, not within a pair.
+- Maximum observed MPS driver allocation 2,667,495,424 bytes; process peak RSS
+  5,913,264,128 bytes. Both are below their separate guards. They overlap in
+  unified memory and must not be added. The runner reports completed rather
+  than a resource stop. Outputs were retained; no resume or overwrite was used.
+- Evidence: report/configuration/source snapshot, allocation, update logs,
+  initial/final structure, four endpoint checkpoints, trained/untrained human
+  and relation reports, fitted readouts, path reports and human comparisons.
+  `analysis-20260915/summary.json` under the run records their hashes and compact
+  derived statistics; `audit.py` reproduces the summary using the repository
+  Python environment, NumPy and PyArrow. No neural forward or training is part
+  of this post-hoc calculation.
+
+### Results
+
+NLL is lower-is-better. Action values are detailed-view mean-row NLL, averaged
+within song group then across groups. Human values are the frozen reader's
+human concept/group macro three-class NLL.
+
+| Seed | Serial action NLL | Interleaved action NLL | Serial minus interleaved, paired group 95% interval | Serial human NLL | Interleaved human NLL |
+| --- | ---: | ---: | --- | ---: | ---: |
+| 17 | 2.047442 | 2.064200 | -0.016757 [-0.033748, 0.000332] | 0.964306 | 0.878661 |
+| 29 | 1.984148 | 1.998581 | -0.014433 [-0.029268, 0.000251] | 0.893605 | 0.942422 |
+
+Initial action NLL was about 4.50–4.56. Both arms learn prediction; neither seed
+meets the proposed interleaved gain of 0.02 with positive interval lower bound.
+Both intervals include zero. They measure source-group uncertainty conditional
+on these checkpoints and do not measure training-seed uncertainty.
+
+The human order advantage changes sign. Interleaved trained versus untrained
+macro gain is +0.040699 at seed 17 and -0.038117 at seed 29. Interleaved Tech
+NLL exceeds serial by 0.287494/0.469024, violating the proposed 0.10 per-concept
+guard in both seeds; seed 29 Trill also regresses by 0.167735. Macro regression
+at seed 29 is 0.048817, narrowly within the separate 0.05 macro bound. The
+single Tech positive prevents a broad conclusion about Tech recognition.
+Same-input Jack/Stream joint presence accuracy is 7/12 versus 7/12 at seed 17,
+and 6/12 versus 7/12 at seed 29 (serial versus interleaved); matched untrained
+readers score 6/12 by predicting both present. Preserve the individual
+combinations rather than interpreting overall joint accuracy as selectivity.
+
+The structural aggregate conceals a specific contrast. At S4, combination
+holdout mean MSE across four statistics is 0.068927/0.063586 at seed 17 and
+0.063207/0.058044 at seed 29 (serial/interleaved). The improvements are only
+7.75%/8.17%, below the proposed 10%. Interleaved untrained S4 MSE is
+0.033981/0.042807, better than the trained aggregate in both seeds.
+However, three local statistics improve strongly:
+
+| S4 combination-holdout MSE | Serial 17 | Interleaved 17 | Serial 29 | Interleaved 29 |
+| --- | ---: | ---: | ---: | ---: |
+| Adjacent same-lane recurrence | 0.003094 | 0.000924 | 0.009476 | 0.000441 |
+| Two-step return without repeat | 0.002965 | 0.001078 | 0.011830 | 0.000607 |
+| Adjacent hand transition | 0.004352 | 0.000392 | 0.002930 | 0.001684 |
+| Lag-16 lane match | 0.265297 | 0.251952 | 0.228594 | 0.229442 |
+
+Lag-16 alone accounts for 90.4%–99.1% of these models' aggregate S4 squared
+error. Its training-mean prior MSE on the same holdout is 0.046875, substantially
+better than either trained probe. On held-out paces, changing lane-to-hand
+assignment leaves true lag-16 agreement unchanged but changes the trained S4
+prediction by mean absolute 0.3593/0.2935 at seed 17 and 0.3290/0.2867 at seed
+29 (serial/interleaved). The readout responds to irrelevant changes for this
+statistic. This is a concrete failure of probe transfer, not proof that the
+encoder has erased all long-range information. The three local statistics and
+the untrained controls rule out describing the entire representation as failed.
+
+Detailed context gives small, inconsistent gains over near context. The
+near-minus-detailed mean-row NLL is -0.009723/-0.020720 at seed 17 and
++0.016928/+0.006803 at seed 29 (serial/interleaved). First-position detailed
+NLL is 2.15–2.21 versus later-position 1.95–2.04; this is descriptive evidence,
+not a causal estimate of decoder-prefix reliance.
+
+The 24 fixed-information path pairs give equal-pair mean TV 0.0956–0.1065
+and JS 0.0114–0.0163 nats. Mean true-target NLL changes under moving the same
+prefix between encoder observation and decoder history vary in sign/magnitude.
+These are routing comparisons on the fixed manifest prefix, not rollout quality
+or broad evidence of route independence. They cover the first four validation
+groups because the manifest has six blocks per group.
+
+### Realized sampling and optimization
+
+| Exposure per seed | 17 | 29 |
+| --- | ---: | ---: |
+| Block draws | 35,736 | 33,568 |
+| Unique groups | 3,169 (100%) | 3,169 (100%) |
+| Unique beatmaps | 10,267 (88.78%) | 10,131 (87.61%) |
+| Target-event exposures before three-view replication | 994,116 | 940,468 |
+| Unique target events | 909,641 (7.89% of population events) | 862,834 (7.49%) |
+| Unique events inside sampled context windows | 5,092,970 (44.2%) | 4,918,493 (42.7%) |
+
+Event coverage merges half-open intervals within each source SHA, using original
+window offset plus target offset. Context-window coverage includes hidden
+positions and must not be presented as visible-action coverage. Training labels
+and gradients can be reused across overlapping draws; raw draws are not
+independent examples or corpus epochs.
+
+Each scale receives about one third of block draws. Median target duration is
+2.30/2.32 seconds; the 90th percentile is 12.39/12.86 seconds; the full observed
+range is 58 ms–66 seconds. A fixed event-count scale is not a fixed physical-time
+or musical-phrase scale. Across all beatmaps, median draw count is two, 90th
+percentile six, maximum 24; more than 10% are never drawn. Uniform song then
+beatmap gives long charts and charts in large sets lower per-event exposure.
+Uniform overlapping window/target starts also give edge events a different
+marginal probability. Annotation sections receive no special pretraining weight.
+
+Almost every update clips the global gradient norm at 1: 99.98% at seed 17,
+100% at seed 29. Last-500 median pre-clip norms are about 3.63/3.66 and
+2.99/3.05 (serial/interleaved). This does not establish an optimization defect;
+module norms, actual Adam displacement and loss response are still absent.
+Last-500 versus preceding-500 training losses fall by about 0.008 at seed 17
+and 0.062–0.064 at seed 29. Random-minibatch averages do not establish held-out
+convergence. Only initial/final action evaluations are available in this run;
+latest checkpoints replace earlier snapshots.
+
+### Plan conformance and evaluation
+
+The full population, paired settings, evaluation families and bounded time
+endpoints conform to the proposed revision-2 procedure. Sequential update
+numbers, target bounds, reported block/source coverage, matching human fitting
+indices across all four conditions per seed, and saved source hashes were
+recomputed successfully. The formal source/acceptance conditions do not conform:
+the launch was dirty and no accepted Card revision exists. The log remains
+exploratory, with unchanged Card and Note status.
+
+Observation: prediction learns, the proposed reorder fails the joint practical
+criterion, three local structural probes benefit, and lag-16 transfer and human
+reuse remain weak or unstable. Strong alternatives are a restrictive stage-moment
+ridge readout, specialization to local conditional prediction, limited target
+exposure, source-to-synthetic distribution shift, and human readout support or
+optimization. None is isolated by the present order comparison.
+
+### Decision and next discriminating work
+
+Recommended outcome: **REFINE**. Keep serial as the reference and retain
+interleaved as a candidate for its local-structure benefits. These are research
+recommendations, not adoption or a lifecycle change. Prioritize:
+
+1. **Separate accessible information from actual network use.** On saved
+   checkpoints, test U/S1/S2/S3/S4/H individually and all-except-one with matched
+   frozen-reader fitting. Fit linear and small nonlinear readouts with the same
+   training-only selection rule and untrained/orderless controls. Analyze each
+   exact relation separately, especially lag 16, and original human cases.
+   Do not select probe capacity on the existing held-out outcomes. The closest
+   methodological analogue is [Hewitt and Liang's probe controls](https://aclanthology.org/D19-1275/);
+   task-specific controls must distinguish what the readout learns itself.
+2. **Intervene on the paths used by the trained predictor.** Compare source
+   projection/time/row interaction, conditioned local kernels and raw-source
+   skips, relation attention R, contextual BiGRU H, ActionReader, and decoder
+   GRU/bilateral interaction. Start with L3/R/H and reader access because the
+   order and context results motivate them. Bypass or replace one computation
+   while recomputing every dependent later state; separately mask only its
+   direct bank-read route. Otherwise retained early states and source skips
+   can confound the apparent removal. Use paired examples, legal occupancy,
+   first/later/scale NLL and held-out semantic outputs. Distribution-matched
+   replacements and readout refitting qualify zero-ablation artifacts.
+   No single intervention ranks a module's universal necessity.
+3. **Audit both sampling processes.** For training, cross source/set size,
+   event count, physical duration, chart position, chord/LN mix and annotated
+   section overlap against realized exposure and error. Evaluate on both the
+   declared group-macro risk and a clearly separate event/duration-weighted
+   population. A subsequent controlled training comparison could alter just
+   one sampling distribution while preserving paired initialization, effective
+   update exposure and evaluation; do not silently importance-weight the
+   original estimand into another target population. For decoding, compare
+   teacher-forced and self-fed continuation over 4/16/64 rows on the same
+   supplied time skeleton, with repeated draws and a small fixed temperature
+   set. Track error growth, lane/chord/LN occupancy and release behavior,
+   recurrence, diversity, and joins to visible continuation. Legal masking
+   can guarantee row legality without guaranteeing musical coherence or
+   boundary compatibility. Timing generation is outside this model's output.
+4. **Resolve local-versus-long-range dependence.** Keep local rows and supplied
+   timing fixed while perturbing distant recurrence, then inspect output and
+   stage response by decoder position and scale. Select representative path
+   cases across groups and durations instead of only the first 24 manifest
+   blocks. Internal swaps require matched source facts and an explicit
+   hypothesized relation; [Geiger et al.](https://proceedings.mlr.press/v162/geiger22a.html)
+   provide a causal-interchange analogue, but their training intervention is
+   not part of the current model or this proposed read-only diagnosis.
+5. **Check optimization after localizing the failure.** Record per-module
+   pre-clip norms, parameter-relative Adam displacement, fixed-batch response,
+   and equal-update validation curves before widening networks or lengthening
+   runs. The existing `diagnostics.py` gradient-dot-displacement helpers can
+   guide instrumentation; they are a local linearization, not causal importance.
+   Attention maps likewise require independent intervention evidence, following
+   the caution in [Jain and Wallace](https://aclanthology.org/N19-1357/).
+
+Begin with saved-output error slicing, then a bounded frozen-checkpoint module
+and rollout diagnostic. Design any new training comparison separately after
+these observations distinguish the hypotheses. New run execution, acceptance,
+and product adoption remain pending human research direction.
