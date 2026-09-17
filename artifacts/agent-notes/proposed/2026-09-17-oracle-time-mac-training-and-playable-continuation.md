@@ -928,10 +928,86 @@ on them. Report pooled and equal-group Brier, paired435-group bootstrap
 uncertainty, per-gap-band errors, and raw start/continue/close counts. An
 improvement with a paired group interval below zero establishes predictive
 information in this control; it does not establish a neural transmission
-defect, causal mapper preference, or a safe occupancy penalty. Sparse cells,+source-style mixing and the much larger exposure of this diagnostic than the
+defect, causal mapper preference, or a safe occupancy penalty. Sparse cells,
+source-style mixing and the much larger exposure of this diagnostic than the
 neural model remain confounders. Never infer that every long gap must be empty.
 
 Output owner is `conditional-timing-signal-v1`, using immutable runtime v7,
 CPU/one Torch thread, a30-minute active bound, RSS2GiB, minimum available2GiB,
 swap-growth1GiB and128MiB output cap. Stop on identity, replay, numeric or resource
 failure. Store aggregate counts and per-group scores; do not copy raw charts.
+
+### Timing-information result
+
+The diagnostic completed in 8.566 seconds, scoring 11,219,325 training and
+1,827,293 validation nonterminal post-seed rows. Pooled validation Brier is
+.06446172 for occupancy alone, .06382779 with the preceding gap, and .06344166
+with both preceding/following gaps. The last improvement is -.00038614 with
+paired group-bootstrap 95% interval [-.00047127, -.00030112]; 320 of 435 groups
+improve. Equal-group improvement is -.00040498, interval
+[-.00048923, -.00032417]. This establishes a small predictive signal in this
+frequency control, not a causal attribution for the neural model.
+
+The relation is not monotone: per previously closed lane, train LN-start rates
+are .0674 before 125–250 ms gaps and .2524 before 2–8 second gaps. Held-out
+2–8 second boundaries include post-row occupancy in 573 of 890 rows. At
+8–32 seconds, 10 of 26 validation boundaries retain occupancy. The nine train
+boundaries beyond 32 seconds and the sole validation boundary have no post-row
+occupancy, but the sparse frequency model actually worsens that one validation
+case because some conditioning cells are unseen. These observations reject a
+general close-before-long-gap rule and retain the extreme tail as an evidence
+gap. No model weights or decode rules changed. Readout SHA:
+`b9a0934ce462976dc8064fd8c73ef187f0abf787449d5244e5eba0c5a1ebcab9`.
+
+The completed 20M context review is
+`quality-skeleton-timing-u300/context-review.json`, SHA
+`eb94ee889a02090622e64ad2f727627ba27fd04d031ced8e65347c790a0f9b69`.
+All eight canonical source-document hashes remained unchanged at review time.
+Its scoped Jack judgment is a machine hypothesis; no human record was changed.
+
+## Bounded shifted-stream feasibility probe
+
+The ongoing horizon comparison remains unchanged. A separate prototype tests
+whether less work per event can make broader training practical. The closest
+analogue is the shifted autoregressive decoder in
+[Attention Is All You Need, section 3.1](https://arxiv.org/html/1706.03762v7),
+combined with the existing bounded recurrent temporal bank. An input at event i
+contains only actions before i and permitted skeleton times, so its self-visible
+token can be used to predict row i without reading that target. This changes
+the neural cache meaning from post-content to pre-row history. It is not a
+function-preserving rewrite and cannot reuse an old cache or claim an exact
+resume from the existing architecture.
+
+Compare the current two-stream model with two exploratory arms: a shifted
+temporal stream retaining facts/local/relation inputs, and a shifted stream
+using facts plus known timing directly. The latter removes learned local and
+relation representations from the execution path; exact replay/occupancy and
+joint legality remain. Retain the existing parameter tensors for this cost
+probe, record which receive gradients, and do not publish its weights as a
+compatible production checkpoint. Transfer likelihood is descriptive only;
+the representation changes require a later controlled learning comparison.
+
+Before timing, verify target/future-action isolation, mirror equivariance,
+step/chunk forward and parameter-gradient parity, inference-cache parity across
+archive creation, and parameter-version invalidation on a small deterministic
+legal fixture. A prediction may prepare private cache state, but commit alone
+advances the authoritative exact/neural row count. Failed legality must not
+publish that state. Prototype outputs use a distinct cache signature.
+
+Use the pinned 20M timing-u300 weights and frozen v7 operators. Select the two
+lexicographically first TRAIN source SHAs with at least 1,800 events plus the
+known longest TRAIN source; inspect full prefixes of 512 and 1,600 rows with
+128 target rows each. Use Q64, B1, AdamW LR3e-5, weight decay.01 and structural
+weight.3; compare the same cases in alternating arm order, on CPU/four threads
+and MPS. Report prefix, target/backward, optimizer and total time separately.
+An arm needs at least 1.3x total target throughput to justify a larger learning
+trial; failing correctness rejects it regardless of speed. Concurrent corpus
+training limits absolute device comparisons. No superiority or novelty claim
+follows from this probe.
+
+Output owner `shifted-stream-probe-v1` has a 30-minute active bound, 128MiB
+diagnostic cap, 4GiB MPS driver/6GiB RSS limits, minimum available 2GiB and
+swap-growth 1GiB. Stop on any invariant, nonfinite, identity or resource failure.
+Record prototype source hashes before execution and leave the product runtime,
+ongoing experiment scripts and current architecture plan unchanged until the
+evidence warrants an explicit revision.
