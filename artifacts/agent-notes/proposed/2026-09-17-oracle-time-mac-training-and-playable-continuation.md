@@ -849,3 +849,47 @@ resource/identity/nonfinite/legality failure; preserve the last atomic
 checkpoint and report incomplete work. Do not overwrite pinned stages or
 restart an already completed100 stage. This is an authorized exploratory
 comparison, with no adoption, lifecycle transition or readiness claim.
+
+### Live continuation and recovery observation
+
+At2026-09-18 03:25 CST, the paired driver is live as Python PID57801
+(tool session23227). The base arm has computed53 updates/21,516 targets;
+its last durable checkpoint is update50,241,277,801 bytes. Logged peak RSS is
+2,453,061,632 bytes, maximum swap growth zero, and the latest available memory
+is11,330,617,344 bytes. These are observation-time values, not a later status
+guarantee. The planned order remains base100, long100, base300, long300.
+Poll this exact process or session and the stage readouts before any recovery;
+do not launch a second driver while it is live.
+
+The frozen driver is `exposure-continuation-v1/run.py`, SHA
+`61c2d7e9dd51e21df7b4243bfd9fea61f316b4462ab22609cd8f26967d5e584a`.
+Its persisted dataclass identity contains JSON lists where Python originally
+used tuples. The separately checked `resume.py` normalizes that metadata before
+comparison, leaving the original driver and model runtime untouched. Wrapper
+SHA is `a5743fb1c460c5f241452950083a8b2ffd7a8eab0727cfab9dd3f3f8d1afa695`.
+The normalized base configuration matches the saved manifest exactly. If the
+process is terminal and work remains, first inspect incomplete stage directories
+and checkpoints, then use:
+
+```sh
+PYTHONPATH=artifacts/oracle-time-continuation/m3-20260917/skeleton-time-runtime-v7/src caffeinate -i uv run --offline --extra mps python artifacts/oracle-time-continuation/m3-20260917/exposure-continuation-v1/resume.py
+```
+
+The driver skips completed hash-verified stage readouts and resumes the owning
+run's AdamW/RNG through `run_training`. A directory interrupted between weight
+copy and readout publication needs inspection before retry; do not overwrite it
+or confuse its presence with a completed stage. The process lock remains the
+second-writer guard. Each invocation's120-minute timer is separate; further
+execution still requires reassessing the active comparison and resource state.
+
+The20M timing-u300 starting weights now also have complete matched raw/seed17
+5b69/e67f/ecc4 generations. They contain2,880/1,715/2,417 notes and913/861/288
+LNs, maximum938/1,295/1,286ms, and complete in102.236 supervisor seconds while
+base training overlaps. Readout SHA:
+`3b0501e5c7cb06077cdfe3a0576b2e1ec71f11b1ea0542a34b65ea6d29fdab8d`.
+All context pages/actions have been rendered in `quality-skeleton-timing-u300`;
+their machine qualitative review remains pending. Counts alone do not establish
+a quality advantage over77M. Product `oracle_time_m3_validation.md` now contains
+the completed broad validation, coverage, timing/branch findings,77M context
+review and horizon-cost measurements. Product code remains at the preserved
+uncommitted implementation; no new product commit or remote push was made.
