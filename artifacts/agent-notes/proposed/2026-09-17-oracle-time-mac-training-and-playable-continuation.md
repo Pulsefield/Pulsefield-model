@@ -1011,3 +1011,80 @@ swap-growth 1GiB. Stop on any invariant, nonfinite, identity or resource failure
 Record prototype source hashes before execution and leave the product runtime,
 ongoing experiment scripts and current architecture plan unchanged until the
 evidence warrants an explicit revision.
+
+### Shifted-stream result and quality coverage
+
+Accepted revision/Card: none. Evaluation: REFINE. The prototype's small legal
+fixture passes the declared causal/cache/gradient/commit comparisons: the
+target/future-action perturbation changes preceding logits by exactly zero;
+maximum step/chunk gradient differences are 4.77e-7 and 3.58e-7. CPU/MPS
+forward agreement is checked on the same fixture. Prototype SHA is
+`a243c655bd8b5140cbdaf41206d6331c0f4b614f61dac6c3ebec78f4549bbffd`;
+validation readout SHA is
+`f5e8665eafc3ec6385bede98b685e8e820a49cf92a9c6e0bbe6ea22ee47080c7`.
+
+The six matched B1 cost updates per arm/device complete in 212.010 process
+seconds. CPU total update times are 35.955/32.395/24.817 seconds for two-stream,
+shifted local/relation and shifted facts/time; MPS totals are
+44.347/41.767/29.323. The full-input shifted arm gives only 1.11x/1.06x
+CPU/MPS throughput and fails the prespecified 1.3x threshold on these cases.
+The facts/time arm gives 1.45x/1.51x and qualifies for a separate learning
+comparison. Prefix replay dominates this B1 workload; these ratios cannot be
+multiplied by the horizon gain or substituted for actual B8/cohort4 costs.
+Bypassing local/relation changes representation and transfer likelihood,
+not just implementation. No production weights or model adoption result exists.
+Readout SHA:
+`ea7a42db12e4550218c50addbc60da24cbe28aa465d105a1adc7169fef89b9af`.
+
+All three models/optimizers were retained in one process. CPU peak RSS is
+2,503,786,496 bytes; MPS peak active/driver is 2,674,753,536/4,277,829,632 bytes,
+with no added swap and at least 8,267,071,488 bytes available. The driver peak
+is close to the 4GiB stop and is not a single-model or long-run envelope.
+The raw path gives gradients to 19,332,928 parameters while retaining the
+20,087,624-parameter allocation. The original product runtime is unchanged.
+
+The horizon comparison's base100/long100 stages consume 41,133/143,020 targets
+and the same 163,530 computed prefix rows. Update timers total 773.103/1,538.657
+seconds. Ordinary 24-window NLL is 2.512699/2.545021: more target exposure has
+not established a prediction gain at this checkpoint. The broad 300-step
+comparison remains the decision point; do not silently adopt the longer risk.
+Matched raw/seed17 complete generations for both100 stages are finished at
+`quality-exposure-{base,long}-u100`; readout SHAs are respectively
+`9bad189ea2fc318a429c9387cf1e4b6009564d86b22bc2a69283b97a1a3159ca` and
+`25ada41b9ab2e53783bc8b31f4e81ef182706085abe70e7a17267db72013ad5c`.
+All contexts are rendered. Full e67f context pages for both arms show short-LN
+movement; the longer arm adds more tap/chord attacks around those holds. This
+does not establish a whole-chart quality preference. The other two sources'
+new generated contexts remain unreviewed.
+
+At 04:27 CST the base300 stage is complete with 115,215 targets. Its ordinary
+NLL is 2.5140093082; broad pooled/equal-group NLL is 2.3086116030/2.3373207177.
+The starting model's broad values were 2.3179136000/2.3425084491, a small further
+improvement whose uncertainty has not yet been estimated. Pinned base300 weights
+SHA is `7665fc0bcb284af871cd065ff3824facbc88aa157d99ae3bae7182e4b7ab3604`.
+The original PID57801 remains live and has moved to long300; inspect current
+state before acting. Its120-minute invocation bound may require a later exact
+resume. A timeout must first be confirmed terminal, then the existing checkpoint
+and stage identities inspected; do not duplicate the live writer.
+
+### Eight-gold temperature evaluation
+
+Use the completed base300 weights above for the next free-running evaluation.
+Temperature .85 has prior positive local evidence at timing-u100 but no broad
+quality pass. Hold top-p1/beta0 and use seeds17/19 on all eight fixed current-gold
+validation sources, generating complete charts from their minimum seeds.
+The eight skeletons contain 19,148 rows per seed, or 38,296 total including seed
+rows. This tests a practical candidate and decode choice, not a pure temperature
+ablation against all prior checkpoints. Do not equate matching source tags or
+LN fractions with quality.
+
+Output owner is `quality-exposure-base-u300-t085`; it must be absent at launch.
+Use frozen v7 generation, CPU/one thread, the existing resource/checkpoint guards,
+an additional2GiB available-memory reserve,3GiB aggregate output budget and
+30-minute process-tree bound. The supervisor records source/weight identities
+and stops on nonzero child exit or a resource/deadline guard. Partial chart
+readouts cannot be treated as the complete16-generation result. Inspect all
+eight full gold review contexts for both seeds and broader chart transitions
+before any final quality decision; retain unreviewed scopes explicitly.
+The ongoing horizon training remains independent, and no remote publication,
+note lifecycle transition or goal completion is authorized by this evaluation.
