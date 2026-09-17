@@ -1134,3 +1134,83 @@ facts/time prototype remains a separate candidate for a properly identified
 learning/inference trial; its cost gain is not permission to call the playable
 model goal complete. Product analysis now includes the conditional-time control
 and shifted-stream cost evidence, with no product runtime change or remote push.
+
+### Paired horizon result and broader quality failure
+
+Accepted revision/Card: none. Evaluation: REFINE. Both arms complete 300 updates
+with all 2,400 stochastic window choices paired and 476,759 computed prefix rows
+each. Base supervises 115,215 targets; long supervises 408,820. Broad 128-group
+pooled NLL improves 2.3086116030 to 2.2597199507, difference −.0488917 with paired
+95% bootstrap interval [−.0719151, −.0273644]. Equal-group NLL improves 2.3373207177
+to 2.3015570823, difference −.0357636, interval [−.0589207, −.0131351]; 81/128 groups
+improve. These results pass the declared prediction regression guard. Ordinary
+24-window NLL also improves 2.5140093082 to 2.4295380055. This supports the horizon
+policy on these prediction metrics, not playable generation or a pure
+supervised-exposure mechanism: the longer target span also changes training risk
+and gradient aggregation.
+
+Retained update timers total 2,399.348/4,576.653 seconds, giving 1.860x target-row
+throughput. This excludes discarded work: the original invocation hit its
+7,200-second deadline during update 298 and exited. After verifying process exit,
+the released driver lock and complete 275-step checkpoint, the unchanged runtime
+resumed through the JSON-normalization wrapper. Updates 276–297 were recomputed;
+the observed loss, gradient norm, row counts and cumulative targets at 297 match
+the pre-timeout values exactly. Recovery plus remaining validation takes 470.544
+seconds. Concurrent probes/generation and discarded work prevent treating the
+retained-step ratio as total wall throughput. Peak logged RSS is 2.749 GB, minimum
+available 8.267 GB, and logged swap growth 0. Final long weights SHA is
+`7160e330d64d9224362c5c923144ac37fb1e7966f527c933b64c09ffc79eb9f4`.
+`exposure-continuation-v1/paired300-readout.json` SHA:
+`ef29cd6c91a4183172ed2bc2971213ca54b8ffc13489dcebc6b7e465ca9e27de`.
+
+Base300 temperature .85 evaluation completes all 16 full charts in 1,042.159
+supervisor seconds. All 58 generated gold-context pages and 16 additional source
+pages were inspected; 13 previously inspected source pages were byte-verified.
+The eight canonical human documents remain unchanged and all 32 references are
+current. Local moving tap flow and independent LN control are present, with
+large seed differences; source-style mismatch is not itself a failure. The
+review retains unresolved dimensions rather than manufacturing negative labels.
+
+A full-chart recurrence locator then identifies concrete additional failures.
+On 85058a/seed17, column 2 taps at 74634/74658/74682/74706 ms, four attacks 72 ms apart
+from first to last. On 871955/seed19, column 0 taps at 137342/137360/137386/137407 ms,
+four attacks in 65 ms amid dense changing chords. The corresponding source events
+include release-only rows and separate LN heads. On ecc496/seed17, source moving
+single attacks at 137500/137535/137571/137607/137643/137678 ms become repeated chords;
+column 1 attacks on all six times over 178 ms. Complete surrounding 4-second
+contexts were inspected for all three, 12 source/generated pages, retaining
+entering holds and raw endpoints. These are post hoc failure locators, not
+universal Foundation label thresholds. The candidate fails whole-chart playable
+quality despite valid export and some coherent gold-context passages.
+
+`quality-exposure-base-u300-t085/context-review.json` SHA:
+`0e0663a151fbb4aaf54c708c88f42c3307369369630423a89a155ea52b01973b`.
+Its full-generation readout SHA is
+`4c405571f5db76dbad12374f52185e243b36ab65f09589c6b9b3cffc044642fa`.
+Other whole-chart passages remain unreviewed, no player trial occurred, and the
+prior 89-second-LN stress case has not been retested on this checkpoint.
+
+### Long300 generation at the new counterexamples
+
+Before broad adoption, generate the complete 85058a, 871955 and ecc496 validation
+charts from the pinned long300 weights, seeds 17/19, temperature .85/top-p1/beta0,
+with the identical minimum seed and frozen v7 generation implementation. The
+three sources are selected post hoc from the base300 failures, so this is a
+targeted failure check, not an unbiased new quality estimate. First compare the
+complete gold contexts and the previously located rapid-recurrence neighborhoods,
+then inspect each new output's own fastest recurrence. A surviving candidate
+still requires the remaining five gold sources and the long-gap stress case.
+
+Use fresh owner `quality-exposure-long-u300-risk-t085`, CPU/one thread,
+30-minute process-tree bound, 3 GiB aggregate output cap, minimum 2 GiB available
+memory and existing generation/checkpoint guards. Keep completed per-chart
+outputs on failure; do not rerun the fresh-output supervisor over them. Do not
+modify sampling, insert timing restrictions or copy source actions in response
+to the discovered failures. Record the supervisor identity before execution;
+no note lifecycle transition, product adoption or remote publication follows.
+
+The bounded supervisor is `exposure-continuation-v1/generate_long_risk_085.py`;
+its SHA-256 is
+`4e165415a65121192334b4816c68d8d145db424bdabf714175f999d0837f0610`.
+The run manifest also records the six source/seed pairs, pinned weights and
+current-human snapshot identity.
