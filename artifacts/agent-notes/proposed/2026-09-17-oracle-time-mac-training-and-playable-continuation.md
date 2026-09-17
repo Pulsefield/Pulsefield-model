@@ -243,3 +243,74 @@ Provenance under `artifacts/oracle-time-continuation/m3-20260917/`:
 - `capacity-probe-v2/`, `capacity-threads-4/`, `prefix-reuse-bench.json`,
   `mps-live-storage.json`, `mps-state-storage.json`, `quality-u500/`, and
   `corpus-mac20m-lr1e4-wd1e2/` retain detailed measurements and outputs.
+
+## Expanded training readouts and prefix-conditioning probe
+
+Accepted Note/Card revision: none. Evaluation remains REFINE. The active task
+authorizes implementation and exploratory parameter/generation runs; no quality
+acceptance, Note acceptance or external-model comparison has occurred.
+
+The paired 20M arms share model seed17, draw seed17, B8/cohort4, warmup20,
+WD0.01 and marginal weight0.3. At update100 both have36,134 targets and273,010
+semantic prefix rows; reuse computes139,793. Fixed24-window/1,126-target
+validation gives3.9517212018 nats/row for LR1e-4 and3.2886056040 for3e-5.
+The1e-4 arm at200 has74,354 targets,600,441 semantic prefix rows and297,035
+computed prefix rows, with validation3.0316332822. These settings differ from
+the 1.28M baseline in more than capacity and are not a pure size ablation.
+
+Full held-out generation on5b69/e67f/ecc uses raw sampling/seed17. At1e-4/u100,
+LN fractions are.0253/.0200/.0203; at1e-4/u200 they are.8932/.7133/.7626;
+at3e-5/u100 they are.0986/.1026/.0814. Max LNs in these later full runs remain
+below two seconds. The output mix changes substantially across checkpoints and
+does not maintain source-dependent organization. Ratios alone are not a style
+or playability verdict. Complete visual inspection of the1e-4/u100 e67f review
+context shows outer-lane dominated attacks/rapid returns, incidental short
+holds and weak flowing organization. The other latest scopes still need complete
+render/action review; no global quality pass is recorded.
+
+Read-only head diagnostics on the exact5b69/e67f validation sources found
+query RMS near1. At5b69 row640,1e-4/u100 entropy is1.3313 nats and mean max
+probability.5922;3e-5/u100 has2.4089/.3062. Hidden-amplitude explosion is not
+supported by this small probe. The first diagnostic accidentally selected a
+different e67-prefix source; it was corrected to exact gold source matching and
+the final file was regenerated. Only the exact-source final file is used above.
+
+New optional conditioning retains counts from the complete minimum seed:
+per-lane attacks, LN heads and a0–4-press histogram, including release-only rows.
+These counts stop changing at the complete row reaching30 notes. Fourteen
+normalized relative-role features enter a shared zero matrix in facts, adding
+1,792 parameters without changing the initial shared weights or outputs.
+No future skeleton feature, endpoint, annotation or suffix target is consumed.
+The hypothesis is that explicit prefix evidence can reduce free-running style
+drift; the alternative is that insufficient training or optimizer noise dominates.
+This path cannot itself establish motif quality and remains disabled by default.
+
+The bounded warm-start comparison will use the3e-5/u200 weights for both arms,
+fresh AdamW and draw seed29,100 updates, the same fixed validation windows and
+three initial complete gold-reference outputs. Backbone LR is3e-5; the new
+zero matrix alone uses3e-4 to learn a new path while preserving the trained
+backbone's smaller steps. This is a conditioning-plus-adapter-optimization
+intervention, not an isolated claim about one scalar feature. Accept only a
+useful qualitative improvement with no material likelihood regression; retain
+failures and expand to the eight gold contexts and multiple decode policies
+before any structure pass. Source initialization and conversion are pinned in
+`seed-anchor-init/manifest.json` once the200-update source is available.
+
+`seed-anchor-runtime-v2/sha256.json` has SHA
+`e50ea424926bc21e5222513d5c195e06ffa92c3163d8eff8a4daff8ce18db7c4`.
+It contains the separate seed LR, complete replay/checkpoint support and512-row
+generation publication interval. The earlier `seed-anchor-runtime-snapshot`
+is unused for training. The default generation interval is now independent of
+128-row resource checks/MPS carry ownership refresh: expanded generation state
+is about45 MB, and old128-row publishing wrote404–633 MB for each tested
+1,226–1,877-row chart. Different write intervals preserve row/export bytes in
+targeted checks. The long-run CPU training remains under its resource guards;
+new feature/cadence real-run measurements are still required.
+
+The201 relevant owner tests plus21 subtests passed with one explicit-input
+allowlist test requiring the new summary field; the updated28-test data owner
+then passed. After adding the separate adapter LR,36 training/Hydra/runtime
+tests passed, including warmup and exact interruption recovery. A separate prior
+test attempt correctly rejected resume after source files were edited during
+the test; subsequent verification used fixed sources. Long runs always use
+frozen runtime snapshots and were unaffected.
