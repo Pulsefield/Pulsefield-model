@@ -893,3 +893,45 @@ a quality advantage over77M. Product `oracle_time_m3_validation.md` now contains
 the completed broad validation, coverage, timing/branch findings,77M context
 review and horizon-cost measurements. Product code remains at the preserved
 uncommitted implementation; no new product commit or remote push was made.
+
+## Conditional timing signal diagnostic
+
+Accepted revision/Card: none. The previous goal turn made progress: it completed
+new controlled measurements, persisted their implications, and started the
+bounded horizon comparison. Its existing driver remains live; no restart is
+authorized by a mere observation timeout.
+
+The20M starting model's thirteen generated context pages have now been inspected
+against the previously checked, byte-identical source context. The ecc4 episode
+contains clearer repeated-column chord organization than the77M sample;
+5b69 mixes taps/chords with short holds and some independent LN interactions.
+e67f still changes the reference's sustained tap flow into short-LN movement.
+These are scoped machine observations, not a whole-chart pass or proof that
+one model size is generally better. Exact actions and hashes will accompany
+the context-review record.
+
+A read-only population diagnostic asks whether known following-gap duration
+adds measurable source action information after conditioning on pre-row
+occupancy and the preceding gap. It does not change a model or decoding policy.
+The analogue is an empirical conditional-frequency predictor, used as an
+input-signal control rather than an alternative generator. Exclude seed rows
+and the true terminal row. Verify canonical source/row-array identities through
+the existing corpus admission API; process one chart at a time with at most1MiB
+of row-array payload, never a whole-corpus tensor.
+
+Use fixed gap boundaries0/31.25/62.5/125/250/500/1000/2000/8000/32000/infinity
+milliseconds. Count ground-truth per-lane post-row occupancy, separated by
+pre-row occupancy. Fit train-only smoothed frequencies for occupancy alone,
+occupancy+preceding-gap, and occupancy+preceding+following-gap, with a.5/.5
+Bernoulli pseudocount. Evaluate all admitted validation charts without fitting
+on them. Report pooled and equal-group Brier, paired435-group bootstrap
+uncertainty, per-gap-band errors, and raw start/continue/close counts. An
+improvement with a paired group interval below zero establishes predictive
+information in this control; it does not establish a neural transmission
+defect, causal mapper preference, or a safe occupancy penalty. Sparse cells,+source-style mixing and the much larger exposure of this diagnostic than the
+neural model remain confounders. Never infer that every long gap must be empty.
+
+Output owner is `conditional-timing-signal-v1`, using immutable runtime v7,
+CPU/one Torch thread, a30-minute active bound, RSS2GiB, minimum available2GiB,
+swap-growth1GiB and128MiB output cap. Stop on identity, replay, numeric or resource
+failure. Store aggregate counts and per-group scores; do not copy raw charts.
