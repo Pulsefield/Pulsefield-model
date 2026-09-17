@@ -4,7 +4,7 @@ Note ID: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 Status: proposed
 Kind: research
 Created: 2026-09-17
-Updated: 2026-09-17
+Updated: 2026-09-18
 Product revision: f679269b92e96efb5bd7989e748bd42cf069379e, with uncommitted implementation; frozen source manifests accompany the exploratory runs
 Scope: research/oracle_time_continuation M3 runtime, Mac resource envelope, optimizer calibration, corpus exposure and generated structure
 Related: 2026-09-15-oracle-time-continuation-resource-and-module-review
@@ -413,3 +413,75 @@ The exact script and initialization are pinned in
 The20M pair continues on frozenv3. Caffeinate prevents idle sleep during these
 runs; external forced sleep would still require distinguishing wall and active
 time. Accepted Note/Card revision remains none; recommendation remains REFINE.
+
+## Time exposure, gap curriculum and publication recovery
+
+The 20M pair completed 100 added updates with 35,441 identical supervised rows.
+Fixed 24-window validation is 2.5614803192 for control and 2.5590380577 with
+time lookahead. Pinned weights are respectively
+`3215d5026c9c95f5cdd9667f8ef1ca96aad1089955a63a121e93f2598313c9d8`
+and `5587eb3cff9ced0a46a71038a67b2a46816cac32625a355aa2f50da67675389e`.
+Three complete generated charts per arm passed independent replay. LN fractions
+and visual inspection do not yet establish a consistent structural gain.
+
+`gap-exposure-u100.json` counts actual target positions: 119 following gaps at
+least 1 second, 18 at least 2 seconds, one at least 4 seconds, and none at least
+8 seconds. The known-time input therefore received almost no long-gap exposure.
+`gap-response-u100.json` holds generated history fixed before two gaps and
+compresses only future times from 84,735 or 77,643 ms to 125 ms. The final 16
+prefix rows are recomputed under each time condition. Control probabilities are
+identical, as required. Timing any-hold probabilities change .146628 to .146268
+and .708764 to .708848; these differences do not demonstrate useful learned gap
+avoidance. No future source actions enter this probe.
+
+The next exploratory intervention mixes 25% time-stratified gap windows with
+75% original draws. Feasible bands are [2,8), [8,32), and [32,infinity) seconds;
+choose band/group/chart/gap/start uniformly within available populations. Starts
+cover up to 32 prior rows and include the boundary in the longest half-open
+horizon. Full prefix replay and true terminal semantics remain unchanged. This
+is a changed population risk, without importance correction. Exact path-mass,
+merged-interval, action-isolation, RNG/cohort, Hydra-consumption and update-resume
+checks cover the implementation. The focused CPU selection passed 37 tests with
+two MPS cases deselected; the earlier full selection passed 205 CPU tests and
+four MPS tests before this sampler addition.
+
+The bounded run starts from timing-u100 above with fresh AdamW, draw seed 53,
+LR 3e-5, timing LR 1e-3, WD .01, warmup 20, structural weight .3, B8/cohort4,
+CPU four threads and the measured 20M resource caps. First readout is 50 updates,
+with at most 100 before reassessment. Stop on existing resource/nonfinite/output
+guards. Compare the unchanged 24 validation windows (regression bound .05
+nats/row), actual gap exposure, the fixed-history time response and complete
+generation. This warm-start curriculum combines optimizer restart and changed
+exposure; it is not a clean sampler-only comparison. Output is a fresh
+`skeleton-time-gap25` directory; checkpoints preserve whole updates. Frozen v6
+manifest SHA is `4bf72030c03591c97dab2709daee6736c82950950e28cd726720e441da411f80`;
+`gap_train.py` SHA is `36e421d52733ad77bdac2efcd3be9bb7339efde7c5d239278b83922bb3f0c0da`.
+Accepted Note/Card fields remain none and recommendation remains REFINE.
+
+A temperature .85/raw-p1/seed17 probe generated the complete 5b69 and e67f
+charts from the same timing-u100 weights. The e67f full-chart LN fraction is
+145/1800 versus 660/1747 at temperature 1. Its entire 32,071–39,845 ms review
+context was visually inspected with all four Beatmap Lens pages and action
+records: moving taps and short directional cells occupy the first five seconds,
+then a short-LN passage starts around 37.4 seconds. This is locally identifiable
+organization, not a whole-chart playability verdict or proof that matching the
+source LN fraction is desirable. The 5b69 full-chart fraction is 1305/2009 versus
+1249/2183. Its context still requires review; no default temperature change yet.
+
+Five matched initial 77M updates took CPU 60.08/11.88/12.71/26.09/18.73 seconds
+and MPS 85.97/29.05/30.39/46.83/62.69 seconds under different concurrent loads.
+Both used identical targets. MPS saved a durable update-5 checkpoint and weights,
+with fixed CPU validation 2.6360789300. CPU had 15 completed but unsaved updates;
+their journal was preserved before resuming exactly from durable update zero.
+The large continuation now uses CPU. These measurements support an operational
+device choice, not an isolated speed comparison or MPS stability failure.
+
+Publication now uses one locked staging directory per destination. Three actual
+subprocess SIGKILLs inside PyTorch serialization left the old checkpoint intact
+and at most one incomplete staging directory; the next save reclaimed it and
+published readable weights. Independent concurrent-publication coverage checks
+that an active writer's stage is never removed. This bounds repeated-crash
+temporary debris; run journals still require a single writer per output folder.
+Frozen v5/v6 contain the fix; ongoing v3/v4 training retains earlier publication
+code. The v5 source manifest is
+`d5e1697bcdf3cbb60560a54c2f44715a9f095baa1e0bdccc533f9d31a964f437`.
