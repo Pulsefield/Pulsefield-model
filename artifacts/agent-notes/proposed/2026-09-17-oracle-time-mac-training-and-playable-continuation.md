@@ -704,3 +704,80 @@ attach a second writer. Full Lens review contexts and action records, including
 entry/exit holds, are required for qualitative interpretation. A positive
 three-chart result would trigger broader eight-gold/multiple-seed assessment,
 not a playable-quality pass.
+
+## Broad validation result and supervised-exposure pilot
+
+Accepted revision/Card: none. Evaluation: REFINE. `coverage-evaluation-v1`
+completed the fixed128-group validation with5,709 targets and48,807 prefix rows.
+Pooled NLL is2.5427614065 for20M/u500,2.3179136000 for20M timing/added-u300,
+and2.3349896527 for77M timing/added-u300. Equal-group means are respectively
+2.6076878098,2.3425084491 and2.3470542066. The two continuations improve103
+and105 of128 groups over the starting weights. Their paired pooled delta95%
+intervals, from5,000 group-bootstrap replicates/seed20260918, are
+[-0.291704,-0.163115] and[-0.268784,-0.148582]. Fresh optimizer, lower LR,
+new draws and the timing path accompany these continuations; this is not a
+pure exposure-only ablation against the500-step model.
+
+For77M minus20M timing, the pooled delta is+0.017076 and its95% interval is
+[-0.005530,+0.040169]; the equal-group delta is+0.004546 with interval
+[-0.022249,+0.030873]. Exactly64 groups favor each capacity. Thus the apparent
+77M advantage on the original seven groups does not establish a broader gain.
+Retain both checkpoints; use20M for the next sampling-cost probe without
+declaring a size ceiling or rejecting a later capacity experiment.
+
+Merging target intervals from the500-step ancestor and300-step continuation
+gives287,852 supervised exposures but249,676 distinct rows across1,460 charts
+and1,276 groups. Those rows are2.1669% of the11,522,113 train event rows.
+This is a coverage fraction, not an epoch estimate under the nonuniform
+group/chart/stratum risk. No-grad prefix replay is not extra supervision.
+The timing AdamW state at update300 has nonzero moments and reconstructed
+per-weight update RMS around7.37e-5–1.67e-4 for its first projection and
+8.28e-5–1.56e-4 for its output projection. Epsilon domination is absent in
+20M and affects about0.0021% of the77M first-layer weights; optimizer epsilon
+is not a demonstrated general obstruction. These are moment-based update
+estimates before decay, not newly observed backward gradients.
+
+The three77M/u300 full raw/seed17 samples complete in162.326 supervisor
+seconds. 5b69/e67f/ecc4 contain2,150/1,604/1,756 notes and1,282/884/818 LNs,
+with maximum LN durations1,875/1,457/1,214ms. All26 source/generated context
+pages were inspected. Staggered holds and independent inner attacks/releases
+are identifiable; the three outputs also share a short-LN organization despite
+different reference episodes. Source-style equality is not the objective, and
+LN counts do not decide quality. This supports continued investigation of
+local structure, not whole-chart acceptance or a fix for the72-minute stress
+chart. A fresh canonical-human read is still running; the frozen reference
+judgments must not yet be called revalidated current gold.
+
+### Bounded sampling-cost comparison
+
+Question: can longer supervised horizons materially improve actual target
+exposure per active second while keeping exact full-prefix replay and Q64
+TBPTT? The closest mechanism analogue is
+[Transformer-XL](https://aclanthology.org/P19-1285/): bounded segment gradients
+with forward recurrence. This probe changes the sampled target horizons, not
+that mechanism. It is an adaptation of ordinary likelihood training, with no
+novelty claim. Exposure-bias literature also gives competing outcomes; the
+[self-recovery study](https://arxiv.org/abs/1905.10617) is a reason to test
+free-running behavior rather than assume error accumulation is the sole cause.
+Neither text-generation result proves a chart-generation response.
+
+Use pinned20M timing-u300 weights and immutable runtime v7. Baseline horizons
+are1/4/16s; the sole intervention uses4/16/64s. Both use B8/cohort4/microbatch1,
+Q64, fresh AdamW, LR3e-5/timing1e-3, weight decay.01, warmup20, clip1,
+structural weight.3 and the unchanged fixed loss denominator1024. Thus this
+explicitly changes training risk, target exposure and gradient accumulation;
+it is not a behavior-neutral optimization or an equal-token quality test.
+Seed20260918 selects the same groups/charts/starts/horizon indices in both arms.
+Twelve updates per arm alternate execution order by update to limit order
+effects. Keep separate models/optimizers and never share learned prefix states.
+
+Record supervised targets, computed prefix rows, active time, unclipped norm,
+per-module clipped-gradient RMS and actual parameter-delta RMS. Primary
+throughput criterion is at least1.5x targets/second over updates3–12, reported
+also including warmup. Failure rejects a larger run for efficiency; a positive
+result only permits a further bounded quality comparison, not adoption.
+Stop on source mismatch, nonfinite/illegal results, resource limit or30-minute
+active bound. CPU/four threads, per-process RSS8GiB, minimum available2GiB,
+swap growth at most1GiB, diagnostic-output cap128MiB. No optimizer checkpoint
+or final weights are retained from this short cost probe. Output owner is
+`horizon-throughput-v1`; exclusive creation prevents overwriting evidence.
