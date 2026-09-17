@@ -375,3 +375,41 @@ checkpoint at completed updates and preserve both negative and positive runs.
 An exploratory capacity probe separately measures two complete updates at
 512/768/1024 temporal width, six layers and the same frontiers, on CPU and MPS.
 It changes size for a resource decision, not a matched learned-quality claim.
+
+## Temporal widening and large-model continuation
+
+The six isolated capacity-v3 runs completed without additional swap. Including
+110,848 timing parameters, widths512/768/1024 have20,087,624 /43,800,136 /
+76,949,832 parameters. Their second CPU updates took6.68/7.58/8.42 seconds;
+MPS took7.38/7.69/8.16 seconds. CPU RSS peaks were1.80/2.93/3.75 GB; largest
+MPS active/driver peaks were2.62/4.13 GB. Full AdamW checkpoints were241,262,123 /
+525,799,979 /923,584,043 bytes. These are two-update capacity results, not soak
+or learned-quality results. The77M preset therefore caps checkpoints at1 GiB,
+checks at6 GiB driver/8 GiB RSS/minimum2 GiB available, and publishes every100
+completed updates to keep write volume per update near the20M/25-update policy.
+Training now rejects an inadequate weights-plus-AdamW tensor budget before
+constructing the optimizer; actual serialization remains independently bounded.
+
+A bounded migration adapts [Net2Net](https://arxiv.org/abs/1511.05641)'s
+function-preserving widening to the temporal attention module: duplicate residual
+and FF channels, duplicate channels within each Q/K/V head, scale Q/K by2^-1/4,
+and split outgoing columns. Seeded zero-sum column noise (.01 times source RMS)
+breaks gradient symmetry. Facts, local/relation operators and timing remain
+unchanged. The transformation does not reuse old neural caches or AdamW state.
+Tiny-model tests cover BOS, coarse memory, cached/chunk distributions, source/RNG
+immutability and distinct gradient copies. The trained u500/timing-zero model
+was also checked on all24 fixed real windows: pooled NLL changes by only
+5.2934856498e-10 nats/row across1,126 targets. Converted77M weights are307,874,913
+bytes, SHA `cbfaccdfa2de4ac48e92eb9b613fb9bc3c611b47fe9757df9ae392d7cf742fca`.
+
+The next exploratory large arm uses these weights, the same draw seed41,
+LR3e-5/timing1e-3/WD.01/warmup20/B8/cohort4/structural.3 as the20M timing arm,
+and readouts at100 and300 additional updates. Width and its preserving weight
+parameterization are the intervention; this is not a random-from-scratch size
+comparison. It retains the same NLL/regression guards and full generation review.
+The exact script and initialization are pinned in
+`skeleton-time-runtime-v4/large-experiment.json`; source runtime manifest SHA is
+`c23912b30bcc47d3f3e08e689eadd338f02eb8297842a44b12a7279dbc58eb17`.
+The20M pair continues on frozenv3. Caffeinate prevents idle sleep during these
+runs; external forced sleep would still require distinguishing wall and active
+time. Accepted Note/Card revision remains none; recommendation remains REFINE.
