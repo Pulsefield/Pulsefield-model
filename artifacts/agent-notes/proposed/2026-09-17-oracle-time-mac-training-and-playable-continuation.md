@@ -141,3 +141,105 @@ Completion requires stable full-capacity long execution, bounded disk behavior,
 real durable recovery, and defensible qualitative generated structure. Stronger
 claims against external models require matched conditions and actual outputs.
 Any adoption or lifecycle change remains a separate human decision.
+
+## Additional exploratory evidence: full corpus, allocation ownership and capacity
+
+Accepted Note/Card revision: none. Evaluation remains REFINE. The owner
+explicitly authorized increasing capacity in necessary modules after the
+baseline measurements. The earlier size restriction is superseded for the
+implementation; larger configurations must still earn resource and quality
+acceptance independently.
+
+The bounded-time 40-update model completed three more longest-chart rollouts,
+80,868 generated rows total, in 439.56/588.53/523.70 seconds. Longest identical
+row runs were 4/6/5 rather than the earlier thousands. The raw seed17 sample
+still held an LN for 89.564 seconds across a 77.643-second gap; quality is not
+accepted. Reset RSS stayed approximately 158–165 MiB, and generation checkpoint
+size stayed 4.67–4.68 MB. Both training exposure and time representation changed;
+these observations do not isolate either cause.
+
+Boundary cache release enabled a 637.13-second full 1.28M MPS run: 29 updates,
+1,600-row prefixes, B2 and target lengths1/17/128 in fixed and varying order.
+Peak sampled active/driver/RSS were 1,943,450,368 / 2,838,953,984 / 715,096,064
+bytes. Every update boundary had 16,566,272 active bytes, with no additional
+swap; unload returned active to zero. This supersedes the unresolved boundary
+release measurement above, not the earlier failed runs.
+
+Full corpus admission retained all 11,564 train identities; one chart lacked
+the minimum seed, leaving 11,563 eligible sources. Compact disk rows occupied
+199 MiB. The 1.28M model completed 500 updates, 44,580 supervised targets and
+386,185 logical prefix rows. Twenty-four fixed validation windows on eight
+charts, 1,126 targets, measured 2.820800 nats/row at update200 and 2.680243 at
+update500. No test payloads were admitted.
+
+The canonical Beatmap Lens effective-observation reader yielded 171 current
+High-confidence observations among 58 selected candidate workflows: 124 train,
+32 validation and 15 outside the inherited catalog. Foundation SHA:
+`15fa68913bdb2bf395a189df7ab433f6d5b126fc35c46c1dbc8e607ce2182e97`.
+Confirmed claims are human authority; embedded machine rationale is not called
+a human-written comment. The read was limited to relevant High candidates and
+verified an unchanged full inventory hash, rather than waiting for unrelated
+workflow validation. The sibling annotation workspace was not modified.
+
+Eight complete gold-validation outputs at update500 had LN fractions5.0–8.5%,
+despite reference fractions0–71.8%. Three earlier update148 outputs had22–25%.
+Ratios do not by themselves make alternative arrangements invalid. Inspected
+action renders still showed incidental short holds and unstable chord/return
+choices, with weak persistence of the gold examples' LN roles or group exchanges.
+No quality pass or external-model advantage is claimed.
+
+Same-update prefix reuse was checked on identical eight-window updates.
+Computed prefix work fell5,800→1,834 rows; wall time24.25→9.37 seconds; NLL differed
+0.0000153 over324 targets; gradient norm agreed, maximum parameter difference
+was1.1e-6. Shared chart cohorts preserve expected batch-average risk but introduce
+correlation; sorted positions do not have the recorded pre-sort path density.
+Only two same-version prefix carries are retained, and both are cleared before
+the optimizer step.
+
+MPS online generation exposed allocation beyond tensors' reported storage:
+at256 rows about133.5 MB active vs1.6 MB state payload. Copying bounded carry
+again reduced active to6.78 MB including model parameters. Restoring the final
+1,226-row checkpoint directly used8.68 MB, whereas the original live run reached
+706.65 MB. State deletion released the excess; exact backend retention mechanics
+remain unresolved. Generation now re-owns MPS carry at durable checkpoints and
+drops old local state references before checking memory. The targeted regression
+and CPU/MPS deterministic resume tests pass; a full real-chart replay measurement
+is running under the frozen runtime.
+
+The capacity probe enlarged temporal width/layers to256/4,384/6 and512/6 while
+keeping local/relation width128 and time-bias MLP64. All used microbatch1/Q64,
+two targets of128 rows after1,600-row prefixes, and two AdamW updates per device.
+Total parameters were4,110,628 /11,659,464 /19,976,776. Peak MPS driver bytes were
+1,656,930,304 /1,880,473,600 /3,115,679,744; every arm added zero system swap and
+unloaded to zero active. The largest model's checkpoint was239,927,307 bytes.
+A previous256-wide run using a wider bias MLP and B2/Q128 stopped on4,075,356,160
+additional swap bytes at first forward; that configuration is not supported.
+
+The selected capacity profile puts19,006,512 parameters in temporal,515,072 in
+local,236,552 in relation,78,848 in facts and139,792 in the head. The rank16
+head already covers a16-by-16 hand-pair matrix. Four CPU threads completed a
+warm capacity update in7.88 seconds vs9.72 with one thread and11.18 on MPS;
+overlapping diagnostic work limits hardware-performance attribution.
+
+The 20M real-corpus run now uses effective batch8, microbatch1/Q64, four windows
+per chart, prefix reuse, LR1e-4 with20 warmup updates, WD0.01, and a512 MiB
+checkpoint cap. It checkpoints every25 complete updates and at requested stage
+ends, reducing500 updates' periodic optimizer writes to about4.8 GB. Recovery
+replays completed but unsaved updates and restores the warmup sequence; targeted
+failure/recovery tests compare final weights exactly. The scheduled readouts
+are100/200/500 updates on the same validation windows. Larger-model LR/decay
+preference and generated structure remain open.
+
+Provenance under `artifacts/oracle-time-continuation/m3-20260917/`:
+
+- Baseline corpus runtime manifest:
+  `8a7e3a6f9bfc41a004f8bcb4e3d6db9393f3febd4d0e8a80dd0dd750c4100630`.
+- Update500 weights:
+  `e3527ebcbbf6810d0abbe66d43d2747bcd0813c54c7cab83810e60975f1a64b4`.
+- Gold generation runtime manifest:
+  `177e0454c7c275c7b5fa02a5fef72eb83bab3b38b636569dc0162d353c574a61`.
+- Expanded corpus runtime manifest:
+  `2c7cf6086cdcae932c13f3390ecc7b8358beb40693a54895023a6ef2844ab4a3`.
+- `capacity-probe-v2/`, `capacity-threads-4/`, `prefix-reuse-bench.json`,
+  `mps-live-storage.json`, `mps-state-storage.json`, `quality-u500/`, and
+  `corpus-mac20m-lr1e4-wd1e2/` retain detailed measurements and outputs.
