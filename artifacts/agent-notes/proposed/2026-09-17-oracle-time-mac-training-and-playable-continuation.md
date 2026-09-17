@@ -1214,3 +1214,31 @@ its SHA-256 is
 `4e165415a65121192334b4816c68d8d145db424bdabf714175f999d0837f0610`.
 The run manifest also records the six source/seed pairs, pinned weights and
 current-human snapshot identity.
+
+### Rapid-recurrence probability diagnostic
+
+The six long300 generations complete, but recurrence extrema still reach four
+same-column attacks in 65–96 ms on 85058a/871955. Before changing the model or
+decoder, test whether these are low-probability sample tails or high-probability
+decisions under generated history. At the three base300 failure locations,
+replay each full source prefix and each fixed base300 generated prefix under
+both base300 and long300 weights, then inspect four consecutive original rows.
+Record raw and temperature.85 lane-attack probabilities, expected attack count,
+multi-attack probability and LN-start probability. Source/generated legality
+differs; do not interpret their difference as an isolated history effect.
+
+For each state, compare the actual query with two valid time-only counterfactuals:
+insert a 250-ms previous-event gap while translating future times to preserve
+their offsets, and multiply future offsets by four while preserving the current
+time and all history. These query-only interventions are never committed and
+do not retime generated outputs. The first changes all elapsed query clocks,
+not just one encoder; the second changes only available future-time information.
+Report probability changes and JS distance, without attributing attention or
+activation size to causality. This is a post hoc three-case diagnostic, not a
+global calibration estimate or evidence for a blanket timing restriction.
+
+Use frozen v7, CPU/one thread, a 10-minute active bound, 2GiB RSS limit,
+minimum 2GiB available memory and 128MiB output cap in fresh owner
+`rapid-recurrence-probe-v1`. Verify source/generated time alignment, model hashes,
+unchanged legality across each time intervention and direct-model/engine
+agreement for the actual query. Save no weights and change no product runtime.
