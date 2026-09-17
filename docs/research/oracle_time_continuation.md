@@ -1,11 +1,12 @@
-# Oracle-time continuation: causal data and exact replay
+# Oracle-time continuation: causal data, backbone and sequence training
 
-The `research/oracle_time_continuation` package implements M0 of the
+The `research/oracle_time_continuation` package implements M0–M2 of the
 [continuation plan](Pulsefield_oracle_time_causal_continuation_plan.md#9-里程碑与依赖):
 verified source rows, a time skeleton, the 30-note seed, exact pre/post-row state,
-and complete-chart terminal legality. This is the data foundation for a causal
-continuation model. The learned backbone, training objective, decode policy and
-corpus generation runs remain M1–M4 work.
+complete-chart terminal legality, and a trainable causal backbone with bounded
+local, relation and temporal memory, window sampling and sequence training.
+Decode policy, durable generation, disk-backed source budgets and corpus runs
+remain M3–M4 work.
 
 The [V3 formulation](../formulation/notation.md) owns lane actions, simultaneous
 rows, occupancy and committed-prefix semantics. The source-action package's
@@ -85,7 +86,7 @@ Exact replay always has known history from true BOS. Unknown rows and padding
 cannot be materialized as `CompleteRow`; all-empty rows are rejected.
 `prefill()` requires consecutive positions from skeleton index zero, so cropped
 prefixes cannot impersonate BOS. Learned-memory truncation and batch padding
-representations belong to M1; they do not erase exact replay facts.
+do not erase exact replay facts.
 
 ## Legal support and terminal closure
 
@@ -100,15 +101,262 @@ querying an exhausted skeleton is an error. Seed LN endpoints are determined by
 the subsequently committed rows, even when they differ from source endpoints.
 
 Replay retains a fixed number of exact facts. Full source rows remain in their
-CPU supervision owner. Parsed-source cache budgets, neural memory, RNG snapshots
-and optimizer-version checks will be defined by the later runtime stages.
+CPU supervision owner. Parsed-source cache budgets, RNG snapshots and durable
+output recovery belong to the later runtime stages.
+
+## Learned backbone and state ownership
+
+[`CausalBackbone`](../../src/pulsefield_model/research/oracle_time_continuation/model.py)
+uses shared hand operators in canonical outer/inner coordinates. Each hand's
+features preserve both ordered roles and the other hand's ordered facts. The
+model receives only `PredictionInput` and learned history. The scheduler's
+skeleton, supervision rows and source identity remain outside its input.
+
+| Owner | Contract |
+| --- | --- |
+| `features.py` | Available elapsed clocks, physical time basis, and the last 32 completed positive event gaps; timestamp differences are computed before conversion to network precision |
+| `local.py` | Three causal time/action-conditioned layers with dilations 1/2/4; separately readable 3/7/15-row summaries and bounded layer-input buffers |
+| `relation.py` | Complete-row nodes selected by all four lane frontiers, deduplicated across attack/release indices and active LN heads |
+| `temporal.py` | Shared-weight query/content attention; raw layer-input carry, mean archives, visibility metadata and optional inference K/V |
+| `model.py` | History encoders and a shared hand unary plus transpose-symmetric bilateral coupling over the full serialized 256-row table |
+| `engine.py` | `ContinuationEngine` schedules pure prediction, atomic commit, content-only prefill and bounded dense teacher forcing |
+| `state.py` | `NeuralState` groups the existing execution/exact state with local, relation and temporal carry; `detached()` copies learned carry into owned storage |
+
+The local kernels condition each offset-specific channel map on elapsed time
+and both committed endpoint actions. Missing predecessors contribute no edge;
+they are never repeated rows or synthetic EMPTY actions. Each summary records
+the union of original row IDs and timestamps, so overlapping sub-summaries do
+not inflate counts. BOS reads use a shared learned boundary. Present and
+truncated local supports have explicit status, count and span. Unknown rows are
+rejected by `CompleteRow`; batch padding is excluded from all encoders.
+
+Relation queries do not select a target lane. The default frontier indexes the
+last 12 attacks and four releases per lane and reads their unique row IDs.
+Active LN heads are also pinned with lane identity and committed start time.
+Nodes preserve causal lane/hand predecessor IDs, completed close-to-head links
+and elapsed intervals; these are facts at commit, not pointers to prior states.
+Payloads are never rewritten when later events arrive. A chord appears once in
+attention while retaining every relevant lane/role, rank and pin tag. The
+default ordinary-node bound is 64 and the bound including pins is 68.
+
+Temporal queries read only the pre-commit bank. Each content layer reads that
+same bank plus its own current layer input. Only after all content layers have
+been constructed does the engine archive and evict. The default recent base is
+512 rows, with up to 15 additional rows still readable while a group accumulates.
+At committed count 528, rows 1–16 become one coarse token atomically and rows
+17–528 remain fine. Coarse capacity is 64 tokens, evicted FIFO. Tokens retain
+start/end row IDs, times, count, birth and eviction metadata. Compression takes
+the mean of raw layer inputs before normalization and K/V projection.
+
+Training reads normalize and project retained raw inputs with current trainable
+parameters. Within a chunk, committed content retains its writer graph. At a
+declared TBPTT boundary, `state.detached()` cuts every learned path, including
+local buffers and pinned descriptors, while preserving exact LN obligations.
+The next read still trains normalization and K/V projections. `predict()` never
+stores a query representation in memory or changes pace, indices or caches.
+
+Inference mode additionally retains projected K/V for the content bank. It
+requires `model.eval()` and disabled gradients. All states, including raw-input
+training carry, have a process-local parameter/buffer/device/cache signature.
+An optimizer update, weight load or device/dtype change invalidates them and
+raises `ContractError`; rebuild by replaying the prefix. This guard is not a
+durable checkpoint format or an optimizer-resume implementation.
+
+## Model execution API
+
+`BackboneConfig()` selects width 128, two temporal blocks with four heads,
+coupling rank 16, and the memory capacities above. Local dilations, the smooth
+8–4096ms time basis and dropout zero are fixed. `max_chunk` defaults to 128 and
+cannot exceed 128. Smaller model/memory dimensions are useful for contract tests;
+configuration validation alone does not establish a hardware resource envelope.
+The default model uses FP32.
+
+```python
+from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
+from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, row_index
+
+model = CausalBackbone()
+engine = ContinuationEngine(model)
+seed = source.minimum_seed()  # source is an admitted ContinuationSource
+if not seed.eligible:
+    raise ValueError(seed.ineligible_reason)
+state = engine.prefill(source.skeleton, source.targets[:seed.seed_row_count])
+
+# The training or generation caller chooses the row after reading the distribution.
+distribution = engine.predict(state)
+target = source.targets[state.execution.next_index]
+log_probability = distribution.score(target.actions)
+state = engine.commit(state, target)
+```
+
+`prefill()` replays content only, under `no_grad`, from true BOS. `predict()`
+returns a `JointRowDistribution` in serialized lane order; illegal and all-empty
+entries are `-inf`. The joint head accepts typed pre-row encodings only.
+`commit()` validates through the M0 owner before constructing a private new
+learned state. A rejected row cannot partially advance either exact or learned
+history. Committing a generated row uses the same path and makes its actions
+visible to every subsequent feature builder.
+
+`teacher_force(state, rows)` accepts at most `max_chunk` consecutive complete
+rows. Local and relation inputs are constructed in causal order. Temporal layers
+then evaluate rows in parallel using explicit query/content visibility masks
+over a bounded union of carried and newly born tokens. Every query gets its own
+archive birth/eviction mask, rather than the bank at the chunk's start or end.
+The result contains `[Q,256]` log probabilities and legality, the updated state,
+and CPU relation/temporal visibility traces for contract checks. It leaves writer
+graphs attached; the caller owns backward and the TBPTT cut. Chunk boundaries
+are computational and do not change predictions or terminal flags.
+
+`teacher_force_batch(states, row_sequences)` dispatches independent per-chart
+dense chunks, then pads their outputs to `[B,Q,256]`. It is a ragged batch API,
+not a fused cross-chart attention kernel. A separate validity mask identifies
+real queries; padded log-probability cells are zero and padded legality is false.
+An empty sequence preserves its state. The sequence objective selects valid
+cells and uses the complete effective batch's fixed denominator.
+
+For a differentiable chunk, the scoring primitive is:
+
+```python
+import torch
+
+rows = source.targets[state.execution.next_index:state.execution.next_index + model.config.max_chunk]
+result = engine.teacher_force(state, rows)
+targets = torch.tensor([row_index(row.actions) for row in rows], device=result.log_probs.device)
+sequence_cost = -result.log_probs.gather(1, targets[:, None]).sum()
+# SequenceTrainer supplies the effective-batch denominator before backward.
+state = result.state
+```
+
+Persistent learned payload counts are bounded by the configured capacities.
+Caller-retained states, logits or attached graphs can still accumulate: discard
+consumed outputs and detach carry at TBPTT boundaries. `SequenceTrainer` owns
+this optimizer/window lifecycle. Disk-backed source caching and streaming
+export remain runtime work; the training API alone does not establish
+full-model long-run memory or generation quality.
+
+## Training-window population
+
+[`WindowSampler`](../../src/pulsefield_model/research/oracle_time_continuation/windows.py)
+uses `WindowSamplingPolicy`, independently of any future decode policy. It
+first filters sources by the existing split and complete-seed eligibility,
+then draws uniformly by song group, eligible chart, feasible context stratum,
+start event and horizon. Duplicate source identities and song-group split
+conflicts are errors. Sources are sorted by identity for reproducible draws;
+the sampler owns a separate Python RNG.
+
+Context strata count rows between the original minimum seed and the target:
+0–63, 64–511 and 512 or more. Starts are stored as ranges. The three increasing
+positive horizons default to 1/4/16 seconds, with equal probability at every
+eligible start. A target contains all rows in `[start_time, start_time+horizon)`,
+including its first row and any release-only rows, and ends at the true chart
+end when necessary. Neither dense targets nor short remaining duration remove
+a horizon from the draw population.
+
+`TrainingWindow` records the chart, seed, zero-based start/exclusive stop,
+stratum, horizon and population counts. Its `probability` is the complete draw
+path probability. Different horizons can yield the same clipped interval;
+`sampler.target_probability(window)` sums those paths. `sampler.window(sha,
+start, horizon_index)` describes a particular path without advancing the RNG.
+Window metadata and source targets stay outside learned features.
+
+## Sequence objective and updates
+
+[`sequence_cost()`](../../src/pulsefield_model/research/oracle_time_continuation/objective.py)
+scores valid joint rows using the sum of their negative log probabilities,
+divided by `effective_batch_size * normalization_rows`. The reference scale
+defaults to 128 and remains fixed for an entire run; it is never a window,
+chunk, active-batch or token-count mean. Ragged padding is excluded before
+scoring. Illegal truth and nonfinite or unnormalized legal probabilities fail
+explicitly.
+
+The same distribution supplies three exact `logsumexp` marginals: press count,
+the complete ordered left/right outer/inner press configuration, and all four
+pre/post lane occupancy transitions. Their fixed weights are 1/3. A finite
+nonnegative `lambda_struct` controls their contribution under the same complete
+denominator; zero selects sequence likelihood alone. Reports keep each group's
+unweighted code length, weighted loss and weighted logit-gradient L2 norm.
+The latter is computed analytically with respect to pre-softmax row logits,
+not model parameters; it does not measure learned long-range organization.
+
+[`SequenceTrainer`](../../src/pulsefield_model/research/oracle_time_continuation/training.py)
+accepts exactly `effective_batch_size` train windows per update. Each microbatch
+replays every prefix from true BOS with the current model, under `no_grad` and
+without a prediction head or query stream. Targets are teacher-forced in chunks
+of at most 128 rows. Each chunk is backpropagated once, all learned carry is
+detached into owned storage, and consumed outputs are released. Current-chunk
+writers and current historical-read projections remain trainable. A short
+tail has the same denominator as every preceding chunk.
+
+All windows finish before one gradient clip and one AdamW step. The next update
+rebuilds prefix states under the new parameters. Reports include unclipped
+gradient norm and cumulative clipping frequency. A failure before the step
+clears accumulated gradients and propagates the error; the runner does not
+attempt partial-graph or optimizer recovery.
+
+```python
+from pulsefield_model.research.oracle_time_continuation.objective import ObjectiveConfig
+from pulsefield_model.research.oracle_time_continuation.training import SequenceTrainer
+from pulsefield_model.research.oracle_time_continuation.training_config import TrainingConfig
+from pulsefield_model.research.oracle_time_continuation.windows import WindowSampler
+
+sampler = WindowSampler(sources)  # admitted sources with existing group/split identities
+trainer = SequenceTrainer(model, TrainingConfig(), ObjectiveConfig(lambda_struct=0.3))
+report = trainer.update(tuple(sampler.draw() for _ in range(trainer.config.effective_batch_size)))
+```
+
+## Local training entrypoint
+
+The packaged preset
+[`oracle_time_train.yaml`](../../src/pulsefield_model/configs/hydra/oracle_time_train.yaml)
+is the process configuration owner. The Hydra boundary rejects unknown fields
+and projects typed model, sampling, objective and training settings into the
+runner. Inspect defaults with:
+
+```sh
+uv run --offline --extra mps python -m \
+  pulsefield_model.research.oracle_time_continuation.train_hydra --cfg job
+```
+
+Training requires an explicit list of source SHA-256 identities and the pinned
+existing split-manifest digest. The manifest is verified before source loading;
+selected identities must already belong to train. No held-out payload is read,
+and this entrypoint neither downloads sources nor assigns groups or splits.
+For two sources from the
+[pinned real-input table](source_action_stage1_verification.md#real-input-provenance-and-bounds),
+choose a fresh output directory:
+
+```sh
+uv run --offline --extra mps python -m \
+  pulsefield_model.research.oracle_time_continuation.train_hydra \
+  split_sha256=15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a \
+  'source_sha256=[000662977cf314075da22600d2fbabbf140edc15791a5fc5dc473f2f64a58923,0123b75a850ebf24136fffe0f975679aa4da8dc46db42e66799a1f494bafaf6e]' \
+  output_dir=artifacts/oracle-time-continuation/m2-example \
+  updates=2 windows.seed=2 objective.lambda_struct=0.3
+```
+
+The default FP32 model runs on MPS; use `device=cpu` for CPU. On NVIDIA Linux,
+replace the environment extra with `--extra cuda` and set `device=cuda`.
+`model_seed` initializes weights independently of
+`windows.seed`. The output directory must be absent or empty. Before training,
+the runner writes resolved Hydra settings, the complete typed runtime config
+and the eligible/excluded source population. It streams draw records to
+`windows.jsonl` and update metrics to `updates.jsonl`, including prefix
+notes/rows/span, recent/coarse coverage, horizon and actual target span,
+terminal inclusion, prefill time and cumulative supervised rows.
+
+Successful runs write `weights.pt` with model settings and CPU model tensors.
+These are weights for initialization, not a durable training-resume checkpoint.
+The selected source set still uses M0's in-memory targets, and no disk-backed
+LRU, resource guard, durable update recovery or generated-chart export is
+provided here. Those contracts remain M3 work; select a bounded local source
+set for this entrypoint.
 
 ## Verification
 
 Run the focused contract suite with:
 
 ```sh
-uv run --offline --group dev pytest -q tests/research/oracle_time_continuation
+uv run --offline --extra mps --group dev pytest -q tests/research/oracle_time_continuation
 ```
 
 The suite exhaustively checks four-lane action legality across all 16 occupancy
@@ -119,6 +367,27 @@ changed future skeleton times, mirrored replay, prefix/chunk parity, and a
 continuation that replaces the seed's original LN endpoints. An import check
 keeps the data path independent of model, legacy training/inference, and masked
 feature-building modules.
+
+The model tests independently check short-history support unions, causal pace,
+time-conditioned kernels, relation deduplication and LN pins, future-action
+isolation, simultaneous commit, mirror equivariance, ragged batch/step parity,
+all occupancy/terminal supports, and parameter-version rejection. Temporal tests
+cover Q=1/17/64/128, n=512/513/527/528, FIFO eviction after 64 coarse tokens,
+mean-before-normalization, layer-input and inference-cache parity, and the
+separate historical-read and within-chunk writer gradients. The MPS test uses
+the default FP32 model and a 128-row differentiable chunk; it is conditional on
+MPS availability. On NVIDIA Linux use `--extra cuda`; MPS evidence does not
+establish CUDA coverage.
+
+M2 tests enumerate population probabilities, stratum boundaries, half-open
+horizons and clipped-path aggregation. Independent enumeration checks all three
+marginals across every occupancy and terminal condition, including their logit
+gradients. Training checks cover ragged effective batches, microbatch parity,
+the 532-row target's five chunks, sequence-cost additivity, within-chunk writer
+gradients, detached prefix/carry, parameter-version replay, single clip/step
+and gradient disposal on failure. Entry tests cover typed configuration,
+unknown-key rejection, split provenance, runtime consumption, deterministic
+CPU updates, package resources and the runtime's Hydra import boundary.
 
 [`verify_source()`](../../src/pulsefield_model/research/oracle_time_continuation/verification.py)
 checks every pre/post-state against an independent source-side oracle. The oracle
@@ -158,4 +427,30 @@ under that split digest. All **16,800 rows** matched in both pre- and post-state
 covering **23,901 hit objects**, **2,018 LNs** and **417 release-only rows**.
 The eight minimum seeds contained 30–31 notes over 15–30 rows. Every source had
 an eligible suffix and closed occupancy after its final row. These are data and
-replay correctness checks; no model was trained or evaluated.
+replay correctness checks; those checks trained or evaluated no model.
+
+### Sequence-training smoke
+
+On 2026-09-17, the two sources in the training command above completed two
+updates on MPS with the default FP32 backbone, `model_seed=17`,
+`windows.seed=2`, `lambda_struct=0.3`, effective/microbatch size two and Q=128.
+The sampling seed was selected to cover all three context strata and horizons
+in four draws. Source bytes and the pinned split digest were verified before
+training. The windows were:
+
+| Context stratum | Horizon (s) | Prefix rows | Target rows | Backward chunks |
+| --- | ---: | ---: | ---: | ---: |
+| 0–63 | 1 | 69 | 6 | 1 |
+| 512+ | 16 | 644 | 161 | 2 |
+| 64–511 | 4 | 413 | 41 | 1 |
+| 512+ | 1 | 673 | 13 | 1 |
+
+The run replayed 1,799 prefix rows and supervised 221 target rows. Both updates
+had finite losses and gradients, and each of the three weighted marginal
+logit-gradient norms was positive. Unclipped parameter gradient norms were
+65.31 and 157.86; each update clipped once at the configured norm cap of one.
+Update wall time totaled 269.45 seconds, including 212.13 seconds of prefix
+replay, measured with device synchronization. The process used an 8 GiB MPS
+allocator ceiling. These observations verify the training path across the
+chosen histories and durations; they do not measure convergence, generation
+quality, long-run memory stability or CUDA behavior.

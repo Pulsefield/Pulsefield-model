@@ -1,0 +1,47 @@
+defaults:
+  - oracle_time_train_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+source_dir: artifacts/scoped-style-modeling/sources
+split_manifest: artifacts/scoped-style-modeling/prepare-v1/split-manifest.json
+# Pin the existing allocation and explicitly select train sources before running.
+split_sha256: ""
+source_sha256: []
+output_dir: artifacts/oracle-time-continuation/m2-train
+device: mps
+model_seed: 17
+cpu_threads: 1
+updates: 1
+model:
+  hidden: 128
+  heads: 4
+  temporal_layers: 2
+  recent: 512
+  coarse_group: 16
+  coarse_capacity: 64
+  attacks_per_lane: 12
+  releases_per_lane: 4
+  coupling_rank: 16
+  max_chunk: 128
+windows:
+  seed: 17
+  horizons_s: [1.0, 4.0, 16.0]
+objective:
+  normalization_rows: 128.0
+  lambda_struct: 0.0
+training:
+  effective_batch_size: 2
+  microbatch_size: 2
+  chunk_rows: 128
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

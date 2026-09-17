@@ -7,11 +7,15 @@ a 4-key rhythm-game choreography generation system.
 
 Pulsefield V3 is under active research and development. Work in this repository
 defines the target generation problem, causal gameplay state, constraints,
-falsifiable hypotheses, and evaluation questions. It does not yet define or
-ship an executable V3 reference architecture, training pipeline, or inference
-pipeline.
+falsifiable hypotheses, and evaluation questions. The V3 reference architecture
+and end-to-end training and inference pipelines remain open.
 
 Start with the [V3 formulation](docs/formulation/README.md).
+
+The [oracle-time continuation research baseline](docs/research/oracle_time_continuation.md)
+implements verified source replay, a causal backbone, and sequence training on
+supplied event times (M0–M2). Sampling, durable generation, and corpus evaluation
+remain later milestones; this baseline does not define the V3 reference architecture.
 
 ## Legacy code boundary
 

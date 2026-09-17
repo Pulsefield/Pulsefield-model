@@ -3,7 +3,7 @@
 ## 下一阶段实现计划书
 
 - 日期：2026-09-15
-- 状态：M1–M4 的实施计划。生成合同、梯度路径和缓存生命周期是实现要求；模块与数值配置是本轮选定的起始设计，不宣称已经证明其表示充分性或质量最优性。
+- 状态：M0–M2 已实现，M3–M4 待实现；接口与验证范围见[实现说明](oracle_time_continuation.md)。本文保留 M1–M4 的设计与验收合同。生成合同、梯度路径和缓存生命周期是实现要求；模块与数值配置是本轮选定的起始设计，不宣称已经证明其表示充分性或质量最优性。
 - 本轮交付：可以从真实谱面前缀开始、逐行更新全部历史特征与缓存、在固定时间骨架上生成合法非空完整 rows 的可训练系统。
 - 实现基础：`991d2f987f8a112220f5beb76bcf2d8a0903ade3` 已实现 M0 的 source/seed、exact replay 与 query/commit。继续扩展现有 `research/oracle_time_continuation` owners；旧 source-action 代码只按本文迁移范围复用，relation-matching 不作为新主干的前置或默认模块。
 
@@ -534,8 +534,8 @@ loss 测试还须覆盖 ragged effective batch、长 target 短尾 chunk、完�
 
 ## 9. 里程碑与依赖
 
-实现状态：M0 的因果数据、seed、逐行 exact replay 与终点规则已实现，接口与真实谱面验证见
-[因果数据与回放说明](oracle_time_continuation.md)。M1–M4 尚待实现；M0 尚不包含磁盘数组、双重 LRU 预算、learned memory 或流式导出。
+实现状态：M0 的因果数据、seed、逐行 exact replay 与终点规则，M1 的在线主干，以及 M2 的窗口采样与序列训练已实现，接口与验证范围见
+[因果数据、在线主干与序列训练说明](oracle_time_continuation.md)。M1 包含逐行与分块 teacher forcing、训练重投影、显式 detach 和推理 K/V；M2 包含按 group/chart/stratum/start/horizon 抽样、固定 effective-batch 分母、三组精确 marginals、content-only prefill、分块 backward 与完整累积后的单次 clip/step。M3–M4 的实际 sampling、磁盘数组、双重 LRU 预算、资源 guard、持久检查点、流式导出与 corpus run 尚待实现。
 
 | Milestone | 实现内容 | 完成条件 | 不允许替代成交付 |
 | --- | --- | --- | --- |
@@ -547,7 +547,7 @@ loss 测试还须覆盖 ragged effective batch、长 target 短尾 chunk、完�
 
 M0 是基础；M1 与 M2 的设计需要共同对齐，不要求先获得旧任务的显著收益；M3 的 sampling/资源语义在 M0 即确定，不能最后补丁式修 LN；M4 使用已完成的同一系统。这里的 milestone 是一条主任务，不是五个可以分别“无收益、停止采用”的微型研究项目。
 
-按本计划的训练缓存与归档合同直接继续 M1–M2。无需新增通用审计、重复 corpus census 或先用小型 NLL pilot 决定是否实施；报警阈值随完整路径验证校准，不能成为等待“表示充分性已证明”才开始实现的条件。资源 soak、平均 NLL 和模块存在性都不能单独替代完整交付。
+后续 M3–M4 沿用 M1–M2 已实现的训练缓存与归档合同。无需新增通用审计、重复 corpus census 或先用小型 NLL pilot 决定是否实施；报警阈值随完整路径验证校准，不能成为等待“表示充分性已证明”才开始实现的条件。资源 soak、平均 NLL 和模块存在性都不能单独替代完整交付。
 
 运行预算由真实吞吐与目标监督事件量共同设置，必须统计 prefill 成本，不能只用 update 数量表达训练暴露。软件 smoke 可以很短；性能 run 的解释必须与其训练量匹配。先得到一套完整新 baseline，再决定是否需要分解 ablation，不先展开 architecture×sampler×loss×optimizer 网格。
 
