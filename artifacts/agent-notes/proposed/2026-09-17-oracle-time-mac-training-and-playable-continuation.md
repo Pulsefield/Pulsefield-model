@@ -314,3 +314,64 @@ tests passed, including warmup and exact interruption recovery. A separate prior
 test attempt correctly rejected resume after source files were edited during
 the test; subsequent verification used fixed sources. Long runs always use
 frozen runtime snapshots and were unaffected.
+
+## Completed conditioning comparison and known-time revision
+
+Accepted revision/Card: none. Evaluation: REFINE. The owner additionally
+permits larger necessary modules and use of this Mac, with playable output as
+the deciding goal. This authorizes exploratory implementation and runs without
+accepting this Note or any Experiment Card.
+
+The seed-count comparison completed 100 additional updates per arm, each with
+36,609 targets after the common 20M/3e-5/u200 weights. Control validation is
+2.8826876811 nats/row; the seed projection gives 2.8770584777. Full raw/seed17
+outputs on 5b69/e67f/ecc have LN fractions .4053/.3141/.3358 for control and
+.3663/.3252/.3190 with the feature. There is no useful demonstrated generation
+benefit, and the optional feature is removed from the product path. Frozen
+`seed-anchor-runtime-v2` and both arms remain available for reproduction.
+Each arm has about 1,854–1,856 seconds of measured update execution, but about
+15,672 seconds between resource timestamps; those wall spans include inactivity
+and must not be called continuous overnight training. Peak RSS is below 2.5 GB
+and measured swap growth is zero for both arms.
+
+The 20M/1e-4 arm completed 500 updates and 183,849 target rows. Its fixed
+24-window/1,126-row validation is 2.7590298638. Immutable weights are
+`quality-mac20m-u500/weights.pt`, SHA-256
+`f3c991bc2c19f9ad2eb2bb3b4de6f93231a95a67d6fe8eaaebc896a398a59359`.
+Three full outputs remain legal; LN fractions are .0807/.0403/.0622. These
+metrics do not establish playable organization or a capacity-only improvement.
+
+The 20M/3e-5/u200 longest-chart run completed 26,956 generated rows in
+1,277.968 seconds, with a 45,507,463-byte continuation checkpoint and
+344,981,504-byte RSS after unload. Its maximum LN is 77,643 ms. At event 10,349,
+time 1,679,374 ms, generated actions (2,3,2,0) begin two LNs immediately before
+that empty gap; the next event closes both. `mac20m-long-gap-readout.json`
+records the exact source and generated actions. This falsifies a playability
+claim despite resource and legality success. The 20M MPS recovery run also
+completed: 347.583 seconds, 44,727,943-byte checkpoint, peak active/driver/RSS
+518,425,344 / 1,217,904,640 / 827,883,520 bytes, zero swap growth and byte-identical
+row/export regeneration after restoring the saved 512-row boundary with a
+later output tail present. This is checkpoint-tail recovery, not literal SIGKILL.
+
+The next bounded intervention permits time-only context from the already supplied
+skeleton while preserving strict action causality. This deliberately revises the
+initial future-timing prohibition: up to 16 ordered offsets and successive gaps
+enter a shared 110,848-parameter MLP, with a zero final projection. No lane,
+future action, source event type or LN endpoint pairing is provided. The nearest
+information-set analogue is known-future covariates in
+[Temporal Fusion Transformers](https://arxiv.org/abs/1912.09363); only that input
+separation transfers. Its forecasting architecture and reported results do not
+validate this chart generator. This is an adaptation, with no novelty claim.
+
+The exploratory paired procedure starts both arms from the pinned u500 weights,
+reinitializes AdamW, uses draw seed41, backbone LR3e-5, WD.01, lambda_struct.3,
+B8/cohort4 and warmup20. The enabled arm alone uses timing LR1e-3. Readouts at
+100 and 300 added updates compare the same fixed 24 windows, three initial full
+gold-reference charts and the longest-chart gap behavior. A useful timing
+response with no material NLL regression (0.05 nats/row) is the initial continuation
+gate; a structure verdict still requires full gold-context inspection. Stop on
+nonfinite loss, resource guard failure or output cap; use fresh output folders,
+checkpoint at completed updates and preserve both negative and positive runs.
+An exploratory capacity probe separately measures two complete updates at
+512/768/1024 temporal width, six layers and the same frontiers, on CPU and MPS.
+It changes size for a resource decision, not a matched learned-quality claim.
