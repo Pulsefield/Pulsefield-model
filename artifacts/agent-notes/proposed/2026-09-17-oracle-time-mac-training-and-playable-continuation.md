@@ -643,3 +643,64 @@ the small source-only archive SHA is
 `2f9221fa33bda4520652932df2c4fed7d9176b69d241d63dd139381651a3c6a4`.
 No product commit/push, Note acceptance, research adoption or goal completion
 is implied by this handoff.
+
+## Completed handoff runs and broader evaluation
+
+Accepted revision/Card: none. Evaluation: REFINE. The active playable-model
+task authorizes continued implementation and bounded execution. Product base
+remains `f679269b92e96efb5bd7989e748bd42cf069379e` with the preserved uncommitted
+implementation. No lifecycle transition or remote publication is requested.
+
+The 77M continuation completed update300 and104,003 targets. Pinned weights in
+`quality-skeleton-large-u300/weights.pt` have SHA
+`bb848e65b27a664d852ea3df2eb5a8ccee27912bc8018621c18169ed7d8675d6`.
+Its fixed24-window/1,126-row NLL is2.4773810562, versus2.5367861164 for the
+20M timing arm and2.5335913921 for the20M control at the same target exposures.
+The capacity ordering reverses relative to update100; the early result did
+not establish that widening cannot help. These windows cover only seven
+validation song groups and cannot establish corpus-wide or generated quality.
+The large run accumulated4,823.360 active update seconds,452,045 actually
+computed prefix rows and885,324 logical prefix rows. Logged peak RSS is
+3,658,989,568 bytes, minimum available9,061,548,032 bytes, and maximum swap
+growth zero. Concurrency changed during the run, so elapsed times are not a
+controlled device or model-size throughput comparison. The300 readout SHA is
+`05a674669eee0ab9a8b9dc8545233636107b4d734ac4ddbfa7e1d8df873c8db3`.
+
+The timing probe completed all12 cases in566.065 seconds. Its complete readout
+SHA is `9a19f815b490aa6006da4d49e361b20caafbfbc40785143cb7bbb655f9a1fd28`.
+Current-query timing changes reach the head: the local fusion reduces their
+RMS to roughly one tenth, but does not eliminate them. At timing-u300, timing
+RMS is about5.4–5.6 percent of history-facts RMS at the four inspected queries.
+Replacing only current-query timing changes any-hold probability by at most
+0.000672 in those four cases. Recomputing the preceding16 rows produces a
+larger change in one generated-history case:0.161893 actual versus0.148354
+compressed, a direction that still does not solve the long-gap failure.
+These are two positions of one TRAIN chart, not a general causal explanation.
+No dead gradient path or legality defect is established.
+
+The next evaluation separates insufficient exposure from premature capacity
+conclusions. Freeze128 distinct validation song groups selected uniformly
+without replacement, one uniformly selected chart per group, then use the
+existing uniform feasible-context-stratum/start/horizon choices with seed
+20260918. The128-window manifest is fixed before loading any model. Compare
+20M/u500,20M timing/added-u300 and77M timing/added-u300 using identical full
+true prefixes and targets. Report pooled NLL, equal-group mean NLL and paired
+group-bootstrap95% intervals; inspect all groups, not just previously selected
+gold examples. This is a broader diagnostic, not an untouched final test set.
+Use immutable runtime v7, CPU/two Torch threads, a30-minute active bound,
+existing resource guards with2GiB available-memory reserve and a128MiB total
+diagnostic-output budget. Output owner is `coverage-evaluation-v1`; files use
+exclusive creation. Stop on source mismatch, nonfinite result, resource limit
+or incomplete evaluation. No training or optimizer changes occur in this run.
+
+In parallel, generate complete5b69/e67f/ecc4 outputs from the pinned77M/u300
+weights at temperature1/top-p1/seed17, matching the existing77M/u100 cases.
+The v7 `quality_scaled.py` runner uses CPU/one thread and the large generation
+profile. A wrapper adds a30-minute process-tree bound and4GiB aggregate output
+limit; resource/checkpoint guards remain enabled. The existing
+`quality-skeleton-large-u300` directory currently contains only pinned weights;
+each per-source output must be absent before starting. Do not overwrite or
+attach a second writer. Full Lens review contexts and action records, including
+entry/exit holds, are required for qualitative interpretation. A positive
+three-chart result would trigger broader eight-gold/multiple-seed assessment,
+not a playable-quality pass.
