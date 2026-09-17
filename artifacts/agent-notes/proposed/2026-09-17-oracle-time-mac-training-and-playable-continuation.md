@@ -1088,3 +1088,49 @@ eight full gold review contexts for both seeds and broader chart transitions
 before any final quality decision; retain unreviewed scopes explicitly.
 The ongoing horizon training remains independent, and no remote publication,
 note lifecycle transition or goal completion is authorized by this evaluation.
+
+### Updated execution and uncertainty
+
+The base300 versus its 20M timing-u300 starting weights comparison has now been
+bootstrapped on the same 128 groups. Pooled change is -.0093020 nats/row, with
+95% interval [-.0350849, +.0123033]; equal-group change is -.0051877, interval
+[-.0372087, +.0267725]. Only 66 of128 groups improve. Thus the point estimate
+does not establish a further general prediction gain from this continuation.
+The full evidence is `exposure-continuation-v1/base300-vs-initial-broad.json`.
+Low supervised coverage remains a limitation, not a proven sole explanation
+of the generated-organization failures.
+
+The paired e67f update100 review covers all eight generated pages plus four
+byte-verified source pages. Base uses more release-only exits; long interleaves
+more attacks/chords with its short holds. No whole-chart preference is assigned.
+Review SHA is `b70f65fa7e281862d43148ea39f50d0e18ef1ccc84e7beee7d0beb04341912bc`;
+file `exposure-continuation-v1/e67f-u100-context-review.json` retains scope,
+action witnesses and image hashes. The two other sources' new100-step contexts
+remain explicitly unreviewed.
+
+At 2026-09-18 04:40 CST, original training PID57801/session23227 is still live.
+The long arm has computed134 updates/196,967 targets; its durable checkpoint
+is update125,241,277,929 bytes. The eight-gold temperature evaluation is also
+live as Python child PID243, supervised by tool session55417. Four of sixteen
+source/seed generations have complete readouts; the rest are not yet complete.
+PID numbers can be reused, so verify their command lines or poll the original
+session handles before acting on these snapshots.
+
+The temperature supervisor is
+`exposure-continuation-v1/generate_gold_085.py`, SHA
+`cc71c61892cca9464df42ae5f7f335782a3b14b5d86a129259879ef8ef1534ba`.
+Its `gold085-manifest.json` pins all eight sources, both seeds, weights and
+the unchanged canonical-human document hashes. `gold085-status.json` appears
+only after all sixteen outputs are verified. If its30-minute bound stops it,
+retain completed outputs and inspect the incomplete chart's checkpoint; do
+not rerun the fresh-output script against an existing target directory.
+
+All32 gold observations were checked to occupy exactly one scope/context pair
+per source, so the existing renderer's first-context selection covers the eight
+intended contexts. On completion, render the complete `quality-exposure-base-u300-t085`
+readout, inspect both seeds at every gold context and broader transitions, then
+test any surviving quality candidate against the long-gap failure. The shifted
+facts/time prototype remains a separate candidate for a properly identified
+learning/inference trial; its cost gain is not permission to call the playable
+model goal complete. Product analysis now includes the conditional-time control
+and shifted-stream cost evidence, with no product runtime change or remote push.
