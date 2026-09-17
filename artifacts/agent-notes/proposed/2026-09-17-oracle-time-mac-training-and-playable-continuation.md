@@ -7,7 +7,7 @@ Created: 2026-09-17
 Updated: 2026-09-18
 Product revision: f679269b92e96efb5bd7989e748bd42cf069379e, with uncommitted implementation; frozen source manifests accompany the exploratory runs
 Scope: research/oracle_time_continuation M3 runtime, Mac resource envelope, optimizer calibration, corpus exposure and generated structure
-Related: 2026-09-15-oracle-time-continuation-resource-and-module-review
+Related: 2026-09-15-oracle-time-continuation-resource-and-module-review; 2026-09-18-oracle-time-m3-session-handoff
 
 ## Question and authority
 
@@ -596,3 +596,50 @@ sustained multi-lane holds. These are descriptive Lens/Foundation judgments,
 not a whole-chart playability pass. All page/action hashes and the Foundation
 identity are retained in `temperature085-context-review.json`. Default decode
 temperature remains1 pending broader evidence.
+
+## One-row intervention result and session handoff
+
+Accepted revision/Card: none. Evaluation: REFINE. The owner requests a durable
+session handoff while reserving more resources for the next session. The latest
+goal permits parameter scaling as needed, keeps this stage audio-free with a
+provided time skeleton, and requires Beatmap Lens/current human gold judgments
+before any final playable-quality decision. The standalone process Note
+`2026-09-18-oracle-time-m3-session-handoff` records authority, implementation,
+negative evidence, active processes, frozen-runtime recovery and next priorities.
+
+The bounded branch probe completes all48 branches/6,144 sampled rows in164.749
+seconds. On e67f, all16 forced LNs close within1–7 rows/61–425ms. At128 rows,
+the single-LN intervention changes subsequent LN heads by paired means+4.125
+at temperature1 and−1 at.85; the rotated-tap control gives+8.5 and0. These cases
+do not support a strong persistent LN attractor triggered by one LN. Two
+positions in one chart cannot establish absence of feedback in general.
+
+Immediate any-new-head probability changes .014132 to.107598 at position256,
+and .050777 to.210903 at512. The tap-hidden/LN-mask diagnostic gives .087974
+and .167755; full LN-hidden versus this hybrid JS is.004633/.004265. Much of
+the immediate effect can be reproduced by support renormalization, but the
+hybrid evaluates logits outside their original historical support. It is not
+evidence of a legality bug or authority to remove legality constraints.
+
+Results are `mechanism-probe-v1/branch-readout.json`, SHA
+`de0e4e6b54300dc45a5107431af68df2fa3f8010629041861a90b740479afcd5`;
+manifest SHA `010f5b5920d8587e76c601191e231ba2e0811b3331178f0a285e69151dc53355`.
+Common/branch/timing script SHAs are respectively
+`d50ca79bc2fe52b493d83bbe9d3c5f49c20943c4417776bb16a9b26dc2c5583f`,
+`84ed4be5c3bc12247cbfbbc890a19b9b462e360882de27da85f39a32d1ce6832`,
+`80620454efb9c20d22bab75f62a8eb27098349efc28d64587274b52296f87b60`.
+The timing trace is still running at the handoff observation, with9/12 completed
+cases. Interpret only a complete `timing-readout.json` as the full run.
+
+At02:39 CST, large-model training has computed236 updates/81,773 targets;
+the durable checkpoint is update200 with69,897 targets,923,599,593 bytes.
+The separate exported weights remain update100 until the stage300 driver ends.
+Do not restart the existing100 stage or attach another writer to this output.
+The product implementation remains uncommitted at base
+`f679269b92e96efb5bd7989e748bd42cf069379e`. Its50 changed/untracked files are
+preserved by `session-handoff-20260918/manifest.json`, SHA
+`06741fefea5ef0665660f1caec6e838672eda03633bcdcc3932d2aa27f1717fd`;
+the small source-only archive SHA is
+`2f9221fa33bda4520652932df2c4fed7d9176b69d241d63dd139381651a3c6a4`.
+No product commit/push, Note acceptance, research adoption or goal completion
+is implied by this handoff.
