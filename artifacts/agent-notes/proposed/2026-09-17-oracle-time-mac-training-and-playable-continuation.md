@@ -745,8 +745,8 @@ are identifiable; the three outputs also share a short-LN organization despite
 different reference episodes. Source-style equality is not the objective, and
 LN counts do not decide quality. This supports continued investigation of
 local structure, not whole-chart acceptance or a fix for the72-minute stress
-chart. A fresh canonical-human read is still running; the frozen reference
-judgments must not yet be called revalidated current gold.
+chart. The canonical revalidation and exact qualitative witnesses are recorded
+with the completed cost probe below.
 
 ### Bounded sampling-cost comparison
 
@@ -781,3 +781,71 @@ active bound. CPU/four threads, per-process RSS8GiB, minimum available2GiB,
 swap growth at most1GiB, diagnostic-output cap128MiB. No optimizer checkpoint
 or final weights are retained from this short cost probe. Output owner is
 `horizon-throughput-v1`; exclusive creation prevents overwriting evidence.
+
+## Horizon throughput result and continued training comparison
+
+Accepted revision/Card: none. Evaluation: REFINE. The twelve matched updates
+per arm completed in304.220 total process seconds. Baseline targets total4,708
+in99.417 update seconds; long targets total16,152 in197.057 update seconds.
+Each arm computes exactly18,802 prefix rows. Excluding the first two updates,
+throughput is48.194 versus83.002 targets/second, a1.7222x ratio that exceeds
+the prespecified1.5x criterion. All twelve steps remain in the20-step LR
+warmup; omitting the first two concerns cache/setup cost, not completion of
+optimizer warmup. Canonical annotation reading overlapped part of the probe;
+alternating arm order reduces but does not eliminate desktop-load confounding.
+Peak process RSS is2,711,371,776 bytes, minimum available9,804,595,200 bytes,
+maximum swap growth zero. Both arms clip all twelve updates; median pre-clip
+norms are2.6769 and8.5773. Facts/local/relation/temporal/head/timing all receive
+gradients and measured parameter updates. Median relative timing-update RMS
+is.004646/.004917; comparable update magnitude does not imply equal direction
+or equal training risk. Readout SHA:
+`4d9564a2ed4ddda187b2e9d3598af4fc4e4543752ce15ec1494c97306321d8f1`.
+
+The initial whole-workspace human reader was deliberately stopped while still
+live because it exceeded this comparison's required source scope. A fresh
+eight-source snapshot pins the original canonical document bytes before and
+after reading; the same canonical reader expands content-addressed objects
+and verifies their hashes through its owning adapter. This takes7.051 seconds,
+returns32 current High judgments, and confirms all eight gold sources' prior
+observation identities unchanged. Snapshot SHA:
+`e3afbae97c50f03a4abf967e1c2d88962b54f374b074bb83fded84547b21bc95`.
+No human source was edited. The26-page machine context review, with entering
+holds, exact action witnesses and all render/action hashes, is
+`quality-skeleton-large-u300/context-review.json`, SHA
+`01cc110b3586885c280b9edcadd0061c64c4c5bd8983044f4a62711ebb1b25e7`.
+
+The next run tests whether the throughput gain survives a meaningful learning
+interval without worse held-out prediction or generated organization. Both
+arms start from20M timing-u300 SHA
+`008acf4f73c173b0f525e85664674a1188dd4917d263cc6d276ba044b76f550c`,
+with fresh AdamW, sampling seed91, and identical model, optimizer, objective,
+B8/cohort4/Q64 settings from the cost probe. Baseline horizons1/4/16s and long
+horizons4/16/64s remain the only configured arm difference. This compares a
+practical training allocation at equal update counts, not equal tokens or
+equal compute; report all three explicitly. No gradient-norm or LR change is
+introduced to conceal the longer arm's larger summed target loss.
+
+Run base100, long100, base300, long300 sequentially in immutable runtime v7,
+preserving each arm's AdamW and sampler RNG between its100 and300 readouts.
+Each stage pins weights and scores the original24 windows; the300 stages also
+score the fixed128-group manifest. Use full true prefixes in all validation.
+Primary guard: long-arm pooled and equal-group broad NLL may not exceed base
+by more than.02 nats/row; report paired group uncertainty rather than declaring
+equivalence from a nonsignificant result. Maintain at least1.5x observed target
+throughput as an efficiency criterion, with execution-order confounding stated.
+Passing those numerical guards is only a candidate-selection condition.
+Compare full5b69/e67f/ecc4 generations at seed17/temp1 first, then all eight
+current-gold contexts and multiple seeds for any candidate worth retaining.
+Check recurrence, moving attacks, coordinated holds/releases and transitions;
+do not substitute LN fraction or source-tag equality for quality. Retain the
+long-gap stress counterexample until the relevant candidate is tested.
+
+Output owner is `exposure-continuation-v1`, with separate `base`/`long` run
+directories and immutable stage-weight directories. One process lock protects
+the experiment from duplicate drivers. CPU/four threads, RSS6GiB, minimum
+available2GiB, swap-growth1GiB,512MiB checkpoint cap,25-update publications,
+6GiB aggregate output budget and120-minute total process bound. Abort at a
+resource/identity/nonfinite/legality failure; preserve the last atomic
+checkpoint and report incomplete work. Do not overwrite pinned stages or
+restart an already completed100 stage. This is an authorized exploratory
+comparison, with no adoption, lifecycle transition or readiness claim.
