@@ -1242,3 +1242,65 @@ minimum 2GiB available memory and 128MiB output cap in fresh owner
 `rapid-recurrence-probe-v1`. Verify source/generated time alignment, model hashes,
 unchanged legality across each time intervention and direct-model/engine
 agreement for the actual query. Save no weights and change no product runtime.
+
+### Long300 quality and recurrence-probe results
+
+Accepted revision/Card: none. Evaluation: REFINE. All six long300 risk outputs
+complete in 247.041 supervisor seconds; generation readout SHA is
+`76ebf3b7bc546b0995ea734765977133e69e76d940ce31866d920363fa765a2d`.
+The review covers all 20 generated gold pages, 12 generated pages at the fixed
+failure contexts, and eight source/generated pages around ecc496's two own
+recurrence extrema. Ten gold-source and six fixed-failure source pages were
+byte-verified against already inspected pages. The first four outputs' own
+extrema fall within the fixed inspected contexts; their separately rendered
+wider contexts remain unreviewed. All canonical human documents remain unchanged.
+
+Long300/871955 now has coherent moving taps in both gold contexts. ecc496/seed17
+has strong changing-chord recurrence, while seed19 has mainly moving taps. These
+are machine hypotheses under the frozen Foundation, not new human labels.
+Nevertheless, 85058a's fastest four same-column attacks span 72/96 ms across
+seeds17/19, and both871955 outputs span 65 ms. ecc496/seed17 retains the rapid
+chord burst near137500 and has another near92357; its fastest six attacks span
+178 ms. ecc496/seed19 distributes the prior burst across columns and has a
+214-ms fastest-four span elsewhere. The targeted generation comparison therefore
+fails the whole-chart quality gate despite the likelihood improvement. This is
+not a blanket rejection of longer horizons as an efficiency policy. Review SHA:
+`23b5b64fa8d3f69c826d9fd089ef19647c51db3d49f0bde3dfb7e40a4b4a00f9`.
+
+The read-only recurrence probe completes 48 original-row cases and 144 query
+distributions in 43.241 seconds. On the ten selected generated-history rows
+whose inspected lane was attacked at most40 ms earlier, temperature.85
+repeat-attack probabilities range .141–.650 for base300 and .305–.798 for
+long300; means are .435/.554. Both models are evaluated on the identical
+base300 histories here, not their separately sampled trajectories. These
+decisions cannot all be explained as extremely unlikely sample tails.
+
+Inserting the250-ms previous gap increases those probabilities by .021–.100
+and .026–.068 respectively: elapsed clocks do affect the output in this test.
+Multiplying current-query future offsets by four changes the inspected lane's
+probability by at most .001923/.005291. This small direct response does not
+prove that all future-time information is unused: earlier cached history still
+contains its original future-time inputs. Source-history predictions also
+overpredict attack multiplicity at ecc496's moving burst, so generated-history
+drift alone does not explain the failure. Source/generated legal support differs
+on LN examples and is not a controlled occupancy intervention.
+
+Probe SHA is `a692d5621a4249b50886ea324376fbfc714f3fe5a7721c437c65356d7bc9b876`;
+`rapid-recurrence-probe-v1/readout.json` SHA is
+`954e947a37ec259b490f9df6cdb4eb532e85b374bfd10d725bab9a08f300263f`.
+Peak RSS is 1,175,994,368 bytes, minimum available10,978,951,168 bytes and swap
+growth zero. Source hashes/time alignment, query legality and direct/engine
+agreement pass the recorded invariants. No weights, sampling rule, product
+runtime or human annotation changed. All training/generation/probe processes
+described in this result are complete; there is no pending writer to resume.
+
+The next design question is whether a direct learned physical-clock path into
+the joint output can make dense-time decisions trainable without being diluted
+by the history stack. A zero-initialized residual readout could preserve the
+current function at initialization and permit a matched comparison against
+continued long-horizon training. This remains a hypothesis, not an implemented
+model or an accepted experiment. Preserve alternatives: insufficient exposure,
+the event-union requirement under all-closed generated history, and history
+dependence can also contribute. Do not replace the learned task with an
+unvalidated minimum-key-interval rule, and do not infer final playability from
+the improved validation loss. The goal remains active and unmet.
