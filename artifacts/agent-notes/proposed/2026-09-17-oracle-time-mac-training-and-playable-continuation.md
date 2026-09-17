@@ -485,3 +485,114 @@ temporary debris; run journals still require a single writer per output folder.
 Frozen v5/v6 contain the fix; ongoing v3/v4 training retains earlier publication
 code. The v5 source manifest is
 `d5e1697bcdf3cbb60560a54c2f44715a9f095baa1e0bdccc533f9d31a964f437`.
+
+## Gap exposure result and generation-state mechanism probes
+
+Accepted revision/Card: none. Evaluation: REFINE. The owner explicitly prioritizes
+understanding the model's information flow and generated structure over a quick
+completion claim. Exploratory implementation and bounded execution remain
+authorized; the Note stays proposed.
+
+The 20M pair completed 300 added updates on the same 104,003 target rows.
+Control fixed-window NLL is 2.5335913921; timing NLL is 2.5367861164. Their pinned
+weight hashes are `984d71a9f8ce9ca2138b9a40ed373ec67d14ff5e13a3b809b09fe2c14b32f387`
+and `008acf4f73c173b0f525e85664674a1188dd4917d263cc6d276ba044b76f550c`.
+This does not demonstrate a likelihood gain from timing. The 77M arm's first
+100 updates have NLL 2.6037101239 on the same 35,441 training targets as the
+20M/u100 pair. Its weights hash is
+`b84ee573594ce65cc559753807441bb6f91172c31f0009664d3c2be22ee6aa25`.
+Full raw/seed17 generation produces 3,368/2,341/2,683 notes and 440/230/177 LNs
+on 5b69/e67f/ecc. All replay legally; these counts do not establish quality.
+The already bounded large run continues to 300 for its second readout.
+
+The gap25 arm stopped at its first 50-update readout, with 16,844 targets and
+fixed-window NLL 2.5636788519 versus the starting timing-u100 value 2.5590380577.
+Pinned weights hash is
+`4edaf2363e6b4afafffce793495296111d20277f978dad2f38eeb411083e8c44`.
+Training has 7,263/212/9 eligible gaps across 1,459/110/7 groups in the three
+bands. A separately constructed validation manifest fixes 17 boundaries:
+eight distinct groups per first two bands and the sole third-band group.
+Its SHA is `7be8253271318dc6fbd2bdde5bfce19e098094d351970cfaca7460a44ad9ee9a`.
+The selection uses skeleton times, draw seed67 and earliest feasible context
+within 32 rows; it is fixed across checkpoints. Pooled gap-window NLL improves
+2.5338106804 to 2.5234816213, but mean boundary NLL worsens 3.5715677054 to
+3.5812723251 and per-lane post-row occupancy Brier worsens .1342577122 to
+.1482326535. Several source cases deliberately sustain LNs across 8–10 seconds;
+unconditionally closing before every gap would be an invalid target.
+
+The fixed generated-history counterfactual also fails: after gap25 training,
+any-hold probability at the 84.735-second gap is .1933552623 versus .1897228956
+with future time compressed to125 ms; at77.643 seconds it is .8153457642 versus
+.8140622973. These are small changes in the wrong direction for these generated
+histories. The earlier baseline probabilities were .1466278280/.1462675630 and
+.7087639570/.7088475820. This result rejects treating exposure alone as a
+demonstrated solution. No additional gap25 updates are scheduled before tracing
+the decision mechanism.
+
+The next bounded diagnostic holds timing-u100 weights fixed and uses one
+current-gold pure-tap validation chart, exact SHA
+`e67f9856f62cf3cf648a8c1107ebcb61b58738df62a395a40712fa0265cccef5`.
+At zero-based positions256 and512, replay the complete true prefix and assert
+all lanes are closed. Compare three legal one-row interventions: the source
+tap row, replacing its first tap with LN_START, and rotating its tap columns
+to a different tap-only row. Generate the following128 rows independently
+under each branch with common RNG seeds17/19/23/29 and temperatures1/.85.
+There are 48 branches and6,144 sampled rows. The true chart terminal is retained;
+the probe horizon never forces a close. Record original forced-row probability,
+LN starts, occupancy area, first forced-LN duration/censoring, marginal close
+hazards, and prefix-length16/32/64/128 summaries. Same RNG is a paired variance
+control, not a guarantee of identical actions after the intervention.
+
+The immediate post-intervention read also separates upstream neural effects
+from legality renormalization: compare the full LN-branch distribution to the
+tap-branch hidden vector evaluated with the LN-branch occupancy mask. This is
+a diagnostic hybrid, never a production decode policy. Trace fact, timing,
+local, relation, temporal projection and six temporal-layer activations; verify
+manual tracing against the normal engine before interpreting deltas. A related
+fixed-history time probe compares actual versus compressed future times with
+the final16 prefix rows recomputed, and current-query timing removal. Query-only
+gradients and activation replacement measure whether information reaches the
+head without retaining a full-prefix graph. Attention weights and activation
+norms alone are descriptive, not causal explanations.
+
+Run on CPU/one Torch thread with existing memory/swap/disk guards, a 30-minute
+active-time bound, a fresh `mechanism-probe-v1` output owner and at most128 MiB
+of diagnostic artifacts. Frozen runtime v7 has manifest SHA
+`efd670e285bef9a7987f8882e5baf09277549dbf334dc5883c9bfdab4b06a3a8`.
+Stop on source/trace mismatch, nonfinite values, illegal action or a resource
+guard. Scripts and output identities are appended after execution. This can
+distinguish immediate legality effects, learned short-term feedback and weak
+timing transmission; it cannot prove whole-chart playability or generalize
+from one chart. A relation-edge row-age feature is still linear in event age;
+measure its actual source/generated range before selecting any saturation fix.
+
+## Additional runtime and context evidence
+
+The timing-u100 longest-chart run completes26,956 generated rows over4,348.526
+seconds of supplied time in1,483.618 active seconds. Peak RSS is492,994,560 bytes,
+swap growth is zero and the final continuation checkpoint is45,524,359 bytes.
+It emits32,692 notes/17,225 LNs, including an89,356 ms LN. This remains a quality
+counterexample despite bounded resource use and legal output. Indexed re-export
+reproduces the1,147,955-byte osu file exactly in.6483 seconds, SHA
+`27349bfed6576dec335c817b26f3533759235c14c26a8a64e562e574b9b1f476`.
+
+SQLite export now caps database pages before insertion and stores notes in a
+WITHOUT ROWID primary key ordered by(time,lane). The export query needs no
+auxiliary sort, verified by its query plan and a late-LN-close ordering test.
+Writes check the final output cap before each header/note. Existing output is
+preserved on staging failure. The current runtime CPU selection passes25 tests
+with two MPS cases deselected. Before this exporter edit, the v6 selected suite
+passes210 CPU tests plus21 subtests and four separate MPS cases.
+
+An actual Hydra CLI generation on e67f with timing-u100/temp.85/seed19 is killed
+at observed row640 and resumed through the CLI. Final row journal and osu bytes
+match the uninterrupted reference. The three child runs take149.764 seconds;
+final checkpoint is44,706,567 bytes. The complete output has1,874 notes/35 LNs,
+maximum607 ms. Its entire four-page32,071–39,845 ms review context shows moving
+tap flow with short inner-lane returns and chord accents. The full five-page
+5b69/temp.85/seed17 context,112,106–122,107 ms, has staggered short LN movements
+and occasional overlap; its source has stronger paired repetition and more
+sustained multi-lane holds. These are descriptive Lens/Foundation judgments,
+not a whole-chart playability pass. All page/action hashes and the Foundation
+identity are retained in `temperature085-context-review.json`. Default decode
+temperature remains1 pending broader evidence.
