@@ -1031,3 +1031,34 @@ all checkpoint/ledger/config identities and records the discarded MPS attempt
 and diagnostic runtime separately. The development-screen Card's three checkpoint
 inputs are now the exact identities in the table. Proceed with its frozen
 24-group/three-seed conditions. Evaluation: REFINE; no generated-quality verdict.
+
+### Development-screen descriptive and visual readout procedure
+
+Before the screen completes, freeze its descriptive reader and initial visual
+subset. `screen_readout.py` SHA
+`f009fe9bf9af496a2ccbf85846b88e6d35f03b89f5447be6a36479cc1bdfdeed` requires all
+216 generations / 72 likelihoods. It reports ordinary/stress/all groups separately,
+paired O1-minus-R1 macro NLL with 10,000 group bootstrap resamples at seed 971,
+pooled NLL, type scores and descriptive generated metrics. Seed outcomes remain
+nested within source groups. No semantic or playability label is inferred from
+these counts, and ordinary/stress pooling is not a population weighting claim.
+
+First visual subset: condition indices 12 (first LN-rich source) and 16 (first
+dense source), O1/R1 at seed 17. Use their prospectively frozen 16-second cores
+with two seconds of entering/exiting context, clipped only at the true chart
+end. This is a bounded stress inspection, not the complete quality benchmark or
+a method-blinded human vote. Inspect every rendered page and concrete action
+relationships before assigning any machine hypotheses; keep other labels and
+unseen scopes unreviewed. `render_screen.py` SHA
+`4c7abd521911b7af41276a54c53b5a096904f978b2c92aeb378e9d490701fa06` uses the
+canonical beatmap-lens renderer/action views and records all source/image hashes.
+Output `corpus-20260918-v1/inspection-250k-v1/` must be fresh. Both scripts pass
+syntax compilation and require a complete successful generation screen.
+
+The eight canonical human workflow documents, frozen Foundation bytes, Inspector
+comment projection and domain owner still match the previous 37-observation read.
+Calibration preflight SHA
+`eaded64781ce530b8a60723dc183ff241c6d296b178ad00c87f4c3fe48de7b2e` records that
+verification. Reuse the actually inspected high-confidence LN positive and
+negative above; no cached machine rationale becomes a human comment. Rendering
+and these measurements do not change gold or Foundation.
