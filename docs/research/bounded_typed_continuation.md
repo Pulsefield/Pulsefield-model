@@ -7,12 +7,17 @@ and the benefit of deciding complete note objects at their onsets. It remains
 a research baseline; generated playability must be evaluated independently of
 likelihood and mechanical correctness.
 
-The implementation currently provides the exact execution contracts in
+The implementation provides exact execution contracts in
 [`contract.py`](../../src/pulsefield_model/research/bounded_typed_continuation/contract.py)
 and a dense/cached finite content encoder in
 [`temporal.py`](../../src/pulsefield_model/research/bounded_typed_continuation/temporal.py).
-Feature construction, complete probability heads, corpus training and generation
-will use the contracts below. The three-arm training comparison has not run.
+[`features.py`](../../src/pulsefield_model/research/bounded_typed_continuation/features.py)
+owns permitted exact-state and timing inputs;
+[`model.py`](../../src/pulsefield_model/research/bounded_typed_continuation/model.py)
+implements joint decisions and dependent endpoint likelihoods and sampling.
+[`data.py`](../../src/pulsefield_model/research/bounded_typed_continuation/data.py)
+projects source labels into bounded, batched teacher-forced training windows.
+The corpus training and generated-quality comparison have not run.
 
 ## Conditions and prediction tasks
 
@@ -29,7 +34,7 @@ timing from audio or test a general negative-candidate grid.
 | R1 | Complete-object seed, R and H | Required head rows on H; releases or no event elsewhere |
 | O1 | Same external conditions as R1 | A four-lane onset group, then a separate endpoint for each new LN |
 
-The minimum production seed contains the complete row reaching at least30
+The minimum production seed contains the complete row reaching at least 30
 original note heads. Typed seeds include the endpoints of at most four LNs
 still open at that boundary. This information is shared by R1 and O1. R0 does
 not receive those future endpoints. The exact execution primitive also accepts
@@ -69,10 +74,10 @@ not reset any of these facts. Current state and prior known plans must directly
 reach the head/type predictor, not only a legality mask or an endpoint head.
 
 The common starting encoder uses shared hand coordinates and one causal width-
-three convolution at each dilation1,2,4,8,16,32,64,128. Its content dependency is
+three convolution at each dilation 1, 2, 4, 8, 16, 32, 64, 128. Its content dependency is
 exactly `1 + 2 * sum(dilations) = 511` materialized tokens. Encoding the preceding
 physical gap of the oldest relevant token needs one additional timestamp, so
-the raw history envelope is512physical rows. Current complete exact facts and
+the raw history envelope is 512 physical rows. Current complete exact facts and
 external time conditions are separate inputs to the prediction query.
 
 This is a concrete finite-context implementation choice, motivated by the
@@ -88,7 +93,7 @@ ends; newly born R1 LN ends are unknown. Full source labels cannot be inserted
 into R1 raw history retrospectively before their physical release.
 
 Dense training re-encodes raw bounded history with current parameters. Gradients
-may flow through that finite prefix; there is no automatic64-row detach. No
+may flow through that finite prefix; there is no automatic 64-row detach. No
 learned carry crosses an optimizer update. Cached inference is tied to one model
 and parameter version, and must match dense execution and cropped recomputation.
 Durable recovery can rebuild learned state from raw history and exact facts.
@@ -103,15 +108,15 @@ forward logits alone is insufficient.
 Known timing features may look ahead without an action-causal mask. All arms
 can read R; only typed arms can read H. Use full supplied timing for nearby
 offsets, future gap descriptors and multiscale counts, independent of training
-window endpoints. Report how512physical rows translate into seconds across
+window endpoints. Report how 512 physical rows translate into seconds across
 density strata before interpreting this as musical or phrase-scale context.
 
 ## Object endpoint probability
 
-The intended object probability is the head-group probability times a joint
+The object probability is the head-group probability times a joint
 endpoint probability. Endpoints are decided sequentially within a row; each
 factor can read earlier factors' already chosen endpoints. Use an equal mixture
-of lane order0,1,2,3 and its mirror3,2,1,0, and marginalize that mixture for
+of lane order 0, 1, 2, 3 and its mirror 3, 2, 1, 0, and marginalize that mixture for
 likelihood. Sampling an order and following its factors samples the same model.
 The full mirrored probability needs a test; shared hand weights alone are not
 enough.
@@ -121,7 +126,7 @@ If another lane is already free, another chosen end is early enough, or a
 remaining factor can make a lane free, the current factor retains every future
 R candidate. Otherwise it must choose a candidate strictly before the next H.
 The legal candidate set is a contiguous half-open R-index interval, exposed by
-`endpoint_bounds`; it has no arbitrary16/128-event cap.
+`endpoint_bounds`; it has no arbitrary 16/128-event cap.
 
 This is a normalized autoregressive joint defined by local completion masks.
 It is not an arbitrary unmasked joint subsequently conditioned on feasibility.
@@ -131,10 +136,40 @@ factor masks and normalizers; the independent-endpoint conditioning formula
 from the earlier frozen probe does not apply to dependent factors.
 
 Full future candidate scoring requires exact chunked logsumexp and a bounded
-backward strategy. Dense and chunked likelihoods and gradients must agree before
-real training. Candidate counts, not just head counts, must constrain endpoint
-microbatches. Rare endpoints beyond a target window remain supervised; the
-window end does not truncate their support.
+backward strategy. The pointer packs ragged factor/candidate pairs into a fixed
+candidate budget, then recomputes each block's features and activations during
+backward. Only factor contexts and the small logsumexp reduction graph persist.
+Tests compare likelihoods and all gradients with dense computation on CPU/MPS,
+and compare retained tensor storage with and without recomputation. Rare endpoints
+beyond a target window remain supervised; the window end does not truncate support.
+
+## Source projection and leakage checks
+
+Source admission retains the existing lossless event-row format and verifies
+its digest. Compact integer indexes recover exact lane clocks and LN starts at
+any target position without replaying neural state from BOS. No learned values
+survive an optimizer update. These indexes and all original endpoint labels stay
+in the supervision owner, outside the predictor API.
+
+An interval selects actual post-seed source onsets. It includes intervening
+release-only rows and extends to immediately before the following unselected
+onset, or to the real chart end. The first interval also includes any releases
+between the seed and first suffix onset. The same interval selection applies to
+all arms. O1 forced releases contribute content but no stochastic likelihood.
+Loss sums every relevant factor and divides by the actual selected onset count.
+
+Training tokens use the preceding physical gap and new plans allowed by their
+arm. Current query features contain exact lane/hand clocks, occupancy, previous
+actions, counts and known remaining hold durations. Timing-only features include
+16 upcoming candidates, their gaps/roles, counts within 0.25/1/4/16/64 seconds,
+and the next gaps of at least 2/8/32 seconds. Only typed arms expose H. Timestamp
+differences are computed in float64 on CPU before conversion to model dtype.
+
+Leakage tests change suffix LN pairings while preserving R/H and the observed
+prefix: R1 content/query features must stay identical. O1 may read a prior plan,
+but changing its current endpoint label cannot change the current head decision.
+Other tests compare indexed exact state against full replay and compare bounded
+and BOS loss/parameter gradients with an LN older than the learned context.
 
 ## Comparison and evaluation plan
 
@@ -149,13 +184,13 @@ choices, endpoint factors, order mixtures and feasibility normalizers, divided
 by the same source onset count. Row-local mean NLL and endpoint-only mean NLL
 remain incomparable. R0 is a different-conditioning practical comparison.
 
-After mechanical/model checks, a16-TRAIN-chart learning check must show actual
+After mechanical/model checks, a 16-TRAIN-chart learning check must show actual
 head/type learning as well as endpoint learning. It covers TAPs, simultaneous
 LNs with different ends, long gaps and exact state at crop boundaries. Synthetic
 long-lived anchors supplement real examples where observed corpus LN spans
 are shorter than the full learned context.
 
-The planned main screen uses250k/1M/2M source-onset exposure checkpoints with
+The planned main screen uses 250k/1M/2M source-onset exposure checkpoints with
 at most four training hours per arm, whichever comes first. Pin exact runnable
 source, data intervals, optimizer and resource limits after the learning/resource
 check. Report equal-exposure and equal-compute results separately, including
