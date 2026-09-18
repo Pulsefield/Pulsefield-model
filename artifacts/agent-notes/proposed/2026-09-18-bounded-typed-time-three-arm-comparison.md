@@ -379,3 +379,65 @@ from the same clean product worktree. Fresh output is
 oneCPUthread, MPS6GiBdriver/8GiBallocator, RSS6GiB, available≥2GiB, swapgrowth≤128MiB,
 output64MiB. Stop on identity/reproduction/numerical/resource failure. Record all
 results and limits as post-hoc; no threshold or baseline is changed silently.
+
+## Result Log: post-hoc LN type discrimination audit
+
+The read-only diagnostic completed in9.290s on the same clean source and exact
+three checkpoints. Readout SHA-256:
+`1f56d656134486e325ab4b4cc8d2baee80015c267e3a9fc1403dcc923b8c1d43`,
+`smoke-20260918-v1/type-diagnostic-v1/readout.json`. Initial/final head-loss
+reproduction absolute total errors are at most0.000160nats over2048onsets, well
+within the stated2e-5nats/onset bound. No parameters, targets or original learning
+gate were changed. Acceptance:none; this remains an exploratory diagnostic.
+
+All three arms happen to share7482structurallyLN-capable lane/onset positions on
+this slice, with828positives (11.0666%). Initial mean LN probabilities are
+34.253%/30.829%/31.438% forO1/R1/R0; final means are8.979%/10.198%/8.335%. Their
+initial positive-only probability was therefore not a calibrated prevalence
+baseline. Lower positive-only probability alone cannot distinguish improved
+classification from failure to learn a minority type.
+
+| Arm | Candidate LN binary NLL, initial → final | Candidate LN AUROC | Candidate LN AP, final |
+| --- | --- | --- | --- |
+| O1 | 0.484454 → 0.223365 | 0.621507 → 0.907881 | 0.557146 |
+| R1 | 0.448692 → 0.225827 | 0.730855 → 0.902541 | 0.512226 |
+| R0 | 0.459171 → 0.245046 | 0.639678 → 0.889859 | 0.461355 |
+
+The fitted constant-prevalence baseline hasNLL0.347905 andBrier0.098419. Final
+Brier scores are0.068546/0.070380/0.076401. Thus gains exceed merely fitting a
+global LN prior on these observed histories. They do not establish generation
+calibration; all three final mean LN probabilities remain below the observed rate.
+
+Conditional TAP-versus-LN diagnostics use3367true source heads for which both
+types are feasible, including828LNs; two structurallyforcedTAPheads are excluded.
+This diagnostic never supplies current head locations to generation.
+
+| Arm | Conditional type NLL, initial → final | Type AUROC, final | Median within-interval type AUROC, initial → final |
+| --- | --- | --- | --- |
+| O1 | 0.697922 → 0.333056 | 0.912251 | 0.531766 → 0.790624 |
+| R1 | 0.635853 → 0.319357 | 0.913326 | 0.616157 → 0.817674 |
+| R0 | 0.647677 → 0.349612 | 0.904172 | 0.576711 → 0.786009 |
+
+The global constant type prior hasNLL0.557804. A stronger diagnostic giving each
+interval its own fitted true LN fraction has weightedNLL0.371819; all three final
+scores are lower. Within-interval AUROC improves in12/12,11/12and10/12intervals
+containing both types. O1 final within-interval AUROCs range0.594–0.939. These
+observations show local type discrimination as well as pooled style separation
+on this small TRAIN slice. They neither rank generated arrangements nor establish
+unseen-group performance.
+
+Interpretation: the initial positive-only gate was a poor stand-alone detector
+of type learning against an overpredicting random initialization. The original
+Card remains failed by its stated rule; this post-hoc audit is not a retroactive
+pass. However, describing the native models as having learned only endpoints
+would contradict the complete binary/within-interval evidence. Subsequent
+learning checks should prospectively use proper all-class scores plus within-
+interval discrimination, retaining positive rates and free-generation collapse
+diagnostics separately.
+
+Next implementation priority is native sampled generation with finite-cache
+recovery, skipped-candidate handling, endpoint obligations and export/reparse
+checks. Then fix the main screen's metric contract and sample manifest before
+training. No coarse LN-intent oracle, positive-class reward, duration truncation
+or decoder repetition penalty is justified by this diagnostic. Evaluation:
+REFINE; quality and independent confirmation remain outstanding.
