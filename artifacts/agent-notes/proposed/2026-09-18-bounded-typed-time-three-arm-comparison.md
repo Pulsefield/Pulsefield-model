@@ -1822,3 +1822,38 @@ verification bound and6GiB/resource guards are separate from training; report
 verification cost separately. On any mismatch, retain outputs and stop before
 training. Do not overwrite initialization artifacts. Successful preflight makes
 the concrete paired continuation reviewable; no quality benefit is yet claimed.
+
+
+## Availability initialization result and first paired continuation
+
+The initialization/preflight succeeds in43.881 seconds. Every original parameter,
+Adam moment/step, RNG value, coverage bitmap and cumulative metric is preserved.
+C0/C1 added parameter bytes are identical and all initial functions agree. Each
+variant exactly reproduces the prior complete generated rows on the three fixed
+sources (621/4402/2042 rows), with mechanical verification and complete-suffix
+head/endpoint sums within1e-5 nats. Readout SHA
+`895b8cee87a2ee0d31e38be2b374313663b1d7e9b43930c1f68be9e90633885d`.
+P0 has2355835 parameters; C0/C1 each have2371260, an addition of15425 parameters.
+No optimizer update occurs in initialization.
+
+Initial checkpoint SHAs under `availability-20260919-v1/`:
+
+- `p0-init/checkpoint.pt`: `83b67714e4eaf36300616e3250ea3883c6363bcb51543bac85980c4783cfdb4f`;
+- `c0-init/checkpoint.pt`: `1ead63e28fede485765e33feaefc134974d86d694c676028629f16e50e3d2355`;
+- `c1-init/checkpoint.pt`: `43adb7a1a65de36b7fc11c04e62b33c91bde11ca32367a21e1b269d2ed7e362f`.
+
+Initialization takes0.741/0.434/0.465 seconds, charged with the parent training in
+the new ledgers. The separate real-chart verification cost is development evidence,
+not supervised exposure. No source or checkpoint repair was needed.
+
+Card revision2's first continuation uses `train_comparison_2250k.py`, SHA
+`6248bd7dfe1ba9b0006c19f26fd433dff83bc478df262cbaa542bd50b59c102b`.
+It checks the successful preflight digest and exact initial checkpoint SHAs, then
+runs P0/C0/C1 sequentially through canonical Hydra composition with
+`stop_after_checkpoint=2250000`. Fresh segments are `p0-2250k`, `c0-2250k`,
+`c1-2250k`; fork fields are cleared and strict resume is used. Source, extended
+plan, optimizer, batch, candidate and resource settings stay pinned above.
+The driver verifies matched draw/row/prefix/padding/endpoint ledgers and coverage.
+Invoke with the same explicit Python3.10/MPS-dependency/dev prefix as the preflight.
+Preserve any failure and stop the chain. Training is authorized exploratory work;
+acceptance remains none and the quality result remains pending.
