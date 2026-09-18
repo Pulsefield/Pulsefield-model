@@ -215,3 +215,81 @@ It verifies the Foundation, canonical renderer and chart-reader digests, then
 writes the public packet to `masked-inspection-v1/`. Its private A/B map must
 remain unread until all eight judgments have been recorded. Both drivers compile.
 The native screen is running; no product source or model parameters changed.
+
+## Native-screen result
+
+The screen completed in 394.136 s: 144 native generations, 48 complete-suffix
+scores, all mechanical/export/reparse checks and four exact raw-state recoveries.
+Both models recovered ordinary index 0 at candidate 113 and LN-rich index 12
+at candidate 512, as declared for the short and longer sources. Peak physical
+footprint was 233145328 bytes; swap growth was zero. The product worktree stayed
+clean at the pinned revision. No new training or product edits occurred.
+
+Raw `development-screen-v1/readout.json` SHA
+`b46ff31e677ec370dfc5487da3b56896ad7fd27baaff23a2e8c2af04cb733765`;
+recounted `readout.json` SHA
+`e93382972b8ad556dc213b1d9a2455630cab0a57d3fb7f5e70bd9a72b5782952`.
+
+| Scope | Initialization | Group macro NLL | Group mean rapid pairs/1000 heads | Rapid pairs | Maximum rapid run | LN head share |
+| --- | --- | --- | --- | --- | --- | --- |
+| 12 ordinary groups | 171 | 2.154512 | .015656 | 2 | 2 | 27.245% |
+| 12 ordinary groups | 172 | 2.132558 | .079493 | 9 | 2 | 52.625% |
+| 12 stress groups | 171 | 2.102821 | .097464 | 8 | 2 | 24.029% |
+| 12 stress groups | 172 | 2.014975 | .409852 | 34 | 3 | 54.725% |
+| All 24 groups | 171 | 2.128667 | .056560 | 10 | 2 | 25.342% |
+| All 24 groups | 172 | 2.073766 | .244673 | 43 | 3 | 53.857% |
+
+All four primary numeric guards pass. Complete-suffix pooled NLL is
+1.970715593/1.920650907 for 171/172. Paired group macro NLL differences for
+172 minus 171 are -.021954 in ordinary groups, 95% bootstrap interval
+[-.044954,-.002709], and -.087846 in stress groups, interval
+[-.175231,-.022753]. Corresponding rapid-rate differences are +.063837,
+interval [0,.151312], and +.312388, interval [.049221,.627071]. These remain
+conditional comparisons of two fixed checkpoints, not uncertainty over all
+initializations or over player preference.
+
+The higher rapid burden of 172 must remain visible alongside its better NLL.
+In the two dense stress groups its mean rate is 1.588278 versus .249053 for 171,
+and maximum run is three versus two. The .8 gate was prospectively defined for
+the aggregate stress stratum, not each two-group category; it passes without
+establishing low burden uniformly across categories. Overall, 25 of 172's 43
+rapid pairs occur with one free lane, versus none of 171's 10. The six stress
+category readouts are retained in the report. Both LN-rich sources have zero
+rapid pairs, so the higher overall LN share is not by itself a burden diagnosis.
+
+Shortest generated LN durations across all seeds are 18 ms for 171 and 8 ms for
+172. These remain unfiltered observations, not a new minimum-duration policy or
+a finding of player-specific impossibility. The preselected semantic review must
+assess actual action relationships. After that masked review, targeted examination
+of the dense rapid runs and shortest holds can clarify the limits of the aggregate
+screen; any such examination must be labeled diagnostic, not substituted for the
+preselected confirmation cases.
+
+## Prepared masked packet and continuation state
+
+`masked-inspection-v1/manifest.json` SHA
+`b9bffadf6cc8d6ff24514e95708bdb81eb6fea1f48ebdb54032a40563c6d52bf`.
+It contains 208 images: six local pairs with eight pages per variant and two wider
+pairs with 28 pages per variant. The cases are ordinary 0/3/6/9, LN-rich 12,
+dense 16, then ordinary 1/2 at 64s. These eight scopes belong to eight distinct
+selected groups. All presentation and Foundation digest checks passed during
+rendering. No image in this new packet has yet been inspected, and its private
+initialization map remains unread. Record all eight masked judgments before
+opening `masked-inspection-v1/private-mapping.json`.
+
+Selection, evaluation, summary and rendering processes are terminal. There is no
+process to restart or wait for. Next perform the preselected masked inspection,
+then the declared diagnostic follow-up if needed. Numerical passage alone does
+not establish the semantic gate or complete the playable-generation goal.
+
+Read-only inference inspection confirms a reusable core in `generation.py`,
+including seed-only initialization, exact physical state, finite raw history and
+verified restoration. Packaged training already exists. A packaged bounded-task
+generation runner is still absent; complete experiment execution currently uses
+artifact drivers. A practical handoff should expose the frozen checkpoint and
+external R/H/complete-seed condition, durable generation and verified osu! export,
+with native behavior equivalence tests. Existing row logging, resource guards and
+export helpers can be reused. Source playback metadata can accompany export, but
+audio is not read by the model or bundled by the existing exporter. This is an
+engineering direction to implement after the quality review, not a new model
+contract or a completed inference feature.

@@ -2141,3 +2141,38 @@ preselected multi-scale inspection. Inspect the practical inference handoff in
 parallel with that bounded work. The current evidence supports emerging
 organization in the reviewed cases; it does not yet complete the usable
 train/inference and generated-quality goal. Note status remains proposed.
+
+### Additional-group R1 screen complete; eight masked scopes await inspection
+
+The new scoped owner
+`2026-09-19-bounded-typed-r1-unused-group-confirmation` freezes both 2M checkpoints
+and evaluates 24 additional VAL groups, excluding every prior bounded-screen group.
+Selection seed 741 chose 12 ordinary groups and two groups for each of the same
+six source-based stress descriptors. These are new to this bounded comparison,
+not claimed untouched by every earlier Pulsefield experiment. TEST stays unread.
+
+All 144 native generations, 48 suffix scores and four exact recoveries pass
+mechanics and export/reparse in 394.136 s, with 233145328-byte peak footprint and
+zero swap growth. Initialization 172 passes the predeclared numerical gates;
+its ordinary/stress rapid rates are .079493/.409852 and group macro NLL values
+2.132558/2.014975. Initialization 171 has .015656/.097464 and 2.154512/2.102821.
+The higher burden in 172 remains a material tradeoff: its dense two-group category
+has rate 1.588278 versus .249053, maximum run three versus two. Better likelihood
+does not establish better playability. Exact results and limits are in the scoped
+Note and `confirmation-20260919-v1/readout.json`, SHA
+`e93382972b8ad556dc213b1d9a2455630cab0a57d3fb7f5e70bd9a72b5782952`.
+
+The new public packet
+`confirmation-20260919-v1/masked-inspection-v1/manifest.json` has SHA
+`b9bffadf6cc8d6ff24514e95708bdb81eb6fea1f48ebdb54032a40563c6d52bf`.
+Its 208 images have not yet been inspected. Review all eight preselected pairs:
+ordinary 0/3/6/9, LN-rich 12 and dense 16 at 16s, then ordinary 1/2 at 64s.
+Keep this packet's private mapping unread until all eight judgments are saved.
+The earlier packet's mapping is already legitimately open and its judgments are
+unchanged. Later dense-run/short-LN diagnosis must remain separate from these
+preselected comparisons.
+
+All processes are terminal. Product source is still clean at
+`15d27db0b0723d7f606b1429c901d26c1f61e5ac`; no new training, product edits or remote
+pushes occurred. A reusable bounded generation entrypoint remains an engineering
+gap after the semantic review. The overall goal remains active and unfulfilled.
