@@ -1422,3 +1422,104 @@ This is a development learning-curve comparison. Neither lower NLL nor more LN
 heads establishes sustained playable organization. Inspect repeated four-key
 attacks and independent LN-control episodes explicitly. Independent initialization,
 unused-group confirmation and broader organization remain outstanding.
+
+
+## One-million visual review and repaired policy readout
+
+All 32 fixed-core images have now been inspected at 1x: eight context pages for
+each O1/R1 output on the two preselected stress conditions. The same frozen
+Foundation and three previously inspected High human LN comparisons apply.
+Eight canonical workflow documents and the Foundation file were revalidated
+unchanged. No human labels or comments were edited. Scoped machine review SHA
+`37e1e3c87ad1e40a65dcbe7d99633d360d2059b55750b8d2da10366ef56d1aa7`, under
+`inspection-1000k-v1/review.json`.
+
+For the LN-rich core 16958.524–32958.524 ms, O1 contains 151 LN heads and 76 taps;
+independent staggered holds/releases repeatedly organize the core. The machine
+assessment is LN coordination present/prominent, High. For example column0
+holds 20605–21280 while columns1/2 release and re-enter independently and column3
+starts at20755; the pattern of different roles recurs later. R1 contains 24 LN
+heads and337 taps, predominantly TAP/chord motion with a definite independent
+control island around28330–28930. Assessment is present/supporting, Medium at
+the complete16s scope. The presence judgment is clearer than its salience.
+
+For the dense core 101905.910–117905.910 ms, O1 has206 LN heads/129 taps, with
+repeated independent control through much of the core: present/prominent, High.
+R1 has only3 LN heads/481 taps: a synchronized columns2/3 pair106510–106567 and
+one column0 anchor107987–108669. No independent multi-LN organization is present:
+absent, High. These are recognizable LN structures, not a universal playability
+pass. In particular O1's dense LN control may impose substantial burden. Other
+tags, ordinary cores, R0, other seeds and larger64s organization remain unreviewed
+by this fixed-core assessment. The early250k O1 absence therefore does not persist.
+
+The corrected policy probe completes in6.871 seconds, reproducing both native
+outputs exactly and matching the first source/generated-history query. Readout
+`policy-drift-1000k-v2/readout.json`, SHA
+`a9e1b7a978f5dab5510f3b837dea7b3246061ed7814d345f4cc9b24a236d5c3f`.
+For successive32-onset blocks starting0/32/64/96, O1 source-history expected LN
+mass is84.686/89.538/96.136/95.873%; generated-history mass is75.874/78.971/54.560/
+39.242%. R1 source values are83.163/85.139/89.955/88.963%, generated values71.239/
+36.307/25.471/1.837%. The definition remains expected LN heads divided by expected
+total heads over every legal joint choice. O1 retains substantially more LN mass
+than at250k on this source/seed, whereas R1 now drifts more. This is one conditional
+trajectory, not a causal or universal arm advantage.
+
+All ten post-hoc longest-quad context pages were also inspected. O1's67 consecutive
+quad attacks span6368ms with70–142ms gaps; R1's59 span10546ms with181–182ms gaps.
+Both have Jack organization present/prominent, High: repeated full-group attacks
+organize the complete core and remain dominant in adjacent context. Neither has
+LN coordination. The R1 final partial context page covers only47ms, not a2500ms
+rest. This confirms sustained recurrence but does not make every such episode
+unplayable. Their burdens differ materially; the broader concern is excessive
+concentration across generated outputs, not the existence of a valid Jack label.
+Other semantic dimensions remain unreviewed. Evaluation remains REFINE.
+
+
+The quad inspection record is `quad-inspection-1000k-v1/review.json`, SHA
+`aaa952b67d6f7bf266c2af2ee5fe40f5b238b286cfd5879b73c9cc6fae9c9061`.
+It uses the canonical tag ID `jack-organization` and preserves all ten inspected
+image hashes, scopes, playback rate and generated-chart identities.
+
+## Experiment Card: bounded-typed-quad-policy-v1
+
+Revision1, proposed, acceptance none. Behavior-neutral diagnostic extending the
+existing expected-policy readout: determine whether the long quad runs reflect
+concentrated learned probabilities under generated history or primarily unusual
+sample outcomes. This can change the next research question toward conditional
+policy calibration and state-distribution drift; it cannot by itself establish
+exposure bias, insufficient context or missing style as the unique cause.
+
+Use clean source `1693d62ffaca04b2a6127d8e3a72d1988adf441f`, the same pinned screen
+conditions and existing250k/1M/2M checkpoints. Select the two already inspected
+1M longest-quad locators before reading their2M outputs: source `27ac9470c9a40a6c7f968ae5516fea21c544a26305edd2ab27feea521152844f`, seed23,
+core[76419,82788)ms; source `c1798e61528cf4a5b618efa5d2bb9effe0b23a72ea7a2db58f2046d731d5395b`, seed17,
+core[105794,116341)ms. Cross both O1/R1 arms and all three checkpoints on these
+fixed sources/seeds:12 native replays. This is post-hoc development diagnosis,
+not an independent quality comparison or an equal-compute selection.
+
+At every suffix H, marginalize the same normalized legal choice distribution to
+expected head/LN counts and probabilities of1/2/3/4 heads. Include deterministic
+singleton choices exactly. Compare source-history and generated-history means
+for the full suffix, fixed locator core and consecutive32-onset blocks. Include
+actual quad fractions separately. Require complete reproduced rows to equal the
+previous native output exactly, aligned H indices, and initial expectations to
+match within2e-5 before histories diverge. Stop on any mismatch or resource failure.
+
+Interpretation: high generated-history quad probability in a realized quad run,
+with low source-history probability at identical external times, supports policy
+concentration under divergent histories, not merely rare draws. If expected mass
+is low despite realized repetition, reassess sampling variance and measurement.
+If source and generated mass are both high, source-conditioned calibration/model
+fit remains a leading issue. Results may be mixed across checkpoints and sources;
+no threshold automatically labels an output unplayable and no decoder change is
+part of this probe. The closest analogue is the existing paired LN-mass diagnostic;
+there is no novelty claim or new scientific intervention.
+
+Driver `quad_policy_probe.py`, SHA
+`61cc3b0de40d37077f045481e1dbe8bb6e3ea9ce4dde78dccd0e586f7f723bc5`, passes
+syntax compilation. Run through `uv run --offline --python 3.10 --extra mps --group
+dev python` after the2M screen completes. CPU one thread; ten-minute total bound,
+6GiB physical footprint and existing RSS/swap/available-memory limits. Fresh
+`quad-policy-probe-v1/`, preserve failure, no overwrite/resume. This writes only
+local derivative diagnostics and leaves source/model/sampler and checkpoints
+unchanged. Human/Foundation records remain read-only. Evaluation pending.
