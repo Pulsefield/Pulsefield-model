@@ -518,3 +518,37 @@ sustained recurrence burden or mode collapse routes subsequent learning/quality
 investigation; this diagnostic alone cannot pass a playability gate. Any rendered
 inspection must use the Foundation/current-human judgment scope, not substitute
 these counts for it. Evaluation remains pending until outputs are checked.
+
+## Result Log: native generation revision 1 export-path failure
+
+Revision1 stopped on its first chart after native generation, candidate600raw
+recovery and independent completed-output verification. Playback-header loading
+raised FileNotFoundError because catalog source paths are relative to the original
+product worktree, while the new implementation worktree has no dataset directory.
+The failure is before export/reparse and before any completed chart result; it is
+not a completed48-chart diagnostic. The last resource guard was atcandidate832,
+1.783s after startup. Preserve the failed output and original script unchanged.
+First generated physical-row SHA-256:
+`36c05654e69cb19ebfef7cdd6b18856c1ec3a221d1486d8e19b59f775cd4e081`.
+
+Read-only preflight resolves all16selected raw source paths against the original
+catalog-owning worktree and confirms each exists and matches its source SHA-256.
+No source cache, model parameters or sampler were changed. Evaluation: REFINE;
+the next revision repairs external playback-file resolution.
+
+## Experiment Card revision 2: bounded-typed-native-generation-v1
+
+Acceptance:none. All question, input/model/source identities, sampling policy,
+comparisons, resource bounds, metrics and stop conditions from revision1 remain
+fixed. The sole implementation repair resolves relative playback source paths
+against the catalog-owning original worktree, and preflights every selected source
+byte digest before sampling. The fresh output owner becomes
+`smoke-20260918-v1/native-generation-v2/`; failed revision1 remains untouched.
+
+Frozen script: `smoke-20260918-v1/generate_pilot_v2.py`, SHA-256
+`5b6f4286fa82d7ff9bee76284268fa761d0a099d127200f8ff6156aa174ea8c4`.
+Run `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/smoke-20260918-v1/generate_pilot_v2.py`.
+Additionally require the repeated first O1 physical-row file to be byte-identical
+to revision1's completed generation before exporting it. This verifies that the
+I/O repair did not change the previously generated trajectory. No optimization,
+new seed, new sample selection or relaxation of mechanical checks is introduced.
