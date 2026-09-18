@@ -2046,3 +2046,39 @@ All processes from this comparison are terminal: initialization, P0/C0/C1 traini
 216-generation evaluation and rendering have completed. Product source remains
 clean at `15d27db0b0723d7f606b1429c901d26c1f61e5ac`. The source and evidence commits
 are local; no remote push occurred during this experiment.
+
+## Follow-on stability probes on2026-09-19
+
+Two scoped proposed Notes now own the new questions; the three-arm contract and
+the negative availability conclusion above are unchanged.
+
+- `2026-09-19-bounded-typed-checkpoint-interpolation`: completed inference-only
+  alpha.25/.5/.75 interpolation between original O1 at2M and2.25M. All216 native
+  generations,72 suffix scores and three recoveries pass mechanics. The preselected
+  midpoint improves pooled NLL to1.863347 versus parent1.906802/1.913932, and
+  group-balanced rapid-pair rate to.431977 versus2.593285 at2M. Its LN share14.000%
+  fails the declared18.5185% coverage guard. All16 fixed-core images were inspected:
+  a localized independent-LN island remains present/supporting, High, and the dense
+  core remains coordination absent, High. Thus numeric mode loss is not complete
+  semantic disappearance. Evaluation REFINE; no new baseline or overall quality
+  pass. Full evidence and the five-point curve belong to the scoped Note.
+- `2026-09-19-bounded-typed-r1-second-initialization`: seed172 trained from scratch
+  through2M in1616.286s,2645 updates. Every source exposure ledger and final coverage
+  matches seed171; peak footprint921831032 bytes, no swap growth. The source-transition
+  preflight reproduced all native rows and NLL sums on three fixed cases. Checkpoint
+  SHA`9be0adc00cea85058b59f0a2446884d43fc40cd412188ee123e866df6369d83a`.
+  Its fixed three-milestone native screen is running, with66 generations and22
+  scores completed at the latest snapshot. Do not rerun into its existing output.
+  This is a second initialization on reused development groups, not independent
+  confirmation. The paired ordinary16s/64s masked review remains pending.
+
+Current product source stays clean at
+`15d27db0b0723d7f606b1429c901d26c1f61e5ac`; no product edits or pushes occurred in
+these probes. Interpolation processes and R1 training are terminal. The only live
+job is the R1 native screen, artifact root
+`artifacts/bounded-typed-continuation/r1-initialization-20260919-v1/`, process
+session39608. After it completes, run its pinned `readout.py`, `render_primary.py`
+and `render_blind_ordinary.py`; inspect before writing semantic results. Keep the
+private ordinary A/B mapping unread until masked judgments are recorded. The
+additional High Jack/Trill calibration is recorded with all11 images inspected
+in the R1 Note. The overall playable-generation goal remains active and unfulfilled.
