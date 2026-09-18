@@ -1304,3 +1304,74 @@ the event-union requirement under all-closed generated history, and history
 dependence can also contribute. Do not replace the learned task with an
 unvalidated minimum-key-interval rule, and do not infer final playability from
 the improved validation loss. The goal remains active and unmet.
+
+## Proposed experiment: direct physical-clock readout
+
+Card ID: oracle-time-clock-readout-v1. Revision: 1. Accepted revision: none.
+The user-authorized implementation/run remains exploratory against product
+revision `f679269b92e96efb5bd7989e748bd42cf069379e` plus the recorded dirty
+worktree. Preserve a preimplementation file manifest and freeze a new runtime
+before execution; existing v7 and its checkpoints remain immutable. Evaluation
+cannot be SUPPORTED or an acceptance claim from this dirty baseline.
+
+Question: can a short learned path from physical query clocks to joint-row
+scores improve fast-time decisions without giving up the history model's
+organization? Current long300 broad NLL is 2.259719951 over 128 groups/5,709
+targets. Its .85 outputs fail the selected recurrence cases, and the fixed
+base300 histories give long300 .305–.798 repeat probability on ten rows with
+lane-attack age at most40 ms. Those selected diagnostics motivate the experiment
+but are not an unbiased population estimate.
+
+Intervention: add a shared-hand MLP producing 16 additive hand-pair unary scores
+directly from pre-row lane LN/attack/release ages, hand attack/release ages,
+previous-event gap, elapsed chart time, prior complete-row actions, occupancy,
+terminal flag and the existing time-only lookahead offsets/gaps. Use the same
+bounded/asinh clock basis and relative hand coordinates. A hidden width of128
+with16 lookahead rows adds152,080 parameters. Zero-initialize the final layer;
+copy every existing parameter from long300 and verify identical initial logits.
+The joint 256-row family, coupling, legality, event skeleton and cache state
+remain unchanged. No future action, source LN pairing or annotation is input.
+
+This is an additive conditional-output adaptation of the existing joint head,
+not a new output family or novelty claim. Hypotheses remain distinct: a shorter
+gradient path may learn timing-sensitive scores; continued exposure alone may
+give the same benefit; or the all-events task/history dependence may require a
+different intervention. Failure to improve the paired quality cases leaves the
+direct-readout hypothesis unproven even if its parameters receive gradients.
+
+Control and intervention start from long300 weights
+`7160e330d64d9224362c5c923144ac37fb1e7966f527c933b64c09ffc79eb9f4`, with fresh
+AdamW, seed20260919, B8/cohort4/microbatch1, Q64 and horizons4/16/64 seconds.
+Keep LR3e-5, timing LR1e-3, weight decay.01, warmup20, clip1, structural weight.3
+and denominator1,024. Only the new clock-readout parameters receive a separate
+LR1e-3. Existing groups otherwise retain their settings; global clipping means
+the new branch can also change the effective backbone step. Pair all group,
+chart, stratum, start and horizon draws. Preserve each arm's optimizer/RNG
+between pinned stages; do not call fresh-optimizer continuation exact resume.
+
+First run100 updates per arm and score the fixed ordinary and128-group windows.
+Report pooled/equal-group NLL and paired group-bootstrap uncertainty. Stop and
+refine if the new arm is worse by more than .05 nats/row in either broad
+aggregation at100; otherwise the possible300-stage continuation requires review
+of the100-step evidence. The prediction guard for a retained candidate is no
+worse than control by .02. Full-chart .85/top-p1/beta0 generations on the same
+three failure skeletons and seeds17/19 must be inspected for both arms. Rapid
+repeated-chord failures must improve without simply replacing the chart with
+another broken organization. A surviving candidate still needs all eight gold
+contexts, multiple seeds, the long-gap counterexample and wider transitions.
+
+Before corpus training, verify zero-initialization equivalence, action causality,
+mirror equivariance, physical-time translation, step/chunk/gradient agreement,
+typed Hydra projection and real runner consumption. Exercise the new optimizer
+group in exact training resume and CPU/MPS generation/export recovery. Check
+that both clock layers learn after the zero-output first update. This code
+change must not weaken existing legality or cache/version guards.
+
+Use CPU/four threads for training and one for rollout. Each invocation has a
+120-minute bound, checkpoint every25 updates, 512MiB checkpoint cap, RSS6GiB,
+minimum2GiB available memory and swap-growth1GiB. Keep the training owner
+`clock-readout-v1` below6GiB; separate generation owners receive3GiB each and
+30-minute process bounds. Stop on identity, nonfinite, causality, resource or
+writer-conflict failures. Resume only after confirming the old process terminal
+and inspecting partial stage publication. Record source/runtime/init identities
+before launching; no remote publication or lifecycle transition is implied.
