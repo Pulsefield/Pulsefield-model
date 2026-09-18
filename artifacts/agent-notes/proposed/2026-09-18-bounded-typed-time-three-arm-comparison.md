@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-19
-Product revision: 1693d62ffaca04b2a6127d8e3a72d1988adf441f on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: 15d27db0b0723d7f606b1429c901d26c1f61e5ac on codex/bounded-typed-continuation; initial corpus source 1693d62ffaca04b2a6127d8e3a72d1988adf441f; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -1960,3 +1960,89 @@ with the full provenance packet and stopped on that unequal shape. The corrected
 check compares the seven shared identity/judgment/scope fields and preserves the
 public reader's comment policy. All three public examples and all12 image hashes
 are verified; no dataset or human record was changed.
+
+
+## Endpoint-availability result at 2.25M: no demonstrated improvement
+
+The fixed screen completes all 216 generations and 72 suffix scores in 647.692 s.
+Every mechanical/export/reparse check and the three selected exact recoveries
+passes. Peak physical footprint is 231703512 bytes; swap growth is zero. Readout
+`availability-20260919-v1/development-readout-2250k.json`, SHA
+`d7502657f151ba72c32e6f09fb3455a2062becc472353078605e55b77ee8be77`.
+
+| Measure, all 24 development groups | P0 original | C0 capacity control | C1 capacity + availability |
+| --- | --- | --- | --- |
+| Primary group-balanced rapid-pair rate per 1000 heads | 0.267819 | 0.278082 | 0.278270 |
+| Pooled rapid-pair rate per 1000 heads | 0.401099 | 0.410048 | 0.410235 |
+| Rapid pairs / those with one free lane | 53 / 1 | 54 / 5 | 54 / 5 |
+| Longest below-40ms attack run | 3 | 3 | 3 |
+| LN heads / all heads | 13560/132137 =10.262% | 13041/131692 =9.903% | 12974/131632 =9.856% |
+| Complete-suffix pooled NLL | 1.913932 | 1.913899 | 1.913886 |
+
+C1's primary-rate ratio is 1.039025 against P0 and 1.000675 against C0. The paired
+95% group-bootstrap intervals for its rate differences are [-0.014629,0.040239]
+and [-0.00000754,0.00052488], respectively. Both reduction gates fail. C1 passes
+the numeric relative LN-share and NLL guards, but has no demonstrated burden
+advantage. C0/C1 produce exactly identical complete physical rows on 65 of 72
+source/seed cases. P0/C0 agree on 35 and P0/C1 on 34. The near-null effect is not
+an untrained-parameter artifact: both added networks received 329 Adam updates.
+
+The larger change is shared with the original model's continued training. O1's
+2M parent had 37.037% LN share, 498 rapid pairs and 439 one-free-lane rapid pairs;
+P0 at 2.25M has 10.262%, 53 and 1. Complete-suffix NLL slightly worsens from
+1.906802 to 1.913932. This is not evidence that candidate availability solved
+allocation. Reduced burden accompanies a substantial change in LN use and the
+matched LN organization described below. It also does not prove that lower LN
+use makes every output worse: alternative TAP-heavy arrangements are allowed.
+
+### Fixed-core verification and quality guard
+
+For each of the two preselected cores, P0/C0/C1 have identical whole exported
+chart bytes and image bytes. All 16 unique P0 context images were visually
+inspected; 32 corresponding duplicate image paths were hash-verified rather
+than separately counted as visual inspection. Manifest SHA
+`99cdc4fd876362a0b453e8b512ed1737c47b038cacaae168294a894d07c6f2af`;
+scoped review SHA `efdfb9f5898996bc1b6f9b59c7e9350ec2e705a2a427985a5100c22fef7926dd`.
+Foundation and the previously inspected High human LN comparisons are unchanged.
+
+The LN-rich core has only four LN heads and 237 taps: column3 at17155–17380,
+synchronized columns2/3 at18580–18655, and column0 at19630–19705. The pair has no
+independent interior event; the other holds are isolated. LN coordination is
+absent, High, for all three variants. The dense core has 305 taps, no LN heads
+and no entering holds: absent, High. These assessments use event relationships,
+not a LN-percentage threshold. Other semantic labels remain unreviewed here.
+The matched LN-rich core's 2M independent coordination is not retained, so the
+semantic retention guard does not pass, despite the relative numeric LN guard.
+This limited scope cannot establish overall playability or method preference.
+
+A simple read-only check of the last 32 training updates gives observed conditional
+LN rates on feasible true head locations of 20.240% at 2M and 19.365% at 2.25M.
+The much larger generated-share change cannot be identified with this local label
+fraction alone. Optimization, incomplete fitting and generated-history feedback
+remain live alternatives; no unique cause is established by these comparisons.
+`comparison-figure-v2/comparison.png` and SVG visualize the shared checkpoint change
+and near-null feature effect, with exact input identities in their provenance.
+
+### Decision and continuation state
+
+Evaluation: REFINE. Do not promote the new availability scorer or spend the
+reserved additional 250k on C0/C1 without a new reason. The first declared 2.25M
+checkpoint is a valid stopping point for this branch comparison; the immutable
+2.5M plan and all checkpoints remain available, but no 2.5M run has begun. The
+new feature remains opt-in with `none` as the default. This finding is bounded
+to the tested 250k continuation and does not prove such features can never help.
+
+Prioritize common training/rollout stability and the still-competitive simpler R1.
+Checkpoint sensitivity, longer matched training, learning-rate policy and weight
+averaging are candidate discriminating questions; none has been executed or
+established as the remedy by this result. Before any new run, choose a bounded
+comparison and pin its source/configuration and parent accounting. Another model
+initialization, unused-group confirmation, ordinary and larger-context organization
+review remain required for a stable quality conclusion. The original goal remains
+active and unfulfilled; no note lifecycle acceptance or implementation transition
+is implied.
+
+All processes from this comparison are terminal: initialization, P0/C0/C1 training,
+216-generation evaluation and rendering have completed. Product source remains
+clean at `15d27db0b0723d7f606b1429c901d26c1f61e5ac`. The source and evidence commits
+are local; no remote push occurred during this experiment.
