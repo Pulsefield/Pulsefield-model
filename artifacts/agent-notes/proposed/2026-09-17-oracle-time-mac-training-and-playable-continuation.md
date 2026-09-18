@@ -1470,3 +1470,149 @@ If training terminates early, inspect its latest atomic checkpoint and any
 partial stage, then resume `run.py 100` with the same frozen v8 and identities;
 never duplicate a live writer. Product code and the validation report remain
 uncommitted, note status remains proposed, and the playable-model goal is active.
+
+### Control100 quality and event-union support audit
+
+Accepted revision: none. Card: oracle-time-clock-readout-v1 revision 1 for the
+paired training/generation; the descriptive support audit is exploratory.
+Evaluation: REFINE. All six control100 generations finish in 513.293 supervisor
+seconds, readout SHA
+`e3974ab54e1212bf723bc43958ab4ee82c81e16b7cd5bdbeb539170a96f9406e`.
+Inspection covers 20 generated gold pages, 24 own-extremum source/generated
+pages and 12 generated fixed-failure pages: 56 files/54 distinct images. Another 32
+source-page files match the previously inspected long300 sources byte for byte.
+All eight canonical human documents retain their recorded hashes. The review
+SHA is `7e40ae8770c7d3e38c513d9eb942662d428deaf0edb7bf7bdb10e649a5587f7b`.
+
+All six gold contexts have coherent moving taps with small chord accents;
+unresolved Jack/Trill/Tech dimensions remain unresolved. The fixed ecc496 burst
+near 137500–137678 ms is improved across both seeds. Nevertheless, 85058a/seed17
+still repeats one column four times in 72 ms, and both 871955 outputs repeat a
+column four times in 66 ms, amid larger repeated-chord bursts. Control100 fails
+the whole-chart quality gate. Other full-chart passages, five remaining gold
+sources and the 89-second-LN stress case remain unreviewed for this checkpoint.
+
+`clock-readout-v1/recurrence_metrics.py` adds full-chart descriptive counts and
+rolling-span quantiles; script SHA
+`6f380d82dc0f614721c49850eaf7ca92eb00c707e1edd8af5085ec9cd113dd3d`.
+The control metrics SHA is
+`e6529f9b0e5569ee510c2dab2596d4ecc6f2866a5275aeaac8f487297c23e1b3`.
+For 871955 seeds 17/19, same-column adjacent attack gaps below 40 ms number 301/241,
+versus 472/497 under the long300 initialization. These counts overlap in episodes
+and are locators, not Foundation thresholds or a standalone quality score.
+
+The research scope is reopened to challenge the entire model, experiment
+design and learning process, including the skeleton definition and explicit LN
+conditions. A read-only audit therefore compares source event roles with the
+generated pre-row occupancy on all 12 completed long300/control100 outputs.
+It replays legal state transitions, checks time alignment and terminal closure,
+and uses source roles only as analysis labels. No generation input changes.
+The audit has a 120-second bound and 32 MiB output cap; it completes in .391 seconds.
+Its script SHA is
+`dd92ddc9cceae7f8f91f1c93874c927bee1d00ede7ab665c7e1f9ffddcdd5f94`;
+`clock-readout-v1/support-audit.json` SHA is
+`4b7770d2727f05c8a94df77cd5c2c9708c4dd6760413dfeeed70dff59f0f91eb`.
+
+In 85058a's continuation, 247 source rows contain releases only. Both control
+seeds reach 242 of these times with all four lanes closed. In 871955 the analogous
+counts are 451/400 out of 584. Given closed lanes, exact nonempty event-union
+coverage forces at least one attack. It does not force any particular column,
+multiple attacks, or the earlier decision not to open an LN. For 871955, 117/92
+of 301/241 fast reattacks end at source release-only times; 94/63 occur there with
+all generated lanes closed. These are descriptive intersections, not an
+identified causal fraction. The older long300 ecc496/seed17 output has 73 fast
+reattacks and none end at release-only times, defeating a single-cause account.
+The product validation report now preserves this conditional support mechanism.
+
+### Reopened timing contract and learning problem
+
+The goal remains playable generation on the available Mac and corpus. Existing
+module structure, exact source-event coverage, 16-row timing lookahead and the
+training-window policy are revisable research choices. Preserve source identity,
+split isolation, valid gameplay actions, declared inputs and honest whole-chart
+quality evaluation. The V3 formulation already allows a planning representation
+to encode row absence; it forbids materializing an all-zero chart row. A
+candidate scheduler can therefore distinguish NO_EVENT from per-lane EMPTY
+without changing that chart language.
+
+Live alternatives answer different questions:
+
+- A declared oracle LN skeleton can expose event roles, counts or complete
+  head/end pairs while withholding lanes. It isolates choreography from LN
+  planning. Exact pair timing is substantially more information than an LN
+  proportion or mode, and success would be conditional on that oracle. Release
+  tags alone do not guarantee consistency with a generated closed state.
+- A candidate-time skeleton permits NO_EVENT and learns event selection. It
+  needs real absence supervision and the same candidate-generation process in
+  training and inference. Adding easily recognized random decoys may teach only
+  decoy rejection; it does not automatically teach recovery from mismatched LN
+  histories. Prevent an all-empty or sparse-tap collapse from counting as success.
+- A note-object or hierarchical event plan predicts LN duration/end choices at
+  the opening decision and learns lane choreography conditioned on that plan.
+  Releases then follow generated obligations. This changes the model's
+  factorization and requires evaluating predicted plans, not only teacher plans.
+- A larger known-time encoder can read global or phrase-scale skeleton features
+  without seeing future source actions. The current 16-row limit is not an
+  information constraint in the user's task. Its cost must be compared with
+  usable supervision throughput and full-chart behavior.
+
+The closest local analogue for candidate absence is the formulation's optional
+row representation; paired LN objects already exist in source parsing but are
+currently excluded from inference inputs. These are adaptations/factorizations,
+not novelty claims. Broader approaches use different supplied information:
+Mug-Diffusion's primary README describes audio and LN-ratio/style/difficulty
+conditioning, while Mapperatorinator uses spectrogram inputs. Their public
+descriptions do not establish a matched quality comparison with this oracle-time
+task. Sources: [Mug-Diffusion](https://github.com/Keytoyze/Mug-Diffusion) and
+[Mapperatorinator](https://github.com/OliBomby/Mapperatorinator), inspected 2026-09-18.
+
+No replacement contract or experiment is accepted or implemented by this
+exploration. Complete the already-running 100-step readout and its planned
+quality comparison; do not automatically expand to 300. Select the next bounded
+test by whether it separates supplied-information, legal-support and learning
+failures. Compare supervision exposure and fixed compute as well as update
+counts, and do not compare per-candidate NLL containing many null targets directly
+against the current event-only NLL. Keep oracle-condition success separate from
+end-to-end generation quality.
+
+### Clock100 prediction result and launched quality follow-up
+
+The original training session 24456 exits successfully after both 100-stage
+readouts and the paired comparison complete. Each arm has 129,843 targets and
+800 exactly matched window draws. Clock ordinary NLL is 2.4212722215; broad
+pooled/equal-group NLL is 2.2752402496/2.3118684842. Against control100, pooled
+delta is −.0170966 with paired 95% bootstrap interval [−.0280513,−.0065015], and
+equal-group delta is −.0174956 with interval [−.0276027,−.0072840]. 72/128 groups
+improve. This passes the planned prediction guard; both broad clock values
+remain above the long300 initialization's 2.2597199507/2.3015570823. A paired
+improvement is not evidence of a new overall best model or a quality pass.
+
+Clock weights SHA is
+`29a2a29e8dd901b72447f24884336adf78349264bd7d61846976d7e4f6856641`;
+`clock-readout-v1/paired100-readout.json` SHA is
+`3d1ae52ecb6dee4af15108db6bda28eaa40a3ea4190e66aa46ec4eecca7787fc`.
+The driver records a perf_counter duration of 3654.111 seconds; wall-clock
+gaps still prevent a clean elapsed-throughput comparison.
+
+At 10:05 CST, the existing bounded supervisor launches
+`generate_quality.py clock 100`, tool session 12313, generation child PID 65373,
+for the six full charts in
+`quality-clockreadout-clock-u100-t085`. The prepared fixed-history `probe.py 100`
+also launches, tool session 16760. Both use frozen v8 and their recorded guards.
+Inspect their exact handles and completion files before any further action;
+never restart over a partial output. No 300-stage training is launched.
+
+The probe session 16760 subsequently completes all 48 original-row cases and
+144 query distributions, in 65.232 seconds. Its readout SHA is
+`64146253ef1f190201aeb81a2892660e4a4941c1a2a21d6a03a032442f556e1a`.
+On the ten fixed base300 generated-history rows with inspected-lane attack age
+at most 40 ms, temperature .85 repeat probability has control mean .439021,
+range .294352–.600548; clock mean .234077, range .026611–.486257. A 250-ms prior
+gap increases it by .0387–.0837 and .0049–.1333 respectively. Current-query
+future-offset expansion changes it by at most .014567/.011048. All previous
+query-only and fixed-history limitations remain. The clock arm changes shared
+weights as well as the new branch, so this is not an isolated readout ablation.
+It does establish room for a learned response on these states, alongside the
+conditional support constraint established by the event-role audit. Whole-chart
+clock quality is still pending; generation child PID 65373/session 12313 was
+confirmed live at 10:06 CST. Both findings are preserved in the product report.
