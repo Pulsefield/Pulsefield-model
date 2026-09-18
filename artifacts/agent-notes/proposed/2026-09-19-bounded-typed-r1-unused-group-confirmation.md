@@ -197,3 +197,21 @@ declared recoveries. Generator inputs, likelihood, support, resource bounds and
 export/reparse checks are unchanged. Syntax compilation passes. The generation
 summary helper stays pinned at
 `5b6f4286fa82d7ff9bee76284268fa761d0a099d127200f8ff6156aa174ea8c4`.
+
+## Pinned summary and inspection drivers
+
+`confirmation-20260919-v1/readout.py` SHA
+`c0f67cc16353fc38894b3689c006afe2bab4b9ffde6f5a27b17718fae4a3d57f`
+recounts complete generated rows, verifies exported bytes and requires all four
+declared recoveries. It reports ordinary/stress aggregates and each stress
+category, with the fixed bootstrap and numeric gates. The common row/statistics
+helper stays at SHA
+`e1becc82254144700ea22b3c01adfb3abe4472cd1b0dd72345c46905c574a81e`.
+
+`confirmation-20260919-v1/render_masked.py` SHA
+`e072e6e040fdc7806cf4e37c20a6fe4af661745567e106823a0c55bf541bd96c`
+prepares six local pairs and two wider pairs at the fixed manifest indices.
+It verifies the Foundation, canonical renderer and chart-reader digests, then
+writes the public packet to `masked-inspection-v1/`. Its private A/B map must
+remain unread until all eight judgments have been recorded. Both drivers compile.
+The native screen is running; no product source or model parameters changed.
