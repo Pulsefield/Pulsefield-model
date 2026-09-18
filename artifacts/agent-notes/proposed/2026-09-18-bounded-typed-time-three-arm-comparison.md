@@ -2115,3 +2115,29 @@ multi-scale evidence before deciding on more training, averaging or unused-group
 confirmation. Product source remains clean at
 `15d27db0b0723d7f606b1429c901d26c1f61e5ac`.
 There is no live experiment process to wait for or restart. The goal remains active.
+
+### Wider R1 review completed; candidates frozen for confirmation
+
+Both complete 64s pairs have now been inspected and judged before unmasking.
+Ordinary 0 gives a limited, moderate preference to initialization 172 for the
+connected return of hold exchanges, independent anchors and TAP passages.
+Ordinary 6 remains a moderate tie between a more varied TAP/LN arrangement and
+a more consistently layered LN arrangement. The four earlier local judgments
+remain ties. All original judgment bytes were frozen before reading the mapping;
+the complete packet comprises 174 inspected images over four reused groups,
+with overlapping local/wider scopes. These are descriptive machine judgments
+calibrated to human examples, not independent human votes.
+
+The scoped Note `2026-09-19-bounded-typed-r1-second-initialization` records the
+witnesses, exact scope boundaries and digests. Its final unmasked readout is
+`r1-initialization-20260919-v1/ordinary-blind-v1/unmasked-readout.json`, SHA
+`ba279b219fbde2ad97a56005117102392bd9e4f7a56357aff5b4f6ded96cc6f1`.
+No further training has started. All jobs are terminal and product source stays
+clean at `15d27db0b0723d7f606b1429c901d26c1f61e5ac`.
+
+Next, preserve both 2M R1 candidates and define a separate confirmation on VAL
+groups excluded from this development screen, with fixed native sampling and
+preselected multi-scale inspection. Inspect the practical inference handoff in
+parallel with that bounded work. The current evidence supports emerging
+organization in the reviewed cases; it does not yet complete the usable
+train/inference and generated-quality goal. Note status remains proposed.

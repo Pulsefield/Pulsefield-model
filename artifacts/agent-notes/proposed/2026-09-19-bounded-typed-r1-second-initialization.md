@@ -343,3 +343,81 @@ further quality evaluation. Evidence remains exploratory under this proposed
 Card. Larger-context review, unused-group confirmation and a durable practical
 train/inference handoff remain open before a final quality decision. Preserve the
 full objective; local plausibility and mechanical validity do not complete it.
+
+### Wider masked review and subsequent unmasking
+
+Both preselected 64-second pairs are now fully inspected: 56 images for index 0
+and 54 for index 6, including the shorter final pages. Their judgments were saved
+before opening the private mapping. All six judgments and their referenced packet
+files were then hash-verified. The frozen record
+`ordinary-blind-v1/judgments-before-unmask.json` has SHA
+`2b75c8df5ce5d2ed7e5de09d97a68c1d28da6c7f5742dd9039a894584419a0e3`.
+The private mapping retains its predeclared SHA
+`71f367499052ed0f58d425b2215732949bafcd2be50640444a472737242e064e`.
+No original judgment was rewritten after the identities were revealed.
+
+Index 0, 44609.750–108609.750 ms, gives a moderate preference to A. Its related
+hold handoffs, independent anchors and TAP passages return across the wider
+scope, producing clearer connected variation. B maintains a readable sparse
+single-note pulse and remains a plausible simple arrangement. A has supporting
+LN coordination, High: column 1 holds 46061–47023 while column 2 holds
+46350–46638 and column 0 enters at 46734; comparable independent roles return
+near 105–107 s. B never has two simultaneously held lanes, so coordination is
+absent, High. Sparse Stream remains unresolved for both. The preference concerns
+the placement and return of figures, not A's 67 versus B's 15 LN heads or the
+presence of an extra tag. The earlier local tie remains intact. Judgment SHA
+`1e9da5afec78e7213db2785c90cc89967de052fa230bfe67f3c4c40cdb8b34b3`.
+
+Index 6, 31275–95275 ms, remains a moderate tie. Both have prominent independent
+LN coordination and supporting Stream, High. A gives longer TAP/LN contrasts:
+the staggered holds around 38–55 s return after the moving TAP passage around
+62–70 s. B develops a more consistently LN-led texture, with independent
+release roles and longer anchors across the sparse 57–62 s passage. Both carry
+their organization through the true ending. For example, A's column 2 hold
+45017–45421 overlaps distinct entries on columns 0 and 1, while column 3 taps
+twice and then starts its own hold. B's columns 0/1 start together at 47039 but
+release at 47186/47113; successive entries preserve distinct surviving layers.
+The two arrangements have 435 TAP/433 LN heads and 207 TAP/754 LN heads,
+respectively. Their shortest LNs are 36 and 30 ms; no duration cutoff was added.
+This inspection is not a player-specific difficulty estimate or physical playtest.
+Judgment SHA
+`98d11ca59bdacc64a06fb55d43a24c0a7f53b47babbad57bd1db50b033dfe895`.
+
+After unmasking, A is initialization 172 in ordinary 0 and 3, and in the local
+ordinary 6 pair; A is initialization 171 in ordinary 9 and the wider ordinary 6
+pair. The only preference is therefore for initialization 172 in wider ordinary
+0. The result is five ties, one limited preference for 172, and no scope judged
+both inadequate. `ordinary-blind-v1/unmasked-readout.json` SHA
+`ba279b219fbde2ad97a56005117102392bd9e4f7a56357aff5b4f6ded96cc6f1`
+records the identities, frozen judgment digests and scope boundaries.
+
+The complete masked review inspected 174 images across four distinct development
+groups. The two wider scopes overlap their local counterparts: six scopes are not
+six independent trials. Aggregate metrics were known before the display labels
+were masked, and all comparisons used generation seed 17. This remains a
+descriptive machine review calibrated to human examples, not a double-blind human
+preference experiment or an estimate of initialization-population uncertainty.
+External timing gaps and density transitions receive no credit as learned rhythm
+composition. Other uninspected tags remain unreviewed.
+
+### Evaluation and next decision
+
+Evaluation: REFINE toward confirmation. The scoped initialization experiment is
+complete under its exploratory authority. The primary numeric gates, fixed
+stress semantics and preselected local/wider inspections jointly justify keeping
+both 2M R1 checkpoints as practical candidates. They do not establish one
+initialization's general superiority or the full goal's completion.
+
+Freeze these two candidates for a separate, prospectively defined confirmation
+on VAL groups excluded from the bounded experiment's development screen. Report
+ordinary and stress strata separately, preserve native sampling, and include
+preselected local and wider semantic inspection. This can reject the inference
+that the observed organization extends beyond the reused development cases.
+Inspect and complete a reusable train/inference handoff alongside that work.
+There is no evidence-based need to start another training run merely to choose
+between the two valid styles. Further O1 training or averaging remains a separate
+question; the interpolation mode-loss result is unchanged.
+
+All experiment processes are terminal. The product worktree remains clean at
+`15d27db0b0723d7f606b1429c901d26c1f61e5ac`. This evidence append is local; the Note
+remains proposed and the overall playable-generation goal remains active.
