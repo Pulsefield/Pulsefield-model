@@ -207,7 +207,49 @@ probabilities. A full default-width, eight-level CPU test also restores after th
 verification checks R/H coverage, unchanged seed, occupancy, terminal closure and
 every sampled O1 endpoint without reusing scheduler feasibility masks. Exported
 osu! files are reparsed into exact rows in the tests. These checks establish
-mechanical behavior on the fixtures; real sampled quality remains unevaluated.
+mechanical behavior on the fixtures. Further CPU/MPS tests force source choices
+through the actual native commit path: exact facts, raw features and pre-decision
+probabilities match dense teacher-forced training across held LNs, context expiry
+and a long gap. This rules out those tested train/inference projection mismatches;
+it does not establish stability on generated histories.
+
+### First native full-suffix diagnostic
+
+At source `21475e65d773b7e7199accf0750de584d9f10ce9`, the three short-fit checkpoints
+each continued all 16 TRAIN charts from their actual minimum-note seed through the
+true end, using generation seed 17 and temperature one. All 48 outputs pass the
+independent task/endpoint verifier and exact osu! export/reparse checks. Each arm's
+first chart also restores after candidate 600 with identical RNG, exact state,
+current content and all convolution buffers, then continues normally.
+
+| Arm | New suffix LN heads / all suffix heads | LN fraction across individual outputs | Total generation time |
+| --- | --- | --- | --- |
+| O1 | 675 / 23,294 = 2.90% | 0.62–6.67% | 23.838 s |
+| R1 | 5,555 / 26,010 = 21.36% | 8.43–46.76% | 29.997 s |
+| R0 | 4,158 / 27,188 = 15.29% | 6.97–29.22% | 30.509 s |
+
+This CPU run takes 86.470 seconds including loading, export and verification;
+sampled RSS peaks at 309,084,160 bytes with no swap growth. Bounded raw recovery
+takes about 0.30–0.32 seconds per checked chart. O1 samples 504,368 full-support
+candidate pairs; its shorter generation time is coupled to its much lower LN
+birth rate and is not an equal-work endpoint-cost benchmark. R1/O1 skip 1,060/1,669
+unused candidates; R0 emits every candidate as required by its different task.
+
+The free-running LN-use gap is substantial despite similar teacher-forced type
+discrimination. It warrants investigation of native closed-loop behavior and
+adequate training, rather than treating a good endpoint or type score as a quality
+pass. Different LN ratios from a source are allowed; this one-seed TRAIN diagnostic
+does not prove universal collapse or rank playability. It has not yet received
+time-proportional visual/Foundation judgments, new human comparisons or independent
+group/initialization confirmation. Rapid-pair and overlap counts are descriptive
+locators, not semantic labels or playability thresholds.
+
+Readout SHA-256:
+`17ed6ca391e680ee99a19298db8873260974eaba56edbd9df4368893999c5956`, under
+`artifacts/bounded-typed-continuation/smoke-20260918-v1/native-generation-v2/`.
+An earlier attempt stopped during playback-header resolution after the first
+chart; resolving catalog-relative paths against their original worktree repairs
+export. The repeated first generated row file is byte-identical to that attempt.
 
 ## Comparison and evaluation plan
 

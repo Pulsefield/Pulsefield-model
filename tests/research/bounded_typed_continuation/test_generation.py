@@ -2,17 +2,21 @@ from copy import deepcopy
 import hashlib
 import json
 
+import numpy as np
 import pytest
 import torch
 
 from pulsefield_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
 from pulsefield_model.research.bounded_typed_continuation.generation import RawEvent, Rollout
+from pulsefield_model.research.bounded_typed_continuation.data import SourceChart
+from pulsefield_model.research.bounded_typed_continuation.features import query_features
 from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
 from pulsefield_model.research.bounded_typed_continuation.verification import verify_complete
-from pulsefield_model.research.oracle_time_continuation.data import admit_source
+from pulsefield_model.research.oracle_time_continuation.data import SourceIdentity, admit_source
 from pulsefield_model.research.oracle_time_continuation.export import export_osu
 from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig
 from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
+from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
 
 
@@ -201,3 +205,54 @@ def test_production_receptive_range_recovers_with_old_seed_holds_outside_raw_his
     torch.testing.assert_close(model.temporal.read(rollout.cache), model.temporal.read(restored.cache), atol=0, rtol=0)
     while not rollout.state.finished:
         assert rollout.step(generator).row == restored.step(random).row
+
+
+@pytest.mark.parametrize('arm', list(Arm))
+@pytest.mark.parametrize('device', ['cpu', 'mps'])
+def test_native_teacher_forcing_matches_training_features_states_and_probabilities(arm, device, monkeypatch):
+    if device == 'mps' and not torch.backends.mps.is_available():
+        pytest.skip('MPS unavailable')
+    rows = np.zeros(40, dtype=ROW_DTYPE)
+    rows['time'] = np.arange(40) * 100. + (np.arange(40) >= 25) * 4000.
+    rows['actions'][:, 2] = 1
+    for lane, start, end in ((0, 0, 31), (1, 6, 11), (3, 17, 23)):
+        rows['actions'][start, lane] = 2
+        rows['actions'][end, lane] = 3
+    source = SourceChart(SourceIdentity('a' * 64, 'b' * 64, 'synthetic', 'train'), rows, minimum_seed_notes=1)
+    torch.manual_seed(23)
+    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2)).to(device).eval()
+    timing = source.view(arm).timing
+    rollout = Rollout.from_seed(model, timing, [source.row(0)], None if arm == Arm.R0 else {0: 31})
+    raw = source.content(arm, 0, len(rows))
+    like = model.temporal.input.weight
+    valid = torch.ones((1, len(rows)), dtype=torch.bool, device=device)
+    content = model.temporal(like.new_tensor(raw[None]), valid)
+    before = model.temporal.before(content, valid, truncated_start=torch.zeros(1, dtype=torch.bool, device=device))
+
+    def choose_truth(_probabilities, _count, **_kwargs):
+        action = source.row(rollout.state.index).actions
+        target = tuple(a if a in (1, 2) else 0 for a in action) if arm == Arm.O1 else action
+        return torch.tensor([model.choices.index(target)])
+
+    def endpoint_truth(*_args, **_kwargs):
+        return {lane: int(end) for lane, end in enumerate(source.endpoints[rollout.state.index]) if end >= 0}
+
+    # Override only random selections. Native commit, feature construction,
+    # cache writes and probability scoring remain on the real generation path.
+    monkeypatch.setattr(torch, 'multinomial', choose_truth)
+    monkeypatch.setattr(model, 'sample_endpoints', endpoint_truth)
+    generator = torch.Generator().manual_seed(19)
+    with torch.no_grad():
+        for i in range(1, len(rows)):
+            indexed = source.state(arm, i)
+            assert rollout.state == indexed
+            np.testing.assert_array_equal(query_features([rollout.state], rollout.view),
+                                          query_features([indexed], source.view(arm)))
+            if arm != Arm.O1 or timing.onsets[i]:
+                hands = model.readout(before[:, i], like.new_tensor(query_features([indexed], source.view(arm))))
+                trained = model.decision_log_probs(hands, [indexed])[0]
+                _, online = rollout.prediction()
+                torch.testing.assert_close(online, trained, atol=2e-5, rtol=2e-5)
+            generated = rollout.step(generator, candidate_budget=7)
+            assert generated.row == source.row(i)
+            np.testing.assert_array_equal(rollout.history[-1].features(), raw[i])
