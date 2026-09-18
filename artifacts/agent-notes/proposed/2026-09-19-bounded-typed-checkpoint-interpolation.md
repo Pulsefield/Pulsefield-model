@@ -133,3 +133,21 @@ quality beyond this checkpoint diagnostic.
 `cbb85bfa74b91725fdfed706753115fb14adc77587b9d3fb35a7cc2436dae20b`.
 It verifies exact alpha0/1 reconstruction, finite matching parameter tensors,
 strict model loading and inference-only serialization before producing a manifest.
+
+## Derived models and pinned native screen
+
+Derivation completed in0.303s with all checks passing. `derivation.json` SHA
+`dbce665415308ee1965f02beb1ba856887ba11acb8eade7ebc02ad31e6949fa6`.
+All three models have2355835 parameters. Model SHAs for alpha.25/.5/.75:
+`47290ebd7f89d1c7a749d9d42ced5b593a63bd5296854961c12e703a89d6d8b4`,
+`8c6e51bb6815fab0581fa2a5a5d62d2b4274763a494595581aa310e14d77c3ae`,
+`b68bc5030cb5d9fbba14993d56f9b8bc3b466ad3ed03cff5b07e48e17de8b260`.
+
+`development_screen.py` SHA
+`02c3073d035bf29354fee2b9c6e29ce1e7e5ada0baa4c4bd339448931c3f4104`.
+It derives from the pinned availability screen
+`b3a456635e34c444bdc36b4105bd97744c1a2bb8313cb105f320f4d880108a1a`,
+changing only model provenance/loading, variant names and fresh output paths.
+Scoring, native rollout, raw-state recovery and export/reparse procedures are
+unchanged. R1 initialization172 training is already active on a separate CPU
+thread when this screen starts; both retain their resource guards.
