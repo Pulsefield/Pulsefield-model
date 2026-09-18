@@ -282,3 +282,100 @@ result supports pipeline learning only; failure calls for debugging or revising
 optimization before a main screen. CPU/unit correctness alone cannot substitute
 for this head/type learning result. Generated Foundation/human judgment remains
 outstanding regardless of the result.
+
+## Result Log: 16-TRAIN learning check, revision 1
+
+All three serial arms completed their exact 128 updates with clean source
+`a178bcfe2badaaea47ae9abce02f2494b8ff9643`. Acceptance: none; exploratory execution
+under the standing user authorization. Each arm saw32768onsets over2048distinct
+onsets, with every selected interval drawn16times. Draw order and common runtime
+configuration were verified identical. All support/finite-gradient/resource checks
+passed, but **all three fail the predeclared LN-positive type-learning gate**.
+
+| Arm | Native factor NLL/onset, initial → final | Row/head NLL/onset | LN-positive lane NLL | TAP-positive lane NLL |
+| --- | --- | --- | --- | --- |
+| O1 | 6.953991 → 2.592007 | 4.166273 → 2.194355 | 1.030073 → 1.449072 | 1.099474 → 0.801876 |
+| R1 | 4.409525 → 2.441500 | same as total | 1.118710 → 1.339264 | 0.985903 → 0.723925 |
+| R0 | 4.691517 → 2.794169 | same as total | 1.128351 → 1.642088 | 1.004750 → 0.732523 |
+
+O1 endpoint NLL per born LN falls6.895225→0.983565. Its total/head/endpoint gates
+pass; its LN-positive NLL rises40.68%. R1 and R0 LN-positive NLL rise19.72% and
+45.53%. These local training-window likelihoods do not rank the representations;
+the factor costs and external conditions differ. No generated quality claim is
+made. The trained LN-type positive metric worsens in all three arms, so the object
+pointer alone is not a sufficient explanation of that measured result.
+
+Training wall times: O1 100.070s, R1 65.250s, R0 64.710s. Complete run times including
+loading and initial/final evaluation:112.186s/72.297s/70.997s. Each arm encoded
+37328target physical rows and65776prefix rows; dense padding raises executed row
+positions to139078. O1 scored13248LNdecisions,26496orderfactors and21913664future
+candidate pairs, with recomputation during backward. Its preparation/forward/
+backward/optimizer totals were1.802/29.688/51.361/2.536s; remaining train time
+includes guards, checkpoints and logging. These costs are measured on this small
+640–2400-row selection, not a whole-corpus throughput estimate.
+
+Sampled RSS peaks:2785607680/2826223616/2681520128bytes. Sampled MPS driver peaks:
+1024983040/822050816/822050816bytes. All swap-growth maxima arezero and minimum
+available memory remains above6.33GB. The seven complete512-row context envelopes
+span59.029–87.300s, median69.851s, from the oldest required predecessor timestamp
+to the first target query. Short-seed contexts are excluded from that summary;
+these seven deliberately selected examples do not estimate corpus-wide density.
+
+Checkpoint SHA-256, in arm order:
+
+- O1 `75276c37ef92d7af2a5825ab52d4d22280ee19455376839513a4de1ac33b9aa4`
+- R1 `d4c6ee5b7492a4d5a422263052d51cf73efe75bf5d34a3998282eb82a3579945`
+- R0 `1e33ce1297bd1548da0a59ca70ad99e848184c70976b8280b075a733181b9edb`
+
+Readout: `smoke-20260918-v1/learning-readout.json`, SHA-256
+`b76d1e742887eb22bb6e244229d3925e63e829584780917b80efd2479ee38594`.
+Readout script SHA-256
+`25257b41c8a10175af25bf629c569a276d8a302ae3ab7bee66da1803bb3a3cc6`.
+Both live under `artifacts/bounded-typed-continuation/`. The selected intervals
+contain3369trueheads, including828LNs, and148rows with independent multiple-LN
+endpoints. Five have open seed LNs; three have an open LN at the target boundary.
+
+Evaluation: REFINE. Keep the failed gate unchanged. Before another training screen,
+separate inadequate minority-type discrimination from a possible measurement
+problem: positive-only NLL against random initialization can worsen when a model
+corrects an initially excessive LN prior. That possibility does not erase the
+observed failure or establish successful type learning. No main-screen run is
+authorized by a claimed pass, and no such pass is recorded.
+
+## Experiment Card: bounded-typed-type-audit-v1
+
+Revision:1. Acceptance:none. This is a post-hoc, read-only diagnostic on the same
+three initializations/final checkpoints, not a revised success claim for the
+completed learning Card. Source and 16-interval manifest remain the identities
+above. Frozen diagnostic script `smoke-20260918-v1/type_diagnostic.py` SHA-256
+`d342fd8399ad57fd9feab5098c01ba352951cdd41322e12f2f93751269e9ffb1`.
+
+Question: did LN discrimination/calibration improve despite worse positive-only
+NLL, or did likelihood gains primarily come from unrelated factors and prior
+adjustment? Reconstruct the initial parameters from the saved model seed and exact
+source; reproduce initial/final row/head NLL within2e-5nats/onset before interpreting
+new metrics. No optimization, endpoint resampling, free generation or data
+expansion occurs.
+
+Measure both proper binary log loss/Brier and tie-aware AUROC/average precision:
+(1) LN versus all other actions on structurally LN-capable lanes at source H;
+(2) LN versus TAP, conditional on a true source head in that lane, where both
+types are feasible. The second is a diagnostic conditional score, not oracle
+head-location input to generation. Compare with each same-cohort fitted constant
+prevalence baseline; retain per-interval results to distinguish pooled style
+separation from within-chart discrimination. R0/R1/O1 eligible cohorts can differ
+because supports differ, so do not rank arms by unqualified pooled scores.
+
+Interpretation: improvement over initialization alone can be prior calibration.
+Better log loss/Brier than the fitted prevalence baseline plus AUROC above0.5
+supports some type discrimination on this TRAIN slice; inspect within-interval
+results before attributing it to local pattern learning. Constant-like ranking
+with prior-only score gains points toward insufficient discrimination. Neither
+outcome passes the original gate or establishes generated LN mode coverage.
+
+Execute `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/smoke-20260918-v1/type_diagnostic.py`
+from the same clean product worktree. Fresh output is
+`smoke-20260918-v1/type-diagnostic-v1/`; no overwrite/resume. Bound300wallseconds,
+oneCPUthread, MPS6GiBdriver/8GiBallocator, RSS6GiB, available≥2GiB, swapgrowth≤128MiB,
+output64MiB. Stop on identity/reproduction/numerical/resource failure. Record all
+results and limits as post-hoc; no threshold or baseline is changed silently.
