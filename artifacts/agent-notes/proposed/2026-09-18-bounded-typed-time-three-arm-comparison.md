@@ -845,3 +845,31 @@ independent control. Script SHA:
 Fresh outputs: `corpus-20260918-v1/memory-probe-v1/<mode>/`. Baseline physical
 footprint is unavailable; therefore compare within this instrumented probe and
 do not invent an aligned footprint for the stopped main run. Evaluation pending.
+
+## Memory attribution results and execution-device control
+
+All three 64-microbatch probes complete without crossing their recorded guards.
+Fixed inputs take 24.629 s: physical footprint changes from 853.9 MiB at step 8
+to 865.8 MiB at step 64 and 605.8 MiB after cleanup. Variable inputs take 79.825 s:
+footprint grows 3.0/4.2/5.3/6.3/7.3/8.2/8.8/9.6 GiB at steps 8 through 64;
+8.5 GiB remains after dropping model/data, garbage collection and idle MPS cache
+release. Variable head-only inputs take 38.195 s and grow from 1.6 to 5.4 GiB;
+4.3 GiB remains after cleanup. Figures retain `vmmap`'s rounded precision.
+
+The large persistent growth depends on changing inputs, and both the common
+encoder/readout path and endpoint path contribute. Nearly constant post-backward
+active MPS storage (about 62–67 MB) does not explain the footprint. These controls
+support investigating shape-related runtime retention, but do not identify the
+exact backend graph/operator cache. They also expose a guard gap: RSS/driver and
+global swap bounds can pass while physical footprint becomes too large. Further
+Mac training needs physical-footprint observation, not a larger swap allowance.
+
+Memory-attribution Card revision 2 adds two fresh execution-device controls:
+same variable-all source draws, checkpoint weights, 64 backward microbatches and
+no optimizer, now CPU with one or four threads. Other guards and the 180-second
+bound remain unchanged; no model/training objective changes. Compare complete
+runtime and footprint against MPS variable-all to decide whether CPU execution
+is a simpler practical route before changing GPU operator geometry. New script
+`corpus-20260918-v1/cpu_memory_probe.py` is a device/thread-only derivative of the
+recorded original; command substitutes it with modes `cpu-1` then `cpu-4`.
+Outputs remain distinct under `memory-probe-v1/`. Acceptance remains none.
