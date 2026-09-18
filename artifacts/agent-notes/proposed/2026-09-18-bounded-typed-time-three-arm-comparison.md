@@ -1239,3 +1239,51 @@ reconsidering learning/conditioning/factorization rather than declaring success
 from lower burden. The original quality criteria still need sustained structure,
 independent LN control where present, larger-context inspection, another model
 initialization and independent confirmation. This card selects no winner.
+
+## Paired exposure result: one million
+
+All three arms reach exactly 1,000,000 onset exposures / 1,320 cumulative updates.
+Each has 917,737 distinct onsets, 3,933 charts and 2,576 groups; paired interval,
+row/prefix/padding/context and coverage ledgers match. Recovery discards no updates.
+The resumed segments take 815.205/555.947/521.552 s for O1/R1/R0; cumulative CPU
+training time is 1091.334/744.789/697.889 s. All remain below their four-hour caps,
+with zero swap growth and segment peak task footprints 890095224/884262448/874366512
+bytes. No support/nonfinite/mechanical training failure occurs.
+
+Checkpoint identities:
+
+- O1: `1ac6589506a03d155a4bf652cf3726a3c644fe03dfccb01455dd3cd3439e4439`;
+- R1: `f9f6f22258c79477a0478b47f4fc298e25a7e8c71d9f3dcb6502e066bb682909`;
+- R0: `181a9554d9b233bc9d79149198e69d43a28bdc4cda8aad4e1cefd26f1fb38533`.
+
+Final 32-update local factor costs are 2.194639/2.195729/2.306777 nats/onset,
+versus 2.404629/2.425383/2.522637 in the first 32 updates of these resumed segments.
+Those are different windows, not held-out arm comparisons. O1 head cost is
+1.925255 and endpoint cost 0.882677 per LN in the final window. Conditional TAP/LN
+NLL is 0.291686/0.303477/0.310617. Peak target density still reaches 38 H/s;
+91 of 5,275 selected intervals reach at least 24 H/s. Readout SHA
+`10d9143a4ab0f7a5fe38edd5af2e01be40c1eb9404e36afbde2557036043bcd4`, script SHA
+`ae2dc6b772c42b316f703a65a669ed162e721df4ba9f4ff3991ce72f86c5a549`.
+Learning/resource gates remain feasible; native generation evidence is pending.
+
+## Development-screen and policy-probe Card revisions for 1M
+
+The development-screen Card is revision 2, proposed, acceptance none. Retain the
+same clean source, 24 conditions, ordinary/stress weighting, seeds 17/19/23,
+full-suffix score, mechanics, fixed 16-second cores, limits and interpretation.
+Only replace its checkpoint inputs by the exact 1M identities above and use fresh
+`development-screen-1000k-v1/` / `inspection-1000k-v1/` outputs. The stage-specific
+drivers are textually identical except milestone and path substitutions:
+
+- `development_screen_1000k.py`: `5d3b5212971d1119f864fad2d431e72c5f0fdde23ecbce97ae79d358c0af00f6`;
+- `screen_readout_1000k.py`: `e6797e3820784e2f5faadac9d3b1438eca3c7df36d56fa55f0c50c263a0448d5`;
+- `render_screen_1000k.py`: `61875ea0ee95df3a06e506933c9bc958c8b38dae98dd21ba43dd7542aaeb571b`.
+
+Likewise policy-drift Card revision 2 repeats the same source/seed/expectation
+definition and reproduction checks at 1M, after its generation screen succeeds.
+Use `policy_drift_1000k.py`, SHA
+`0a8fa84c3d82667491a439402784256943702e369b6153ad88357aa1dc992f8e`, fresh output
+`policy-drift-1000k-v1/`, unchanged 120-second and memory limits. All drivers pass
+syntax compilation. Invoke each through the same `uv run --offline --python 3.10
+--extra mps --group dev python` prefix; no source/model edit or new condition
+selection is introduced. Quality decisions remain pending actual outputs.
