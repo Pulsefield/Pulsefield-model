@@ -141,3 +141,15 @@ cannot complete the overall playable-generation goal.
 Read-only preparation caught and corrected two driver-inspection errors before
 this driver was written: an attempted JSON dump of tensor buffers and the Hydra
 enum spelling `r1` instead of `R1`. Neither created a run or modified a checkpoint.
+
+## Preflight result and pinned training driver
+
+Preflight completed in15.451s with exactly matching head/endpoint NLL sums and
+all native rows at indices0/12/16 (620/1696/4403 physical rows). Mechanical checks
+pass, and the scientific configuration matches after the declared initialization
+change and inactive default field. `preflight.json` SHA
+`5803d32717be8e3b0dbc45f4b50555e3978a13ac41756c2eb7d8d6023405c164`.
+`train.py` SHA
+`ba5709fc7639ff27e2b76d2ac5afa0eeaa1701750bef68ee99b6978e0bff6cf7`.
+The driver checks this preflight identity before training and compares all source
+exposure/coverage ledgers against the original three training segments afterward.
