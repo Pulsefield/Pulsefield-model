@@ -151,3 +151,15 @@ changing only model provenance/loading, variant names and fresh output paths.
 Scoring, native rollout, raw-state recovery and export/reparse procedures are
 unchanged. R1 initialization172 training is already active on a separate CPU
 thread when this screen starts; both retain their resource guards.
+
+## Pinned analysis and inspection
+
+`readout.py` SHA
+`e1becc82254144700ea22b3c01adfb3abe4472cd1b0dd72345c46905c574a81e`
+reuses the original parent outputs, independently recounts rapid pairs and
+one-free-lane cases from complete rows, pools LN durations from matched objects,
+and reports ordinary/stress/all strata with the declared group bootstrap.
+`render_midpoint.py` SHA
+`874e3155dd9c96fe165a5b83bfb576348cc9b62677c90987a9dd30f92a9063cd`
+renders all context pages and paginates the complete action records for the two
+fixed midpoint cores. These scripts do not alter models or select new cases.
