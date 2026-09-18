@@ -2225,3 +2225,94 @@ process is running, and there is no typed-pilot context-review.json yet.
 
 The external review has not yet been received. Evaluation remains REFINE,
 Note status remains proposed, and no Card gains acceptance from publication.
+
+### Typed-onset pilot quality completion and next diagnostic
+
+The remaining own and matched generated contexts are now inspected. Across
+earlier and current passes, all44standard generated pages (20gold,12own,12matched)
+are covered;32source pages are byte-matched to previously inspected source pages.
+Fresh owner `typed-onset-quality-v1` measures the existing six files without
+generating new charts and renders post-hoc LN cases. Readout SHA is
+`f3cdc61f9def02ce4c22cb6dde59d67865a0be74a09baeebb3371c256b6ce4a5`;
+review SHA is
+`9c42e627f85423002647fa2efb29b898c6fd1934c3f408ce7947dc38b579d908`.
+All eight canonical human documents remain byte-identical. The frozen Foundation
+identity remains15fa6891; its complete JSON file byte digest is separately
+recorded asb1aea3cb, not confused with its canonical Foundation identity.
+
+Across85058a/871955/ecc496, new prior has0/10/1adjacent same-column attack pairs
+below40ms; context has0/10/2. These are locators, not a playability threshold.
+The old clock seed17 counts are2/16/1. Five new outputs have no positive-duration
+simultaneous LN occupancy anywhere. ecc496/context has1071ms across three local
+overlap episodes. Nine additional context-arm pages inspect all three and the
+longest hold. Independent unequal-tail pairs around72071–72643 and staggered
+LN handoffs121643–122214 provide definite, supporting LN coordination within
+their surrounding five-second contexts. The first isolated overlapping pair
+63500–63785 has a synchronized release and remains unresolved for coordination
+organization. The longest hold118214–119643 has moving taps in other columns,
+without a concurrent second hold; it does not establish LN coordination.
+These are machine hypotheses, not new human annotations. Fresh source/prior
+pages produced for the extra LN contexts remain unreviewed and are not claimed
+as evidence. Existing standard source contexts retain their earlier inspection.
+
+All six seed-object files actually contain zero seed LNs. The full-object seed
+contract permits extra endpoint information in general, but it supplied none
+in these particular outputs; do not attribute their difference to an actual
+seed-endpoint oracle. Onset-role conditioning and representation still differ.
+The pilot remains REFINE: local moving structure persists and two definite LN
+insertions exist, but the largely TAP-only type dynamics and residual speed
+spikes do not satisfy the broader playable-structure goal. Do not expand seed19
+on a claim of unqualified improvement.
+
+### Exploratory Card: typed-onset-type-audit-v1, revision1
+
+Owner: this proposed Note; accepted revision/Card:none. Execution is within the
+user's continuing model/experiment authorization. Baseline implementation is
+published product89d5379f150cba9d1684822a44166765d38f644f, identical to frozen v8
+source09469489; weights remain clock10029a2a29e. This is a no-gradient diagnostic,
+not a new training or generated-quality experiment. Closest analogue is the
+existing direct clock/support intervention: compare distributions under changed
+support at exactly the same queried history, separating it from trajectory drift.
+
+Question: do mandatory-onset/endpoint-plan masks immediately suppress LN-start
+mass, or is low LN propensity mainly associated with the generated history and
+the temperature policy? Use the same three validation sources85058a/871955/ecc496
+and their two existing typed outputs. The endpoint/generation hashes above pin
+all inputs. Replay each source truth and each prior/context generated history
+under frozen clock100. Use each history's earlier object endpoint decisions;
+no simultaneous/current endpoint label enters the predictor or support.
+Source truth supplies prior plans only for the teacher-forced comparator.
+Do not draw new actions or change any endpoint.
+
+At each post-seed required onset score four distributions: original legal row
+support atT1; additionally requiring at least one head atT1; full typed scheduler
+support atT1; and the same typed support atT.85. Primary readouts are expected
+LN heads divided by expected total heads, mean probability of any LN start,
+and accepted raw probability mass. Pair support interventions at the identical
+history/time. Stratify by pre-occupancy and due releases, report each chart and
+trajectory separately; no broad significance claim from three selected sources.
+Preserve observed row counts/type fractions as descriptive comparators.
+
+Verify nonempty finite normalized distributions, legality of recorded actions,
+exact replay and endpoint schedule, input identities and original generated
+selected-log-probability reproduction (absolute error at most2e-5). Stop on a
+mismatch. If full typed support reduces aggregate LN fraction by at least2x
+relative to onset-only support at matching generated histories, prioritize
+the support/type interaction. If generated-history typed LN fraction is below
+one quarter of teacher-forced typed fraction on both LN-rich sources while
+the matching support intervention stays within2x, prioritize trajectory/training
+mismatch. These are diagnostic routing criteria, not learned-model acceptance.
+Mixed outcomes remain unresolved; relative fractions with zero denominators
+must be reported as unavailable, not silently repaired. Temperature and
+occupancy strata may explain part of either pattern.
+
+Use CPU one thread, Python3.10/Torch2.11, no optimizer or network. Fresh owner
+`typed-onset-type-audit-v1`, results subdirectory created exclusively. Limit the
+whole run to10minutes,6GiB RSS,2GiB minimum available,256MiB outputs and512MiB disk
+reserve. No resume or overwriting. The command uses frozen v8 PYTHONPATH and
+`caffeinate -i uv run --offline --extra mps python artifacts/oracle-time-continuation/m3-20260917/typed-onset-type-audit-v1/audit.py`.
+Record the producer digest before launch. Conditional-mask comparisons are
+local interventions; different source/generated histories remain observational
+and cannot by themselves identify why the trajectories diverged. This diagnostic
+does not establish that a finite-context architecture or an end-to-end object
+model will train better; it only narrows the next practical intervention.
