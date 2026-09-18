@@ -1678,3 +1678,96 @@ LN-intent conditioning is not currently the first intervention: LN production
 and independent coordination have already emerged, while safe allocation of
 future capacity is a concrete remaining problem. Direction remains REFINE;
 no new training or representation change has been executed from this section.
+
+
+## Experiment Card: bounded-typed-endpoint-availability-v1
+
+Revision 1, proposed, acceptance none. Standing implementation/experiment authority
+covers this scoped exploratory comparison; no adoption or publication is implied.
+The preceding goal turn made progress: paired 2M training, complete development
+evaluation and occupancy diagnostics changed the next research question. Current
+product and note worktrees were revalidated clean before designing this change.
+
+**Question and baseline.** Does exposing candidate-specific future lane availability
+reduce O1's generated rapid recurrence beyond additional training or endpoint
+network capacity, without suppressing LN organization? Clean baseline source
+`1693d62ffaca04b2a6127d8e3a72d1988adf441f`; initialize every branch from its final
+O1 2M checkpoint SHA
+`759a4e6212e1c47b0039a457d9617bdfa957a7989e31f3715b6f70ff0b18d3b1`.
+The fixed 24-group/three-seed development screen has 498 below-40ms same-lane pairs,
+3.052219 pairs/1000 heads pooled and 2.593285 after equal group/seed weighting;
+439 pairs have only one free lane. Complete-suffix pooled NLL is 1.906802 and
+LN share is 37.037%. These are exploratory development baselines, not independent
+confirmation or a universal difficulty scale.
+
+**Branches and intervention.** P0 continues the original endpoint network. C0 adds
+a small zero-initialized residual endpoint scorer reading context and ordinary
+candidate features, with the new availability inputs fixed to zero. C1 uses the
+identical residual scorer and supplies the derived availability features. C0/C1
+start from identical added weights; the residual final layer is zero, so all
+three begin with the parent's conditional probabilities. New parameter moments
+start empty, while all existing optimizer moments/steps, RNG, coverage, exposure
+and metrics are preserved. This separates extra capacity from the access path.
+No head-network, finite-context, likelihood, legal support, decoding or external
+condition change is allowed.
+
+For a proposed endpoint, compute from supplied R/H, previous LN plans and earlier
+within-row factors the future interval during which the target LN plus at least
+0/1/2/3 other *known* holds remain occupied. For each interval expose transformed
+H count, summed inverse H gaps and elapsed duration, plus known-other and pending
+current-LN counts. Count H at an LN endpoint as blocked on that lane because same-
+time release/restart is excluded. Pending within-row endpoints remain unknown;
+never substitute their future teacher-forced labels. These are partial-plan facts,
+not a prediction of all future occupancy. The transforms introduce no gap cutoff,
+maximum duration, penalty, forbidden pattern or truncated endpoint support.
+The closest implementation analogue is the current exact-clock/plan readout;
+this is a derived-feature access experiment, not a novelty claim.
+
+**Matched data and execution.** Extend the deterministic corpus plan into a fresh
+artifact with milestones 250k/1M/2M/2.25M/2.5M. Require identical sources, data pins,
+sampling settings and the entire old draw prefix. Never modify the existing plan.
+The new source, extended-plan SHA and exact driver/config identities must be
+recorded before training. Add an explicit audited fork initialization path, distinct
+from strict same-source resume, that verifies the pinned old checkpoint, finalized
+runtime ledger, old plan and prefix relationship. Charge the parent's full 2174.555
+seconds and any necessary migration cost to each branch. Ordinary resume retains
+its strict source/configuration identity; no relabeled checkpoint workaround.
+
+Run sequential P0/C0/C1 on CPU one thread, with the unchanged batch4/microbatch2,
+AdamW, LR0.0003, clipping, candidate8192 and cache settings. First stop at2.25M;
+continue to2.5M only if mechanics/resources/finiteness pass and the comparison is
+still informative. The original four-hour cumulative per-branch cap, 6GiB footprint,
+RSS/swap/available-memory, fresh-output, disk and checkpoint guards remain. Fresh
+artifact owner `artifacts/bounded-typed-continuation/availability-20260919-v1/`.
+No accelerator training is planned. Targeted CPU/MPS numeric tests remain allowed.
+
+**Verification before execution.** Compare availability features against brute-force
+future-H occupancy, including an endpoint exactly on H, translated large timestamps,
+unknown later factors and mirror reversal. Verify full-support normalized likelihood,
+chunked/dense values and gradients, mirror equivariance with a nonzero new scorer,
+sampler feasibility/partition invariance, and bounded recomputed activation storage.
+Verify initial old/new function equality, existing optimizer preservation, identical
+C0/C1 initialization, successful fork continuation, exact ordinary resume, and rejection
+of changed source/plan prefixes, digests or undeclared scientific settings. Keep
+canonical Hydra schemas/presets complete and reject unused options.
+
+**Readout and decision.** Repeat the same fixed 24 development conditions and seeds
+17/19/23 after the paired checkpoint. Primary burden diagnostic is the group-balanced
+mean below-40ms same-lane pair rate per1000 generated heads, averaging seeds within
+group. Report pooled counts and one-free-lane pairs separately. A promising access-
+path result needs at least25% lower primary rate than both P0 and C0, with a paired
+group-bootstrap interval supporting a reduction. If a control rate is zero, there
+is no identifiable reduction to claim. Mechanical/export/reparse errors must be zero;
+complete-suffix pooled NLL may be at most0.05 nats/onset worse than the better control.
+Generated pooled LN share must retain at least75% of each control's share, and fixed
+LN-rich core inspection must retain clear independent control. These are experimental
+guards, not semantic label thresholds. Check mode concentration, LN duration, chord
+counts and the known three-hold burst alongside broader ordinary/64s organization.
+A reduced burden obtained through LN or organization collapse is a failed result.
+
+If all branches improve similarly, prioritize further training and retain the simpler
+network. C0 matching C1 supports capacity/optimization rather than the new facts. A
+C1 benefit with failing quality guards calls for refinement. Wide uncertainty is
+inconclusive, and another initialization/unused groups remain required for a stable
+choice. This exploratory Card cannot establish overall playable-quality completion.
+Implementation and execution results are pending at this revision.
