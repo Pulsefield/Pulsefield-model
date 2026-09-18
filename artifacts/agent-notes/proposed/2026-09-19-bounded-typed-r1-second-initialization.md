@@ -181,3 +181,54 @@ a key-count facet because the cached raw packet lacks materialized sourceFacts.
 Removing that facet recovered the known High comparisons. A missing query result
 is not evidence that a semantic pattern or human example is absent. Source4K
 identity is still checked by parsing before using those comparisons.
+
+## Training result and native-screen pin
+
+Initialization172 completes2M exposures and2645 updates in1616.286s of charged
+training time. Source ledgers match initialization171 exactly across every update,
+including physical/prefix/padded rows and context spans. Coverage matches:
+1697938 distinct onsets,6315 charts,3078 groups. Peak physical footprint921831032
+bytes and zero swap growth. The declared interpolation screen overlapped; brief
+readout/rendering work also ran alongside training. These timings do not establish
+a causal speed change. The product worktree stayed clean at its pinned revision.
+
+`training-comparison.json` SHA
+`d721a0d1aa68b1e4f0b1cdd230d484913d2c8921b7238c9256685bbf156147ce`.
+Milestone checkpoint SHAs for250k/1M/2M:
+`7174793e0b6d4bddd3408b57460dc2b7646cc93dbd4aaeab134dff069c31f7c0`,
+`09c9029efae9cf4618e53aeb4b0acd94e10f95df9af7e66a600a3f931507d191`,
+`9be0adc00cea85058b59f0a2446884d43fc40cd412188ee123e866df6369d83a`.
+`development_screen.py` SHA
+`e29439dd9ed2aea55d568e46c4c9ea3cbada98c5287cc0057d3647bcb87c9eba`
+is pinned before execution. It verifies the training report and milestone
+digests, then scores and natively samples the declared24 conditions at each
+milestone. Its task is R1, initialization172, availability none; source sampling,
+suffix scoring, support, generation seeds and export/reparse match the baseline.
+
+### Additional human calibration
+
+`human-motion-calibration-v1/manifest.json` SHA
+`79d1a53380e3b027dde0ef12ba27da21e8c3531839d7d687f26856f97f8998b9`;
+`review.json` SHA
+`10cfb254f801a215b14af4e01e2fc9069fd083a4de779adfd5c20be420afa8d2`.
+All11 context images were inspected at1x. Source4K identity, exact bytes, the
+canonical human documents and cached public example identities were verified.
+No human records were changed and no human rationale was invented.
+
+- Source871955…105169–109343: High Jack absent and Trill absent, IDs
+  `human-cd6e12362ea63698869fd567` and `human-48f59fc3f96b602b5f3cc79e`.
+  Changing leads, single/pair attacks and short-LN articulation contrast with a
+  fixed exchange or recurrence organization. These absences coexist with its
+  previously inspected prominent Stream human judgment.
+- Sourceecc496…148072–153786: High Jack prominent and Trill supporting, IDs
+  `human-30aca5c52b2e159f6a2ecf69` and `human-955bf3e14af9e97c36db37c0`.
+  Repeated quads dominate, while an articulated pair exchange occurs at
+  150500/150571/150643/150714/150785ms between columns[2,3] and[0,1]. The following
+  quad at150928 marks its exit. This is a scoped comparator, not a five-row rule.
+- Source98357f…87509–93156: High Jack supporting and Trill prominent, IDs
+  `human-c54a1981c3fea4fd4f1d8684` and `human-c31acb592d831d60ea0902b9`.
+  Its sustained left-pair/right-pair exchange sits inside a broader mixed scope
+  with a localized LN passage and moving attacks. The whole-scope Jack judgment
+  must not be transferred onto pure disjoint A/B alone.
+
+Generated Jack/Trill judgments remain unreviewed until the new samples are read.
