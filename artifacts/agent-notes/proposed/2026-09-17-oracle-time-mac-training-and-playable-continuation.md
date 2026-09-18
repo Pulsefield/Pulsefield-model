@@ -1671,3 +1671,60 @@ and inspect the child before any resume; never rerun the fresh-output supervisor
 over a partial owner. No weights, decoder or human labels change in this check.
 The supervisor SHA is
 `2f37dbf6e070b2ab6a5a85dbdadcb7121d88e397812576b7f75b75f26cf485de`.
+
+### Exploratory representation audit: onset skeleton and learned LN endpoints
+
+The next concrete design branch supplies onset times and learns note types,
+columns and LN endpoints as linked decisions. Generated endpoints create their
+own release obligations; unused release candidates need not materialize rows.
+This supplies onset-role information beyond the old untyped event union, while
+leaving LN pairing and column assignment as outputs. It is a changed conditional
+task, permitted by the explicit skeleton-redefinition scope. No product contract
+or implementation is changed by selecting this audit.
+
+The closest analogue is REMI's replacement of separated note-off events with
+note-duration prediction, described in section3.2 of
+[Pop Music Transformer](https://arxiv.org/pdf/2002.00212). The transferable idea
+is representing onset and duration together; the paper's piano/metrical-time
+representation and quality results do not establish 4K choreography quality.
+Pulsefield would retain raw milliseconds and explicit lane occupancy. Supplying
+future source endpoints at inference is a separate oracle diagnostic, not this
+learned-endpoint proposal. This is an adaptation, not a novelty claim.
+
+Before implementing a duration or endpoint head, audit all11,564 admitted TRAIN
+charts under the pinned catalog/split and frozen v8. Count event/onset/release-only
+rows, LN instances, releases coincident with onsets, simultaneous LN heads with
+different ends, and distributions of physical duration and endpoint rank in the
+original event union. Verify each lane's ordered start/end pairing and final
+closure. Retain per-chart summaries and a bounded set of extreme examples. No
+validation/test payload or model weights are read. The known population is
+11,522,113 TRAIN event rows; this audit supplies the currently missing proposed
+representation counts, not a prediction or quality comparison.
+
+A local endpoint candidate set is plausible only if its observed coverage and
+cost justify it. Even high coverage cannot justify dropping rare long targets:
+a shortlisted design needs an explicit long-tail path or full candidate access.
+An onset-conditioned model must also keep future required attacks feasible when
+four lanes could otherwise remain held; source validity does not automatically
+make arbitrary generated duration choices valid. These are design obligations,
+not reasons to insert true endpoints as an undisclosed fallback.
+
+Do not build negative candidate examples by blindly taking unions of charts in
+one song group. The catalog groups are transitive published-group/set/beatmap/
+normalized-song components; audio deduplication is not established, and that
+grouping is not a guarantee of temporal alignment. Candidate absence remains a
+live alternative requiring a declared, matched training/inference construction.
+
+Audit ID: timing-representation-audit-v1, revision1, accepted revision none.
+Baseline product is f679269b92e96efb5bd7989e748bd42cf069379e plus the recorded
+dirty worktree; the read-only audit imports immutable v8. Its fresh output owner
+is `timing-representation-audit-v1/results`, script
+`timing-representation-audit-v1/audit.py`, SHA
+`cf6662ba4f2d37dc9c10bbac98e6fb6aded84c9a6e00f77dd68410a94dff1598`.
+Run once with the v8 PYTHONPATH and `uv run --offline --extra mps python`.
+Bounds are10 minutes,2 GiB RSS,2 GiB minimum available memory and128 MiB output.
+Stop on identity, source-pairing, resource or count inconsistency; keep partial
+output and do not overwrite it. Broader gold and long-gap generation run
+concurrently, so timing is operational only. The result can refine the endpoint
+representation and its feasibility test; it cannot establish learned benefit or
+select a final architecture. Evaluation remains REFINE.
