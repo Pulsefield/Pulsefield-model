@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-18
-Product revision: b544ea4d02dea5bf175991ec633045e53b9e20d6 on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: 411c8c29abad50a05cf3ceb90f20a20d93a321ed on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -620,3 +620,155 @@ older feedback projection omit; that attempted extraction stopped with KeyError.
 Use the current canonical reader/projection or an explicit missing-comment adapter
 before semantic comparison. Do not promote inherited agent rationale into human
 comments. No human record, Foundation or pin was changed.
+
+## Calibration repair and scoped visual results
+
+The canonical workflow reader plus Inspector comment ownership resolves the
+older offline projection's missing `humanComment`. The artifact adapter reads
+eight copied workflow documents through `WorkflowDirectoryV2.read`,
+`effectiveHumanObservationsV2` and `readAgentReviewsV2`; it takes an actual human
+decision rationale or direct human claim rationale, leaving missing comments
+unrecorded. All eight original documents retain their prior hashes. No annotation,
+Foundation, product reader or human confidence is changed. The canonical Python
+example extractor now returns 37 effective observations.
+
+Adapter SHA: `1dd637711675366c559ce92c8b6a4d55052e3ae78f7a747bc0aa067807e53c9a`.
+Human projection SHA: `244b0596cf88f9ba989a85fab5cb6d570c11f6616fae571e37a27f3fe88d7252`.
+Artifact owner is the existing `native-generation-v2/inspection-v1/` under the
+learning-check root. Foundation identity remains
+`15fa68913bdb2bf395a189df7ab433f6d5b126fc35c46c1dbc8e607ce2182e97`.
+
+All 24 rendered pages in `review.json` were visually inspected at rate one:
+six human reference pages, ten LN-rich context pages and eight dense context
+pages. Review SHA:
+`7063b8d246fe3d635632bd55dc8a08c46d3fcd2aa53bd8bc858baaa72f6a91d9`.
+The positive high-confidence human example `human-03f7e300cf02f58f3dcbba66`
+marks LN coordination prominent at 167706–169445 ms; its comment identifies
+repeated dense multi-lane occupancy with misaligned starts/releases. The negative
+high-confidence example `human-9f2c08a0592fa13087c98d5e`, 313004–319158 ms, has
+synchronized long holding without independent interior events. It has no
+substantive human comment. These calibrate the difference between co-holding
+and independent control; neither overlap nor a duration cutoff defines the tag.
+
+On source `bd120339738c6231ab4093f4d19869f9675a2b5eb6053904d47893da7c6f33e8`,
+core 95864–103864 ms with two seconds of entry/exit context, O1 has 64 TAP and
+3 LN heads. Columns 1/2 hold together at 100872–100984 and column 0 holds alone
+at 102998–103110: machine LN-coordination absent/high. R1 has 19 TAP and 51 LN
+heads plus two entering holds: present/prominent/high. A witness is column 2
+held 100312–100984 while columns 1, 3 and 0 independently release and re-enter;
+column 0 taps at 100984 while column 3 remains held to 101096. Independent roles
+recur through the core. The scope was centered on its LN-rich supervised window.
+
+On dense source `00126e732bc47a8451ad779c6f82a476482ed4e9d72467d3866cbe91c259e8f6`,
+core 158311–164311 ms with two seconds of entry/exit context, O1 has 181 TAP and
+1 LN heads: LN coordination absent/high. R1 has 170 TAP and 35 LN heads with a
+shorter independent LN episode after dense TAP activity: present/supporting/medium.
+The post-hoc rapid-run locator finds seven column-zero taps at 161205, 161238,
+161274, 161310, 161345, 161382 and 161417 ms with other-column activity. This is
+a localized burden, not a global Jack or whole-chart unplayability verdict.
+
+The same dense core has 105 supplied onsets and 113 source heads, compared with
+182 O1 and 205 R1 generated heads. Its maximum one-second H count is 30; all
+16 supervised windows have maxima at most 15. Broader data coverage is therefore
+a concrete discriminating next step, not an established fix. These two selected
+scopes, one generation seed and short-fit checkpoints cannot establish an arm
+preference. Other tags, R0 images, larger organization, new human blind comparisons
+and independent confirmation remain outstanding. Evaluation: REFINE.
+
+## Corpus-training implementation and input preparation
+
+Clean source `411c8c29abad50a05cf3ceb90f20a20d93a321ed` adds the shared draw plan,
+bounded source-index LRU, typed Hydra corpus entrypoint, microbatch accumulation,
+safe model/optimizer/RNG/coverage recovery, proper two-class LN diagnostics and
+complete-suffix likelihood partitioning. Runtime model distributions are unchanged.
+CPU/MPS tests compare unequal-microbatch gradients and bit-exact uninterrupted
+versus resumed training; failed publications retain a recoverable boundary and
+charge discarded work. All 102 selected tests and 21 package subtests pass in
+14.63 s; Hydra `--cfg job` succeeds. No CUDA claim or repository-wide test claim.
+
+Plan preparation consumes the previously pinned TRAIN census/cache, catalog
+`e31b7e8f4daa044503ef2b8411bc41727ba371eec804c9462a4608be8112ad28`, allocation
+`15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a`, and census
+`7a6380fd1efab72ffaaa60250a8b2a92869675699d9d108c7dc87708bb5d0fd9`.
+It verifies every existing admitted TRAIN row/metadata digest without changing
+the allocation. No validation/test payload is used. Preparation takes 3.060 s.
+The frozen plan is `artifacts/bounded-typed-continuation/corpus-20260918-v1/plan.json`,
+SHA `a6e727d0bbfa414e7d20c742a18d84e8786f155b91629d285e7abf04348cd82f`:
+11,563 eligible charts, 3,169 groups, 10,573 draws, 2,000,000 exact onset exposures.
+
+## Experiment Card: bounded-typed-corpus-feasibility-v1
+
+Revision: 1. Acceptance: none. Execution is exploratory under the user's standing
+authority for formulation changes and bounded training; no lifecycle acceptance
+or quality pass is inferred. This card fixes corpus training and its first
+resource/learning readout. A separately pinned development generation/likelihood
+screen is required to rank quality and decide between R1/O1.
+
+Question: can the native three-arm setup reach 250,000 common onset exposures
+over broader TRAIN coverage on this Mac, with complete endpoint support, finite
+gradients and bounded resources? A pass permits continuing the same plan to
+1M/2M, not adopting an arm. A failure identifies a concrete resource or learning
+problem to fix before extending. The closest baseline is the 16-chart learning
+check: 32,768 exposures over 2,048 unique onsets, with native full generation
+revealing low O1 LN usage and an unseen dense regime. The encoder/clock/likelihood
+family is unchanged. Corpus coverage, window lengths, optimizer schedule and
+effective batch change jointly; this is not a causal ablation of one of those.
+
+Fixed source: `411c8c29abad50a05cf3ceb90f20a20d93a321ed`. Use the exact plan SHA
+above for O1, R1 and R0, each from scratch with model seed 171. Draw seed 471;
+uniform group then uniform chart, horizon 128/256 equiprobable, 12.5% seed-window
+stratum, otherwise uniform valid window. Milestones shorten only their final
+draw. Actual selected source onsets normalize every joint factor. Default model
+128/8/4/rank16 and full-support endpoint budget 8192 with backward recomputation.
+AdamW 0.0003, weight decay 0.01, gradient clipping 1, warmup through 32,768 onset
+exposures, effective batch 4 intervals, microbatch 2. No auxiliary loss, quality
+mask, decoder penalty, audio or LN-intent condition.
+
+Environment: Python 3.10.20, Torch 2.11.0, NumPy 1.26.4, Apple M5/24 GiB,
+MPS FP32, one CPU thread. Run arms sequentially O1/R1/R0, never concurrently.
+Fresh outputs are `corpus-20260918-v1/o1-250k`, `r1-250k`, `r0-250k` under the
+bounded-typed artifact root. Preserve failures and use fresh segments for any
+verified recovery. No automatic resume of a parent lacking a finalized runtime
+ledger; checkpoint/model/data identities must match. Recovery time and discarded
+work count against cumulative compute. The sampler/source plan is never edited.
+
+Command per arm, with `<ARM>`/`<arm>` substituted as above:
+
+```sh
+uv run --offline --python 3.10 --extra mps --group dev python -m pulsefield_model.research.bounded_typed_continuation.train_hydra \
+  plan_file=artifacts/bounded-typed-continuation/corpus-20260918-v1/plan.json \
+  plan_sha256=a6e727d0bbfa414e7d20c742a18d84e8786f155b91629d285e7abf04348cd82f \
+  source_cache_dir=../Pulsefield-model/artifacts/oracle-time-continuation/full-cache-v1 \
+  output_dir=artifacts/bounded-typed-continuation/corpus-20260918-v1/<arm>-250k \
+  model.arm=<ARM> stop_after_checkpoint=250000
+```
+
+Resource bounds: 14,400 cumulative training seconds per arm through the whole
+2M plan, checked before each optimizer update; report any final update/publication
+overrun explicitly. MPS driver/RSS each 6 GiB, allocator ceiling 8 GiB, available
+memory at least 2 GiB, swap growth at most 128 MiB. Cache owner at most 64 sources
+and 256 MiB conservative charge, with guarded process RSS for live microbatches.
+Checkpoint at most 128 MiB, each segment output at most 512 MiB, disk reserve
+1 GiB. Check resource pressure after forward/backward and every update start;
+checkpoint every 32 updates and every milestone, releasing idle MPS cache there.
+Stop immediately on support/nonfinite-gradient/resource failures, preserve the
+last durable checkpoint and record the complete failed segment duration.
+
+Primary feasibility gate: all three arms reach exactly 250,000 common onset
+exposures within their compute/resource bounds, with zero invalid source targets,
+nonfinite updates or silent support truncations, and at least 100,000 unique
+source onsets per arm. Report curves for all-class LN NLL/Brier/prevalence and
+conditional TAP/LN NLL, complete local factor cost, actual physical/prefix/padded
+rows, endpoint factors/candidate pairs and context duration. These training
+diagnostics do not replace paired complete-suffix validation or generated quality.
+The earlier positive-only random-baseline gate remains failed as originally
+declared; this card does not retroactively rename that result a pass.
+
+Positive result: broader training is operationally feasible; inspect fixed
+development conditions before deciding further resource allocation. Negative:
+preserve and diagnose the exact failure. Ambiguous: finite training costs improve
+while generated LN/organization or burden remains weak, or curves still improve
+sharply at the budget boundary. None of these proves an intrinsic representation
+advantage. One initialization and previously used validation remain development
+evidence; second initialization/unused groups and human blind comparisons are
+still required for independent confirmation.
