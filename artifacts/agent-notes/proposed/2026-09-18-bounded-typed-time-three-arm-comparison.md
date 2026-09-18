@@ -1945,11 +1945,18 @@ were opened through the canonical example reader and all12 context pages inspect
   attacks; continuous activity alone does not establish flowing organization.
 
 The descriptive readings above are machine interpretations of the inspected
-sources, not new human rationales. Saved comments contain confirmation/confidence
-administration rather than substantive pattern explanations. Labels, comments,
+sources, not new human rationales. The public reader retains one confidence-update
+comment and no substantive pattern explanations for the other two examples. Labels, comments,
 Foundation and canonical documents remain unchanged. This calibration does not
 assign generated Stream tags or prove64s organization.
 
 Artifact owner `availability-20260919-v1/human-stream-calibration-v1/`, manifest SHA
 `7f939c2d2833a7d5cbc253b4189667192b2e30ed49a518e1802fab1fceb8e078`.
-Review SHA will be pinned from its completed file in the same evidence append.
+Review SHA `ec689620cf5665b0e9139624ad08c14593adc8eb2b071a005bfff4a6097de78d`.
+
+
+The calibration record writer initially compared the public example projection
+with the full provenance packet and stopped on that unequal shape. The corrected
+check compares the seven shared identity/judgment/scope fields and preserves the
+public reader's comment policy. All three public examples and all12 image hashes
+are verified; no dataset or human record was changed.
