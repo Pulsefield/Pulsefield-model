@@ -11,14 +11,15 @@ from torch import Tensor, nn
 from ..scoped_style_modeling.dataset import ContractError
 from .config import BackboneConfig
 from .engine import PredictionInput
-from .features import HistoryEncoder
+from .features import ClockReadout, HistoryEncoder, SkeletonTimeEncoder, TIME_FEATURE_SCHEMA
 from .local import LocalEncoder, LocalState
 from .relation import RelationEncoder, RelationState
 from .replay import ExactReplayState
 from .schema import Actions, CompleteRow
 from .temporal import TemporalEncoder, TemporalState
 
-CACHE_SCHEMA = "oracle-causal/layer-input-mean/post-content-archive-v1"
+CACHE_SCHEMA = "oracle-causal/layer-input-mean/post-content-archive-v1/skeleton-time-v1/" + TIME_FEATURE_SCHEMA
+WEIGHTS_FORMAT = "oracle-time-continuation/weights-v2-bounded-time"
 
 
 def row_index(actions: Actions) -> int:
@@ -53,19 +54,23 @@ class JointHead(nn.Module):
     def __init__(self, config: BackboneConfig):
         super().__init__()
         self.rank = config.coupling_rank
-        self.unary = nn.Linear(config.hidden, 16)
+        self.unary = nn.Linear(config.temporal_hidden, 16)
         self.actions = nn.Embedding(16, self.rank)
-        self.interaction = nn.Linear(config.hidden, self.rank ** 2)
+        self.interaction = nn.Linear(config.temporal_hidden, self.rank ** 2)
         table = torch.tensor(list(product(range(4), repeat=4)), dtype=torch.long)
         self.register_buffer("rows", table)
         self.register_buffer("left", 4 * table[:, 0] + table[:, 1])
         self.register_buffer("right", 4 * table[:, 3] + table[:, 2])
+        self.clock_readout = (ClockReadout(config.clock_readout_hidden, config.time_lookahead_rows)
+                              if config.clock_readout_hidden else None)
 
     def forward(self, query: PreRowEncoding) -> tuple[Tensor, Tensor]:
         if not isinstance(query, PreRowEncoding):
             raise ContractError("Joint head requires pre-row query outputs")
         hidden = query.hidden
         unary = self.unary(hidden)
+        if self.clock_readout is not None:
+            unary = unary + self.clock_readout(query.inputs)
         matrices = self.interaction(hidden).reshape(-1, 2, self.rank, self.rank)
         coupling = (matrices[:, 0] + matrices[:, 1].transpose(-1, -2)) / 2
         pair = (self.actions.weight @ coupling @ self.actions.weight.T) / math.sqrt(self.rank)
@@ -99,6 +104,9 @@ class CausalBackbone(nn.Module):
         self.relation = RelationEncoder(config)
         self.temporal = TemporalEncoder(config)
         self.head = JointHead(config)
+        # Construct after the shared backbone to preserve its initialization.
+        self.timing = (SkeletonTimeEncoder(config.hidden, config.time_lookahead_rows)
+                       if config.time_lookahead_rows else None)
 
     def cache_signature(self) -> tuple:
         # Process-local guards also detect optimizer/load_state_dict in-place
@@ -109,6 +117,8 @@ class CausalBackbone(nn.Module):
 
     def query_input(self, query: PredictionInput, local: LocalState, relation: RelationState) -> Tensor:
         raw = self.facts(query.history, query.time_ms, local.pace, query.clocks.previous_row_ms, query.is_terminal)
+        if self.timing is not None:
+            raw = raw + self.timing((query.future_offsets_ms,))
         frontier = self.local.read(raw, local)
         return self.relation(frontier, relation, query.time_ms, query.history.row_count + 1)
 
@@ -117,6 +127,8 @@ class CausalBackbone(nn.Module):
         gap = query.clocks.previous_row_ms
         pace = local.pace.commit(gap)
         raw = self.facts(post, row.time_ms, pace, gap, query.is_terminal)
+        if self.timing is not None:
+            raw = raw + self.timing((query.future_offsets_ms,))
         local = self.local.commit(local, row, post.row_count, raw, gap)
         frontier = self.local.read(raw, local)
         relation = self.relation.commit(relation, row, post.row_count, frontier)

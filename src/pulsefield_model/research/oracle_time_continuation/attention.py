@@ -5,7 +5,7 @@ from torch.nn import functional as F
 
 
 class MemoryAttention(nn.Module):
-    def __init__(self, hidden: int, heads: int, edge_dim: int):
+    def __init__(self, hidden: int, heads: int, edge_dim: int, *, bias_hidden: int | None = None):
         super().__init__()
         self.heads = heads
         self.width = hidden // heads
@@ -13,7 +13,8 @@ class MemoryAttention(nn.Module):
         self.query = nn.Linear(hidden, hidden, bias=False)
         self.key = nn.Linear(hidden, hidden, bias=False)
         self.value = nn.Linear(hidden, hidden, bias=False)
-        self.bias = nn.Sequential(nn.Linear(edge_dim, hidden), nn.GELU(), nn.Linear(hidden, heads))
+        bias_hidden = hidden if bias_hidden is None else bias_hidden
+        self.bias = nn.Sequential(nn.Linear(edge_dim, bias_hidden), nn.GELU(), nn.Linear(bias_hidden, heads))
         self.output = nn.Linear(hidden, hidden)
         self.ff_norm = nn.LayerNorm(hidden)
         self.ff = nn.Sequential(nn.Linear(hidden, 4 * hidden), nn.GELU(), nn.Linear(4 * hidden, hidden))

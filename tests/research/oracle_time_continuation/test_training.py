@@ -246,3 +246,25 @@ def test_effective_batch_split_and_chunk_configuration_are_validated():
                    {"learning_rate": 0}, {"max_grad_norm": float("nan")}):
         with pytest.raises(ContractError):
             TrainingConfig(**values)
+
+
+def test_shared_prefix_replay_preserves_gradients_with_overlaps_rewinds_and_new_updates():
+    source = admit([(0, 0, 20000)] + [(1 + i % 3, i * 100, i * 100) for i in range(200)])
+    sampler = WindowSampler((source,))
+    windows = tuple(sampler.window(source.identity.source_sha256, start, 0) for start in (50, 80, 45, 45))
+    model = small_model()
+    settings = TrainingConfig(effective_batch_size=4, microbatch_size=2, chunk_rows=7,
+                              max_grad_norm=1e6, parallel_frontiers=True)
+    reference = SequenceTrainer(deepcopy(model), settings, ObjectiveConfig(lambda_struct=.3))
+    reused = SequenceTrainer(deepcopy(model), replace(settings, reuse_prefixes=True), ObjectiveConfig(lambda_struct=.3))
+    for _ in range(2):
+        expected, actual = reference.update(windows), reused.update(windows)
+        assert actual['computed_prefill_rows'] == 50 + 30 + 45
+        assert expected['computed_prefill_rows'] == actual['prefill_rows'] == 220
+        assert [w['reused_prefix_rows'] for w in actual['windows']] == [0, 50, 0, 45]
+        assert actual['sequence_nll'] == pytest.approx(expected['sequence_nll'], rel=1e-6)
+        for (name, left), (_, right) in zip(reference.engine.model.named_parameters(), reused.engine.model.named_parameters()):
+            if left.grad is None or right.grad is None:
+                assert left.grad is right.grad is None, name
+            else:
+                torch.testing.assert_close(left.grad, right.grad, atol=2e-6, rtol=2e-4, msg=name)

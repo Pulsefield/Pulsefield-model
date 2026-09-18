@@ -9,7 +9,7 @@ import torch
 from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
 from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
 from pulsefield_model.research.oracle_time_continuation.features import HistoryStatus, clock_features
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, row_index
+from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, PreRowEncoding, row_index
 from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow, TimeSkeleton
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
 
@@ -45,6 +45,13 @@ def skeleton(rows):
     return TimeSkeleton(tuple(row.time_ms for row in rows))
 
 
+def randomize_optional_readouts(engine):
+    if engine.model.timing is not None:
+        torch.nn.init.normal_(engine.model.timing.projection[-1].weight, std=.1)
+    if engine.model.head.clock_readout is not None:
+        torch.nn.init.normal_(engine.model.head.clock_readout.projection[-1].weight, std=.1)
+
+
 def assert_learned_equal(first, second, *, atol=3e-6):
     assert first.execution == second.execution
     assert first.local.pace == second.local.pace
@@ -64,8 +71,10 @@ def assert_learned_equal(first, second, *, atol=3e-6):
             torch.testing.assert_close(a, b, atol=atol, rtol=2e-5)
 
 
-def test_step_dense_ragged_batch_and_chunk_partition_agree(chord_source):
-    engine = make_engine()
+@pytest.mark.parametrize('time_lookahead_rows,clock_readout_hidden', [(0, 0), (16, 0), (0, 12), (16, 12)])
+def test_step_dense_ragged_batch_and_chunk_partition_agree(chord_source, time_lookahead_rows, clock_readout_hidden):
+    engine = make_engine(time_lookahead_rows=time_lookahead_rows, clock_readout_hidden=clock_readout_hidden)
+    randomize_optional_readouts(engine)
     rows = mixed_rows()
     prefix = 7
     with torch.no_grad():
@@ -100,8 +109,10 @@ def test_step_dense_ragged_batch_and_chunk_partition_agree(chord_source):
         assert batch.states[1].execution.next_index == 6
 
 
-def test_current_and_future_targets_cannot_change_pre_row_distribution():
-    engine = make_engine()
+@pytest.mark.parametrize('time_lookahead_rows,clock_readout_hidden', [(0, 0), (16, 0), (0, 12), (16, 12)])
+def test_current_and_future_targets_cannot_change_pre_row_distribution(time_lookahead_rows, clock_readout_hidden):
+    engine = make_engine(time_lookahead_rows=time_lookahead_rows, clock_readout_hidden=clock_readout_hidden)
+    randomize_optional_readouts(engine)
     rows = mixed_rows(18)
     changed = list(rows)
     changed[6] = CompleteRow(rows[6].time_ms, (0, 1, 1, 1))
@@ -114,11 +125,14 @@ def test_current_and_future_targets_cannot_change_pre_row_distribution():
         torch.testing.assert_close(first.log_probs[:4], second.log_probs[:4], atol=0, rtol=0)
         assert not torch.allclose(first.log_probs[4].exp(), second.log_probs[4].exp())
         assert initial.execution.replay.open_ln_start_ms[0] == 0
-        # Only future scheduler times differ; no new model input is available.
+        # The action prefix is identical; the optional time-only context changes.
         altered = TimeSkeleton(tuple(t if i <= 3 else t + 1234 for i, t in enumerate(skeleton(rows).times_ms)))
         same_prefix = engine.prefill(altered, rows[:3])
-        torch.testing.assert_close(engine.predict(initial).log_probs, engine.predict(same_prefix).log_probs,
-                                   atol=0, rtol=0)
+        if time_lookahead_rows:
+            assert not torch.allclose(engine.predict(initial).log_probs, engine.predict(same_prefix).log_probs)
+        else:
+            torch.testing.assert_close(engine.predict(initial).log_probs, engine.predict(same_prefix).log_probs,
+                                       atol=0, rtol=0)
 
 
 def test_predict_is_pure_and_commit_updates_all_history_paths_atomically():
@@ -144,8 +158,10 @@ def test_predict_is_pure_and_commit_updates_all_history_paths_atomically():
         assert not torch.equal(changed.temporal.recent[-1].inputs[0], state.temporal.recent[-1].inputs[0])
 
 
-def test_mirror_equivariance_including_coarse_memory_and_terminal_support():
-    engine = make_engine()
+@pytest.mark.parametrize('time_lookahead_rows,clock_readout_hidden', [(0, 0), (16, 0), (0, 12), (16, 12)])
+def test_mirror_equivariance_including_coarse_memory_and_terminal_support(time_lookahead_rows, clock_readout_hidden):
+    engine = make_engine(time_lookahead_rows=time_lookahead_rows, clock_readout_hidden=clock_readout_hidden)
+    randomize_optional_readouts(engine)
     rows = mixed_rows()
     mirrored = tuple(CompleteRow(row.time_ms, row.actions[::-1]) for row in rows)
     with torch.no_grad():
@@ -157,6 +173,68 @@ def test_mirror_equivariance_including_coarse_memory_and_terminal_support():
     for a, b in zip(first.state.temporal.tokens, second.state.temporal.tokens):
         for left, right in zip(a.inputs, b.inputs):
             torch.testing.assert_close(left, right.flip(0), atol=4e-6, rtol=2e-5)
+
+
+def test_zero_time_projection_preserves_compatible_logits_and_receives_training_gradient():
+    baseline = make_engine()
+    anchored = make_engine(time_lookahead_rows=16)
+    for name, value in baseline.model.state_dict().items():
+        torch.testing.assert_close(value, anchored.model.state_dict()[name], rtol=0, atol=0)
+    loaded = anchored.model.load_state_dict(baseline.model.state_dict(), strict=False)
+    assert loaded.missing_keys == ['timing.projection.0.weight', 'timing.projection.0.bias',
+                                   'timing.projection.2.weight', 'timing.projection.2.bias']
+    assert not loaded.unexpected_keys
+    rows = mixed_rows(80)
+    prefix = 50
+    with torch.no_grad():
+        a = baseline.prefill(skeleton(rows), rows[:prefix])
+        b = anchored.prefill(skeleton(rows), rows[:prefix])
+        torch.testing.assert_close(baseline.predict(a).log_probs, anchored.predict(b).log_probs, atol=0, rtol=0)
+    result = anchored.teacher_force(b, rows[prefix:])
+    indices = torch.tensor([row_index(row.actions) for row in rows[prefix:]])
+    (-result.log_probs.gather(1, indices[:, None]).sum()).backward()
+    grad = anchored.model.timing.projection[-1].weight.grad
+    assert grad is not None and torch.isfinite(grad).all() and grad.abs().sum() > 0
+
+
+def test_zero_clock_readout_preserves_pretrained_function_and_receives_gradient():
+    baseline = make_engine(time_lookahead_rows=16)
+    randomize_optional_readouts(baseline)
+    candidate = make_engine(time_lookahead_rows=16, clock_readout_hidden=12)
+    loaded = candidate.model.load_state_dict(baseline.model.state_dict(), strict=False)
+    assert loaded.missing_keys and all(name.startswith('head.clock_readout.') for name in loaded.missing_keys)
+    assert not loaded.unexpected_keys
+    rows = mixed_rows(80)
+    with torch.no_grad():
+        a = baseline.prefill(skeleton(rows), rows[:50])
+        b = candidate.prefill(skeleton(rows), rows[:50])
+        torch.testing.assert_close(baseline.predict(a).log_probs, candidate.predict(b).log_probs, atol=0, rtol=0)
+    result = candidate.teacher_force(b, rows[50:])
+    targets = torch.tensor([row_index(row.actions) for row in rows[50:]])
+    (-result.log_probs.gather(1, targets[:, None]).sum()).backward()
+    grad = candidate.model.head.clock_readout.projection[-1].weight.grad
+    assert grad is not None and torch.isfinite(grad).all() and grad.abs().sum() > 0
+
+
+def test_clock_readout_uses_physical_intervals_and_future_times_without_absolute_timestamp():
+    engine = make_engine(time_lookahead_rows=16, clock_readout_hidden=12)
+    randomize_optional_readouts(engine)
+    rows = mixed_rows()
+    shifted = tuple(replace(row, time_ms=row.time_ms + 1_000_000_000) for row in rows)
+    with torch.no_grad():
+        state = engine.prefill(skeleton(rows), rows[:10])
+        translated = engine.prefill(skeleton(shifted), shifted[:10])
+        query = state.execution.query(16)
+        other = translated.execution.query(16)
+        readout = engine.model.head.clock_readout
+        torch.testing.assert_close(readout((query,)), readout((other,)), rtol=0, atol=0)
+        altered = (query, replace(query, time_ms=rows[9].time_ms + 250),
+                   replace(query, future_offsets_ms=tuple(4 * x for x in query.future_offsets_ms)))
+        hidden = torch.zeros(3, 2, engine.model.config.temporal_hidden)
+        probabilities, legal = engine.model.head(PreRowEncoding(hidden, altered))
+        assert torch.equal(legal[0], legal[1]) and torch.equal(legal[0], legal[2])
+        assert not torch.allclose(probabilities[0], probabilities[1])
+        assert not torch.allclose(probabilities[0], probabilities[2])
 
 
 @pytest.mark.parametrize("occupied", list(product((False, True), repeat=4)))

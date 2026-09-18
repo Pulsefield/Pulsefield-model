@@ -1,0 +1,15 @@
+defaults:
+  - oracle_time_train_mac
+  - _self_
+
+# The 1024-wide temporal module was measured on the 24 GiB M5 Mac.
+# Its FP32 AdamW checkpoint is about 924 MB; fewer publications bound SSD writes.
+output_dir: artifacts/oracle-time-continuation/mac77m-train
+checkpoint_every_updates: 100
+model:
+  temporal_expansion: 8
+resources:
+  driver_limit_bytes: 6442450944
+  rss_limit_bytes: 8589934592
+  min_available_bytes: 2147483648
+  checkpoint_max_bytes: 1073741824

@@ -94,8 +94,8 @@ class ContinuationSource:
 def admit_source(data: bytes, expected_sha256: str, *, group_id: str, split: str) -> ContinuationSource:
     """Verify original 4K bytes and build exact rows, without scope markers or retiming.
 
-    Reuses V3 raw admission only. The old prepared-chart features, including
-    following gaps and future LN durations, never enter this causal path.
+    Reuses V3 raw admission only. Prepared-chart features and future LN pairing
+    never enter prediction; the scheduler separately exposes bounded skeleton times.
     Nonfinite/negative times and incompatible single-lane coincidences fail.
     Group and split must come from the caller's existing song-group allocation.
     """

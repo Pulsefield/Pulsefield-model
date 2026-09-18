@@ -13,9 +13,15 @@ and end-to-end training and inference pipelines remain open.
 Start with the [V3 formulation](docs/formulation/README.md).
 
 The [oracle-time continuation research baseline](docs/research/oracle_time_continuation.md)
-implements verified source replay, a causal backbone, and sequence training on
-supplied event times (M0–M2). Sampling, durable generation, and corpus evaluation
-remain later milestones; this baseline does not define the V3 reference architecture.
+implements verified source replay, a causal backbone, sequence training, and durable sampled generation on
+supplied event times (M0–M3). M4 corpus training and generated-structure evaluation
+are in progress, including a Mac profile with a larger temporal module; this
+research baseline does not define the V3 reference architecture.
+
+The [formulation research question](docs/research/oracle_time_expert_question.md)
+collects the current task definitions, contrasting experimental results and
+inspectable endpoint prototypes for an independent assessment of the next
+learning setup.
 
 ## Legacy code boundary
 
