@@ -1871,3 +1871,57 @@ The retry selection SHA is
 128 TRAIN charts/7010 selected heads and32 validation charts/1794heads, with
 155036/30969 total event rows respectively. Context width is1096. Extraction
 remains active at this record; no fitting result or generated-decoder claim exists.
+
+During extraction, the three additional outputs with a fastest-four locator
+below250ms received complete ±2s source/generated context inspection:12pages,
+review `clock-readout-v1/coverage-extrema/review.json`, SHA
+`d718c5a99f630d97bea790b1b581fa56f4562cbe1f18f62ce00d447e2bc13d35`.
+713ef9/seed19 repeats column0 at196773/196850/196927/197004ms (77ms gaps).
+The TRAIN long output repeats column2 at606593/606667/606741/606815ms (74ms).
+e67f/seed19 repeats column2 at98629/98710/98791/98832ms (81/81/41ms).
+Moving structure persists around these short concentrations, unlike the earlier
+20ms repeated-chord bursts, but uniform difficulty is not established. Preserve
+these as additional regressions to inspect, without converting the locator
+threshold into a Foundation tag or universal quality threshold. Human gold is
+unchanged; other uninspected chart passages remain open.
+
+### Further branch to refine: learned context versus supervised exposure
+
+Do not treat exact full-BOS learned-memory reconstruction as synonymous with
+causality. A finite learned context can still read only past actions and retain
+exact occupancy, open-LN starts, elapsed clocks, earlier planned endpoints and
+known skeleton times. It changes the model's available history and may lose
+phrase-scale relationships; it is not a hidden future-action shortcut. A cropped
+window must never impersonate true BOS. This is a research alternative to the
+current complete learned-history contract, not an implementation exception to it.
+
+The existing coverage measurement is a concrete reason to test this tradeoff:
+the500-update20M ancestor plus its300-update timing continuation have287852
+supervised exposures, covering249676 distinct rows (2.17% of TRAIN) across1460
+charts/1276groups. Later horizon and clock updates improve exposure, but prefix
+replay without gradients is still not supervised coverage. The long300 arm
+alone has408820 targets and476759 computed prefix rows. These observations do
+not establish that insufficient training causes all generation problems; they
+make data exposure per Mac compute budget a live competing explanation.
+
+The closest architecture analogue is the relative local-attention variant in
+[Music Transformer](https://arxiv.org/pdf/1809.04281), section3.5 and Table3.
+It attends within neighboring blocks rather than all positions at once. The
+transferable idea is bounded learned context with relative timing; its piano
+data and conclusions do not establish 4K action quality. A second representation
+analogue, [Compound Word Transformer](https://arxiv.org/pdf/2101.02402), groups
+related note attributes and uses typed output heads. Its large sequence-length
+savings cannot be transferred to this already row-compacted representation,
+where removing release-only rows saves only4.41%. Both would be adaptations,
+not a novelty claim.
+
+A discriminating future comparison should hold the conditional task, corpus
+allocation, loss targets and generation policy fixed, then compare an efficient
+finite-context baseline against the current architecture at equal real compute
+budget, reporting supervised exposures/unique coverage and complete generated
+quality alongside likelihood. If greater exposure does not improve structure,
+or phrase/hold relations regress despite exact replay state, the alternative
+loses support. Context length, exact timing/occupancy features and training
+coverage must be recorded; parameter count alone is not the comparison axis.
+Outcome is REFINE. There is no new Card, implementation, training run or adoption
+for this branch; finish the linked-endpoint probe before selecting another run.
