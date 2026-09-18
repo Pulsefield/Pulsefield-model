@@ -896,6 +896,105 @@ long-tail generalization or playability. Frozen feature extraction takes about
 supervisor seconds. Exact replay of the inherited backbone dominates this
 particular preparation cost.
 
+### Typed-onset rollout and type-probability diagnosis
+
+A subsequent pilot supplies required onset times H and optional endpoint
+candidates R. Each LN head selects its complete future endpoint; unused R
+positions do not create a row. The row backbone remains frozen clock100 and
+has not been trained on this factorization. Onset roles and prior planned
+endpoints constrain its support, while only the endpoint head reads them as
+explicit features. This changes the conditional task relative to the original
+nonempty event-union generator. The object-seed contract also permits known
+endpoints for seed LNs, but all three selected source seeds actually contain
+only TAPs, so no extra seed endpoint is supplied in these six outputs.
+
+With row temperature .85, endpoint temperature1, row seed17 and independent
+endpoint seed100020, the generic/context endpoint arms generate three complete
+validation charts each. Every output passes onset coverage, endpoint membership,
+occupancy, closure and independent export/reparse checks. Per-source LN counts
+are6/6 for85058a,6/6 for871955 and13/67 for ecc496; clock100 under the old task
+had145/102/23. Those source types and ratios are background, not targets that a
+different valid arrangement must copy.
+
+All44standard generated pages are inspected across fixed gold, each output's
+own fastest-four locator and matched earlier failure contexts. Moving taps and
+small chords remain, with reduced dense repeated-chord bursts in the first two
+sources. New generic/context counts of adjacent same-column attacks below40ms
+are0/0,10/10 and1/2; old clock seed17 counts are2,16,1. These remain descriptive
+locators, not universal playability thresholds. Five outputs have no simultaneous
+held pair anywhere. ecc496/context has1071ms with at least two held columns;
+additional complete contexts around all three overlap episodes show definite
+short LN-coordination insertions near72.1 and121.6seconds, while an isolated
+staggered pair remains unresolved. Its longest1429ms hold accompanies other-column
+taps without a second hold and is not LN coordination. These are machine
+structural hypotheses under the frozen Foundation, not human or player validation.
+
+A separate no-gradient diagnostic replays the three source histories and six
+generated histories under the identical clock100 weights. At each post-seed H
+position it compares the same logits under original legal support, mandatory
+head support, full planned-release support, and full support at temperature .85.
+The generated selected raw log probabilities reproduce exactly; policy log
+probability errors stay below1.8e-15. The nine trajectories take382.03seconds,
+peak sampled RSS469696512bytes, with no additional swap.
+
+The table reports expected LN heads divided by expected total heads, summed
+over required onsets. It is not the realized output ratio or a quality score.
+
+| Source / history | Original support, T1 | Required head, T1 | Full typed support, T1 | Typed support, T.85 |
+| --- | ---: | ---: | ---: | ---: |
+| 85058a / true | 43.965% | 45.497% | 44.481% | 44.559% |
+| 85058a / generic rollout | 1.038% | 1.041% | 1.045% | .466% |
+| 85058a / context rollout | 1.044% | 1.046% | 1.052% | .468% |
+| 871955 / true | 46.016% | 48.311% | 46.489% | 47.274% |
+| 871955 / generic rollout | .597% | .598% | .605% | .230% |
+| 871955 / context rollout | .597% | .598% | .604% | .229% |
+| ecc496 / true | 3.880% | 3.937% | 3.915% | 2.489% |
+| ecc496 / generic rollout | 1.448% | 1.456% | 1.539% | .865% |
+| ecc496 / context rollout | 5.364% | 5.466% | 5.526% | 3.845% |
+
+Full typed masking does not immediately suppress LN mass relative to requiring
+heads on these generated histories. On the two LN-rich sources the generated
+history has1.30–2.36% of the true-history typed LN fraction, and temperature .85
+reduces its fraction to37.9–44.6% of its T1 value. The contrast remains within
+the subgroup with all four lanes currently closed: true-history typed fractions
+are33.30%/29.79%, versus about1.0%/.59% in generated histories. Thus current
+occupancy alone does not describe the difference. These history comparisons
+are observational: they do not identify why trajectories diverged, and do not
+prove that matching source LN ratios is a valid objective.
+
+The result favors investigating type initiation and continuation under the new
+training/conditioning task before attributing TAP-dominated output to endpoint
+legality. It does not establish that more oracle labels, scheduled sampling or
+a new architecture will improve quality. Teacher-forcing original actions after
+arbitrary generated LN decisions can also produce illegal targets; a future
+training change must define its supervision rather than silently repair them.
+
+### Seed-conditioned TRAIN type population
+
+A complete TRAIN-only census covers11563eligible charts. Among4336charts whose
+complete30-head seed has no LN,802(18.50%) have no LN in the suffix;1399(32.26%)
+have more than10% LN heads in the suffix. Their chart-mean suffix LN fraction is
+8.51%, pooled-head fraction7.92%, and equal-song-group mean10.31%. Where an LN
+does occur, the median first LN is46onset rows after the seed, using a zero-based
+offset.2675of4336have an LN within the first128suffix onsets. A TAP-only opening
+therefore changes the type prior but does not determine the rest of the chart.
+
+Onset-role information further stratifies that population. Among TAP-only seeds,
+charts with5–15% release-only suffix candidates have23.14% mean LN fraction
+(361charts); those above15% have40.54%(72charts). Zero release-only candidates
+have2.25%(1364charts). These are chart population descriptions, not the exact
+nonuniform window-training risk. Roles are additional oracle information in
+the typed task; neither this association nor the census makes a desired
+generated ratio compulsory. It does identify relevant supplied information
+that the frozen row actor does not yet receive as explicit features.
+
+The census takes6.38seconds, peak sampled RSS250609664bytes, without swap growth.
+No validation/test payload or annotation changes are involved. Evidence owners
+are `typed-onset-quality-v1`, `typed-onset-type-audit-v1` and
+`seed-type-population-v1` under the existing M3 artifact root. Their readout
+SHAs respectively begin `f3cdc61f`, `33d0a079` and `bf17d1e9`. The typed pilot
+remains a refinement result; it has no whole-chart playable-quality acceptance.
+
 ## Resource measurements
 
 Environment: Apple M5, 24 GiB unified memory, macOS 27.0, Python 3.10.20,

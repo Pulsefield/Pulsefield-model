@@ -23,6 +23,11 @@ collects the current task definitions, contrasting experimental results and
 inspectable endpoint prototypes for an independent assessment of the next
 learning setup.
 
+The [bounded three-arm continuation baseline](docs/research/bounded_typed_continuation.md)
+defines matched typed-row/object tasks alongside the original row task. Exact
+execution support and a finite content encoder are implemented; the native
+three-arm training and generated-quality comparison remain in development.
+
 ## Legacy code boundary
 
 > **Do not use mapper v2/v2.1, the pre-V3 timing stack, Control V3, or the
