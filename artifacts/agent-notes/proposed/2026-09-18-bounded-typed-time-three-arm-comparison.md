@@ -1771,3 +1771,54 @@ C1 benefit with failing quality guards calls for refinement. Wide uncertainty is
 inconclusive, and another initialization/unused groups remain required for a stable
 choice. This exploratory Card cannot establish overall playable-quality completion.
 Implementation and execution results are pending at this revision.
+
+
+## Endpoint-availability implementation and Card revision 2
+
+Clean intervention source `15d27db0b0723d7f606b1429c901d26c1f61e5ac` implements the
+three modes and audited training fork. The baseline-to-intervention diff changes
+only endpoint feature/scoring access, fork/configuration plumbing, their tests and
+the owning research guide. The original task support, head network, data selection,
+finite context, normalized likelihood and sampler rules remain intact. Product
+code is locally committed; no remote publication occurred.
+
+Fourteen availability inputs encode the four occupancy intervals, continuous
+inverse-gap mass and elapsed duration, plus known/pending counts. C0/C1 both add a
+residual MLP of width64 at default hidden128, with a zero final layer. Input
+features use only known earlier endpoints. Source-level tests exercise a nonzero
+residual so normalization/mirror checks are not vacuous initialization checks.
+
+Selected checks: feature/model24 tests passed in3.58s; train/fork/Hydra20 tests
+passed in10.26s; generation/data/corpus/memory/package54 tests and21 package
+subtests passed in6.82s. These include CPU/MPS gradients and native recovery,
+exact extended-plan fork/resume equivalence, existing Adam-state preservation,
+initial functional equality and rejection of mismatched scientific settings,
+digests and draw prefixes. The packaged `--cfg job` path displays the new mode
+and all four fork fields; it is configuration inspection, not a training run.
+`git diff --check` passed. No CUDA or full-repository claim is made.
+
+The new immutable plan is `availability-20260919-v1/plan.json`, SHA
+`ab4e01d1efd78162f0bc6e1e612428ab879a2a7d9e36d3e1173079607fd2bef1`.
+It contains13213 draws over the same11563 TRAIN sources, with the full10573-draw
+old prefix verified exactly. Milestones are250k/1M/2M/2.25M/2.5M. The original
+plan and checkpoints remain byte-identical.
+
+Card revision2 pins that clean source/plan and adds the concrete initialization
+preflight. All scientific thresholds, comparisons and guards from revision1
+remain unchanged; acceptance remains none. Driver `initialize_compare.py`, SHA
+`5cc9b2867bf704f72c697997a2780ea8426ec57e8a76d98b9404ce395a9e669c`, passes syntax
+compilation. Invoke it with `uv run --offline --python 3.10 --extra mps --group dev
+python artifacts/bounded-typed-continuation/availability-20260919-v1/initialize_compare.py`.
+It composes the canonical Hydra settings for P0/C0/C1, supplies the pinned parent
+checkpoint/source/plan, and stops immediately at2M in fresh `p0-init`, `c0-init`,
+`c1-init` segments. These initialize without optimizer updates and preserve all
+old parameters, moments, RNG, counters and coverage. Parent compute is charged.
+
+Then verify exact state copying, identical C0/C1 initial parameter bytes, and
+native generation on fixed screen indices0/16/23, seed17. Each initial variant
+must reproduce the parent's complete physical rows and mechanical checks; full-
+suffix head and endpoint NLL sums must agree within1e-5 nats. The three-minute
+verification bound and6GiB/resource guards are separate from training; report
+verification cost separately. On any mismatch, retain outputs and stop before
+training. Do not overwrite initialization artifacts. Successful preflight makes
+the concrete paired continuation reviewable; no quality benefit is yet claimed.
