@@ -1523,3 +1523,158 @@ dev python` after the2M screen completes. CPU one thread; ten-minute total bound
 `quad-policy-probe-v1/`, preserve failure, no overwrite/resume. This writes only
 local derivative diagnostics and leaves source/model/sampler and checkpoints
 unchanged. Human/Foundation records remain read-only. Evaluation pending.
+
+
+## Two-million development evaluation
+
+All 216 generations and 72 complete-suffix scores finish in 705.152 seconds. All
+mechanical/export/reparse checks pass, including the three selected exact cache
+recoveries. Peak physical footprint is 236864520 bytes and swap growth remains
+zero. The readout is `development-readout-2000k.json`, SHA
+`262979f1deb1069f0ff9b401f5c2d83b55b79f0de4051b770b57d6ac64e828f3`.
+All comparisons below use the unchanged 24 development conditions and three seeds;
+no validation or decoding changes were introduced between checkpoints.
+
+| Measure | O1 | R1 | R0 |
+| --- | --- | --- | --- |
+| Complete-suffix pooled NLL, nats/source onset | 1.906802 | 1.915834 | 2.031677 |
+| Group-macro NLL | 1.968009 | 1.987622 | 2.129202 |
+| Generated LN heads / all heads | 60430/163160 =37.037% | 35910/129871 =27.651% | 59689/126164 =47.311% |
+| Quad attack rows | 223 | 104 | 193 |
+| Same-lane attack pairs below 40 ms | 498 | 28 | 30 |
+| Such pairs per 1000 heads | 3.052 | 0.216 | 0.238 |
+| Longest such attack run | 8 | 2 | 2 |
+
+R0 NLL remains a different-condition task and is not a same-task likelihood
+ranking. O1 minus R1 paired macro NLL is -0.019613, with group-bootstrap 95%
+interval [-0.049635,0.011185]. The ordinary subset has difference -0.034013,
+interval [-0.061996,-0.006458]; the stress subset difference is-0.005213,
+interval [-0.058856,0.048380]. No overall stable arm winner or independent
+confirmation follows from this development sample.
+
+Quad concentration at 1M is transient on this trajectory: counts fall from
+17684/19354/19047 to 223/104/193 without decoder penalties or support changes.
+All three models also broaden LN use. The early low-LN and intermediate quad
+outcomes cannot be treated as invariant representation failures. However,
+O1 rapid recurrence rises, concentrated in stress outputs, and must remain a
+quality concern. The figure `learning-curve-v1/learning-curve.png` and its SVG
+show source fitting, LN share, quad share and rapid-pair rate across the three
+checkpoints. Its provenance pins all input readouts; it is descriptive, not a
+composite quality score.
+
+### Fixed-core visual interpretation at 2M
+
+All 32 canonical images were inspected at 1x. Manifest SHA
+`4e692038af60fc4acf178472b5ea53429a4423698267f5a174916b57cbf54fdc`, scoped
+machine review SHA `c1558cf25d6331fbd233e7ff4909cac3a007f03a42c9e0ff4184d328e65a73fc`.
+The frozen Foundation and previously inspected High human positive/supporting/
+negative LN cases remain the calibration. No new human labels are claimed.
+
+In the fixed LN-rich 16 s core, O1 has 161 LN heads/80 taps and R1 has 231 LN heads/
+38 taps. Both now show sustained independent start/release exchanges:
+LN coordination present/prominent, High. O1 interleaves short TAP-led breaks;
+R1 more continuously exchanges short holds. For O1, column 1 holds 21505–22030
+while column 2 releases 21805 and re-enters 21880, column 3 taps then starts 21955,
+and other lanes take distinct control roles. For R1, column 3 holds 18355–18805
+while columns 0/1 release 18505 and re-enter 18580, and column 2 releases 18655 and
+re-enters 18730. These are arrangement relations, not positivity inferred from
+LN fraction. R1's 1M local weakness has changed with further training.
+
+In the dense 16 s core, O1 has 468 taps and four isolated LNs, while R1 has 301 taps
+and no LN. O1's four holds never overlap. Both are LN-coordination absent, High.
+O1 mainly uses moving TAP/chord groups and some fixed-pair exchanges; R1 mainly
+moves single-column TAPs. Other tags are not formally assigned. A TAP-heavy
+adaptation is not itself failure, and matching the source LN ratio is not the
+criterion. Ordinary cores, R0 images, other seeds and 64 s organization remain
+unreviewed by this fixed-core record.
+
+The repeated LN policy probe completes in 7.118 seconds and exactly reproduces
+both 2M outputs. SHA `783e13acb5c6d866499cbd311bc43dea498213a9e3e0c74197071eebbd9eeda3`.
+In the first four 32-onset blocks, O1 generated-history expected LN mass is
+62.548/71.720/88.362/75.626%, R1 is 82.489/59.115/60.501/52.992%. At block 1344,
+O1 retains 79.294% and R1 retains 56.677%. This is stronger retention than the
+respective early failure trajectories, but remains one source/seed diagnostic.
+
+### Quad policy concentration changes with learning
+
+The prospective 12-replay diagnostic completes in 37.831 seconds; every native
+row reproduction, H alignment and first-query equality check passes. Readout
+`quad-policy-probe-v1/readout.json`, SHA
+`1e37777dfd7fe101637ac453e1f61bc037848ffda9064ae871949ba23420cb53`.
+
+At source `27ac9470c9a4`, seed 23, the O1 core mean probability of a quad is
+0.0153% at 250k, 87.315% at 1M and 0% at 2M under its own generated histories. At 1M its
+source-history quad probability is only 1.452%, while all 67 realized generated
+attacks are quads. At 2M this generated core is instead LN-heavy, with 84.377%
+expected LN-head mass. At source `c1798e61528c`, seed 17, R1 generated-history
+quad probability changes 0.949%→93.409%→0%; its 1M source-history value is 1.507%.
+All 59 realized 1M attacks are quads. O1 also has 86.859% quad probability on this
+second 1M core, compared with 1.527% under source history.
+
+Thus these 1M runs reflect concentrated conditional policies under generated
+histories, not merely improbable samples from a consistently diffuse policy.
+The concentration largely disappears at 2M on the paired trajectories. Because
+histories differ, this does not isolate the cause among fitting/calibration,
+representation, style retention and feedback. The post-hoc locators are not
+independent confirmation. Evaluation: REFINE.
+
+### Remaining O1 burden: commitments can leave only one available lane
+
+A deterministic readout replays all generated physical rows at all three
+checkpoints. Before each suffix attack it counts occupied lanes, preserving the
+rule that a lane releasing at that instant still cannot restart. It verifies its
+rapid-pair counts against every existing generation summary. Output
+`rapid-occupancy-readout-v1.json`, SHA
+`c7f2886ebb54a5f5d3e1e9c2ddd4ee7778e28f38fe11aad9379c7c3632acafd8`.
+At 2M,439 of 498 O1 pairs below 40 ms occur with only one lane available for a new
+head, versus 8 of 28 for R1 and 0 of 30 for R0. At 250k O1 had 0 of 166 such constrained
+pairs; at 1M it had 75 of 370. The R0 occupancy count is descriptive: R0 does not
+receive a mandatory-H condition. For O1, previous endpoint commitments make the
+other lanes unavailable; a head at that H is therefore forced onto the sole
+free lane. This is a sufficient factual explanation of head placement at that
+step, not proof of why the earlier LN decisions were learned.
+
+The largest 2M O1 run is on source
+`4f8b228d1b19985500cfbd43c4a166a3708c81cc9e57addcaaba8e3308aab2ca`, seed 23.
+Column 2 attacks 18170/18205/18239/18273/18308/18342/18376/18411 ms: eight attacks
+over 241 ms, with 34–35 ms gaps. Earlier generated LNs occupy column 1 at 18033–18891,
+column 3 at 18067–18411 and column 0 at 18136–18411. All three block a head for the
+whole burst, including 18411 under the no-close/restart rule. The same supplied
+H permits R1 and source to distribute attacks across columns without such holds.
+This is a generated allocation problem, not an unavoidable property of R/H.
+
+All six canonical context images for O1/R1/source were inspected; the last page
+covers 742 ms. Manifest SHA `2b52b1a2322a910d1bb11023574fe1b1c6bf682f7ac268e46e1f714fd1789302`,
+factual review SHA `a05d463e27f78cae084a914d7c52796037b4ec6ee18ae9c4088c93b0dc710f0b`.
+No new semantic label or universal playability cutoff is assigned by this probe.
+The rapid-pair locator selects an adverse case; the population readout supplies
+its separate frequency evidence.
+
+### Next research decision
+
+Do not select O1 from lower NLL or more LN output. R1 remains cheaper and avoids
+most observed rapid recurrence at 2M; R0 also improves markedly. Further common
+training remains a live explanation because fitting and native behavior are still
+changing. Another initialization, unused groups and larger-context ordinary
+inspection are still needed before a stable model choice.
+
+For a targeted O1 branch, inspect how an endpoint candidate exposes the future
+availability implied by prior commitments. Source audit shows that the current
+query reads exact remaining LN times and near/far timing information, but each
+candidate vector encodes duration, adjacent gaps, distance/rank to the endpoint
+and its role. It does not explicitly encode the number and spacing of mandatory
+H that would have only one free lane under that candidate and already committed
+plans. The network could infer some of this from its inputs; the audit does not
+prove a missing-information impossibility.
+
+A candidate-conditioned availability feature derived only from supplied R/H and
+already chosen plans is a distinct, testable access-path change. It introduces
+no new source LN oracle, no minimum-interval rule and no repetition penalty.
+It should be compared against matched additional training of the current O1,
+with the same LN/mode and burden checks; any model/plan/source change requires
+a new proposed Card and explicit checkpoint-migration accounting. Do not silently
+extend the immutable 2M plan or relabel completed checkpoints. Coarse external
+LN-intent conditioning is not currently the first intervention: LN production
+and independent coordination have already emerged, while safe allocation of
+future capacity is a concrete remaining problem. Direction remains REFINE;
+no new training or representation change has been executed from this section.
