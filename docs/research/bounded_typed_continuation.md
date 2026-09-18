@@ -18,7 +18,8 @@ implements joint decisions and dependent endpoint likelihoods and sampling.
 [`data.py`](../../src/pulsefield_model/research/bounded_typed_continuation/data.py)
 projects source labels into bounded, batched teacher-forced training windows.
 The packaged `bounded_typed_smoke` configuration provides a bounded learning-check
-runner. The corpus training and generated-quality comparison have not run.
+runner. A 16-chart learning check has run; the corpus training and generated-quality
+comparison have not run.
 
 ## Conditions and prediction tasks
 
@@ -173,6 +174,67 @@ Other tests compare indexed exact state against full replay and compare bounded
 and BOS loss/parameter gradients with an LN older than the learned context.
 
 ## Comparison and evaluation plan
+
+### Initial 16-chart learning result
+
+Clean source `a178bcfe2badaaea47ae9abce02f2494b8ff9643` was tested on 16 distinct
+TRAIN groups, with 128 selected onsets per group. Each arm started from model seed
+171 and used the same shuffle seed 271, 128 AdamW updates and two intervals per
+update: 32,768 exposures over 2,048 distinct source onsets. The slice contains 828
+LN and 2,541 TAP heads, independent multiple-LN endpoints, long gaps and crossing
+holds. It deliberately tests pipeline learning, not population quality.
+
+| Arm | Total factor NLL/onset, initial → final | Training time | Parameter count |
+| --- | --- | --- | --- |
+| R0 | 4.691517 → 2.794169 | 64.710 s | 2,281,104 |
+| R1 | 4.409525 → 2.441500 | 65.250 s | 2,281,104 |
+| O1 | 6.953991 → 2.592007 | 100.070 s | 2,355,835 |
+
+These local-window costs show within-arm fitting progress; they do not rank the
+three representations. O1's head NLL falls 4.166273→2.194355 and endpoint NLL per
+born LN falls 6.895225→0.983565. All three satisfy support and finite-gradient checks.
+Sampled RSS remains below 2.64 GiB and MPS driver memory below 0.96 GiB, with no
+swap growth. O1 evaluates 21,913,664 candidate pairs during training, with backward
+recomputation. Total run time including loading and initial/final evaluation is
+112.186 s for O1, 72.297 s for R1 and 70.997 s for R0. This throughput applies only
+to the selected 673–2288-row source charts. The seven intervals using the full
+512-row raw envelope span 59.029–87.300 seconds, median 69.851 seconds; a corpus-wide
+context-span distribution remains unmeasured.
+
+The initial type gate required negative log probability on true LN_START lanes to
+improve against random initialization. All three fail that rule: O1 1.030→1.449,
+R1 1.119→1.339 and R0 1.128→1.642. A subsequent diagnostic identifies a limitation
+of that positive-only comparison. LN prevalence among feasible lane/onset positions
+is 11.07%, while initial mean LN probabilities are 30.83–34.25%. Correcting that
+excessive prior can lower probabilities on positives while improving classification.
+
+A read-only audit reproduces initial/final head losses and scores both classes.
+O1's full binary LN NLL improves 0.484454→0.223365, versus 0.347905 for a fitted
+constant prevalence. Its LN AUROC improves 0.621507→0.907881. Conditional TAP/LN
+NLL at true head locations improves 0.697922→0.333056; even a baseline allowed each
+interval's true LN fraction has weighted NLL 0.371819. Within-interval type AUROC
+improves in all 12 intervals containing both types, with median 0.532→0.791.
+R1/R0 also improve proper binary scores and within-interval discrimination.
+
+The original gate remains failed, and this post-hoc diagnostic does not establish
+a quality pass. It does show that describing these models as learning only
+endpoints would omit evidence of type discrimination. Subsequent checks should
+predefine proper all-class scores and within-interval discrimination, while
+tracking positive rates and free-generation mode collapse separately. Native
+sampled generation, independent groups and Foundation/human quality judgment
+remain necessary.
+
+Artifact identities: interval manifest SHA-256
+`fe6090618154f2026e34ce5d432ddc2368d692cd50f0fc28d563a42e308e8fda`;
+paired learning readout
+`b76d1e742887eb22bb6e244229d3925e63e829584780917b80efd2479ee38594`;
+post-hoc type readout
+`1f56d656134486e325ab4b4cc8d2baee80015c267e3a9fc1403dcc923b8c1d43`.
+They are local generated evidence under
+`artifacts/bounded-typed-continuation/smoke-20260918-v1/`; the observations above
+remain interpretable without those files. No annotation or human gold was changed.
+
+### Learning-check execution and main comparison
 
 The learning-check entrypoint is
 `python -m pulsefield_model.research.bounded_typed_continuation.smoke_hydra`.
