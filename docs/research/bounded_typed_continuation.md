@@ -17,7 +17,8 @@ owns permitted exact-state and timing inputs;
 implements joint decisions and dependent endpoint likelihoods and sampling.
 [`data.py`](../../src/pulsefield_model/research/bounded_typed_continuation/data.py)
 projects source labels into bounded, batched teacher-forced training windows.
-The corpus training and generated-quality comparison have not run.
+The packaged `bounded_typed_smoke` configuration provides a bounded learning-check
+runner. The corpus training and generated-quality comparison have not run.
 
 ## Conditions and prediction tasks
 
@@ -172,6 +173,33 @@ Other tests compare indexed exact state against full replay and compare bounded
 and BOS loss/parameter gradients with an LN older than the learned context.
 
 ## Comparison and evaluation plan
+
+The learning-check entrypoint is
+`python -m pulsefield_model.research.bounded_typed_continuation.smoke_hydra`.
+Use explicit `mps` dependencies on this Mac. Pin `interval_manifest`/`interval_sha256`,
+`catalog_path`/`catalog_sha256`, `split_manifest`/`split_sha256`, `source_cache_dir`
+and a fresh `output_dir` through Hydra overrides. Select `model.arm=R0`, `R1` or
+`O1`; packaged defaults select O1. The runner requires clean committed source,
+checks TRAIN identities before loading rows, writes resolved and projected config,
+and refuses an existing output directory. Its report-point checkpoint stores
+parameters, optimizer, source exposure and draw/RNG state. Automatic resume is not
+implemented in this small check.
+
+`smoke_selection.select_intervals` can prepare a deterministic mechanical slice
+from a pinned TRAIN census and catalog: 16 distinct groups, 128 target onsets each,
+with TAP, mixed, LN-rich, independent-endpoint and long-gap examples. Source lengths
+are restricted to 640–2400 physical rows for this first pointer exercise. The
+manifest records every source and interval, crossing-hold counts and selection
+facts. This deliberately selected slice does not estimate population quality.
+
+The default check uses 128 AdamW updates, two intervals per update, a shared shuffle
+seed and actual-onset normalization. It separately records observed TAP/LN lane
+probabilities, complete row/head costs and endpoint costs; no auxiliary term uses
+those diagnostics. Preparation, dense prefix/target forward, candidate scoring,
+backward, optimizer steps, checkpointing and evaluation are recorded or included
+in elapsed-time totals. The complete run has an 1800-second limit and explicit
+driver/RSS, available-memory, swap-growth and output guards. These settings bound
+a pipeline check; the main screen remains separately planned below.
 
 Use roughly matched, few-million-parameter common encoders, identical source
 intervals and training initialization seeds, with all arms trained from scratch.

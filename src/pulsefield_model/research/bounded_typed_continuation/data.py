@@ -208,7 +208,7 @@ def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: i
                          sum(i.stop - i.start for i in intervals), sum(i.start - first for i, (first, _) in zip(intervals, crops)), spans)
 
 
-def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True):
+def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None):
     """Sum every task factor, normalized by actual supervised source onsets.
 
     Returned head/endpoint sums describe local training factor costs. They are
@@ -230,6 +230,20 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
         raise ContractError('Source decision is outside the model support')
     head_nll = -selected.sum()
     endpoint_nll = (model.endpoint_log_probs(hands, batch.states, batch.labels, batch.endpoints, batch.views,
-                                           candidate_budget=candidate_budget, recompute=recompute).sum().neg()
+                                           candidate_budget=candidate_budget, recompute=recompute, ledger=diagnostics).sum().neg()
                     if model.pointer is not None else head_nll.new_zeros(()))
+    if diagnostics is not None:
+        with torch.no_grad():
+            observed = torch.tensor(batch.labels, device=like.device)
+            choices = torch.tensor(model.choices, device=like.device)
+            for name, action in (('ln_type', 2), ('tap_type', 1)):
+                values = []
+                for lane in range(4):
+                    at = observed[:, lane] == action
+                    values.append(-probabilities[at][:, choices[:, lane] == action].logsumexp(-1).sum())
+                diagnostics[name + '_nll_sum'] = float(torch.stack(values).sum().cpu())
+                diagnostics[name + '_count'] = int((observed == action).sum().cpu())
+            diagnostics.setdefault('endpoint_decisions', 0)
+            diagnostics.setdefault('scored_order_factors', 0)
+            diagnostics.setdefault('candidate_pairs', 0)
     return (head_nll + endpoint_nll) / batch.source_onsets, torch.stack((head_nll, endpoint_nll))

@@ -110,8 +110,8 @@ class EndpointPointer(nn.Module):
             def block(values, owned_parts=tuple(parts)):
                 features = np.concatenate([factors[i].view.candidates(factors[i].index, start, stop)
                                            for i, start, stop in owned_parts])
-                owners = torch.tensor([i for i, start, stop in owned_parts for _ in range(stop - start)],
-                                      dtype=torch.long, device=values.device)
+                owner_ids = np.repeat([i for i, _, _ in owned_parts], [stop - start for _, start, stop in owned_parts])
+                owners = torch.as_tensor(owner_ids, dtype=torch.long, device=values.device)
                 scores = self.score(values.index_select(0, owners), values.new_tensor(features))
                 offset, sums = 0, []
                 for _, start, stop in owned_parts:
@@ -188,7 +188,7 @@ class BoundedModel(nn.Module):
         return self.joint(hands).masked_fill(~mask, -torch.inf).log_softmax(-1)
 
     def endpoint_log_probs(self, hands: Tensor, states: Sequence[Schedule], heads, endpoints,
-                           views: Sequence[TimingView], *, candidate_budget=8192, recompute=True):
+                           views: Sequence[TimingView], *, candidate_budget=8192, recompute=True, ledger=None):
         """Joint endpoint likelihood per onset, marginalizing both factor orders.
 
         Chosen head groups and previous within-row true endpoints are legal
@@ -215,6 +215,9 @@ class BoundedModel(nn.Module):
                     factors.append(EndpointFactor(view, state.index, start, stop, targets[lane]))
                     owners.append(2 * i + order_id)
                     assigned[lane] = targets[lane]
+        if ledger is not None:
+            ledger.update(endpoint_decisions=len(factors) // 2, scored_order_factors=len(factors),
+                          candidate_pairs=sum(f.stop - f.start for f in factors))
         if not factors:
             return hands.sum((1, 2)) * 0.
         context = self.pointer.context(torch.cat((torch.stack(contexts), hands.new_tensor(np.stack(raw))), -1))

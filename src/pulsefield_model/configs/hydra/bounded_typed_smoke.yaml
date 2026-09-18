@@ -1,0 +1,50 @@
+defaults:
+  - bounded_typed_smoke_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+# Pin the TRAIN selection and existing allocation before execution.
+interval_manifest: ''
+interval_sha256: ''
+catalog_path: ''
+catalog_sha256: ''
+split_manifest: ''
+split_sha256: ''
+source_cache_dir: ''
+output_dir: artifacts/bounded-typed-continuation/smoke
+device: mps
+model_seed: 171
+shuffle_seed: 271
+cpu_threads: 1
+updates: 128
+batch_size: 2
+report_every: 8
+candidate_budget: 8192
+learning_rate: 0.001
+weight_decay: 0.01
+max_grad_norm: 1.0
+warmup_updates: 8
+max_seconds: 1800.0
+model:
+  arm: O1
+  hidden: 128
+  levels: 8
+  expansion: 4
+  coupling_rank: 16
+resources:
+  driver_limit_bytes: 6442450944
+  rss_limit_bytes: 6442450944
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 2147483648
+  max_swap_growth_bytes: 134217728
+  checkpoint_max_bytes: 134217728
+  disk_reserve_bytes: 1073741824
+  output_max_bytes: 536870912
+  release_mps_cache_at_boundaries: true
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null
