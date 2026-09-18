@@ -1840,3 +1840,34 @@ Record exact commands and source digests before launching. Sampling a moderate
 LN-rich slice, frozen features, known onset roles, teacher-forced prior endpoints
 and independent simultaneous duration heads limit all conclusions. Qualitative
 quality requires subsequent complete generated contexts and long-gap checks.
+
+Implementation is artifact-local under `linked-endpoint-head-v1/scripts`.
+The exact extraction command is:
+
+```sh
+PYTHONPATH=artifacts/oracle-time-continuation/m3-20260917/skeleton-time-runtime-v8/src caffeinate -i uv run --offline --extra mps python artifacts/oracle-time-continuation/m3-20260917/linked-endpoint-head-v1/scripts/supervise.py extract
+```
+
+Fitting uses the same command with final argument `fit`, after a complete
+verified feature manifest exists. Initial extraction stopped while serializing
+the first chart: the structured disk row's float64 time view has a12-byte stride,
+which PyTorch cannot consume directly. `attempt-r1` preserves the original code,
+selection, partial output and failure. An owned contiguous float64 copy fixes
+storage without altering times, selection or the scientific comparison. The
+retry's exact selected sources/targets equal the failed attempt's. Five focused
+checks pass: crossing-hold reconstruction and prior-plan boundary, mirrored
+context parity, untruncated future support/padding gradients, generic-prior
+history isolation, and exact independent storage of structured timestamps.
+`selected-checks.json` SHA is
+`ca8b36a1b035d3ab78497a5a78943a5f33fc14a3056b3fafa08c3338ea08a548`.
+
+Current source SHAs are core.py
+`3d6ef6e4bb6137b2fd009336ef6140a42d935ab6b12b0d79dbb0b130e70b4276`,
+extract.py `00688da5d6d0e2bbc4761e6ca69cc000d3cbabbcf4dd27f07ff9a19ae0965ce0`,
+fit.py `e54bcfbdc7dd6a1459e1151e3a7254f1af924603fbe1e51f8b43ab029e54ad9b`,
+supervise.py `ae460bde70899c2cdfdb3e7ed72d86ae65b101f557dc63bc56f17b121c1a67a7`.
+The retry selection SHA is
+`ee581d536d08d32b0a1269e8159672b1c179c893fc6d295e19b6383925130289`:
+128 TRAIN charts/7010 selected heads and32 validation charts/1794heads, with
+155036/30969 total event rows respectively. Context width is1096. Extraction
+remains active at this record; no fitting result or generated-decoder claim exists.
