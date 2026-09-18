@@ -984,3 +984,50 @@ its reused descriptive helper is the pinned earlier generation script SHA
 `5b6f4286fa82d7ff9bee76284268fa761d0a099d127200f8ff6156aa174ea8c4`.
 The script passes syntax compilation; actual execution and checkpoint identities
 remain pending. Evaluation/Decision pending.
+
+## Corpus feasibility revision-2 result: all arms at 250k
+
+All three CPU arms pause successfully at exactly 250,000 source-onset exposures
+after 333 optimizer updates. Shared draw/cursor, physical/prefix/padded-row ledgers,
+context spans and exact coverage bitmaps match; configurations differ only in arm
+and output directory. Each covers 243,346 distinct onsets, 1,227 charts and 1,081
+groups. All loss/gradient/support/resource checks pass. The bounded feasibility
+gate is met; generated quality and arm choice remain unresolved.
+
+| Arm | Complete segment seconds | Peak task footprint bytes | Checkpoint SHA-256 |
+| --- | --- | --- | --- |
+| O1 | 276.129 | 918095456 | `f3e3b264fa6eacf9f3a5949afa0f1b6c81bad3571ae07cc852a29a371b98f366` |
+| R1 | 188.842 | 923387536 | `7c83a4920aed8d07aebae4241ca6067d066dd0ecf7fa3f309ffa6da9f804dcbf` |
+| R0 | 176.337 | 924599952 | `a3b88f7f211bb1642e0acb56833e496027c86ee3eb826f5d43e87cf46b617671` |
+
+Swap growth is zero throughout. Each processes 262,671 physical target rows,
+338,544 prefix rows and 755,854 padded rows. O1 supervises 64,523 LN endpoints,
+129,046 order factors and 91,619,349 full-support candidate pairs with recomputed
+backward. The CPU run's first update-32 local cost agrees with the earlier MPS
+value within 0.0000002 nats/onset; no model geometry was changed to obtain the
+runtime/memory improvement.
+
+First-32 to last-32 update summaries indicate learning but use different source
+windows: local O1 factor cost 4.713912 to 2.397143, R1 3.502996 to 2.425545, R0
+3.583767 to 2.547641 nats/onset. These are not full-suffix cross-arm scores.
+Proper LN binary NLL moves 0.294279 to 0.180289 for O1, 0.308116 to 0.185841 for
+R1 and 0.310573 to 0.186890 for R0. O1's final-window conditional TAP/LN NLL is
+0.322663, with predicted LN mass 19.081% against observed 18.377%; analogous R1
+NLL is 0.334705 and R0 0.330376. Feasible diagnostic cohorts can differ slightly
+because each factorization has different already-known obligations; do not treat
+them as a common joint code-length comparison.
+
+The 1,330 selected intervals now include target densities up to 38 H/second,
+versus 15 in the small check. Only 20 intervals reach at least 24 H/second, so
+the dense regime remains rare. Among intervals using the full 512-row history
+envelope, median span is 111.000 / 64.579 / 46.315 / 39.163 seconds for target
+peak-density bins [0,8), [8,16), [16,24), [24,infinity), with 16/232/101/14
+intervals respectively. These are paired training-window statistics, not a
+corpus-time distribution or proof of learned multi-scale organization.
+
+Readout `corpus-20260918-v1/training-readout-250k.json`, SHA
+`1b39b734e38565ce0d927b9c776791da186faba15b553d4644228a504044fdc4`, verifies
+all checkpoint/ledger/config identities and records the discarded MPS attempt
+and diagnostic runtime separately. The development-screen Card's three checkpoint
+inputs are now the exact identities in the table. Proceed with its frozen
+24-group/three-seed conditions. Evaluation: REFINE; no generated-quality verdict.
