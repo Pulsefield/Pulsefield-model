@@ -232,3 +232,114 @@ No human records were changed and no human rationale was invented.
   must not be transferred onto pure disjoint A/B alone.
 
 Generated Jack/Trill judgments remain unreviewed until the new samples are read.
+
+## Native-screen result: primary guards pass, trajectories differ
+
+The screen completes216 generations and72 whole-suffix scores in697.909s. Every
+mechanical/export/reparse check and the three selected exact raw-state recoveries
+passes. Peak footprint230114240 bytes, zero swap growth. The training, evaluation
+and rendering processes are all terminal; no live job remains from this experiment.
+Raw readout SHA
+`c957b31053872019f6e8ac74fb1e229529a0ed558030e6db1a73a3d9e4e96c1a`;
+`r1-initialization-20260919-v1/readout.json` SHA
+`48a7cece3ffd7c9ade1c81023cfa9857a55941116bfc421182c465369b66c02d`.
+
+| Exposure | Initialization | Pooled suffix NLL | LN head share | Group mean rapid pairs/1000 heads | Quad rows |
+| --- | --- | --- | --- | --- | --- |
+| 250k | 171 | 2.268465 | 9.582% | 2.497277 | 507 |
+| 250k | 172 | 2.247107 | 8.188% | 2.266637 | 612 |
+| 1M | 171 | 2.054385 | 8.072% | .353136 | 19354 |
+| 1M | 172 | 2.210655 | 1.516% | .042441 | 2 |
+| 2M | 171 | 1.915834 | 27.651% | .175522 | 104 |
+| 2M | 172 | 1.894703 | 51.323% | .338994 | 365 |
+
+At the predeclared2M endpoint, initialization172 has54 rapid pairs and maximum
+run2, versus28 and2 for171. The paired group-mean rate difference is+.163472,
+95% group-bootstrap interval[-.038340,.529225]. Its macro suffix NLL is1.965769
+versus1.987622, difference-.021853, interval[-.034605,-.009672]. These intervals
+describe group variability conditional on these two fixed initializations; they
+are not uncertainty over a population of model initializations. All four numeric
+primary guards pass, including the broad half-to-twice-baseline LN-share guard.
+
+The early250k values are similar, but the1M trajectories have different generated
+modes: initialization171 has many quads while172 is overwhelmingly single-note,
+with very few LNs. Identical source draws alone do not determine the earlier quad
+outcome. At2M, low rapid burden is reproduced, but the aggregate LN style remains
+initialization-sensitive. This difference is not by itself proof that one output
+style is invalid under the shared timing/seed condition.
+
+The immutable eligible plan contains10735674 post-seed source onsets. Its2M run
+covers1697938 distinct ones, about15.8%. The definition was checked in `corpus.py`:
+these are suffix onsets, not total physical rows. A preliminary read incorrectly
+treated the plan's sources mapping as a list and failed before any mutation;
+the corrected mapping sum supplies this count. Coverage does not prove that more
+training will help, but incomplete learning remains a live explanation. The
+sampler is group-uniform, then chart-uniform, so this fraction is not an epoch
+count or a claim of uniform onset sampling.
+
+### Primary semantic guard
+
+All16 context images of the fixed LN-rich/dense2M cores were viewed. Manifest SHA
+`6a81820ec391a3ac49d22569b126982099cfc2121d46f1967aaf302bfd5f4a39`;
+`inspection-2000k-v1/review.json` SHA
+`60cd380e90929920790de39e7ccf47ec34a3bbe0df42e281a68d976968cf5395`.
+The frozen Foundation and eight canonical human documents were revalidated.
+
+The LN-rich core has242 LN heads,19 taps and three entering holds. LN coordination
+is present/prominent, High: distinct hold roles persist through the whole episode.
+For example, columns0/3 start19030 and end19405/19555, while column2 survives to
+19180; columns1/2 enter19330, and subsequent releases/restarts preserve different
+surviving layers. This is independent control rather than just parallel bars.
+
+The dense core has297 taps and five short LNs, no entering hold. Coordination is
+absent, High. Its only two-lane overlap is columns3/2 at106056–106169 and
+106112–106169, sharing their release. It then has one held lane plus a tap, and
+successive nonoverlapping short holds. This articulation does not establish an
+independently evolving multicolumn layer. The primary semantic retention guard
+passes; other tags in these two stress cores remain unreviewed.
+
+### Masked ordinary local review
+
+Public packet `ordinary-blind-v1/manifest.json` SHA
+`d975fa52536bdea1ba3d7e6fa6023ea92f556a3c57a57943985008ee6d17af0e`.
+All64 paired context images for the four preselected16s cores were viewed before
+their judgments were recorded. The private initialization mapping remains unread.
+Each pair is locally plausible with no observed forced rapid-repeat breakdown;
+the descriptive machine preference is a tie in all four. This is neither a human
+win-rate experiment nor evidence of statistical equivalence.
+
+- Index0: both have at most one simultaneous held lane in the core, so LN
+  coordination is absent, High. One version has a chain of single-lane LN handoffs,
+  the other mainly taps; both sustain a sparse moving-column pulse. Stream remains
+  unresolved because the calibrated comparisons do not settle this slower sparse
+  episode. Judgment SHA
+  `87e2a3bc1bc423584d0db0b55ac245983810d6c82077522cd62806733b53aa31`.
+- Index3: both show supporting Stream and supporting LN coordination, High. A
+  mixes TAP/chord/hold figures; B sustains a legato line with a definite independent
+  hold island. Their different articulation does not by itself decide quality.
+  Judgment SHA
+  `d3c638a39d51098475a1559a309311a4e550dcf67652223cdf18a966b403b39b`.
+- Index6: both show prominent LN coordination and supporting Stream, High.
+  Independent starts/releases persist through the dense-to-broader supplied timing
+  transition. Short LNs down to36ms were retained and inspected. A is more steadily
+  LN-led; B has more TAP/LN contrast. Judgment SHA
+  `b5a10fa698bbdc70cd2a3aa99df0548f9a4eac03cfbee82a876e2c9a2a7c3436`.
+- Index9: A is a flowing TAP-led version with one isolated LN anchor. B has
+  independent LN layers and a definite local column1 recurrence across six
+  changing-chord attacks311693–312550ms. Both receive prominent Stream, High;
+  A has LN/Jack absent and B has both supporting, High. More texture alone is not
+  scored as a quality win. Judgment SHA
+  `fb2f68d78d81ab887a40fb04f06bc7b3a05815ae2f9b2a53cbdb71187f1b8c0f`.
+
+These machine judgments distinguish actual event relations from the supplied
+timing skeleton: the model is not credited with creating the external gaps.
+Uninspected tags remain unreviewed. The two64s pairs still need full inspection;
+do not read `private-mapping.json` until their masked judgments are also recorded.
+
+### Current evaluation boundary
+
+All predeclared primary numeric and scoped semantic guards pass, making R1 worth
+further quality evaluation. Evidence remains exploratory under this proposed
+Card. Larger-context review, unused-group confirmation and a durable practical
+train/inference handoff remain open before a final quality decision. Preserve the
+full objective; local plausibility and mechanical validity do not complete it.
