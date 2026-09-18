@@ -1155,3 +1155,87 @@ Run `uv run --offline --python 3.10 --extra mps --group dev python
 artifacts/bounded-typed-continuation/corpus-20260918-v1/policy_drift.py`;
 script SHA `3a4a5dcbbfe20d97dee3148a6a690749ced7bcb17926d52b8d7ce7d26adf8d88`.
 Syntax check passes; measurement and interpretation pending.
+
+## Policy-drift result
+
+The probe completes in 6.484 s, SHA
+`b10c1131b5381812372211dd4026714544d3d5c8ec7479a3d97e6caa26b6a50c`.
+Both native histories exactly reproduce their saved seed-17 output rows. The
+first O1 query has expected total heads 1 and expected LN heads 0.9328866 on both
+source and generated paths. R1's first expected LN count is 0.4285475 versus
+0.4285476; the required tolerance passes. This is a within-model consistency
+check, not a claim that the two models have the same first distribution.
+
+| 32-onset block start | O1 source-history LN mass | O1 generated-history LN mass | R1 source-history LN mass | R1 generated-history LN mass |
+| --- | --- | --- | --- | --- |
+| 0 | 67.427% | 20.177% | 72.315% | 64.110% |
+| 32 | 68.009% | 5.164% | 74.763% | 62.207% |
+| 64 | 77.079% | 2.125% | 75.498% | 50.770% |
+| 96 | 75.873% | 1.344% | 75.906% | 66.145% |
+
+Mass is summed expected LN heads divided by summed expected total heads, over
+every legal joint choice; it is not probability conditional on a true source
+head location and not a realized LN fraction. The rows align the same supplied
+R/H times. O1 generated physical-row counts at these block starts are 30,63,96,128.
+Its first seed action leaves the 511-token raw context only at suffix onset 477;
+R1 reaches that point at onset 418. O1's policy shift therefore begins while its
+entire seed still fits in the raw receptive field. Literal context eviction is
+not a sufficient explanation for this case. This does not prove that learned
+use of longer history is adequate or identify the exact feedback mechanism.
+
+R1 also deviates from source-history predictions and later visits low-LN phases,
+but its trajectory retains substantial LN mass through several later episodes.
+Expected-policy mass shows the difference is not merely an unusually low realized
+sample count. Endpoint errors, lane choices, finite-data learning and retention
+of style remain live contributors; none is isolated by this observational trace.
+`policy-mass.png` and `.svg` visualize the complete block trajectories. Increasing
+the raw context alone is not the next intervention. Evaluation: REFINE.
+
+## Experiment Card: bounded-typed-corpus-exposure-v1
+
+Revision 1, proposed, acceptance none. Continue the authorized paired training
+trajectory to its predeclared 1,000,000-onset checkpoint, keeping source, model,
+optimizer, data draws and probabilities unchanged. Question: does additional
+native exposure improve closed-loop LN/organization coverage as well as source
+likelihood, or does the 250k policy gap persist? The sole scientific intervention
+is additional supervised exposure along the existing frozen plan; no coarse LN
+intent, source-future action labels, decoder penalties or longer context are added.
+
+Fixed clean source `1693d62ffaca04b2a6127d8e3a72d1988adf441f`. Resume exact O1/R1/R0
+250k checkpoints and SHAs recorded above, using the same plan SHA
+`a6e727d0bbfa414e7d20c742a18d84e8786f155b91629d285e7abf04348cd82f`. Run CPU one
+thread sequentially O1/R1/R0. Each fresh segment is named `<arm>-cpu-1000k` under
+the same corpus root; parent `*-cpu-250k` outputs remain unchanged. Verify parent
+journal boundaries, configurations and measured compute before continuing. The
+four-hour per-arm cap includes all CPU segments; record the separate discarded
+MPS/development costs rather than presenting them as free recovered exposure.
+All existing footprint/RSS/swap/available-memory/checkpoint/output guards persist.
+
+Command per arm:
+
+```sh
+uv run --offline --python 3.10 --extra mps --group dev python -m pulsefield_model.research.bounded_typed_continuation.train_hydra \
+  plan_file=artifacts/bounded-typed-continuation/corpus-20260918-v1/plan.json \
+  plan_sha256=a6e727d0bbfa414e7d20c742a18d84e8786f155b91629d285e7abf04348cd82f \
+  source_cache_dir=../Pulsefield-model/artifacts/oracle-time-continuation/full-cache-v1 \
+  resume_from=artifacts/bounded-typed-continuation/corpus-20260918-v1/<arm>-cpu-250k/checkpoint.pt \
+  output_dir=artifacts/bounded-typed-continuation/corpus-20260918-v1/<arm>-cpu-1000k \
+  model.arm=<ARM> device=cpu stop_after_checkpoint=1000000
+```
+
+Operational gate: all arms reach exactly 1M exposures, with identical paired
+draw/coverage accounting and zero support/nonfinite/resource failures; stop and
+retain a failed segment rather than silently changing the plan. Repeat the same
+24 development groups / three seeds / complete-suffix scoring and fixed visual
+cores at the new checkpoint, pinning the stage-specific driver before execution.
+No validation-selection changes are permitted in that learning-curve comparison.
+Report paired changes in macro/pooled NLL and mode/burden diagnostics, plus the
+same history-policy trace when it changes the interpretation.
+
+Continuing to the planned 2M checkpoint remains reasonable if fitting is still
+improving and no mechanical/resource regression occurs. A decrease in NLL without
+LN/organization improvement is not a quality pass; persistent degeneration requires
+reconsidering learning/conditioning/factorization rather than declaring success
+from lower burden. The original quality criteria still need sustained structure,
+independent LN control where present, larger-context inspection, another model
+initialization and independent confirmation. This card selects no winner.
