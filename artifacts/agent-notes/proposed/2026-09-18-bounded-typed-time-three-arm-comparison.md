@@ -772,3 +772,76 @@ sharply at the budget boundary. None of these proves an intrinsic representation
 advantage. One initialization and previously used validation remain development
 evidence; second initialization/unused groups and human blind comparisons are
 still required for independent confirmation.
+
+## Corpus feasibility result: first O1 resource stop
+
+The revision-1 command starts O1, then stops before starting R1/R0 because its
+swap-growth guard fires. It completes 40 updates / 30,295 onset exposures in
+102.380 s; the last durable boundary is update 32 / 24,384 exposures. Its
+checkpoint SHA is `374ac4c85dfad39b78b9f9dcf71a519b46a4deac6a142338502992589dd5bc01`.
+Eight completed updates / 5,911 exposures plus the partial next update are not
+recoverable as optimizer progress and must not be counted twice on resume.
+Completed coverage is 30,167 unique onsets / 158 charts / 156 groups; checkpoint
+coverage is 24,256 / 126 / 124. The feasibility gate has failed in this attempt.
+
+At the stopping backward check, global swap increases 149,487,616 bytes, exceeding
+134,217,728; available memory is 6,020,661,248 bytes. Across the sampled run,
+maximum active MPS memory is 539,189,504 bytes, driver 1,822,408,704 bytes and
+process RSS 3,070,427,136 bytes. At the update-32 cache-release boundary active
+memory is 120,041,216 and driver 738,181,120 bytes. RSS subsequently falls while
+swap rises. These overlapping counters cannot be added, and global swap does not
+identify a process owner. Physical footprint was not recorded. This does not yet
+establish an oversized live tensor, allocator leak or graph-cache mechanism.
+
+The condition selector was written and executed after training had stopped
+(source timestamps 1789723123/1789723159 versus stop 1789722991); it did not
+overlap that run. It pins 24 distinct validation groups: 12 group-uniform ordinary
+sources, then two highest-ranked remaining groups for each of LN fraction,
+independent endpoint-row count, one-second onset density, chord fraction, longest
+onset gap and adjacent eight-second density change. Eligibility is at least 128
+suffix onsets and 16 post-seed seconds: 1,632 charts / 435 groups. Selection seed
+571, prospectively fixed generation seeds 17/19/23, and uniformly drawn 16-second
+core intervals with optional enclosing 64-second contexts. These are development
+conditions, not new independent confirmation or source-matching targets.
+Condition manifest SHA:
+`f0ead07f41111c0413cae9b3f27b3a20c2abbedc2efea1b94f5c2b2707b808eb`;
+selector SHA `af8abee08a65ce07370b8fdd5009531a8b71a117cc4b3f0589133d4cd855209d`.
+Preparation takes 4.330 s. No generated validation result has been seen.
+
+## Experiment Card: bounded-typed-memory-attribution-v1
+
+Revision: 1. Acceptance: none. Bounded exploratory measurement under standing
+user authority, following the repository MPS investigation guide. Fixed source
+`411c8c29abad50a05cf3ceb90f20a20d93a321ed`, the exact O1 checkpoint and plan above,
+same MPS model/FP32/candidate budget, one CPU thread. No optimizer step or saved
+parameter change; backward is only a measured workload.
+
+Compare fresh processes: `fixed-all` repeats the first two draws after the
+checkpoint; `variable-all` consumes the next 128 draws in consecutive pairs;
+`variable-head` uses those same varying pairs but omits endpoint likelihood and
+its backward graph. All perform up to 64 microbatches, clearing gradients before
+each, with no intermediate idle-cache release. Thus fixed/variable distinguishes
+repetition from new input shapes/content; all/head removes endpoint work. It does
+not isolate every shape from semantic content. At every eight steps record macOS
+`vmmap -summary` physical footprint alongside synchronized RSS/active/driver/swap
+counters. Afterward drop model/data owners, collect garbage and empty MPS cache.
+
+Primary observations are repeated phase-aligned footprint/counter trajectories,
+fixed versus variable slope and cleanup response. A variable-only persistent
+increase motivates a shape/cache investigation; shared growth motivates lifetime
+or host/allocator investigation. Endpoint-only differences narrow ownership but
+are not by themselves proof of a backend graph cache. Resource guards are the
+unchanged 6 GiB RSS/driver, 8 GiB allocator, 2 GiB available and 128 MiB swap growth.
+Each process is capped at 180 measured seconds, checked each step; stop on the
+first violation and retain its result. These are diagnostic costs, not exposure
+credited to the main comparison. No guard is loosened and no recovery is launched
+until this diagnostic is interpreted.
+
+Run `uv run --offline --python 3.10 --extra mps --group dev python
+artifacts/bounded-typed-continuation/corpus-20260918-v1/memory_probe.py <mode>`
+for the three named modes sequentially, preserving a failed mode before the next
+independent control. Script SHA:
+`24714e2626b200068d8e9c64359a9d59b118ea50da117e37e8ba8d6a08803500`.
+Fresh outputs: `corpus-20260918-v1/memory-probe-v1/<mode>/`. Baseline physical
+footprint is unavailable; therefore compare within this instrumented probe and
+do not invent an aligned footprint for the stopped main run. Evaluation pending.
