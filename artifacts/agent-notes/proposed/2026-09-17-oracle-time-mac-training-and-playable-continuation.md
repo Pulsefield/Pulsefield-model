@@ -2346,3 +2346,63 @@ identities; abort on resource/input mismatch. Execute with frozen v8 PYTHONPATH
 and explicit `uv run --offline --extra mps python .../seed-type-population-v1/audit.py`.
 This runs independently of the frozen type replay and cannot change its inputs;
 operational durations are not a clean hardware speed comparison.
+
+### Type replay and seed census results
+
+typed-onset-type-audit-v1/r1 completes all nine trajectories in382.032seconds,
+readout SHA
+`33d0a079a1a1d333b0193c798fc30e3852422c722c34058cb311b641c16d253c`.
+Producer SHA is
+`4913a7536d38afaebb8f8a6722874503f983cb453a216ca985c0233c92547ec9`.
+Peak sampled RSS469696512bytes, minimum available8506163200bytes, zero swap
+growth. Every generated raw selected log probability reproduces exactly;
+maximum policy error is below1.8e-15. No current endpoint labels enter the
+distribution, and all recorded schedules/replay identities remain valid.
+
+Expected LN heads / expected total heads at required onsets under full typed
+support, T1, is44.481%/46.489%/3.915% for source85058a/871955/ecc496 true
+histories. Generic generated histories give1.045%/.605%/1.539%; context gives
+1.052%/.604%/5.526%. AtT.85 those generated fractions become
+.466%/.230%/.865% and.468%/.229%/3.845%. Mandatory-head-only versus full typed
+masking changes the two LN-rich generated fractions by a factor1.0036–1.0114,
+not a suppression. Generated/true-history typed fractions are.0130–.0236 in
+those cases. The prespecified history/training-mismatch routing criterion is
+met; the immediate-mask-suppression criterion is not. In pre-occupancy-zero
+strata, true-history typed fractions33.30%/29.79% still contrast with generated
+about1.0%/.59%. This is not explained by current occupancy count alone, but
+different full histories remain observational, not an identified cause of drift.
+The evaluation.json preserves ratios and criteria separately from the readout.
+
+The TRAIN census completes11563eligible charts in6.380seconds, readout SHA
+`bf17d1e9ffd565fbe04145e39cd62f461f3da468ee849625795b58d5cb941d5e`;
+producer SHA
+`f8a7afaf83369421d976271fa5ba8d9ca614bdf11183f6a2e5cf11ae342c87ce`.
+Peak RSS250609664bytes, minimum available8627453952bytes, no swap growth.
+4336charts have TAP-only complete seeds:802(18.50%) have no suffix LN,
+1399(32.26%) exceed10%suffix LN fraction, and2675have their first LN within128
+suffix onsets. Conditional on having one, the median first-LN onset offset is46.
+Suffix LN fractions are7.92%pooled,8.51%chart-mean,10.31%equal-group-mean.
+Groups appear in both seed strata when different charts share a song; subgroup
+group counts must not be added. The all-TAP-seed subsets with5–15% orabove15%
+release-only suffix candidates have23.14%/40.54%chart-mean LN fractions,
+versus2.25%when none are release-only. Those role statistics are oracle
+conditioning information in the new task, not learned predictions or desired
+generated-type quotas.
+
+Both probes conform to their bounded procedures; they remain exploratory REFINE,
+without Note/Card acceptance or generated-quality adoption. The two live missing
+pieces are learning the new conditional type decision rather than only masking
+an old actor, and improving effective supervision without requiring full-BOS
+learned-prefix computation. Known H/R roles and prior generated endpoint plans
+should be explicit candidate inputs in that comparison; full future source LN
+labels remain targets. Naive scheduled sampling is not a drop-in fix because
+the original next action can attack an occupied generated lane. A broader
+finite-context/object training comparison must define its exact state and
+supervision consistently and retain rare endpoint support, rather than letting
+small probability/readout gains stand in for playable-quality evidence.
+
+The reusable numerical results and limitations are appended to the original
+product worktree's `docs/research/oracle_time_m3_validation.md`. The published
+external-review snapshot89d5379 is unchanged. There are no live processes from
+either diagnostic; the goal remains active, and no independent external-model
+answer has been received.
