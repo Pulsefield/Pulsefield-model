@@ -153,3 +153,31 @@ change and inactive default field. `preflight.json` SHA
 `ba5709fc7639ff27e2b76d2ac5afa0eeaa1701750bef68ee99b6978e0bff6cf7`.
 The driver checks this preflight identity before training and compares all source
 exposure/coverage ledgers against the original three training segments afterward.
+
+## Pinned analysis and semantic preparation
+
+`readout.py` SHA
+`3b758eac0a34915926e325131562f2d99d88984ace22c9405f28ffae5ae04f8e`
+compares all three declared milestones with initialization171. Its shared
+row-recount/statistics helper is the interpolation `readout.py`, SHA
+`e1becc82254144700ea22b3c01adfb3abe4472cd1b0dd72345c46905c574a81e`.
+`render_primary.py` SHA
+`7961864a2a47158d869474202fcc6e884195acab32cb842aafb8b79971ce8b2f`
+prepares the fixed LN-rich and dense2M cores.
+
+`render_blind_ordinary.py` SHA
+`33790710dc8e215d0d8fb88e786fa595d868abda8bdae2daca819b22eb9ef52b`
+prepares the declared ordinary indices0/3/6/9 locally and0/6 at64s, with complete
+entry/exit contexts and paginated actions. Each pair's A/B initialization mapping
+is randomly shuffled and saved separately. This randomization only masks display
+identity; it does not select sources, checkpoints, generation seeds or outcomes.
+The mapping is to remain unread until scoped machine judgments are recorded.
+Masked machine review is not a human blind-preference experiment.
+
+The frozen Foundation byte digest was reverified as
+`b1aea3cbdfe9102e1657d01acfae3f36729467d0a8675b6272ba4f0b17c743ab`.
+Canonical human-example queries for Jack/Trill initially returned no matches with
+a key-count facet because the cached raw packet lacks materialized sourceFacts.
+Removing that facet recovered the known High comparisons. A missing query result
+is not evidence that a semantic pattern or human example is absent. Source4K
+identity is still checked by parsing before using those comparisons.
