@@ -1062,3 +1062,96 @@ Calibration preflight SHA
 verification. Reuse the actually inspected high-confidence LN positive and
 negative above; no cached machine rationale becomes a human comment. Rendering
 and these measurements do not change gold or Foundation.
+
+## Development-screen result at 250k
+
+The complete screen finishes in 688.168 s: all 216 generated charts pass independent
+coverage/occupancy/endpoints/closure and export/reparse checks, and all 72 full-suffix
+scores finish. The three actual raw-cache recoveries match state/RNG/buffers.
+Peak observed task footprint is 228,508,608 bytes, with zero swap growth.
+Descriptive readout SHA:
+`943808c0b27fa6c8c32f99eca5422f57b1f077781f7731cd7b4a61e8e2830a11`.
+
+Ordinary-group macro suffix NLL is O1 2.189516 versus R1 2.196794; the paired
+O1-minus-R1 difference is -0.007278, group-bootstrap 95% interval [-0.041318,0.025698].
+Stress-group macro NLL is O1 2.485951 versus R1 2.459914, difference 0.026037,
+interval [-0.042325,0.092383]. Combined macro difference is 0.009380,
+interval [-0.028848,0.047057]. These observations do not establish either an
+advantage or equivalence. Pooled full-suffix NLL is 2.291069/2.268465 for O1/R1.
+R0's different-condition macro/pooled costs are 2.456342/2.384288, not a same-task
+likelihood ranking against typed arms.
+
+Across 72 outputs per arm, new LN fractions are O1 3,316/127,933 = 2.592%, R1
+16,071/167,725 = 9.582%, R0 6,666/157,030 = 4.245%. Ordinary/stress O1 fractions
+are 3.442%/1.893%, versus R1 8.774%/10.250%. O1's per-chart range is 0.465–10.423%,
+R1 3.635–35.459%. Below-40ms same-lane pairs per thousand generated heads are
+1.298/3.076/3.324 for O1/R1/R0. O1's lower recurrence count accompanies more
+single-note TAP output, so it is not a playability improvement by itself. Full-
+suffix source-fitting similarity has not removed the free-running mode difference.
+
+All 32 generated context pages and four additional human-comparison pages were
+actually inspected. Render manifest SHA
+`42e6e90ab7846c6655a509f2895a313b87b1df2ac1706c737876814e67357f67`;
+machine review SHA `507bca0ba79a4c338752b2066e69f9b6c95b70346907e78a01e7c4265b98be9f`.
+In the LN-rich `0447fb187bc3` core 16958.524–32958.524 ms, O1 has 214 TAP and no
+LN heads; R1 has 225 TAP / 82 LN heads and three entering holds. Original source
+has 259 LN heads at the same 197 onsets. O1 LN coordination is absent/high.
+R1 has repeated definite independent-control passages interleaved with TAP/chord
+runs: present/supporting, medium confidence at the whole 16-second scope. A
+witness is column 3 held 17005–17530 while other columns exchange shorter holds
+and column 2 taps at 17380/17455. At 29605 columns 1/2/3 start holds ending
+29980/29755/29830, followed by other-lane re-entry before the final closure.
+
+In dense `e6b273f7877d`, core 101905.910–117905.910 ms, source has 382 heads
+(two LNs) at 293 onsets. O1 has 323 TAP-only heads; R1 has 381 TAP / 18 LN heads.
+The two outputs have one/two below-40ms same-lane pairs, longest run two in both,
+so this inspected core has no prolonged rapid run by that locator. Conditions
+differ from the earlier short-fit dense failure; this does not prove that fixed
+regression case was repaired. O1 LN coordination is absent/high. R1 has a short
+independent figure: column 0 holds 112931–113101, columns 2/3 start at 113044 and
+end at 113158/113215, with independent intervening taps. Machine judgment is
+present/supporting with medium confidence; isolated single-anchor holds are not
+positive evidence by themselves. No whole-chart preference follows.
+
+The additional opened High/supporting human example is
+`human-2208bdfda699add6503ca166`, source `98357fbf0c617bae8d1783950fe0c3a1b97c5cf9366ebce920f9870a8424d4c9`,
+scope 87509–93156 with context 86097–94568 ms. It places an independent LN island
+inside a larger TAP section, with eight LN and 86 TAP heads. It has no substantive
+human comment. The generated dense island is briefer, limiting confidence; no
+percentage/duration threshold is inferred. All other tags, ordinary images,
+larger 64-second organization, other seeds and R0 images remain unreviewed.
+
+On the first LN-rich source, teacher-forced conditional TAP/LN probability at
+true head locations averages 75.969% LN for O1 and 77.120% for R1, while all
+observed heads are LN. Native whole-chart LN fractions for seeds 17/19/23 are
+2.167/2.327/2.743% for O1 and 30.188/21.647/22.058% for R1. These are different
+cohorts/conditioning states and cannot be subtracted as calibration error. They
+motivate measuring the complete head-policy mass on aligned source/generated
+histories before claiming that endpoints alone learned or that context is too
+short. Evaluation: REFINE; no arm selected and no quality completion.
+
+## Experiment Card: bounded-typed-policy-drift-250k-v1
+
+Revision 1; proposed, acceptance none, exploratory under standing user authority.
+Fixed source `1693d62ffaca04b2a6127d8e3a72d1988adf441f`, exact 250k O1/R1 checkpoints,
+condition index 12 and seed 17. No model update or generation change. Compute
+expected LN-head count and expected total-head count by summing each native legal
+joint distribution. Score all source-history H queries in finite batches and
+instrument a native free-running replay at the same R/H points. Require that the
+first head distributions agree within 0.00002 in both expected counts and that
+all sampled rows exactly reproduce the completed screen outputs. A failure stops
+the diagnostic and reopens implementation consistency before further training.
+
+Report ratios of summed expectations in 32-onset blocks, alongside physical-row
+counts and timestamps. This distinguishes a policy shift under generated history
+from mere unusual realized LN samples, and locates whether it begins before raw
+context eviction. It does not uniquely separate endpoint errors, lane allocation,
+training insufficiency or latent style retention. No counterfactual source action
+is forced onto an incompatible generated occupancy state.
+
+CPU one thread, at most 120 seconds, existing 6 GiB footprint/RSS, 2 GiB available,
+128 MiB swap-growth bounds. Fresh output `corpus-20260918-v1/policy-drift-250k-v1/`.
+Run `uv run --offline --python 3.10 --extra mps --group dev python
+artifacts/bounded-typed-continuation/corpus-20260918-v1/policy_drift.py`;
+script SHA `3a4a5dcbbfe20d97dee3148a6a690749ced7bcb17926d52b8d7ce7d26adf8d88`.
+Syntax check passes; measurement and interpretation pending.
