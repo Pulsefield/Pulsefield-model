@@ -17,6 +17,10 @@ owns permitted exact-state and timing inputs;
 implements joint decisions and dependent endpoint likelihoods and sampling.
 [`data.py`](../../src/pulsefield_model/research/bounded_typed_continuation/data.py)
 projects source labels into bounded, batched teacher-forced training windows.
+[`generation.py`](../../src/pulsefield_model/research/bounded_typed_continuation/generation.py)
+samples the native tasks and rebuilds bounded caches from raw checkpoints;
+[`verification.py`](../../src/pulsefield_model/research/bounded_typed_continuation/verification.py)
+independently checks completed outputs against the external condition and plans.
 The packaged `bounded_typed_smoke` configuration provides a bounded learning-check
 runner. A 16-chart learning check has run; the corpus training and generated-quality
 comparison have not run.
@@ -172,6 +176,38 @@ prefix: R1 content/query features must stay identical. O1 may read a prior plan,
 but changing its current endpoint label cannot change the current head decision.
 Other tests compare indexed exact state against full replay and compare bounded
 and BOS loss/parameter gradients with an LN older than the learned context.
+
+## Native generation and recovery
+
+`Rollout.from_seed` accepts the model, R/H timing, complete physical seed rows and
+the permitted crossing seed endpoints. It accepts no source suffix labels. Typed
+seed objects already closed inside the prefix are paired from that prefix; open
+ones use the explicit endpoint condition. Native sampling uses temperature one
+and the trained feasible distributions. Deterministic candidates consume no RNG.
+Skipped candidates change neither the physical clocks nor the learned history.
+
+The CPU generator owns all random draws, including endpoint order selection and
+full-support Gumbel sampling. A scored O1 decision records the head probability
+and marginalized endpoint probability; requesting unscored endpoints explicitly
+returns an unavailable endpoint log probability, not a substitute path score.
+
+A durable rollout snapshot retains exact facts, known obligations, CPU RNG and
+the most recent 511 raw physical events. Each raw event includes its predecessor
+timestamp and permitted plans chosen when that event was committed. No learned
+buffers are serialized. Restoration checks timing/configuration/parameter-byte
+identities and replays those bounded raw events using the same online kernels.
+This includes the extra timestamp needed for the 512-row raw dependency envelope.
+Parameter updates invalidate a live rollout. A failed step leaves its exact and
+learned state uncommitted, but callers must restore RNG from a durable boundary
+before retrying if sampling had begun.
+
+Synthetic CPU/MPS tests compare uninterrupted and restored rows, plans, RNG and
+probabilities. A full default-width, eight-level CPU test also restores after the
+511-token range has discarded three still-held seed heads. Separate full-output
+verification checks R/H coverage, unchanged seed, occupancy, terminal closure and
+every sampled O1 endpoint without reusing scheduler feasibility masks. Exported
+osu! files are reparsed into exact rows in the tests. These checks establish
+mechanical behavior on the fixtures; real sampled quality remains unevaluated.
 
 ## Comparison and evaluation plan
 
