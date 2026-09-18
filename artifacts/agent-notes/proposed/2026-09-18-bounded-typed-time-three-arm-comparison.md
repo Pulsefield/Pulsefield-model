@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-18
-Product revision: 411c8c29abad50a05cf3ceb90f20a20d93a321ed on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: 1693d62ffaca04b2a6127d8e3a72d1988adf441f on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -873,3 +873,52 @@ is a simpler practical route before changing GPU operator geometry. New script
 `corpus-20260918-v1/cpu_memory_probe.py` is a device/thread-only derivative of the
 recorded original; command substitutes it with modes `cpu-1` then `cpu-4`.
 Outputs remain distinct under `memory-probe-v1/`. Acceptance remains none.
+
+## CPU control results and corpus Card revision 2
+
+The CPU script SHA is
+`5bb0587d018bc90b31bccc0f15411adb89efb0cc33ca0383c187b9b53bba0a9d`.
+Both 64-step variable-all controls finish with zero swap growth. One thread
+takes 28.275 s, final footprint 733.1 MiB and peak 863.5 MiB; four threads take
+25.946 s, final 721.1 MiB and peak 857.2 MiB. Footprints stabilize after the cold
+portion. Both retain roughly their final host allocation after cleanup, but that
+small retained pool does not show the MPS trajectory's continuing growth.
+Minimum available memory is above 10.48 GB in both CPU runs. Result SHAs:
+
+- fixed MPS: `37a2f1dc7be31b5fb97c7678598323403f689823df1ebc1e312d4838b0b700d4`;
+- varying MPS: `f54554b96f570a624f8bc5ffce8629e561277d4b63ddd7ffcd0d24c332d003a4`;
+- varying head-only MPS: `35984df8dcb89ba104b47bf1d7d3b6db617ae733a0674d79c08ad5fcb777d5b3`;
+- CPU one thread: `d28d936b8c9b069f16d42b2d86dd766138ce3333b3b29898515f20a000f943c0`;
+- CPU four threads: `8a0de5034bfbe5703feb04cd10ac0c42737545d15eeb1c0472d4b3d3e22a517c`.
+
+Select one-thread CPU for the common training comparison: about 2.8 times faster
+than the variable-input MPS control, stable sub-GiB footprint in this workload,
+and only a small measured difference from four threads. This decision avoids
+changing model geometry before testing adequate training. It does not establish
+long-run training memory or universal backend superiority. Keep the probability
+heads, finite context, candidate support and sampling plan unchanged.
+
+Clean product source `1693d62ffaca04b2a6127d8e3a72d1988adf441f` adds direct Mach
+`TASK_VM_INFO_REV1.phys_footprint` measurement and a 6 GiB guard, and changes the
+corpus preset's execution default to CPU. A Darwin test compares the byte counter
+with independent `vmmap`; an injected counter verifies stop behavior even when
+RSS passes. All 17 affected training/memory tests pass in 8.35 s, including
+CPU/MPS exact recovery, and Hydra configuration inspection succeeds. The earlier
+102-test run still describes the preceding implementation scope; no new full-suite
+claim is made.
+
+The `bounded-typed-corpus-feasibility-v1` Card is now revision 2, proposed with
+acceptance none. Replace revision 1's source with the clean source above; replace
+MPS execution with CPU/one thread for every arm and add the 6 GiB Mac footprint
+guard. Fresh destinations are `o1-cpu-250k`, `r1-cpu-250k`, `r0-cpu-250k` in the
+same artifact root. All other data, initialization, optimizer, checkpoints,
+sampling, scientific thresholds and resource fields are unchanged. Run the same
+command with `device=cpu` and these new outputs, sequential O1/R1/R0. Every arm
+starts from scratch; none imports the failed MPS optimizer or its exposures.
+Preserve that attempt's 102.380 s and the five diagnostic runtimes as separate
+research costs, and include them explicitly in any overall cost claim. This is
+a new matched execution comparison, not a free recovery of the failed attempt.
+The 14,400-second cap still applies to each CPU arm's cumulative segments, while
+equal-compute interpretation must also disclose the discarded development cost.
+Evaluation remains pending; no representation or playability result follows from
+the execution-device choice.
