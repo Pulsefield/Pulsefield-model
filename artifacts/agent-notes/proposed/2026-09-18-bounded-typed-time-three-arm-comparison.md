@@ -1891,3 +1891,28 @@ seeds nested inside, seed1971,10000 resamples. Separate pooled counts, one-free-
 lane pairs, LN shares/quantiles, chord histograms and complete-suffix fitting
 remain in the readout. Numeric guard success never substitutes for calibrated
 LN-control/mode/organization inspection. Scientific conclusions remain pending.
+
+
+## Availability paired training result at2.25M
+
+P0/C0/C1 each reaches2,250,000 cumulative onset exposures and2974 updates; the
+new segment contributes250,000 onsets and329 updates. Draw/row/prefix/padding/
+endpoint-factor ledgers and coverage agree exactly:1,873,845 distinct onsets,
+6,735 charts and3,108 groups. No recovery discards or training failure occurs.
+Segment runtimes are269.571/314.910/334.380 seconds, cumulative charged training
+2444.867/2489.899/2509.400 seconds. This is an equal-exposure comparison; added
+endpoint computation is included in each separate compute ledger. The sequential
+CPU order is fixed P0/C0/C1 and cache/order effects remain a timing confounder.
+
+Training readout SHA `2cfb3b7e01e6591dd0be37bba84721e1995f468f819209597fb6b791cb8a036e`.
+Finalized checkpoints under the corresponding `<arm>-2250k/checkpoint.pt`:
+
+- P0: `a4769bdc1498e178e24dd40050612ffcf67e0076f6879b61ac086a9964686f95`;
+- C0: `acd44e22d15266f926fc107c804ac92c3ff02034dbbc0afa5b10d9a0f2119c2b`;
+- C1: `4572e55888d8498ec541222e2c30b68fa5963edf98e045e9c19761653ce82bbe`.
+
+All checkpoint digests were revalidated against the completed paired report.
+The predeclared fixed development screen can now run on these exact inputs;
+source stays `15d27db0b0723d7f606b1429c901d26c1f61e5ac`. No source/model or selection
+change follows from local training losses. Quality and control comparisons remain
+pending generated evidence.
