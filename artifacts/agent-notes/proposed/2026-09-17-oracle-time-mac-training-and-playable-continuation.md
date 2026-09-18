@@ -2316,3 +2316,33 @@ local interventions; different source/generated histories remain observational
 and cannot by themselves identify why the trajectories diverged. This diagnostic
 does not establish that a finite-context architecture or an end-to-end object
 model will train better; it only narrows the next practical intervention.
+
+### Exploratory Card: seed-type-population-v1, revision1
+
+Owner/accepted revision:this proposed Note/none. A read-only TRAIN population
+check prevents interpreting source/generated type differences as failure merely
+because the inspected sources are LN-rich. All six pilot seeds contain only TAPs.
+Question: how informative is an all-TAP 30-head seed about later LN organization
+in this corpus, and how does the supplied onset-role/event-union information
+change that population description? Reuse the pinned11564-chart TRAIN catalog,
+split and full-cache identities from timing-representation-audit-v1. Source is
+published89d5379 plus its identical frozen v8, with a new hashed census producer.
+No validation/test payload, model update, new generation or annotation mutation.
+
+Record eligible-chart suffix heads/LNs and first subsequent LN position; compare
+seed-with-LN versus all-TAP seed groups. Report chart and equal-song-group
+statistics, suffix LN-fraction bins (zero,up to1%,1–10%,10–50%,above50%) and
+first-LN onset distance. For all-TAP seeds additionally describe suffix
+release-only candidate fractions (zero,up to1%,1–5%,5–15%,above15%). These are
+population summaries, not the nonuniform window sampler's exact training risk
+or a definition of desired generated LN counts. No hypothesis is accepted by a
+ratio threshold; the result limits interpretation of the ongoing trajectory
+diagnostic and informs whether explicit type intent should be tested.
+
+Fresh owner `seed-type-population-v1/results`, exclusive creation, no overwrite
+or resume. CPU one thread,10-minute wall cap,2GiB process RSS,2GiB minimum
+available,128MiB outputs, no network. Verify source admission and note-count
+identities; abort on resource/input mismatch. Execute with frozen v8 PYTHONPATH
+and explicit `uv run --offline --extra mps python .../seed-type-population-v1/audit.py`.
+This runs independently of the frozen type replay and cannot change its inputs;
+operational durations are not a clean hardware speed comparison.
