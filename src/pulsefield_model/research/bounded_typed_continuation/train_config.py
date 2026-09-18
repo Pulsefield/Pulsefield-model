@@ -16,7 +16,7 @@ class TrainConfig:
     output_dir: str = 'artifacts/bounded-typed-continuation/corpus'
     resume_from: str | None = None
     stop_after_checkpoint: int | None = None
-    device: str = 'mps'
+    device: str = 'cpu'
     model_seed: int = 171
     cpu_threads: int = 1
     batch_size: int = 4
@@ -30,6 +30,7 @@ class TrainConfig:
     max_seconds: float = 14400.
     cache_max_sources: int = 64
     cache_max_bytes: int = 256 * 1024 ** 2
+    footprint_limit_bytes: int = 6 * 1024 ** 3
     model: ModelConfig = field(default_factory=lambda: ModelConfig(Arm.O1))
     resources: SmokeResources = field(default_factory=SmokeResources)
 
@@ -37,7 +38,7 @@ class TrainConfig:
         if self.device not in ('cpu', 'mps', 'cuda'):
             raise ContractError('Training device must be cpu, mps or cuda')
         for name in ('cpu_threads', 'batch_size', 'microbatch_size', 'report_every', 'candidate_budget',
-                     'cache_max_sources', 'cache_max_bytes'):
+                     'cache_max_sources', 'cache_max_bytes', 'footprint_limit_bytes'):
             if type(getattr(self, name)) is not int or getattr(self, name) <= 0:
                 raise ContractError(f'{name} must be a positive integer')
         for name in ('model_seed', 'warmup_onsets'):
@@ -52,7 +53,8 @@ class TrainConfig:
         if (self.microbatch_size > min(self.batch_size, 2) or self.batch_size > 8 or
                 self.model.hidden > 128 or self.model.levels > 8 or self.model.expansion > 4 or
                 self.model.coupling_rank > 16 or self.candidate_budget > 32768 or
-                self.cache_max_sources > 128 or self.cache_max_bytes > 512 * 1024 ** 2):
+                self.cache_max_sources > 128 or self.cache_max_bytes > 512 * 1024 ** 2 or
+                self.footprint_limit_bytes > 8 * 1024 ** 3):
             raise ContractError('Corpus training exceeds its bounded model, batch, candidate or cache envelope')
         if self.plan_sha256 and (len(self.plan_sha256) != 64 or any(c not in '0123456789abcdef' for c in self.plan_sha256)):
             raise ContractError('plan_sha256 must be a lowercase SHA-256 digest')

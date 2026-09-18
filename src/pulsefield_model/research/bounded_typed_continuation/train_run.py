@@ -16,13 +16,14 @@ import time
 import torch
 
 from ..oracle_time_continuation.runtime import (
-    ResourceGuard, atomic_checkpoint, log_boundary, verify_boundary, write_record,
+    ResourceGuard, ResourceLimit, atomic_checkpoint, log_boundary, verify_boundary, write_record,
 )
 from ..oracle_time_continuation.storage import file_digest
 from ..scoped_style_modeling.dataset import ContractError
 from .corpus import ChartCache, Coverage, next_batch, read_plan
 from .data import batch_likelihood, prepare_batch
 from .model import BoundedModel
+from .memory import footprint_bytes
 from .smoke_run import save_json, source_revision, synchronize
 from .train_config import TrainConfig
 
@@ -124,7 +125,10 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
             guard = ResourceGuard(config.device, config.resources, resource_log)
 
             def check(phase):
-                guard.check(phase, update=update, onset_exposures=exposure)
+                footprint = footprint_bytes()
+                guard.check(phase, update=update, onset_exposures=exposure, footprint_bytes=footprint)
+                if footprint is not None and footprint > config.footprint_limit_bytes:
+                    raise ResourceLimit(f'{phase}: task footprint={footprint} exceeds {config.footprint_limit_bytes}')
                 if sum(p.stat().st_size for p in output.iterdir() if p.is_file()) > config.resources.output_max_bytes:
                     raise ContractError('Corpus segment exceeds its output byte budget')
 

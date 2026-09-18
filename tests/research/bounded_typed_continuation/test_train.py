@@ -21,10 +21,12 @@ from .test_data import mixed_chart
 def test_hydra_packaged_projection_and_rejected_unknown_or_unused_fields():
     config = compose_config(['model.arm=R1', 'batch_size=3', 'microbatch_size=1', 'stop_after_checkpoint=250000'])
     assert config.model.arm == Arm.R1 and config.batch_size == 3 and config.microbatch_size == 1
+    assert config.device == 'cpu' and config.footprint_limit_bytes == 6 * 1024 ** 3
     assert config.stop_after_checkpoint == 250000
     assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_train.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.check_every_rows=1'],
-                      ['candidate_budget=0'], ['learning_rate=0'], ['microbatch_size=3'], ['cache_max_sources=129']):
+                      ['candidate_budget=0'], ['learning_rate=0'], ['microbatch_size=3'], ['cache_max_sources=129'],
+                      ['footprint_limit_bytes=0']):
         with pytest.raises((ValueError, ContractError)):
             compose_config(overrides)
 
@@ -161,3 +163,13 @@ def test_binary_diagnostic_counts_negative_examples_and_excludes_forced_types():
     assert record['ln_binary_nll_sum'] > 0 and record['ln_binary_brier_sum'] > 0
     assert record['head_type_binary_count'] < record['ln_binary_count']
     assert np.isfinite(record['head_type_binary_nll_sum'])
+
+
+def test_footprint_guard_stops_even_when_resident_set_guard_passes(tmp_path, monkeypatch):
+    monkeypatch.setattr(train_run, 'source_revision', lambda: 'e' * 40)
+    config = config_fixture(tmp_path)
+    monkeypatch.setattr(train_run, 'footprint_bytes', lambda: config.footprint_limit_bytes + 1)
+    with pytest.raises(ContractError, match='task footprint'):
+        train_run.run_training(config)
+    result = json.loads((tmp_path / 'whole/result.json').read_text())
+    assert result['status'] == 'stopped' and result['last_completed_update'] == 0

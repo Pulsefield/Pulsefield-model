@@ -414,13 +414,17 @@ the same boundaries. This distribution is not uniform over onsets or song time.
 The corpus entrypoint is
 `python -m pulsefield_model.research.bounded_typed_continuation.train_hydra`.
 Supply `plan_file`, `plan_sha256`, `source_cache_dir` and a fresh `output_dir`.
-Packaged defaults use four intervals per optimizer update, microbatches of two,
+Packaged defaults use CPU execution with one thread, four intervals per optimizer update, microbatches of two,
 AdamW at 0.0003, weight decay 0.01, clipping at one and a linear warmup through
 32,768 actual onset exposures. Gradients divide by the effective batch's actual
 onset count even when its microbatches differ in length. Full-support endpoint
 blocks retain the candidate budget and backward recomputation described above.
 The source-index LRU is bounded at 64 charts and 256 MiB of conservative charges;
 active microbatches can retain evicted charts, so process memory remains guarded.
+On macOS, the runner also reads `TASK_VM_INFO_REV1.phys_footprint` directly and
+enforces `footprint_limit_bytes` (default 6 GiB). Footprint and RSS overlap and
+must not be added. Footprint is unavailable on other platforms; existing RSS,
+device, available-memory and swap checks still apply there.
 
 Each segment writes resolved/projected configuration, resource and training logs,
 and safe-loadable model/optimizer/RNG/coverage checkpoints. `stop_after_checkpoint`
@@ -445,6 +449,52 @@ bounded chunks through the true chart end, paying each O1 endpoint exactly once
 even when it falls beyond its chunk. This supplies a common complete-suffix R1/O1
 score. CPU/MPS tests check microbatch gradients and exact pause/resume trajectories;
 chunking tests check complete-suffix likelihood and diagnostics.
+
+### Variable-input MPS memory and CPU execution
+
+The first corpus attempt at source `411c8c29abad50a05cf3ceb90f20a20d93a321ed`
+stops after 40 O1 updates / 30,295 onset exposures: global swap growth reaches
+149,487,616 bytes against a 128 MiB guard. The last durable checkpoint contains
+24,384 exposures. Total measured runtime is 102.380 s. Peak observed active MPS
+memory is 0.50 GiB, driver memory 1.70 GiB and RSS 2.86 GiB; these counters do not
+explain the process's complete footprint. R1/R0 do not start in that attempt.
+
+A read-only gradient workload starts from that checkpoint and compares 64
+microbatches on the same next 128 plan draws, without optimizer updates. Each
+process uses full-support endpoint scoring and one CPU thread unless specified.
+`vmmap -summary` measures physical footprint every eight steps. Cleanup drops
+model/data references, collects garbage and releases unused MPS allocator memory.
+
+| Workload | Time | Final footprint | After cleanup |
+| --- | --- | --- | --- |
+| MPS, fixed pair repeated | 24.629 s | 865.8 MiB | 605.8 MiB |
+| MPS, varying pairs | 79.825 s | 9.6 GiB | 8.5 GiB |
+| MPS, varying pairs, head likelihood only | 38.195 s | 5.4 GiB | 4.3 GiB |
+| CPU, varying pairs, one thread | 28.275 s | 733.1 MiB | 733.1 MiB |
+| CPU, varying pairs, four threads | 25.946 s | 721.1 MiB | 721.1 MiB |
+
+The fixed-input MPS footprint changes only 11.9 MiB from step 8 to step 64;
+varying-input footprint continues growing while post-backward active tensor
+storage stays near 62–67 MB. Both the common path and endpoint path contribute.
+This supports shape-related runtime retention, without establishing ownership by
+a specific backend cache. RSS can fall while footprint grows, so an RSS-only
+limit is insufficient. The direct Mach counter is checked against independent
+`vmmap` output in a Darwin test, and a runner test verifies its stop behavior.
+
+CPU is approximately 2.8 times faster than MPS for this varying-input workload
+and avoids its observed footprint growth. Four threads are only 8.2% faster than
+one in this single measurement. The corpus default therefore uses one CPU thread
+before changing model or pointer geometry. This preserves the probability model
+and leaves MPS optimization optional. These are bounded backward workloads;
+full optimizer training, longer-run memory and generated quality still require
+measurement. Neither a backend-wide leak nor universal CPU superiority is claimed.
+
+Evidence lives under
+`artifacts/bounded-typed-continuation/corpus-20260918-v1/memory-probe-v1/`.
+The varying MPS result SHA is
+`f54554b96f570a624f8bc5ffce8629e561277d4b63ddd7ffcd0d24c332d003a4`;
+one-thread CPU result SHA is
+`d28d936b8c9b069f16d42b2d86dd766138ce3333b3b29898515f20a000f943c0`.
 
 Generation retains existing regression cases and adds separately sampled ordinary
 and stress groups, with multiple seeds. Mechanical failures cannot be averaged

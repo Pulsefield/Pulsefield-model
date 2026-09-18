@@ -10,7 +10,7 @@ source_cache_dir: ''
 output_dir: artifacts/bounded-typed-continuation/corpus
 resume_from: null
 stop_after_checkpoint: null
-device: mps
+device: cpu
 model_seed: 171
 cpu_threads: 1
 batch_size: 4
@@ -24,6 +24,7 @@ warmup_onsets: 32768
 max_seconds: 14400.0
 cache_max_sources: 64
 cache_max_bytes: 268435456
+footprint_limit_bytes: 6442450944
 model:
   arm: O1
   hidden: 128
