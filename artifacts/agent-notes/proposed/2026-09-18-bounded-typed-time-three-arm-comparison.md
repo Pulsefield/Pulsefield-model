@@ -1287,3 +1287,72 @@ Use `policy_drift_1000k.py`, SHA
 syntax compilation. Invoke each through the same `uv run --offline --python 3.10
 --extra mps --group dev python` prefix; no source/model edit or new condition
 selection is introduced. Quality decisions remain pending actual outputs.
+
+## One-million development result and diagnostic correction
+
+The 1M screen completes all 216 generations and 72 suffix scores in 696.709 s,
+with every mechanical/export/reparse check passing. Peak footprint is 231736280
+bytes; swap growth remains zero. Readout SHA
+`ea86a71c1b047a996367943b1db230e5134b1b11dc6eb9a75841fcd787399389`.
+O1/R1 pooled full-suffix NLL improves from 2.291069/2.268465 at 250k to
+2.051118/2.054385. Ordinary macro scores are 2.006055/2.005809 and stress macro
+scores 2.245701/2.271089. Overall paired macro difference is -0.012571 with
+group-bootstrap 95% interval [-0.041833,0.013609]; no stable arm winner.
+
+O1's LN share rises to 27763/201873 = 13.753%, versus R1 18617/230635 = 8.072%
+and R0 14317/252012 = 5.681%. O1's chart range is now 0.321–74.412%, so its earlier
+broad lack of high-LN outputs is not invariant to training exposure. However,
+all three generate many more four-key attack groups: O1 17684, R1 19354, R0
+19047, versus 306 in the matched sources counted once per generation seed.
+At 250k the corresponding generated counts were 67/507/129. Fewer below-40ms
+pairs therefore cannot establish a lower overall recurrence burden.
+
+A post-hoc factual locator finds consecutive identical nonempty attack groups,
+retaining intervening release-only rows and reporting actual gaps without a
+semantic threshold. Readout SHA
+`4150db9021392bc1e92acb6fd18d12ca465036c0d46a3f5aab68ff7c65531685`.
+Examples include 67 O1 quad attacks at 76419–82787 ms (gaps 70–142 ms) on ordinary
+source `27ac9470c9a4`, seed 23, and 59 R1 quads at 105794–116340 ms (181–182 ms)
+on ordinary source `c1798e61528c`, seed 17. Both source charts have no suffix quad
+attack rows. These are locators for sustained repetition and mode concentration,
+not universal difficulty verdicts or automatic semantic labels. The 1M fixed
+core images are rendered but remain visually unreviewed at this record.
+
+The original 1M policy probe stops at its alignment assertion after exactly
+reproducing the O1 rows. Inspection of `Rollout.step` identifies a measurement
+omission: legal-singleton H decisions execute without invoking the neural query
+hook. They were missing from the captured probability sequence. This does not
+invalidate generated rows or the normalized deterministic probability of one.
+The original output is retained with a failure record; R1 was not attempted.
+
+Policy-drift Card revision 3 repairs only this readout: for a missing H callback,
+require exactly one feasible decision and add its exact head/LN expectation.
+Retain source, checkpoints, source/seed, limits and native reproduction checks.
+Use fresh `policy-drift-1000k-v2/`, script `policy_drift_1000k_v2.py`, SHA
+`9ead461be2ebdfef90abdca451a0723530c30f47dbb46b3df183cb8908e73c24`.
+Syntax compilation passes; no model or sampler changes. Acceptance remains none.
+
+## Corpus-exposure Card revision 2: complete the two-million checkpoint
+
+Continue all three arms from their exact 1M checkpoints to the existing plan's
+2M endpoint on unchanged source `1693d62ffaca04b2a6127d8e3a72d1988adf441f`.
+The held-out fitting curve is still improving materially, resource limits remain
+comfortable, and generation changes with exposure; neither early O1 rejection
+nor quality completion is supported. Four-key repetition is an explicit quality
+concern to carry into the final screen, not something to hide with a decoder rule.
+
+This is corpus-exposure Card revision 2, proposed, acceptance none. All protected
+scientific, sampling, optimizer, device, memory and cumulative four-hour-per-arm
+fields remain unchanged. Resume `<arm>-cpu-1000k/checkpoint.pt` with its pinned
+digest above; use fresh `<arm>-cpu-2000k`, set `stop_after_checkpoint=2000000`,
+and execute sequential O1/R1/R0 with the same command prefix/plan/cache settings.
+Parents remain immutable. The plan ends at 2M, so successful runner status is
+`completed`, not `paused`. Preserve any failure and stop the sequential chain.
+
+At 2M, repeat the fixed development conditions and inspect LN control, sustained
+repetition and larger organization. Lower NLL, more LNs or recognizable Jack
+structure cannot alone meet the playable-quality goal. If generation remains
+concentrated in undesirable recurring states, reconsider the common learning or
+conditioning setup; do not redefine success as mechanical legality. Source fitting
+and generated organization remain separate decisions. No implementation change
+or new external oracle condition is introduced by this continuation.
