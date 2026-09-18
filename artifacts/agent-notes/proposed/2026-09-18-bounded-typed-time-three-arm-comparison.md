@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-18
-Product revision: 89d5379f150cba9d1684822a44166765d38f644f; new implementation branch codex/bounded-typed-continuation
+Product revision: 2dc036579853c84815a2ddfa0b1b15b55a4ac0ff on codex/bounded-typed-continuation; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -148,3 +148,43 @@ until its exact resource and input manifest exists.
 
 Evaluation: REFINE. Note/Card acceptance: none. This owner tracks the new
 comparison; the earlier owner retains historical M3 and endpoint-probe evidence.
+
+## Implementation result: contracts, probability and bounded source projection
+
+Clean product commits `ee83ad0b3d028aed1fd22e32e70b51bae98bfa23` and
+`2dc036579853c84815a2ddfa0b1b15b55a4ac0ff` implement the exact scheduler, finite
+temporal encoder, permitted features, joint row/head distribution, dependent
+endpoint mixture and teacher-forced bounded windows. No new real-data model
+training or generation has run. These commits remain local; the published expert
+review snapshot is unchanged.
+
+The default R0/R1 models each contain 2,281,104 parameters; O1 contains 2,355,835.
+All common encoder/exact-readout/fusion weights initialize identically for a shared
+seed. O1's extra parameters implement endpoint scoring. Raw content uses committed
+actions, the preceding physical gap and permitted new plans. Exact query features
+contain complete clocks, occupancy, counts and known remaining durations, with
+R/H-only lookahead derived from the complete external condition.
+
+The full pointer likelihood packs factor/candidate pairs under a candidate budget,
+normalizes with chunked logsumexp, and recomputes features/activations during backward.
+CPU/MPS tests match dense values and every participating gradient. A saved-tensor
+test confirms more than a tenfold reduction in retained tensor storage for its
+synthetic 3,695-candidate-pair fixture. This is a correctness/storage mechanism
+check, not measured real-corpus throughput or peak system memory.
+
+51 bounded-model tests and 40 unchanged canonical replay tests pass together
+(`91 passed in 5.62s`, Python3.10/Torch2.11 with explicit MPS dependencies). Checks
+cover full 511-token dense/cache/crop equivalence, parameter gradients, exact
+index/replay equivalence, source-target support, mirrored joint probabilities,
+normalization over every feasible endpoint assignment on a small fixture,
+streamed sampling and unchanged draws under different chunk partitions.
+R1 inputs remain identical when only unseen source LN pairings change. An O1
+current endpoint label cannot affect its own head decision. Source windows retain
+real terminal semantics and endpoints beyond the target interval. Tests run on
+CPU and available MPS where applicable; this is not a full repository test run.
+
+The next gate remains an explicitly bounded 16-TRAIN-chart mechanical/learning
+check, with recoverable source, a pinned interval manifest and separate head/type
+learning criteria. Passing these unit checks does not establish learned LN use,
+training efficiency, generated organization or playability. Evaluation: REFINE;
+Note/Card acceptance: none; lifecycle remains proposed.
