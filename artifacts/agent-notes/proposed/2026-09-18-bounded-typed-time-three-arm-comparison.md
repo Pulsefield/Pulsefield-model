@@ -2082,3 +2082,36 @@ and `render_blind_ordinary.py`; inspect before writing semantic results. Keep th
 private ordinary A/B mapping unread until masked judgments are recorded. The
 additional High Jack/Trill calibration is recorded with all11 images inspected
 in the R1 Note. The overall playable-generation goal remains active and unfulfilled.
+
+### R1 screen and local review completed; wider review pending
+
+The R1 screen has now completed; session 39608 and both rendering processes are
+terminal. Its 216 generations and 72 suffix scores pass mechanics/export/reparse
+and three exact recoveries. Initialization 172 at 2M has pooled NLL 1.894703,
+group-balanced rapid rate .338994, maximum rapid run 2 and LN share 51.323%, versus
+initialization 171's 1.915834/.175522/2/27.651%. All predeclared numeric guards pass.
+Its LN-rich primary core retains prominent independent coordination, High; the
+dense core's five isolated short LNs do not establish coordination, absent High.
+All 16 primary context images were inspected. The scoped Note
+`2026-09-19-bounded-typed-r1-second-initialization` owns the exact evidence and
+the important 1M initialization divergence, not just the favorable 2M endpoint.
+
+The ordinary 16s pairs at indices 0/3/6/9 have also been inspected in full: 64 images,
+four masked descriptive machine ties, with concrete differences in LN handoffs,
+independent hold layers, moving flow and localized recurrence. This is positive
+evidence of local organization, not a human preference result or a final quality
+pass. Initialization identities remain masked. Source 0's sparse Stream judgment
+is unresolved; uninspected tags remain unreviewed.
+
+Next, inspect the two complete 64s pairs in
+`r1-initialization-20260919-v1/ordinary-blind-v1/ordinary-00-context_64s/` and
+`ordinary-06-context_64s/`. Their public manifest SHA is
+`d975fa52536bdea1ba3d7e6fa6023ea92f556a3c57a57943985008ee6d17af0e`; it lists 28
+and 27 pages per variant, respectively, including entry/exit context and the true
+chart end. No image in these wider packets has yet been inspected. Keep the
+private mapping unread until both masked judgments are recorded; the four local
+judgments are already saved under `masked-judgments/`. Then compare the full
+multi-scale evidence before deciding on more training, averaging or unused-group
+confirmation. Product source remains clean at
+`15d27db0b0723d7f606b1429c901d26c1f61e5ac`.
+There is no live experiment process to wait for or restart. The goal remains active.
