@@ -1375,3 +1375,46 @@ minimum2GiB available memory and swap-growth1GiB. Keep the training owner
 writer-conflict failures. Resume only after confirming the old process terminal
 and inspecting partial stage publication. Record source/runtime/init identities
 before launching; no remote publication or lifecycle transition is implied.
+
+### Clock-readout implementation and initial parity
+
+The optional path is implemented in the product worktree with default width0;
+seven runtime/config files, four test owners and two interface/plan documents
+change relative to the preimplementation snapshot. The snapshot contains the
+50 inherited modified/untracked files, with manifest SHA
+`e623642066483791b87baf4f5e295f209d2dab639645e7d794d3f1dbc246c928`.
+`clock-readout-v1/implementation-manifest.json` records the scoped final file
+hashes and diff, SHA
+`84974b3131ef004a58b4157be1eff5a2d6b9f53435b2bb20eaf530e713e35966`.
+
+Selected evidence comprises55 model/batch/Hydra tests, three periodic-resume
+and CPU/MPS generation/export recovery cases, and12 training/package tests
+with21 subtests. The actual-runner test was then extended and rerun to verify
+zero first-layer gradient at update1 and positive gradients in both clock
+layers at update2. `selected-checks.json` records exact commands and results;
+SHA `d5100d23ffc097a72939f11afdac5f80706debc6f701ddd56ed2de3f4b152e72`.
+This is selected evidence for the scoped change, not full inherited M3 readiness.
+
+Frozen runtime v8 manifest SHA is
+`09469489b1d5b0d3f9e92890fa0ae6f58c3a9ecc2bf78cad977a865a3d16790e`.
+The initial128-group validation reproduces2.259719950719731 NLL for both arms,
+with exactly zero per-case NLL difference over5,709 targets. It takes271.186
+seconds and changes no existing parameter. The new model has20,239,704
+parameters, including152,080 added clock parameters. Initialized clock weights
+SHA is `99a5ae9f72ba86ee3d477d47d238c2c8a950541af5f197fde2125c4ffe192750`;
+initial readout SHA is
+`1aa1d21093d85d51a6881c4c1247b4a558053aad4e121c733fc85ea3dabbf4e6`.
+
+The training driver `clock-readout-v1/run.py` SHA is
+`6b5cdce61b79b7ff3799725068daab15380684c9572a0895cacb262c4f5863e6`;
+shared helper SHA is
+`c26a477bdd4dbb9bf01112cc45e60d90eb90ba9e63b2c84a3d9c9d748eee08b9`.
+The first invocation requests100 updates per arm. Sampling and added-branch
+initialization use seed20260919; model construction retains preset seed17 and
+then loads every pinned parameter. There is no dropout or other training draw
+from that construction RNG. The driver records post-clip clock gradients and
+actual parameter-update RMS without changing the optimizer step. Its identity
+comparison normalizes dataclass tuples before comparing persisted JSON, and
+its kernel lock protects against duplicate drivers. Resume uses this same
+entrypoint with100 only after terminal confirmation;300 is a separate reviewed
+continuation. No default sampling or trained-model adoption changed.
