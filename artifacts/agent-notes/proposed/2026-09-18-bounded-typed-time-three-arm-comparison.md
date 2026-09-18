@@ -2194,11 +2194,30 @@ scoped Note records boundaries, exact action witnesses, human comparators and
 all evidence identities. These are Foundation-calibrated machine judgments,
 not human votes or physical playtests.
 
-Next perform the declared dense-run/short-LN diagnostic, preserving its separation
-from the preselected comparison. Distinguish freely chosen repeats, preceding
-occupancy allocation and equal-time release semantics before choosing a model,
-support or optimization change. The current result does not justify an automatic
-minimum-gap rule, more training, or a post-hoc quality pass for either checkpoint.
+The declared diagnostic is complete, under the scoped investigation owner
+`2026-09-19-bounded-typed-r1-burden-mechanism`. Recounting all 144 outputs and
+24 sources confirms zero source rapid pairs, ten 171 pairs with multiple lanes
+free, and 43 pairs for 172, including 25 with only one free lane. Each of those 25 has a
+verified native two-row alternative: release a generated hold at the preceding
+candidate, then use that lane without a below-40-ms head pair. Thus the observed
+prefix creates the constraint; the supplied timing does not require it.
+
+The local probability audit exactly reproduces 47 original generated-history
+log probabilities. At two masked 172 predecessor decisions, harmful choices
+carry about 25% and 26% probability, with the latter locally most probable.
+The 171 wider example includes a different, rare mixed LN-start row at .0067%.
+All 27 diagnostic images were inspected, including source and both-model views
+of the longest 29+29 ms run and the shortest 18/8 ms holds. The original masked
+judgments remain unchanged. Detailed source/probability/support evidence and
+digests are in the investigation Note.
+
+Retain the same-time restriction: upstream osu! editor checks also treat
+same-column end/start equality as a conflict. The next intervention should
+separate probability calibration from learning of occupancy consequences, with
+coverage and semantic guards frozen first. Neither more training nor a hard
+minimum-gap rule follows automatically from this diagnosis. Implementing a
+reusable native generation entrypoint is independent practical work available
+now that all source-pinned evaluations are terminal.
 
 All processes are terminal. Product source is still clean at
 `15d27db0b0723d7f606b1429c901d26c1f61e5ac`; no new training, product edits or remote

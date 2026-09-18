@@ -7,7 +7,7 @@ Created: 2026-09-19
 Updated: 2026-09-19
 Product revision: 15d27db0b0723d7f606b1429c901d26c1f61e5ac
 Scope: Fixed-checkpoint R1 confirmation outside the bounded comparison's development groups
-Related: 2026-09-19-bounded-typed-r1-second-initialization
+Related: 2026-09-19-bounded-typed-r1-second-initialization, 2026-09-19-bounded-typed-r1-burden-mechanism
 
 ## Question and current evidence
 
@@ -409,15 +409,29 @@ ordinary 2 is unresolved, as is the dense local primary scope. The comparator
 also has an unresolved wider scope. Neither candidate gets an unqualified
 quality pass, and better NLL does not select initialization 172 for adoption.
 
-Next use a focused diagnostic, separate from this preselected confirmation, to
-examine these 26/35 ms pairs, the worst rapid run and shortest holds. Distinguish
-free choices, preceding occupancy allocation, and the equal-time release
-convention before choosing a remedy. Potential remedies include better learning
-of upcoming availability, a different support convention if justified by source
-and mechanics evidence, or optimization changes; this result identifies none as
-proven. Do not begin more training or silently redefine the original quality
-gate to obtain a pass. Preserve all original judgments and report any later
-resolution as new evidence.
+The separate diagnostic is complete and owned by
+`2026-09-19-bounded-typed-r1-burden-mechanism`. All 24 sources have zero rapid
+pairs. Of 172's 43 pairs, 25 occur with one lane free; every one has a verified
+native alternative that releases another lane one candidate earlier and avoids
+the rapid head pair. R1 releases its new LNs rowwise, so their endpoints were
+not irrevocably fixed at birth. Upstream osu! editor checks also flag same-column
+end/start coincidence; direct relaxation is not the selected remedy.
+
+The probability audit exactly reproduces 47 logged generated-history query
+values across six targeted cases. Harmful predecessor choices have about 25%
+and 26% mass before the masked 172 pairs; the latter is locally most probable.
+The 171 wider witness instead includes a rare mixed LN-start row at about
+.0067%, followed by an optional repeat. This separates a tail-sensitive example
+from high-mass occupancy failures without proving a single underlying training
+cause. All 27 additional source/comparator/extreme images were inspected, with
+the shortest 18 ms and 8 ms holds recorded in full context. The original eight
+masked judgments and this confirmation's REFINE decision are unchanged.
+
+Keep the current support while choosing a bounded comparison of probability
+calibration or learning of action consequences. No remedy has been demonstrated,
+and no new quality cutoff, decoding change or training run was introduced by the
+diagnostic. A reusable native inference entrypoint can proceed independently now
+that the source-pinned evaluations are terminal.
 
 Selection, evaluation, summary and rendering processes are terminal. Product
 source stays clean at the pinned revision; no new training, product edits or
