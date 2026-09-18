@@ -1916,3 +1916,40 @@ The predeclared fixed development screen can now run on these exact inputs;
 source stays `15d27db0b0723d7f606b1429c901d26c1f61e5ac`. No source/model or selection
 change follows from local training losses. Quality and control comparisons remain
 pending generated evidence.
+
+
+Resource follow-up confirms P0/C0/C1 segment peak footprints878282336/708609656/
+746079912 bytes with zero swap growth. All three checkpoint digests were checked
+again. Both residual networks received329 Adam steps on every added parameter;
+final-layer weight norms are0.081116/0.084970. Small local loss differences cannot
+be explained by an uninitialized or entirely untrained residual branch. An initial
+ad-hoc resource summary omitted the optional startup-record footprint field and
+raised KeyError; its corrected read skips records without that field. Training
+and fixed-screen execution were unaffected.
+
+## Additional Stream calibration for broader organization review
+
+The unchanged eight canonical workflow documents and frozen Foundation were
+revalidated before using the existing effective-human packet. Three High examples
+were opened through the canonical example reader and all12 context pages inspected:
+
+- `human-2af74649b91a0eb016f7c6d2`, source `871955cefaa2`, scope105169–109343ms:
+  human Stream present/prominent. Changing single/pair groups sustain motion while
+  mixing taps and short LNs; lead columns and chord placements vary.
+- `human-559a6f83cb9345097c3c46d7`, source `5b69e9a82e2b`, scope113773–120440ms:
+  human Stream present/supporting. Changing held groups and interleaved attacks
+  coexist with more separated chord/hold figures. The final context page covers
+  only1ms, outside the assigned core, and cannot establish a long static hold.
+- `human-b8e95528659f86b0d58df1b7`, source `ecc49676c356`, scope148072–153786ms:
+  human Stream absent. Recurrent quad attacks dominate, with inserted single/pair
+  attacks; continuous activity alone does not establish flowing organization.
+
+The descriptive readings above are machine interpretations of the inspected
+sources, not new human rationales. Saved comments contain confirmation/confidence
+administration rather than substantive pattern explanations. Labels, comments,
+Foundation and canonical documents remain unchanged. This calibration does not
+assign generated Stream tags or prove64s organization.
+
+Artifact owner `availability-20260919-v1/human-stream-calibration-v1/`, manifest SHA
+`7f939c2d2833a7d5cbc253b4189667192b2e30ed49a518e1802fab1fceb8e078`.
+Review SHA will be pinned from its completed file in the same evidence append.
