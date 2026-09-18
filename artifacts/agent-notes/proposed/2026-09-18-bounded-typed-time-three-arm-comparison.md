@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-18
-Product revision: 2dc036579853c84815a2ddfa0b1b15b55a4ac0ff on codex/bounded-typed-continuation; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: a178bcfe2badaaea47ae9abce02f2494b8ff9643 on codex/bounded-typed-continuation; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -188,3 +188,97 @@ check, with recoverable source, a pinned interval manifest and separate head/typ
 learning criteria. Passing these unit checks does not establish learned LN use,
 training efficiency, generated organization or playability. Evaluation: REFINE;
 Note/Card acceptance: none; lifecycle remains proposed.
+
+## Experiment Card: bounded-typed-16-train-learning-v1
+
+Revision: 1. Owning Note: 2026-09-18-bounded-typed-time-three-arm-comparison.
+Acceptance: none. Execution uses the user's standing authorization to implement
+and run bounded model/formulation experiments; this remains exploratory.
+
+Question: does each native arm learn actual source action/type choices on a small
+TRAIN slice, while O1 also learns its complete endpoint distribution, with a
+bounded practical Mac memory/compute footprint? A pass permits designing the main
+comparison; it does not establish generalization, preferred factorization or
+generated quality. The closest encoder analogue and task differences are recorded
+above. Full object planning remains the selected hypothesis; typed rows and the
+original task remain live alternatives rather than rejected branches.
+
+Clean source: `a178bcfe2badaaea47ae9abce02f2494b8ff9643`. This adds the packaged
+Hydra learning-check boundary, pinned source selector, parameter/draw/optimizer
+checkpoint and type diagnostics to the preceding implementation. The selected
+bounded test suite passes 54 tests, including CPU/MPS model execution and a small
+synthetic run through the actual runner. No real-data learning preceded this Card.
+
+Baseline: each arm's fresh initialization and initial teacher-forced score on its
+own selected intervals. Initial numerical values are intentionally unmeasured
+until the recorded run; this is a paired within-arm learning check, not a numerical
+R1/O1 likelihood comparison on local windows. Intervention: 128 updates of native
+full likelihood, without auxiliary structural losses or decoding penalties.
+
+Inputs:
+
+- Existing TRAIN catalog byte SHA-256
+  `e31b7e8f4daa044503ef2b8411bc41727ba371eec804c9462a4608be8112ad28`,
+  `artifacts/oracle-time-review/20260915-adfb1ee/catalog.json`.
+- Existing split canonical SHA-256
+  `15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a`,
+  `artifacts/scoped-style-modeling/prepare-v1/split-manifest.json`.
+- TRAIN census byte SHA-256
+  `7a6380fd1efab72ffaaa60250a8b2a92869675699d9d108c7dc87708bb5d0fd9`,
+  the earlier `seed-type-population-v1/results/per-chart.jsonl`.
+- Fresh selection manifest
+  `artifacts/bounded-typed-continuation/smoke-20260918-v1/intervals.json`,
+  SHA-256 `fe6090618154f2026e34ce5d432ddc2368d692cd50f0fc28d563a42e308e8fda`.
+  Selector seed371 inspected33sources and selected16distinctTRAINgroups in0.161s.
+  Four TAP, four mixed, four LN-rich, two independent-endpoint and two long-gap
+  strata each contribute128onsets per chart, totaling2048distinctonsets. Source
+  lengths range673–2288rows. Seven intervals use a full512-row raw envelope;
+  examples include seed/crop-crossing holds, multiple LNs with different ends,
+  and4336/2709ms gaps. These are selection facts, not behavior required of a
+  generated arrangement. The source cache is the existing admitted
+  `artifacts/oracle-time-continuation/full-cache-v1` in the original worktree.
+
+Procedure: run
+`uv run --offline --python 3.10 --extra mps --group dev python -m pulsefield_model.research.bounded_typed_continuation.smoke_hydra`
+once for each `model.arm=O1`, `R1`, `R0`, serially on the Mac. Supply the exact
+interval, catalog and split paths/digests above, the original admitted source
+cache, and fresh sibling output directories `o1`, `r1`, `r0` under the manifest
+owner. Runtime config records resolved absolute input paths; the note stores
+repository-relative provenance. Every other value stays at packaged
+`bounded_typed_smoke.yaml`: modelseed171, shuffleseed271, 128AdamWupdates,
+two128-onsetintervals/update, learningrate0.001, decay0.01, clip1.0, eight-update
+linearwarmup, width128/eightdilationlevels/expansion4/rank16, candidatebudget8192,
+oneCPUthread, report/checkpoint everyeightupdates. Expected supervision per arm is
+32768source-onsetexposures; a complete16-drawcycle visits every interval once.
+
+Bounds: each complete run, including loading and initial/final evaluation, has
+1800wallseconds. At most three serial arms (90minutes outer total), MPS6GiBdriver
+guard/8GiBhardallocator, RSS6GiB, availablememory≥2GiB, swapgrowth≤128MiB,
+checkpoint≤128MiB, totaloutput≤512MiB/arm, diskreserve1GiB. No downloads/network
+are needed. Existing outputs are never overwritten; automatic resume is disabled.
+Stop on time/resource guards, nonfinite loss/gradient, a source outside support,
+identity/digest failure or any exact-state/normalization failure. A failure keeps
+the last durable checkpoint and failure record; changing the procedure requires
+a new Card revision/fresh output, not silent continuation.
+
+Learning gate, evaluated on the same2048sourceonsets before/after:
+total native factor NLL per onset decreases by at least20%; row/head NLL per onset
+decreases by at least10%; mean negative log probability of the observed LN_START
+lane action decreases by at least10%; observed TAP lane NLL does not increase.
+O1 additionally requires mean joint endpoint NLL per born LN to decrease by at
+least10%. All mechanical checks and finite-gradient guards must pass. Report each
+arm separately; a singleton deterministic factor has zero cost. These thresholds
+are an engineering fit gate, not significance estimates or a claim that the
+conditional finite-context data can be memorized to zero loss.
+
+Record source/uniqueonset exposures, repeated draws, physical/prefix rows, context
+span seconds, endpoint decisions, both order-factor counts, full candidate pairs,
+preparation/forward/backward/optimizer times, evaluation and checkpoint costs,
+and resource journal. Forward includes prefix encoding and candidate construction;
+backward includes candidate recomputation. No learned prefix is reused across an
+optimizer update. The fresh-initialization and final scores are deterministic
+teacher-forced diagnostics on this deliberately chosen TRAIN slice. A positive
+result supports pipeline learning only; failure calls for debugging or revising
+optimization before a main screen. CPU/unit correctness alone cannot substitute
+for this head/type learning result. Generated Foundation/human judgment remains
+outstanding regardless of the result.
