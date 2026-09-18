@@ -1418,3 +1418,55 @@ comparison normalizes dataclass tuples before comparing persisted JSON, and
 its kernel lock protects against duplicate drivers. Resume uses this same
 entrypoint with100 only after terminal confirmation;300 is a separate reviewed
 continuation. No default sampling or trained-model adoption changed.
+
+### Live clock-readout comparison state
+
+At 2026-09-18 09:30 CST, training PID35757/tool session24456 is confirmed live
+under `clock-readout-v1/run.py 100`. Control100 is complete with129,843 targets,
+ordinary NLL2.4413434481, broad pooled/equal-group NLL2.2923368436/2.3293640517.
+Its weights SHA is
+`2d033d4c39e9ebcb14ce5723e819709c3a42e5cb23cf715246cf0dc5e77de88d`.
+The clock arm has computed14 updates/24,632 targets and is still training.
+Both arms' first update has exactly the same1,705 targets and2.3339998066 NLL.
+
+On real corpus update2, the new input/output weight gradient RMS values after
+clipping are4.10e-7/9.94e-4; actual update RMS values are6.03e-5/8.05e-5.
+At update1 the input gradient is zero and its tiny8e-9 movement is decay, while
+the zero output layer learns. These observations distinguish learned updates
+from mere parameter presence or decay, but do not establish quality benefit.
+
+The control generation supervisor is also live: tool session50833, Python child
+PID52843. It is producing the six complete outputs in
+`quality-clockreadout-control-u100-t085`. The supervisor is
+`clock-readout-v1/generate_quality.py`, SHA
+`667016338e507cd29e616e03294af8c40ef6762d6be13c81d21591dccf492e4b`.
+It supports `control|clock 100|300`, checks the pinned stage readout and canonical
+human document hashes, and writes a completion status only after all six charts
+are verified. Fresh-output semantics prohibit blindly rerunning a partial target.
+
+The read-only post-training diagnostic `clock-readout-v1/probe.py` is prepared
+but not run; SHA
+`ae181e3be3c053069d571e8d71e3f6836f77ccc29e8c8e27380b4991feaf7cdb`.
+After both100 readouts exist, invoke it with100 using frozen v8. It compares
+control/clock on the same fixed base300 generated histories and source prefixes,
+preserving the previous query-only intervention limits. Do not substitute these
+fixed-history probabilities for free-running quality.
+
+Training resource timestamps contain long gaps while retained update timers
+are much shorter: observed neighboring samples differ by931/381/174 seconds.
+The caffeinate process is verified to hold a PreventUserIdleSystemSleep
+assertion. The cause of these gaps is not established; report wall spans and
+update timers separately, and do not label them model computation or compare
+uncontrolled wall throughput. The process is advancing with no logged swap
+growth. The last explicitly loaded control checkpoint was update50,241,277,929
+bytes; control subsequently finished100 and published its stage normally.
+
+Continue by checking the original live handles, collecting both100-stage
+readouts and the paired bootstrap, then generating the clock arm through the
+same supervisor and reviewing the six matched outputs per arm. Existing
+`render_quality.py` and `inspect_quality_recurrence.py` can operate on the new
+quality tags under v8. Preserve source/inspection hashes and unresolved scopes.
+If training terminates early, inspect its latest atomic checkpoint and any
+partial stage, then resume `run.py 100` with the same frozen v8 and identities;
+never duplicate a live writer. Product code and the validation report remain
+uncommitted, note status remains proposed, and the playable-model goal is active.
