@@ -1616,3 +1616,58 @@ It does establish room for a learned response on these states, alongside the
 conditional support constraint established by the event-role audit. Whole-chart
 clock quality is still pending; generation child PID 65373/session 12313 was
 confirmed live at 10:06 CST. Both findings are preserved in the product report.
+
+### Clock100 generated recurrence and broader follow-up
+
+The user explicitly supports free exploration of these directions and permits
+redefining the supplied time skeleton for experiments. Exact event-union coverage
+is not a fixed requirement of the user goal. This grants experiment scope, not
+an automatic Note acceptance, model adoption or remote publication.
+
+All six clock100 generations complete in 390.889 supervisor seconds. Readout
+SHA is `266c531e16e98558bc954c24a162d09abca0c8e3406c91a3b1348181796c3ca7`.
+Review covers all 20 generated gold pages, 24 source/generated own-extremum
+pages and 12 generated fixed-failure pages. Another 32 source-page files match
+the inspected control references, and the eight human documents are unchanged.
+Review SHA: `38edc3861d404e67b326b862934a0e655fad593410cec11ee51f29de5b7f0ff9`.
+Metrics SHA: `2084d4910d324f887f87c45f67b93073758865d6cfd90dc8f0fc303100da33d8`.
+
+For 85058a/871955/ecc496, seeds 17/19 respectively, the fastest four attacks in
+one column span 209/169, 131/174 and 250/214 ms, versus control's 72/145, 66/66
+and 178/143 ms. Full-chart adjacent same-column attack gaps below 40 ms decrease
+from 583 to 45 across the six outputs; 871955 alone decreases from 301/241 to
+16/17. These are descriptive locators with overlapping windows, not quality
+thresholds. The fixed dense repeated-chord failures are substantially reduced,
+and the complete contexts retain moving single/chord organization. In the
+85058a/seed17 context, columns 0/3 hold over 102254–103215 and 102446–103312 ms
+with intervening inner-column taps; seed19 instead remains mainly tap flow.
+In ecc496, seed19 has stronger moving chord accents than seed17. Machine labels
+and unresolved strengths are retained separately from the source human gold.
+
+Residual concerns include the four column0 attacks over 131 ms near 257320 in
+871955/seed17 and isolated 24–35 ms pairs elsewhere. This is a meaningful
+targeted improvement, not a whole-chart playability pass. Keep clock100 as a
+candidate for broader inspection; do not infer that the existing task definition
+is either sufficient or impossible from this slice. No 300-step extension starts.
+
+Complete the existing Card's broader candidate check with the other five gold
+validation sources (5b69,713ef9,98357f,e67f,ece738), seeds 17/19, plus one seed17
+full generation of the known TRAIN long-gap stress source 1022f1. Use the pinned
+clock100 weights, temperature .85/top-p1/beta0, minimum 30-note source seed and
+unchanged frozen v8. The remaining gold results are candidate checks without
+new control100 generations on those five charts; the older 89-second-LN result
+also differs in checkpoint and may differ in decoding. Neither is a new causal
+ablation, and the TRAIN stress result cannot establish held-out generalization.
+
+The fresh owners are `quality-clockreadout-clock-u100-gold-rest-t085` and
+`quality-clockreadout-clock-u100-long-t085`. The supervisor
+`clock-readout-v1/generate_coverage.py` takes `gold-rest` or `long`, runs CPU/one
+thread, bounds each child process tree to 30 minutes, requires 2 GiB available,
+caps each owner at 3 GiB and retains the runner's checkpoint/replay guards.
+It validates pinned weights/runtime/catalog/split and current human documents
+before launching. Per-chart completion is journaled; a final readout/status is
+published only after every requested chart finishes. Preserve partial outputs
+and inspect the child before any resume; never rerun the fresh-output supervisor
+over a partial owner. No weights, decoder or human labels change in this check.
+The supervisor SHA is
+`2f37dbf6e070b2ab6a5a85dbdadcb7121d88e397812576b7f75b75f26cf485de`.
