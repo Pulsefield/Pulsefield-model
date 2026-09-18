@@ -1764,7 +1764,8 @@ four-attack minimum222ms, and549LNs. Neither84.735s nor77.643s event gap is
 spanned by a hold. Its longest LN is13200ms at4335854–4349054, exactly the source
 closing LN's times on a different column. It also adds a terminal tap. This is
 one TRAIN seed, with a different checkpoint/policy from the earlier89s failure;
-no causal or held-out quality conclusion follows. Its visual quality is unreviewed.
+no causal or held-out quality conclusion follows. Its whole-chart visual quality
+is unreviewed; a later paragraph records the one inspected recurrence context.
 
 The all-TRAIN representation audit completed in9.741s with readout SHA
 `7ef9903f8856074642d92cf73f142a293e72654872bf436e2de655ef29fd016a`.
@@ -1778,7 +1779,7 @@ plausible benefit is linked start/end credit assignment and freedom to leave
 unused candidate times unmaterialized. No rare target will be silently dropped
 or replaced by a true endpoint. The next probe uses all future candidates.
 
-### Exploratory Card: linked-endpoint-head-v1, revision1
+### Exploratory Card: linked-endpoint-head-v1, revision2
 
 Owner is this proposed Note; accepted revision is none. The user's explicit
 authorization covers exploratory implementation, runs and skeleton redefinition.
@@ -1830,13 +1831,19 @@ or whole-model claim follows from teacher-forced endpoint accuracy.
 Procedure: implement artifact-local dataset/feature extraction and endpoint
 scoring, verify linked encoding reconstructs canonical rows, then run one fresh
 extraction and paired fitting. Use `uv run --offline --extra mps python` with
-v8 PYTHONPATH, CPU/four threads on this24GiB Mac. Bound extraction to30minutes,
-fitting to20minutes, each to6GiB RSS and2GiB minimum available memory, total
+v8 PYTHONPATH, CPU/four threads on this24GiB Mac. Bound aggregate extraction to
+45minutes, each extraction process to30minutes, fitting to20minutes, each to
+6GiB RSS and2GiB minimum available memory, total
 owner to2GiB. Fresh owner is `linked-endpoint-head-v1`; implementation scripts
 and outputs have separate subdirectories. Stop on hash/round-trip mismatch,
 non-finite loss, impossible candidate targets or any resource bound. Preserve
 partial outputs; never overwrite or relaunch an existing output owner blindly.
-Record exact commands and source digests before launching. Sampling a moderate
+Record exact commands and source digests before launching. Completed per-chart
+feature files may be resumed only after the producing process stops and a
+manifest pins their bytes, source/target identities and original source code.
+Partial or unjournaled files are preserved but never reused. A resumed extractor
+uses the same full-prefix computation for missing charts and verifies retained
+files before assembling a complete manifest. Sampling a moderate
 LN-rich slice, frozen features, known onset roles, teacher-forced prior endpoints
 and independent simultaneous duration heads limit all conclusions. Qualitative
 quality requires subsequent complete generated contexts and long-gap checks.
@@ -1871,6 +1878,64 @@ The retry selection SHA is
 128 TRAIN charts/7010 selected heads and32 validation charts/1794heads, with
 155036/30969 total event rows respectively. Context width is1096. Extraction
 remains active at this record; no fitting result or generated-decoder claim exists.
+
+Revision2 changes only the extraction procedure and bound. At65 completed charts,
+859s have elapsed; extrapolation
+from completed work exceeds the original30-minute bound for176817 total prefix
+rows. Preserve revision1 and its original source hashes in Git/history, stop its
+producer before snapshotting completed files, then resume missing charts under
+the45-minute aggregate extraction budget. This does not change selected data,
+the endpoint factorization, frozen features' computation, fitting draws or the
+comparison criteria. It remains exploratory, with accepted revision none.
+
+The original producer was deliberately stopped at1100.649s, exit-15, after82
+journaled complete charts/4368heads; no partial or unjournaled feature file is
+reused. Original producer code is preserved in `producer-snapshot`. All82 files
+were checked against source row hashes, timestamps, onset roles, selected
+head identities, endpoint labels, tensor dimensions and finiteness. The resume
+input manifest SHA is
+`bc52a3d1432d764d082acf10fa7f39eb464d5dc50d297ea3fc1e68297ebc1c2d`.
+The budget conservatively charges1118.744s for the two preceding extraction
+attempts and allowance; the resumed supervisor enforces the45-minute aggregate
+and30-minute per-process limits. The remaining78charts receive unchanged
+full-prefix computation. No learned state is transferred between charts.
+
+Resume command:
+
+```sh
+PYTHONPATH=artifacts/oracle-time-continuation/m3-20260917/skeleton-time-runtime-v8/src caffeinate -i uv run --offline --extra mps python artifacts/oracle-time-continuation/m3-20260917/linked-endpoint-head-v1/scripts/resume_supervise.py extract-rest
+```
+
+After a complete resumed manifest exists, use that supervisor with argument
+`fit`. Its tiny `fit_resumed.py` wrapper selects the resumed feature manifest;
+the original fitting implementation and400 shared update draws are unchanged.
+Resume source SHAs: resume_extract.py
+`fcc090789804477822eacd418f789e39a74537b681e0bc5177765c0d1fb87943`,
+resume_supervise.py `75c313a790e2ad66a4f39dbccd88142a2152e14f50ed54db975c627e7c3c79f0`,
+fit_resumed.py `bc78040091767d4ba537b824a22a2ed75ffd61e1d343f86216dab52c52b0b202`.
+The reviewed extractor diff changes only output ownership, verified file reuse
+and provenance. Original candidate scoring, context features and complete-prefix
+execution are unchanged. These files compile; the previously checked core is
+byte-identical. No fitting or generated result exists at this launch record.
+
+An actual-feature optimizer smoke check uses four TRAIN examples only. Both
+arms' initialized log probabilities match exactly; three disposable context-head
+updates have finite gradients and preserve the feature tensors. The head has
+156389parameters. These disposable updates are not reused by the paired fit and
+are not a scientific result. `real-feature-smoke.json` retains the source-file
+identity, shapes and losses.
+
+The unchanged selected labels are summarized in `slice-audit.json`, SHA
+`599756b08572c43faee52212b64c9c45dd6425fd4cd280420849ae9465b90b67`.
+Always selecting the next candidate has75.41% TRAIN and74.30% validation
+per-head accuracy. Only9 TRAIN and1 validation selected endpoints have rank>16;
+their maximum ranks are31/25 and maximum durations11415/5581ms. This pilot has
+little long-tail supervision despite its untruncated output support. A prior
+LN plan exists for47.36%/57.19% of selected TRAIN/validation heads; the current
+true endpoint matches any earlier plan for only5.26%/5.80%. These are support
+membership counts, not copy-policy predictive accuracy. The trained generic
+prior and held-out group NLL remain the declared comparison; high next-candidate
+accuracy alone cannot demonstrate useful learned endpoint structure.
 
 During extraction, the three additional outputs with a fastest-four locator
 below250ms received complete ±2s source/generated context inspection:12pages,
