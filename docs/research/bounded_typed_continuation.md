@@ -239,9 +239,9 @@ The free-running LN-use gap is substantial despite similar teacher-forced type
 discrimination. It warrants investigation of native closed-loop behavior and
 adequate training, rather than treating a good endpoint or type score as a quality
 pass. Different LN ratios from a source are allowed; this one-seed TRAIN diagnostic
-does not prove universal collapse or rank playability. It has not yet received
-time-proportional visual/Foundation judgments, new human comparisons or independent
-group/initialization confirmation. Rapid-pair and overlap counts are descriptive
+does not prove universal collapse or rank playability. The selected visual scopes
+below provide limited Foundation-based inspection; new human comparisons and
+independent group/initialization confirmation remain outstanding. Rapid-pair and overlap counts are descriptive
 locators, not semantic labels or playability thresholds.
 
 Readout SHA-256:
@@ -250,6 +250,42 @@ Readout SHA-256:
 An earlier attempt stopped during playback-header resolution after the first
 chart; resolving catalog-relative paths against their original worktree repairs
 export. The repeated first generated row file is byte-identical to that attempt.
+
+### Selected visual scopes and human calibration
+
+The frozen Foundation and current human examples distinguish independent LN
+control from simultaneous holding alone. A high-confidence positive at
+167706–169445 ms on source `ece7388da533` contains repeated staggered starts and
+releases across held lanes. A high-confidence negative at 313004–319158 ms on
+source `713ef90e11c7` includes synchronized long holds without independent
+interior actions. The latter has no substantive human comment; its label must
+not be supplemented with an inherited agent rationale. Canonical workflow
+projection yields 37 observations from eight unchanged source documents.
+
+Two generated source scopes were inspected at playback rate one, including all
+24 rendered context pages across the human references and O1/R1 outputs. These
+are machine judgments calibrated to human examples, not new human labels or a
+blinded preference test.
+
+| Selected scope | O1 observation | R1 observation |
+| --- | --- | --- |
+| LN-rich source `bd120339738c`, 95864–103864 ms | 64 TAP and 3 LN heads; two LNs start/end together and the third is isolated. LN coordination absent, high confidence. | 19 TAP and 51 LN heads plus two entering holds. Repeated independent holding, attack and release roles characterize the core. LN coordination present/prominent, high confidence. |
+| Dense source `00126e732bc4`, 158311–164311 ms | 181 TAP and 1 LN heads; dense chord re-attacks persist. LN coordination absent, high confidence. | 170 TAP and 35 LN heads; an independent LN episode follows dense TAP activity. LN coordination present/supporting, medium confidence. |
+
+The LN-rich scope was selected around the center of its supervised interval.
+The dense scope was located post hoc by R1's longest rapid same-lane attack run:
+seven column-zero taps at 161205, 161238, 161274, 161310, 161345, 161382 and
+161417 ms, with other-column activity. This establishes a localized burden,
+not a global Jack label or universal playability cutoff.
+
+The dense core has 105 supplied onsets and 113 source heads, versus 182 O1 and
+205 R1 generated heads. Its maximum count in one second is 30 onsets; the maximum
+over the 16 supervised learning-check intervals is 15. Broader training can test
+whether chord size adapts to this density, but the coverage gap does not prove
+that more training will fix it. Other labels, R0 images, larger organization and
+player playability remain unreviewed. Review SHA-256:
+`7063b8d246fe3d635632bd55dc8a08c46d3fcd2aa53bd8bc858baaa72f6a91d9`, in
+`native-generation-v2/inspection-v1/review.json` under the readout owner above.
 
 ## Comparison and evaluation plan
 
@@ -364,6 +400,51 @@ source, data intervals, optimizer and resource limits after the learning/resourc
 check. Report equal-exposure and equal-compute results separately, including
 unique coverage, repeated exposures, physical rows, endpoint factors and recovery
 costs. Prefix preparation and candidate scoring belong in the compute ledger.
+
+### Shared corpus plan and resumable training
+
+`corpus.create_plan` freezes a pinned TRAIN census, catalog/allocation and admitted
+row-cache digests. It draws a group uniformly, then a chart uniformly within that
+group. Target horizons are 128 or 256 source onsets with equal probability. An
+explicit 12.5% seed-window stratum covers short deployment histories; other draws
+choose a valid full-length window uniformly. Short sources use their actual
+length. Draws are shortened at 250k/1M/2M exposures so every arm reaches exactly
+the same boundaries. This distribution is not uniform over onsets or song time.
+
+The corpus entrypoint is
+`python -m pulsefield_model.research.bounded_typed_continuation.train_hydra`.
+Supply `plan_file`, `plan_sha256`, `source_cache_dir` and a fresh `output_dir`.
+Packaged defaults use four intervals per optimizer update, microbatches of two,
+AdamW at 0.0003, weight decay 0.01, clipping at one and a linear warmup through
+32,768 actual onset exposures. Gradients divide by the effective batch's actual
+onset count even when its microbatches differ in length. Full-support endpoint
+blocks retain the candidate budget and backward recomputation described above.
+The source-index LRU is bounded at 64 charts and 256 MiB of conservative charges;
+active microbatches can retain evicted charts, so process memory remains guarded.
+
+Each segment writes resolved/projected configuration, resource and training logs,
+and safe-loadable model/optimizer/RNG/coverage checkpoints. `stop_after_checkpoint`
+can pause at a declared plan checkpoint. `resume_from` continues the final durable
+checkpoint in a fresh segment directory; it requires identical source and
+scientific/resource settings, verifies the parent journal prefix, and preserves
+the parent artifacts. No learned history is retained. Coverage counts the exact
+union of supervised source onsets rather than the number of draws.
+
+The four-hour compute limit includes plan loading, source preparation, forward,
+backward, checkpointing and verified recovery. It is checked before each update;
+an in-flight update and final publication can cross the deadline and their actual
+duration is reported. A caught failure records its complete segment duration,
+including work beyond its last checkpoint, which is charged on resume. An
+unmeasured hard-killed parent cannot silently contribute a zero-cost recovery;
+the runner requires a finalized parent runtime ledger.
+
+LN diagnostics score both outcomes on feasible source-onset lanes, and conditional
+TAP/LN at observed head locations where both types are feasible. They do not add
+an auxiliary training loss. `evaluation.suffix_likelihood` sums all factors across
+bounded chunks through the true chart end, paying each O1 endpoint exactly once
+even when it falls beyond its chunk. This supplies a common complete-suffix R1/O1
+score. CPU/MPS tests check microbatch gradients and exact pause/resume trajectories;
+chunking tests check complete-suffix likelihood and diagnostics.
 
 Generation retains existing regression cases and adds separately sampled ordinary
 and stress groups, with multiple seeds. Mechanical failures cannot be averaged

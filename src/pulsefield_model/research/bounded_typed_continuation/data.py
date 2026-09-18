@@ -243,6 +243,30 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
                     values.append(-probabilities[at][:, choices[:, lane] == action].logsumexp(-1).sum())
                 diagnostics[name + '_nll_sum'] = float(torch.stack(values).sum().cpu())
                 diagnostics[name + '_count'] = int((observed == action).sum().cpu())
+            # Score both classes on source-onset lanes where either outcome is
+            # feasible. Positive-only likelihood rewards an excessive LN prior.
+            for name in ('ln_binary', 'head_type_binary'):
+                diagnostics.update({name + suffix: 0 for suffix in
+                                    ('_nll_sum', '_brier_sum', '_probability_sum', '_positive_count', '_count')})
+            source_onset = ((observed == 1) | (observed == 2)).any(-1)
+            for lane in range(4):
+                ln = probabilities[:, choices[:, lane] == 2].logsumexp(-1)
+                other = probabilities[:, choices[:, lane] != 2].logsumexp(-1)
+                tap = probabilities[:, choices[:, lane] == 1].logsumexp(-1)
+                truth = observed[:, lane] == 2
+                for name, negative, cohort in (
+                        ('ln_binary', other, source_onset),
+                        ('head_type_binary', tap, (observed[:, lane] == 1) | truth)):
+                    at = cohort & torch.isfinite(ln) & torch.isfinite(negative)
+                    positive, negative = ln[at], negative[at]
+                    normalizer = torch.logaddexp(positive, negative)
+                    positive, negative = positive - normalizer, negative - normalizer
+                    p, y = positive.exp(), truth[at]
+                    diagnostics[name + '_nll_sum'] += float(-torch.where(y, positive, negative).sum().cpu())
+                    diagnostics[name + '_brier_sum'] += float((p - y.float()).square().sum().cpu())
+                    diagnostics[name + '_probability_sum'] += float(p.sum().cpu())
+                    diagnostics[name + '_positive_count'] += int(y.sum().cpu())
+                    diagnostics[name + '_count'] += len(p)
             diagnostics.setdefault('endpoint_decisions', 0)
             diagnostics.setdefault('scored_order_factors', 0)
             diagnostics.setdefault('candidate_pairs', 0)

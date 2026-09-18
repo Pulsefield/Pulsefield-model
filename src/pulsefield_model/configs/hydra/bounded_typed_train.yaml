@@ -1,0 +1,48 @@
+defaults:
+  - bounded_typed_train_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+plan_file: ''
+plan_sha256: ''
+source_cache_dir: ''
+output_dir: artifacts/bounded-typed-continuation/corpus
+resume_from: null
+stop_after_checkpoint: null
+device: mps
+model_seed: 171
+cpu_threads: 1
+batch_size: 4
+microbatch_size: 2
+report_every: 32
+candidate_budget: 8192
+learning_rate: 0.0003
+weight_decay: 0.01
+max_grad_norm: 1.0
+warmup_onsets: 32768
+max_seconds: 14400.0
+cache_max_sources: 64
+cache_max_bytes: 268435456
+model:
+  arm: O1
+  hidden: 128
+  levels: 8
+  expansion: 4
+  coupling_rank: 16
+resources:
+  driver_limit_bytes: 6442450944
+  rss_limit_bytes: 6442450944
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 2147483648
+  max_swap_growth_bytes: 134217728
+  checkpoint_max_bytes: 134217728
+  disk_reserve_bytes: 1073741824
+  output_max_bytes: 536870912
+  release_mps_cache_at_boundaries: true
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null
