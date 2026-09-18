@@ -2142,7 +2142,7 @@ parallel with that bounded work. The current evidence supports emerging
 organization in the reviewed cases; it does not yet complete the usable
 train/inference and generated-quality goal. Note status remains proposed.
 
-### Additional-group R1 screen complete; eight masked scopes await inspection
+### Additional-group R1 confirmation complete; local burden remains unresolved
 
 The new scoped owner
 `2026-09-19-bounded-typed-r1-unused-group-confirmation` freezes both 2M checkpoints
@@ -2165,14 +2165,43 @@ Note and `confirmation-20260919-v1/readout.json`, SHA
 The new public packet
 `confirmation-20260919-v1/masked-inspection-v1/manifest.json` has SHA
 `b9bffadf6cc8d6ff24514e95708bdb81eb6fea1f48ebdb54032a40563c6d52bf`.
-Its 208 images have not yet been inspected. Review all eight preselected pairs:
-ordinary 0/3/6/9, LN-rich 12 and dense 16 at 16s, then ordinary 1/2 at 64s.
-Keep this packet's private mapping unread until all eight judgments are saved.
-The earlier packet's mapping is already legitimately open and its judgments are
-unchanged. Later dense-run/short-LN diagnosis must remain separate from these
-preselected comparisons.
+All 208 images were inspected across the eight preselected pairs: ordinary
+0/3/6/9, LN-rich 12 and dense 16 at 16s, then ordinary 1/2 at 64s. All eight
+judgments were frozen before opening the private map, and their bytes remain
+unchanged. The frozen judgment manifest SHA is
+`ac7c80ef72093ca218e373e0c9aa9152bde538da1ca7f460b9c4f4f112497e2a`;
+`masked-inspection-v1/unmasked-readout.json` SHA is
+`f64a7b7b28d984055038f406357aad6dcebf4686b40451d54872a6a9fdd987b5`.
+The earlier comparison's map is also open; its original judgments are unchanged.
+
+The masked comparison gives six descriptive machine ties and one limited
+preference for each initialization. Ordinary 9 favors 172's development and
+return of independent LN roles. Dense 16 favors 171's distributed moving flow:
+172 instead forces a 26 ms column-0 reattack while the other three lanes remain
+unavailable. One of those lanes releases exactly at the later attack, but the
+declared same-time close/restart restriction excludes it. Ordinary 2's wider
+scope contains a 35 ms pair in both variants: 171 chooses it with other lanes
+available; 172 is again limited to one lane, with two other lanes releasing
+exactly at the later attack. Both wider-scope quality judgments stay unresolved.
+Concrete moving-flow and independent-LN relationships remain confirmed in these
+outputs; positive labels do not settle their local burden.
+
+Initialization 171 has seven plausible scopes and one unresolved; 172 has six
+plausible and two unresolved. Neither has an inadequate scope. Evaluation is
+REFINE because the declared requirement for two plausible wider primary scopes
+is not established. Numerical passage and better NLL do not override it. The
+scoped Note records boundaries, exact action witnesses, human comparators and
+all evidence identities. These are Foundation-calibrated machine judgments,
+not human votes or physical playtests.
+
+Next perform the declared dense-run/short-LN diagnostic, preserving its separation
+from the preselected comparison. Distinguish freely chosen repeats, preceding
+occupancy allocation and equal-time release semantics before choosing a model,
+support or optimization change. The current result does not justify an automatic
+minimum-gap rule, more training, or a post-hoc quality pass for either checkpoint.
 
 All processes are terminal. Product source is still clean at
 `15d27db0b0723d7f606b1429c901d26c1f61e5ac`; no new training, product edits or remote
 pushes occurred. A reusable bounded generation entrypoint remains an engineering
-gap after the semantic review. The overall goal remains active and unfulfilled.
+gap, and this source-pinned screen is terminal. The overall goal remains active
+and unfulfilled; no Note acceptance or model adoption occurred.

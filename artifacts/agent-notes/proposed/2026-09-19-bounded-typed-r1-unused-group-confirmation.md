@@ -265,22 +265,164 @@ of the dense rapid runs and shortest holds can clarify the limits of the aggrega
 screen; any such examination must be labeled diagnostic, not substituted for the
 preselected confirmation cases.
 
-## Prepared masked packet and continuation state
+## Completed masked inspection
 
 `masked-inspection-v1/manifest.json` SHA
 `b9bffadf6cc8d6ff24514e95708bdb81eb6fea1f48ebdb54032a40563c6d52bf`.
-It contains 208 images: six local pairs with eight pages per variant and two wider
-pairs with 28 pages per variant. The cases are ordinary 0/3/6/9, LN-rich 12,
-dense 16, then ordinary 1/2 at 64s. These eight scopes belong to eight distinct
-selected groups. All presentation and Foundation digest checks passed during
-rendering. No image in this new packet has yet been inspected, and its private
-initialization map remains unread. Record all eight masked judgments before
-opening `masked-inspection-v1/private-mapping.json`.
+All 208 images were inspected: six local pairs with eight pages per variant and
+two wider pairs with 28 pages per variant. The cases are ordinary 0/3/6/9,
+LN-rich 12, dense 16, then ordinary 1/2 at 64s, belonging to eight distinct
+selected groups. The initially truncated request for ordinary-02/A pages 0-3
+did not count as inspection; those four pages were reopened successfully.
+All public file digests and the Foundation bytes were verified before judgment
+freezing. `review_support.py`, SHA
+`ab24685996157da31c50f6e88072d5bfb558ebded4dd42e4039823be4092a469`,
+persists manual judgments and verifies public evidence; it does not infer tags.
 
-Selection, evaluation, summary and rendering processes are terminal. There is no
-process to restart or wait for. Next perform the preselected masked inspection,
-then the declared diagnostic follow-up if needed. Numerical passage alone does
-not establish the semantic gate or complete the playable-generation goal.
+The eight original judgments were saved before parsing the private map.
+`masked-inspection-v1/masked-judgments/frozen-before-unmask.json` SHA
+`ac7c80ef72093ca218e373e0c9aa9152bde538da1ca7f460b9c4f4f112497e2a`
+records all eight judgment digests and 208 inspected image identities. The map
+SHA `ef06e3cca16c0533b2899f7e8de509e55bc596522eac7900e9763333dc920e93`
+matches the public manifest. The resulting `masked-inspection-v1/unmasked-readout.json`
+has SHA `f64a7b7b28d984055038f406357aad6dcebf4686b40451d54872a6a9fdd987b5`.
+Unmasking changed none of the original judgment bytes. Aggregate numerical
+results were already known, so this is identity-masked machine review, not an
+independent double-blind human preference experiment.
+
+Times below are milliseconds; columns are zero-based. Structural confidence and
+comparative preference are moderate. Explicit pattern judgments are High;
+unreviewed tags remain unreviewed and uncertain tags are not counted as positives.
+
+| Scope | Interval | A/B initialization | Structural status, 171/172 | Limited preference |
+| --- | --- | --- | --- | --- |
+| Ordinary 0, local | 21473.138-37473.138 | 172/171 | plausible/plausible | tie |
+| Ordinary 3, local | 47588.144-63588.144 | 171/172 | plausible/plausible | tie |
+| Ordinary 6, local | 11895.532-27895.532 | 172/171 | plausible/plausible | tie |
+| Ordinary 9, local | 138095.420-154095.420 | 172/171 | plausible/plausible | 172 |
+| LN-rich 12, local | 33126.902-49126.902 | 171/172 | plausible/plausible | tie |
+| Dense 16, local | 31035.640-47035.640 | 171/172 | plausible/unresolved | 171 |
+| Ordinary 1, wider | 3040-67040 | 172/171 | plausible/plausible | tie |
+| Ordinary 2, wider | 102766.774-166766.774 | 171/172 | unresolved/unresolved | tie |
+
+This gives six ties and one preference for each initialization, not a vote-based
+winner. Initialization 171 has seven plausible and one unresolved scope;
+172 has six plausible and two unresolved scopes. Neither has an inadequate
+scope, but unresolved quality is not a pass.
+
+### Organization and scoped evidence
+
+Ordinary 0 has a connected single-note line in both versions, supporting Stream.
+The sequence at 24503/24683/24864/25045/25226/25407/25588/25769 uses columns
+1,2,0,1,0,3,1,0. Initialization 172 adds only one isolated LN, column 1 at
+33731-33911; 171 has none. Both have LN coordination and Jack absent. Ordinary 3
+has prominent moving flow in both versions; 172 includes three complete 0,1,2,3
+roll groups at 51760-52731 with 88/89 ms spacing. Its extra LNs are sequential
+single-lane handoffs, not independent held layers. Both have LN coordination
+absent; the roll passage alone does not determine Stream salience.
+
+Ordinary 6 has supporting Stream in both versions. The synchronized columns 2/3
+hold at 13021-14221 has no independent interior action, and later holds are
+isolated anchors or boundary handoffs. Initialization 171's chain at 25192-27935
+passes through columns 1,3,2,0,3,2,0,1,2,3,1,0,3,2,3,0 with only one held lane at
+a time. LN coordination is absent for both despite different LN counts.
+
+Ordinary 9 favors 172 for the development and return of independent held roles.
+For example, columns 0/1 enter at 139145 while column 2 continues to 139375;
+column 0 releases at 139606 while column 1 survives to 140068, with additional
+column changes between. Related roles return at 149760-150337. LN coordination
+is prominent. Its additional Stream label remains unresolved, which does not
+make the observed LN relationship uncertain. Initialization 171 maintains a
+plausible TAP-led line with supporting Stream, then isolated anchors. Its first
+overlapping companion at 154145 begins after the core ends at 154095.420; that
+exit-context coordination cannot change its core judgment of LN coordination
+absent.
+
+Both LN-rich versions have prominent independent coordination. Initialization
+171's column-3 anchor at 33613-34937 survives column-0/1 entries, early releases
+and re-entries. Initialization 172's columns 0/3 start at 34231 and end at
+34495/34407; column 1 then ends and re-enters under columns 2/3 and survives
+their subsequent replacement. Initialization 171 also has supporting Jack:
+adjacent onset groups recur on column 1 at 33966, columns 0/1 at 34231 and
+34495, columns 0/1/2 at 34672, then column 0 at 34848. This judgment does not
+come from its separate later fixed disjoint-group alternation.
+
+Ordinary 1 sustains and recalls held relationships across 64s. Initialization
+172's column-3 anchor at 12683-15683 survives independent columns 0/1/2; later,
+columns 1/3 begin at 53826 with different ends and column 0 enters while column 3
+continues. Coordination is prominent. Initialization 171 uses more TAP/chord
+contrast and supporting coordination, including column 0 at 12469-16540 with
+shorter other-lane holds and another independent island at 53826-54683. The
+supplied seed ends at 3040: the boundary-row facts include supplied events, but
+the witnesses used for model quality begin strictly afterward. Different LN
+counts, 251 versus 151 heads, do not decide the tie.
+
+Ordinary 2 has prominent moving flow in both versions. Initialization 171 uses
+mostly TAP motion, with supporting independent-LN islands: column 0 holds
+125836-126670 while column 1 ends at 126184 and re-enters at 126253; another
+island at 164100-164378 has distinct entries and releases across columns 0/1/2.
+Initialization 172 has a sustained independent-LN opening phase through about
+117s, single anchors and TAP passages later, then independent layers return from
+163336 through the core exit. Coordination is prominent. These macro-scale
+relationships remain positive evidence despite the local concerns below.
+
+The calibration uses the previously inspected human High examples: Stream
+`human-2af74649b91a0eb016f7c6d2` and `human-559a6f83cb9345097c3c46d7`;
+prominent LN coordination `human-03f7e300cf02f58f3dcbba66`, supporting coordination
+`human-2208bdfda699add6503ca166`, and its synchronized-pair negative contrast
+`human-9f2c08a0592fa13087c98d5e`. Foundation and original human provenance stay
+unchanged. Human structure labels do not supply a numerical difficulty cutoff.
+
+### Local counterevidence retained before unmasking
+
+Dense 16 favors 171's distributed flow. Its dense passage repeats columns 3,2,1,0
+from 43499 at 25/26 ms between rows, giving each lane about 102 ms between its
+attacks. There is no below-40-ms same-lane pair inside this core. It also has a
+localized independent LN island: column 3 holds 44417-45234 beneath columns 0/1
+at 44927-45029, column 2 at 45029-45132 and column 1 at 45132-45234. Stream is
+prominent and LN coordination supporting.
+
+Initialization 172 has supporting Stream and prominent independent coordination,
+but column 0 attacks at 43422 and 43448, only 26 ms apart. Before 43448, columns
+1/2/3 hold 43397-43448, 43371-43473 and 43244-43473. Under the declared ban on
+same-time close/restart, column 0 is the only available lane for the required
+onset. The repeat follows earlier occupancy decisions plus support semantics.
+This concrete local concern leaves its quality unresolved; positive pattern tags
+do not erase it, and it is not a claim that the entire scope is impossible.
+
+Ordinary 2 has one 35 ms pair in each version. Initialization 171 repeats column 0
+at 129239/129274 beneath a column-1 hold at 128935-129508; columns 2/3 remain
+available. Initialization 172 repeats column 0 at 116982/117017 beneath columns
+1/2/3 at 116600-117086, 116826-117017 and 116947-117017. The latter is forced
+to the only free lane under the same-time restriction; the former is a learned
+choice with alternatives. Both wide-scope quality judgments remain unresolved
+without discarding their clear larger-scale organization. Isolated rapid pairs
+do not by themselves establish Jack presence. No minimum attack gap or LN
+duration was added, and no original output was filtered or repaired.
+
+## Decision and continuation state
+
+Evaluation: REFINE. All numerical guards pass and concrete moving-flow and
+independent-LN organization occur in the primary output. The practical-handoff
+requirement that both wider primary scopes be plausible is not established:
+ordinary 2 is unresolved, as is the dense local primary scope. The comparator
+also has an unresolved wider scope. Neither candidate gets an unqualified
+quality pass, and better NLL does not select initialization 172 for adoption.
+
+Next use a focused diagnostic, separate from this preselected confirmation, to
+examine these 26/35 ms pairs, the worst rapid run and shortest holds. Distinguish
+free choices, preceding occupancy allocation, and the equal-time release
+convention before choosing a remedy. Potential remedies include better learning
+of upcoming availability, a different support convention if justified by source
+and mechanics evidence, or optimization changes; this result identifies none as
+proven. Do not begin more training or silently redefine the original quality
+gate to obtain a pass. Preserve all original judgments and report any later
+resolution as new evidence.
+
+Selection, evaluation, summary and rendering processes are terminal. Product
+source stays clean at the pinned revision; no new training, product edits or
+remote pushes occurred. The Note remains proposed with no accepted revision.
+The practical train/inference and scoped quality goal remains active.
 
 Read-only inference inspection confirms a reusable core in `generation.py`,
 including seed-only initialization, exact physical state, finite raw history and
