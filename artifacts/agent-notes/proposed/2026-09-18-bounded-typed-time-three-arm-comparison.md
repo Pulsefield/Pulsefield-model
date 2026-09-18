@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-18
-Product revision: a178bcfe2badaaea47ae9abce02f2494b8ff9643 on codex/bounded-typed-continuation; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: 21475e65d773b7e7199accf0750de584d9f10ce9 on codex/bounded-typed-continuation; trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -441,3 +441,80 @@ checks. Then fix the main screen's metric contract and sample manifest before
 training. No coarse LN-intent oracle, positive-class reward, duration truncation
 or decoder repetition penalty is justified by this diagnostic. Evaluation:
 REFINE; quality and independent confirmation remain outstanding.
+
+## Implementation result: native generation and raw recovery
+
+Clean source `21475e65d773b7e7199accf0750de584d9f10ce9` adds a native sampler and
+an independent completed-output verifier. Source `6a2a5ae241c9c7e04ecb60d218f4ce0abae4a657`
+is the intervening behavior-neutral research report. Model/training parameters
+remain those of the learning-check source; no new optimizer run occurred.
+
+`Rollout.from_seed` takes only the permitted R/H/seed condition. It uses native
+normalized distributions at temperature1, CPU RNG and full-support endpoint
+sampling. Deterministic candidates consume no RNG; absent events never enter
+physical or learned history. Scored endpoint probabilities marginalize both
+orders, while an explicitly unscored endpoint is marked unavailable.
+
+Checkpoints retain exact state, commitments, recent raw physical events with
+their predecessor timestamps, and RNG. They exclude learned buffers. Recovery
+checks exact parameter/configuration/timing identities and rebuilds the bounded
+cache using the same online kernels. Tests verify unchanged rows/plans/RNG and
+cache values under CPU/MPS interruption, reject stale parameters and missing raw
+context, retain a seed hold beyond the learned range, and finish on an unused
+terminal candidate. Full default-width/eight-level CPU recovery is also tested.
+Independent output checking covers seed fidelity, R/H coverage, occupancy, all
+chosen O1 suffix endpoints and final closure; generated osu! bytes reparse to the
+same physical rows. All73bounded tests pass in6.46s, including19newgeneration tests.
+
+## Experiment Card: bounded-typed-native-generation-v1
+
+Revision:1. Acceptance:none. This is a bounded TRAIN free-running diagnostic
+under the user's standing experimental authority, not the main quality screen or
+an independent generalization result. Original learning-gate failure remains
+recorded. Question: do the current native distributions execute/recover correctly
+and retain basic LN/attack modes under their own histories after the short fit?
+
+Fixed source: `21475e65d773b7e7199accf0750de584d9f10ce9`. Use all16TRAINsources in
+the same pinned `fe6090…e8fda` manifest, now from their actual30-note seed through
+the true end of R, rather than only the supervised128-onset intervals. Use the
+exactO1/R1/R0 checkpoints and SHA-256 identities recorded above, oneCPUthread,
+CPUexecution and generationseed17 for every arm/source. No optimizer update,
+temperature change, candidate cap, duration rule, repetition penalty, external
+LN-intent label or source-suffix fallback is introduced. Typed arms receive only
+the prescribed complete-object seed; rowR0 receives no future seed endpoints.
+
+Frozen script: `artifacts/bounded-typed-continuation/smoke-20260918-v1/generate_pilot.py`,
+SHA-256 `e80af7a68514231af2f87429dec1e4abbc0b30a32be3daf80a6a31f9700bd997`.
+Execute `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/smoke-20260918-v1/generate_pilot.py`.
+Its clean-source assertion, pinned checkpoint digests and TRAIN catalog allocation
+are checked before use. Scoring of sampled endpoint likelihoods is disabled for
+this generation-cost measurement, explicitly leaving those log probabilities
+unavailable; sampling still scores/normalizes the complete support. A read-only
+module hook counts actual candidate pairs and neural queries without retaining
+tensors or changing outputs.
+
+Outputs: fresh `smoke-20260918-v1/native-generation-v1/`,48charts, per-source
+condition, physical rows, candidate decisions, bounded raw checkpoints and osu!
+exports; no overwrite/resume. Every512candidates and completion save raw state
+plus durable journal boundaries. Atcandidate600of the first chart in each arm,
+restore the raw checkpoint, require bit-identical current cache values and every
+internal convolution buffer plus identical exact state/RNG, then continue.
+Check every output independently and require exact export/reparse row equality.
+
+Bounds:1800seconds for the complete48-chart run, oneCPUthread, RSS6GiB, available
+memory≥2GiB, swapgrowth≤128MiB, totaloutput512MiB, checkpoint128MiB, diskreserve1GiB.
+No network/download. Resource checks occur every64candidates and after each chart.
+Stop on any mechanical/cache/identity/numerical/resource failure; preserve partial
+outputs for diagnosis without declaring completion.
+
+Report source and generated suffix heads/LN fraction, head-count histogram,
+adjacent same-lane attacks below40ms and longest associated run, concurrent-hold
+time, independently released holds, attacks while another hold continues, LN
+duration quantiles, skipped candidates, total generation/recovery time, actual
+candidate pairs and neural queries. The40ms locator is not a playability cutoff;
+overlap and independent-release counts do not by themselves certify LN coordination.
+Do not require per-chart source LN ratios or style copying. Low LN coverage,
+sustained recurrence burden or mode collapse routes subsequent learning/quality
+investigation; this diagnostic alone cannot pass a playability gate. Any rendered
+inspection must use the Foundation/current-human judgment scope, not substitute
+these counts for it. Evaluation remains pending until outputs are checked.
