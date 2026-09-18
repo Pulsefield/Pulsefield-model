@@ -1779,7 +1779,7 @@ plausible benefit is linked start/end credit assignment and freedom to leave
 unused candidate times unmaterialized. No rare target will be silently dropped
 or replaced by a true endpoint. The next probe uses all future candidates.
 
-### Exploratory Card: linked-endpoint-head-v1, revision2
+### Exploratory Card: linked-endpoint-head-v1, revision3
 
 Owner is this proposed Note; accepted revision is none. The user's explicit
 authorization covers exploratory implementation, runs and skeleton redefinition.
@@ -1816,7 +1816,7 @@ head's endpoint and any later source actions or pairings are never input.
 Simultaneous heads are conditionally independent for this feasibility probe.
 Onset roles are declared additional skeleton information, beyond old untyped Γ.
 
-Fit each arm for400 AdamW updates, batch32, learning rate.001, weight decay.01,
+Fit each arm for1600 AdamW updates, batch32, learning rate.001, weight decay.01,
 clip1, shared example draws and construction seed20260920; frozen backbone is
 never updated. Primary metric is equal-group mean endpoint negative log
 likelihood on the fixed32 held-out groups. Report per-head NLL, exact endpoint
@@ -1990,3 +1990,139 @@ loses support. Context length, exact timing/occupancy features and training
 coverage must be recorded; parameter count alone is not the comparison axis.
 Outcome is REFINE. There is no new Card, implementation, training run or adoption
 for this branch; finish the linked-endpoint probe before selecting another run.
+
+### Linked-endpoint result at400 updates and revision3 optimization check
+
+All160charts/8804head features complete with manifest SHA
+`6bd32392e4d2512ee518f8eb6f5580ad103ab1401c42c6f26dd77462821dcbe3`.
+The resumed supervisor takes1072.206s; conservatively charged aggregate
+extraction is2190.950s, within the revised45-minute bound. Sampled peak RSS is
+1320.7MiB for the first producer and1190.5MiB for the resumed producer, with no
+observed swap growth. The paired400-update fit completes in14.766 internal
+seconds/16.134 supervisor seconds. Its readout SHA is
+`225cbe80437e222b0ce9f496251c6df0c2333d535bf2e4c50459ac57f9f44888`.
+
+| Endpoint head | Equal-group NLL | Equal-group exact accuracy | Per-head NLL | Mean absolute MAP error |
+| --- | ---: | ---: | ---: | ---: |
+| Generic timing prior | .955568 | .737542 | .898632 | 89.147ms |
+| History/context | .894912 | .735530 | .859524 | 89.244ms |
+
+The32-group NLL difference is−.060655,95% paired bootstrap CI
+[−.155882,+.017844], with22groups improving. Accuracy changes−.002012.
+The prespecified criterion is **not met** because the interval crosses zero.
+For the461validation heads ending later than the next candidate, NLL changes
+2.378124→2.145300 and exact accuracy2.17%→4.77%; for the1333 next-candidate
+heads NLL changes.386970→.414856. A single30-head group improves by1.268368nats,
+while another64-head group regresses by.603593. Keep these heterogeneous
+outcomes; do not relabel the run positive through a different significance test.
+No generated decoder is launched on this result. Evaluation is REFINE.
+
+Revision3 changes only the fixed fitting budget from400 to1600updates per arm.
+Each400-update arm saw12800examples against7010available TRAIN heads, and the
+fit is cheap relative to frozen extraction. The question remains whether the
+context head beats a learned timing prior; the added budget tests incomplete
+optimization before rejecting that particular head. Both arms restart from
+the same original initialization and replay the original first400draws, with
+their400-step weights checked against the retained checkpoints. Use the same
+features, seeds, optimizer, batch size,32validation groups, primary metric,
+bootstrap and decision criterion. Final evaluation is at1600 only; retain the
+400result independently and do not select the more favorable checkpoint. This
+is an adaptive exploratory follow-up, not an independent confirmatory test.
+
+Fresh owner is `linked-endpoint-head-v1/fit-u1600`; source files are fit1600.py
+and fit1600_supervise.py. Keep the20-minute fitting,6GiB RSS,2GiB available and
+2GiB total-owner bounds. Stop on prefix-weight mismatch, non-finite values or
+resource/identity failure. There is no further automatic budget extension
+under this Card. A weak/negative result refines the representation or shifts
+attention to the finite-context/exposure branch, rather than triggering a
+generated-decoder quality claim. Accepted revision remains none.
+
+Separate decoder-feasibility preparation is in endpoint_feasibility.py. Five
+functional checks cover strict pre-onset release, an already free lane, exact
+enumeration of the conditioned joint endpoint distribution, impossible support,
+and numerically rare feasible mass. The check record SHA is
+`be82e8f285e8872da3e976bde6dfe023d769acae22e1dd795b97a40ec6a158a4`.
+This helper is not imported by extraction or fitting and has no generated
+quality evidence. The endpoint pool remains the supplied source event union;
+this probe neither trains an explicit NO_EVENT row classifier nor establishes
+robustness to a differently constructed candidate pool.
+
+At1600updates, both arms exactly reproduce their retained400-step weights and
+draws before continuing. The paired fit completes in47.541 internal/48.407
+supervisor seconds, readout SHA
+`dd33fec02d3bf479644cfcf0b343b7a3af10d4ea687c09e20e9a764d6c4af40c`.
+Generic/context equal-group NLL is.949939/.868903, difference−.081036 with95%
+paired group-bootstrap CI[−.161373,−.013947];24/32groups improve. Equal-group
+exact accuracy is.739007/.740960, per-head NLL.879634/.805242, and mean absolute
+MAP error89.169/88.810ms. The revision3 gate is met, supporting a bounded
+generated-decoder pilot. This follows an adaptive budget extension on the same
+validation set and is not independent confirmation or generated-quality proof.
+Keep the400-step weak result alongside it. Evaluation remains REFINE.
+
+The1600 source SHAs are fit1600.py
+`e0782dbdef16cf56d18187030e9409d59b8b3d3cfc39ce6e42946aff23b93d3c`
+and fit1600_supervise.py
+`3ed08633fe6957e4241d7d0f0cef1a4a103c89301d7654d4cb06d9a6e32ddae8`.
+The source command uses v8 PYTHONPATH, caffeinate and the same explicit mps
+dependency profile, ending in `scripts/fit1600_supervise.py fit-u1600`.
+Pinned generic/context checkpoint SHAs are
+`31ce4e2821ebd42aaf3edd7df029fd3782626e7faa639580828c2065a5ebd128`
+and `7a5d8c391b30ce60eea15faf57a8f7d53ed9ae59a90128d83261ddd85f7a2297`.
+
+### Exploratory Card: onset-endpoint-generation-v1, revision1
+
+Owner/accepted revision: this proposed Note/none. User authorization includes
+this changed conditional task. Test whether linked endpoint decisions and
+optional unused endpoint slots produce coherent continuation, and whether the
+context head improves generated structure over the learned generic prior.
+The two new arms differ only in the fitted endpoint head/context switch. Their
+comparison with existing clock100 outputs changes the supplied information and
+factorization, so it cannot isolate one causal explanation for an improvement.
+
+Supply required onset times H and candidate endpoint times R, with H a subset
+of the source event union R. At least one head is required at each H time;
+counts, columns, TAP/LN types and LN endpoint associations remain generated.
+Unused R slots create no row. Seed conditioning includes the same original
+30-note complete-row prefix plus full endpoints of LN objects whose heads are
+in that prefix. This explicitly gives more information than the old physical
+row prefix; no suffix-starting LN endpoint, type or column is supplied.
+
+Keep frozen v8 and clock100 backbone29a2a29e. Use the two pinned1600 endpoint
+heads, with raw milliseconds and all future R candidates. Backbone row scores
+are restricted to required attacks, occupied-lane legality and already selected
+release obligations. Release-only steps are deterministic; unused slots advance
+the candidate index without committing a materialized/learned row. A head's
+chosen endpoint creates its future obligation. Condition simultaneous endpoint
+draws jointly to keep at least one pre-closed lane at the next required onset;
+no source-end fallback, lane-repeat penalty or maximum LN duration is allowed.
+The existing exact replay and learned state use only materialized rows. The
+typed scheduler separately owns candidate position and completion.
+
+Generate85058a/871955/ecc496, seed17, once for each endpoint arm: six complete
+charts, no model updates. Use the same pinned catalog/split/weights and exact
+source bytes as the earlier failure checks. Row policy is temperature.85/top-p1;
+endpoint policy uses the fitted full distribution at temperature1. Use separate
+CPU RNG streams, row seed17 and endpoint seed100020, in both arms so the required
+onset draws remain aligned despite different LN counts. CPU/one thread, no audio
+input; original playback metadata is copied only during export.
+
+The first gate is executable correctness: reproduce source rows when replaying
+source object decisions; skip unused candidate slots; enforce positive endpoints,
+onset coverage, occupancy, closure and independent export/reparse consistency.
+Stop an arm on any failed invariant, non-finite probability or empty feasible
+support. Inspect complete generated gold contexts and each output's fastest-four
+same-column context under the frozen Foundation, with raw endpoint witnesses.
+Report omitted-slot count, required-onset coverage, LN durations and recurrence
+locators, keeping them separate from qualitative judgments. A coherent result
+without recurrence/hold regression merits seed19 and broader validation/long-gap
+checks. A visible regression or weak result refines the representation. No
+whole-chart quality or benchmark superiority claim follows from this pilot.
+
+Fresh implementation/launch owner is `onset-endpoint-generation-v1`, with
+separate quality owners `quality-onset-endpoint-prior-v1` and
+`quality-onset-endpoint-context-v1`. Each arm is capped at30minutes,6GiB process-
+tree RSS,2GiB minimum available and2GiB output, with a512MiB disk reserve.
+Preserve partial outputs and fail rather than overwrite. Record source/check
+digests and exact commands before launch. Arms may run concurrently; measured
+time is operational, not a clean speed comparison. This is a new exploratory
+Card, not adoption of a replacement product contract.
