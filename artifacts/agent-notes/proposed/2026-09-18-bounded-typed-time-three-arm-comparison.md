@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-18
-Product revision: 21475e65d773b7e7199accf0750de584d9f10ce9 on codex/bounded-typed-continuation; trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: b544ea4d02dea5bf175991ec633045e53b9e20d6 on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -552,3 +552,71 @@ Additionally require the repeated first O1 physical-row file to be byte-identica
 to revision1's completed generation before exporting it. This verifies that the
 I/O repair did not change the previously generated trajectory. No optimization,
 new seed, new sample selection or relaxation of mechanical checks is introduced.
+
+## Result Log: native generation revision 2
+
+The48-chart run completed in86.470s. All16conditions per arm passed independent
+R/H/seed/occupancy/endpoint/terminal verification and exact osu! reparse equality.
+The first O1 row file matches the failed attempt byte-for-byte. Candidate600raw
+restoration in the first chart of each arm preserves exact state, RNG, current
+learned content and all convolution buffers bit-for-bit; recovery times are
+0.318/0.305/0.304s. No optimizer change or sampling intervention occurred.
+
+Readout: `smoke-20260918-v1/native-generation-v2/readout.json`, SHA-256
+`17ed6ca391e680ee99a19298db8873260974eaba56edbd9df4368893999c5956`.
+All generated source-condition/row/decision/checkpoint/osu! files live in that
+owner. The process exited successfully; no generation job remains running.
+
+| Arm | New suffix LN heads / all suffix heads | Per-chart LN fraction min / median / max | Generation seconds |
+| --- | --- | --- | --- |
+| O1 | 675 / 23294 = 2.8977% | 0.6221% / 2.2184% / 6.6667% | 23.838 |
+| R1 | 5555 / 26010 = 21.3572% | 8.4277% / 17.9342% / 46.7553% | 29.997 |
+| R0 | 4158 / 27188 = 15.2935% | 6.9661% / 16.3581% / 29.2237% | 30.509 |
+
+O1 samples504368futurecandidatepairs; its low generation cost is coupled to a
+low LN birth rate, so this is not an equal-work pointer cost comparison. Neural
+queries are14507/15363/16306. O1/R1 skip1669/1060unusedcandidates, whileR0 emits
+allR by contract. Sampled CPU RSS peaks at309084160bytes, minimum available memory
+is7980351488bytes and swap growth remainszero.
+
+Adjacent same-lane attack pairs below40ms total57/103/127 forO1/R1/R0. The dense
+source00126e732bc4 accounts for51/93/108 of those pairs, with longest rapid runs
+4/7/4attacks respectively. These locators do not establish Jack or playability.
+Suffix time with at least two held LNs is26335/387537/265344ms; independent-release
+row counts are116/1247/919, and attacks while another hold continues are327/3410/2456.
+These are factual action relationships, not LN-coordination verdicts.
+
+Interpretation: under this short fit and one generation seed, O1 exhibits much
+lower LN use across the selected collection, despite good teacher-forced type
+discrimination. R1 retains a wider LN-use range. This warrants treating typed
+rows as a serious practical candidate; it does not prove O1 intrinsically fails,
+that source LN ratios must be copied, or that R1's denser LN arrangements are more
+playable. Most complete suffix positions were outside the128-onset learning slice,
+and neither full-corpus training nor independent quality evaluation has occurred.
+
+To check an alternative explanation, product commit
+`b544ea4d02dea5bf175991ec633045e53b9e20d6` adds six CPU/MPS parity cases without
+changing runtime/model behavior. They override only random selections to force
+source choices through the actual native generation commit path. Indexed exact
+state, permitted raw content and query features match the training owner; online
+pre-decision probabilities match dense teacher forcing across an old hold, context
+expiry and a long gap. All25generation tests pass in5.17s. This rejects the tested
+train/inference feature or cache projection mismatches, not all possible bugs or
+the statistical effects of generated-history drift.
+
+Next work: inspect sustained generated organization with time-proportional images
+and Foundation/current-human contrasts, then define the main paired training
+screen and prospectively repair the type-learning measurement. Keep inadequate
+exposure, generated-history drift and factorization/optimization differences as
+live explanations. No decoder repair, coarse LN oracle or object-model victory
+is inferred. Evaluation: REFINE; visual semantic judgments remain unreviewed.
+
+Calibration preparation: frozen Foundation file bytes still match
+`b1aea3cbdfe9102e1657d01acfae3f36729467d0a8675b6272ba4f0b17c743ab`, and all eight
+canonical workflow documents match the earlier typed-quality review's recorded
+hashes. The find/get MCP tools are not exposed in this session. Current canonical
+Python example extraction expects `humanComment`, which some observations in the
+older feedback projection omit; that attempted extraction stopped with KeyError.
+Use the current canonical reader/projection or an explicit missing-comment adapter
+before semantic comparison. Do not promote inherited agent rationale into human
+comments. No human record, Foundation or pin was changed.
