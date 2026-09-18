@@ -4,7 +4,7 @@ Note ID: 2026-09-18-bounded-typed-time-three-arm-comparison
 Status: proposed
 Kind: research
 Created: 2026-09-18
-Updated: 2026-09-18
+Updated: 2026-09-19
 Product revision: 1693d62ffaca04b2a6127d8e3a72d1988adf441f on codex/bounded-typed-continuation; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
@@ -1356,3 +1356,69 @@ concentrated in undesirable recurring states, reconsider the common learning or
 conditioning setup; do not redefine success as mechanical legality. Source fitting
 and generated organization remain separate decisions. No implementation change
 or new external oracle condition is introduced by this continuation.
+
+
+## Paired exposure result: two million
+
+All three arms completed the immutable plan at exactly 2,000,000 source-onset
+exposures and 2,645 cumulative updates. Each covers 1,697,938 distinct onsets,
+6,315 charts and 3,078 groups. Interval, physical-row, prefix, padding, context
+and coverage ledgers match; configurations match after removing arm and segment
+paths. No parent updates were discarded, and no resource/support/nonfinite
+failure occurred. Cumulative CPU training seconds are O1 2174.555, R1 1501.429
+and R0 1408.085. The final segments take 1083.221/756.640/710.195 seconds.
+Peak segment footprints are 872203872/884426360/880690784 bytes with zero swap
+growth. These are training costs; evaluation and earlier MPS diagnostics remain
+separate. All costs stay below the declared four-hour-per-arm training cap.
+
+Checkpoint identities:
+
+- O1: `759a4e6212e1c47b0039a457d9617bdfa957a7989e31f3715b6f70ff0b18d3b1`;
+- R1: `302fae523cf1fe36afff463fe28f20739a2eb40cab5064d0941a588d8f70c564`;
+- R0: `fbe7a80936d089779a5cae48e48c3c76f36ef2062b70027c963f2a21cf9ae2d1`;
+
+The last 32-update local factor costs are 2.041436/2.025580/2.130897 nats/onset.
+These are training-window summaries, not complete-suffix rankings. O1 endpoint
+cost is 0.807911 nats/LN; conditional TAP/LN NLL is 0.275195/0.275957/0.289180.
+All 10,573 draws are accounted for; 165 reach at least 24 H/s and the maximum is
+38 H/s. Median full 512-row-envelope duration is 103.268/65.625/46.312/36.671
+seconds in peak-density bins below 8, 8–16, 16–24, and at least 24 H/s. This
+summarizes sampled training windows, not a uniform corpus-time distribution.
+Training readout SHA `9b25bbe8453eb2ed92b97d69b24f8977c666bb092112f16b873a2e68bffe4dd4`.
+
+## Development-screen Card revision 3: fixed two-million comparison
+
+Proposed, acceptance none. Repeat the same 24 development groups, seeds
+17/19/23, full-suffix normalized NLL, mechanical/export/reparse checks, resource
+bounds, fixed 16-second visual cores and interpretation from revision 2. The only
+scientific input change is the exact 2M checkpoints above. Source remains clean
+`1693d62ffaca04b2a6127d8e3a72d1988adf441f`; conditions SHA remains
+`f0ead07f41111c0413cae9b3f27b3a20c2abbedc2efea1b94f5c2b2707b808eb`.
+Use fresh `development-screen-2000k-v1/` and `inspection-2000k-v1/`. The runner
+status guard changes from paused to completed because this is the plan endpoint.
+No model, sampler, candidate support or validation selection changes are made.
+
+Stage-specific artifact driver SHAs:
+
+- `training_readout_2000k.py`: `54010b96622f33510acf9948314ad4c12a2963361985109d022fb1ccb0d3ef7d`;
+- `development_screen_2000k.py`: `61c1a330b507b35416919d3ec7cf2504112f50313530773fdc92918257d2c2d2`;
+- `screen_readout_2000k.py`: `73a327f6249d7a22d21be7fc0a38c644802a00a960c358320a19594aa7e537cb`;
+- `render_screen_2000k.py`: `8fc5836ffe09a11d20514243172dc3ad30d406da489e664f60c6a351ad63eb1a`;
+- `policy_drift_2000k.py`: `1da2bdc6897eb5b2bcb49887b377b9237656242cc683144eb038a0bada670f85`;
+
+All drivers pass syntax compilation. Run the development driver, then its
+readout/rendering and policy driver through `uv run --offline --python 3.10
+--extra mps --group dev python`, on CPU one thread. Screen limit remains one
+hour, 6 GiB physical footprint, existing RSS/swap/available-memory guards and
+2 GiB output cap. Preserve failures and never overwrite previous outputs.
+
+Policy-drift Card revision 4 uses the same source index 12, seed 17, exact
+expectation definition and native-row reproduction checks at 2M. It inherits
+the deterministic-singleton H capture correction of revision 3 and writes
+fresh `policy-drift-2000k-v1/`; its 120-second/resource limits remain unchanged.
+Its checkpoint substitution is prospective; no result is implied.
+
+This is a development learning-curve comparison. Neither lower NLL nor more LN
+heads establishes sustained playable organization. Inspect repeated four-key
+attacks and independent LN-control episodes explicitly. Independent initialization,
+unused-group confirmation and broader organization remain outstanding.
