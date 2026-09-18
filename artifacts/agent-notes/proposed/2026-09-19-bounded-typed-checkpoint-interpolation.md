@@ -163,3 +163,70 @@ and reports ordinary/stress/all strata with the declared group bootstrap.
 `874e3155dd9c96fe165a5b83bfb576348cc9b62677c90987a9dd30f92a9063cd`
 renders all context pages and paginates the complete action records for the two
 fixed midpoint cores. These scripts do not alter models or select new cases.
+
+## Result: better interior fit, incomplete generation tradeoff
+
+The native screen completes216 generations and72 complete-suffix scores in
+748.645s. All mechanics/export/reparse checks and three selected exact raw-cache
+recoveries pass. Peak physical footprint233866200 bytes; swap growth zero. The
+declared concurrent R1 training was active, so elapsed time is not a standalone
+throughput comparison. No product source changes or checkpoint overwrites occurred.
+Raw readout SHA
+`d925bf1b58658f2911f8c12be2add5f7e6972b9507b570c76eb127dadde2693d`;
+paired summary `stability-20260919-v1/readout.json` SHA
+`273e17edfda7074681f0a02b02323c992be4c447331deff301e7ee68a68c954a`.
+
+| Weight on2.25M parent | Pooled suffix NLL | Group mean rapid pairs/1000 heads | LN head share | Rapid pairs / one-free pairs | Longest rapid run |
+| --- | --- | --- | --- | --- | --- |
+| 0,2M parent | 1.906802 | 2.593285 | 37.037% | 498 /439 | 8 |
+| .25 | 1.874042 | .753338 | 21.631% | 152 /129 | 5 |
+| .5, primary | 1.863347 | .431977 | 14.000% | 90 /47 | 6 |
+| .75 | 1.876252 | .168061 | 11.864% | 33 /9 | 2 |
+| 1,2.25M parent | 1.913932 | .267819 | 10.262% | 53 /1 | 3 |
+
+The midpoint primary rate difference to A is-2.161308,95% paired group-bootstrap
+interval[-6.024613,-.085535]. The rapid-reduction and NLL gates pass. The aggregate
+LN-share gate fails:14.000% is below18.5185%. Its remaining47 one-free-lane rapid
+pairs and longest run6 also prevent interpreting the lower mean as elimination
+of local occupancy burden. Alpha.25 has a more favorable aggregate LN/burden
+tradeoff, but it was not the primary contrast and its semantic outcomes are
+unreviewed. Do not replace the failed primary combined gate post hoc.
+
+### Direct semantic inspection
+
+All16 midpoint context images were viewed. Manifest SHA
+`92e3111b4585ca6593505a8c01066008ddeb4e356cb164cff7a59068cdff06f4`;
+`inspection-midpoint-v1/review.json` SHA
+`12628bcd45fd37d18261ac83442f9ca82b647c7e9d4be7b9b1b259fba1299205`.
+The Foundation, cached human packet and eight canonical human workflow documents
+retain their pinned hashes. The previously viewed High LN positive, negative and
+localized-supporting comparisons remain the calibration references.
+
+The LN-rich core has33 LN heads and227 taps, with no entering hold. Its17305–20980ms
+island contains independent starts/releases; for example, three holds begun19030
+end19180/19330/19405, and the next column2 hold spans19330–19855 while the other
+roles continue and restart. Later at20080, column0 remains held while columns1/2
+begin holds and column3 taps; column1 survives a subsequent column2 tap. This is
+LN coordination present/supporting, High. The longer TAP-led surroundings and
+isolated later short holds do not make the whole core prominently coordinated.
+The dense core has443 taps and no LN or entering hold: coordination absent, High.
+Other tags remain unreviewed. The scoped semantic retention gate passes, although
+the collection-level numeric coverage guard fails. No whole-output quality or
+human-preference conclusion is claimed.
+
+### Evaluation and decision
+
+Evaluation: REFINE. The predeclared combined midpoint gate is not met. The three
+interior points have lower teacher-forced NLL than either parent, giving a concrete
+reason to investigate prospective trajectory averaging or LR policy after the R1
+replication and broader organization review. This is a source-bounded diagnostic,
+not proof that optimization is the unique cause or that SWA/EMA will preserve
+generation modes. Averaging can improve fit while substantially changing free
+generation; mode coverage and sustained organization must remain separate guards.
+
+`curve-figure-v2/curve.png` and SVG show the five fixed parameter locations, fit,
+group-balanced burden and LN share. The midpoint's localized coordination is
+retained, so describing this result as complete LN disappearance would be wrong.
+The current models remain experimental inference-only artifacts. No deployment,
+promotion, additional alpha tuning, remote push or Note lifecycle transition is
+authorized by this result. The overall playable-generation goal remains active.
