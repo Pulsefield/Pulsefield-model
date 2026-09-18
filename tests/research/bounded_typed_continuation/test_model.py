@@ -6,14 +6,15 @@ import pytest
 import torch
 
 from pulsefield_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
-from pulsefield_model.research.bounded_typed_continuation.features import CONTENT_DIM, TimingView, query_features
+from pulsefield_model.research.bounded_typed_continuation.features import CONTENT_DIM, EndpointAvailability, TimingView, query_features
 from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, EndpointFactor, EndpointPointer, ModelConfig
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
 
 
-def small_model(arm=Arm.O1, device='cpu'):
+def small_model(arm=Arm.O1, device='cpu', availability='none'):
     torch.manual_seed(171)
-    return BoundedModel(ModelConfig(arm, hidden=12, levels=2, coupling_rank=3)).to(device)
+    return BoundedModel(ModelConfig(arm, hidden=12, levels=2, coupling_rank=3,
+                                   endpoint_availability=availability)).to(device)
 
 
 @pytest.mark.parametrize('arm', list(Arm))
@@ -35,15 +36,20 @@ def test_joint_actions_normalize_on_exact_support_and_mirror(arm):
 
 
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-def test_chunked_recomputed_pointer_matches_dense_values_and_all_gradients(device):
+@pytest.mark.parametrize('availability', ['none', 'commitment'])
+def test_chunked_recomputed_pointer_matches_dense_values_and_all_gradients(device, availability):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
     torch.manual_seed(19)
     dtype = torch.float64 if device == 'cpu' else torch.float32
-    pointer = EndpointPointer(8).to(device=device, dtype=dtype)
+    pointer = EndpointPointer(8, availability).to(device=device, dtype=dtype)
+    if pointer.availability_residual is not None:
+        torch.nn.init.normal_(pointer.availability_residual[-1].weight, std=.05)
     dense = deepcopy(pointer)
-    view = TimingView(Timing(tuple(float(i * i) for i in range(41)), (True,) + (False,) * 40))
-    factors = [EndpointFactor(view, 0, 1, 41, 40), EndpointFactor(view, 2, 3, 31, 11), EndpointFactor(view, 30, 31, 32, 31)]
+    view = TimingView(Timing(tuple(float(i * i) for i in range(41)), tuple(i % 2 == 0 for i in range(41))))
+    facts = EndpointAvailability((40, 39), 0)
+    factors = [EndpointFactor(view, 0, 1, 41, 40, facts), EndpointFactor(view, 2, 3, 31, 11, facts),
+               EndpointFactor(view, 30, 31, 32, 31, facts)]
     context = torch.randn(3, 8, device=device, dtype=dtype, requires_grad=True)
     copied = context.detach().clone().requires_grad_()
     actual = pointer.log_prob(context, factors, candidate_budget=7, recompute=True)
@@ -61,8 +67,11 @@ def test_chunked_recomputed_pointer_matches_dense_values_and_all_gradients(devic
             torch.testing.assert_close(a.grad, b.grad, atol=tolerance, rtol=tolerance)
 
 
-def test_complete_dependent_endpoint_mixture_normalizes_and_is_mirror_equivariant():
-    model = small_model().double()
+@pytest.mark.parametrize('availability', ['none', 'commitment'])
+def test_complete_dependent_endpoint_mixture_normalizes_and_is_mirror_equivariant(availability):
+    model = small_model(availability=availability).double()
+    if model.pointer.availability_residual is not None:
+        torch.nn.init.normal_(model.pointer.availability_residual[-1].weight, std=.1)
     timing = Timing((0., 40., 100., 160.), (True, False, True, False))
     state, view = Schedule(Arm.O1, timing), TimingView(timing)
     group = (2, 2, 2, 2)
@@ -101,10 +110,13 @@ def test_head_type_and_endpoint_gradients_reach_the_common_encoder():
 
 
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-def test_endpoint_sampling_keeps_feasibility_and_is_chunk_partition_invariant(device):
+@pytest.mark.parametrize('availability', ['none', 'commitment'])
+def test_endpoint_sampling_keeps_feasibility_and_is_chunk_partition_invariant(device, availability):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
-    model = small_model(device=device)
+    model = small_model(device=device, availability=availability)
+    if model.pointer.availability_residual is not None:
+        torch.nn.init.normal_(model.pointer.availability_residual[-1].weight, std=.05)
     timing = Timing((0., 40., 100., 160.), (True, False, True, False))
     state, view = Schedule(Arm.O1, timing), TimingView(timing)
     group, hands = (2, 2, 2, 2), torch.randn(2, model.config.hidden, device=device)
@@ -126,10 +138,12 @@ def test_all_arms_start_with_identical_common_weights_at_a_shared_initialization
             torch.testing.assert_close(parameters[0][key], parameters[2][key], atol=0, rtol=0)
 
 
-def test_recomputed_candidate_blocks_do_not_retain_full_future_activation_storage():
-    pointer = EndpointPointer(16)
-    view = TimingView(Timing(tuple(float(i) for i in range(2001))))
-    factors = [EndpointFactor(view, 0, 1, 2001, 2000), EndpointFactor(view, 4, 5, 1700, 1000)]
+@pytest.mark.parametrize('availability', ['none', 'commitment'])
+def test_recomputed_candidate_blocks_do_not_retain_full_future_activation_storage(availability):
+    pointer = EndpointPointer(16, availability)
+    view = TimingView(Timing(tuple(float(i) for i in range(2001)), (True,) * 2001))
+    facts = EndpointAvailability((1700, 800), 0)
+    factors = [EndpointFactor(view, 0, 1, 2001, 2000, facts), EndpointFactor(view, 4, 5, 1700, 1000, facts)]
 
     def saved_bytes(recompute):
         saved = {}

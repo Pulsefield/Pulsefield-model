@@ -8,6 +8,7 @@ external runtime audit before it can support an equal-compute continuation.
 from __future__ import annotations
 
 from dataclasses import asdict
+from copy import deepcopy
 import json
 from pathlib import Path
 import platform
@@ -21,14 +22,16 @@ from ..oracle_time_continuation.runtime import (
 from ..oracle_time_continuation.storage import file_digest
 from ..scoped_style_modeling.dataset import ContractError
 from .corpus import ChartCache, Coverage, next_batch, read_plan
+from .contract import Arm
 from .data import batch_likelihood, prepare_batch
-from .model import BoundedModel
+from .model import BoundedModel, ModelConfig
 from .memory import footprint_bytes
 from .smoke_run import save_json, source_revision, synchronize
 from .train_config import TrainConfig
 
 FORMAT = 'bounded-typed/corpus-training-v1'
-EXECUTION_FIELDS = {'output_dir', 'resume_from', 'stop_after_checkpoint', 'plan_file', 'source_cache_dir'}
+EXECUTION_FIELDS = {'output_dir', 'resume_from', 'stop_after_checkpoint', 'plan_file', 'source_cache_dir',
+                    'fork_from', 'fork_sha256', 'fork_source_revision', 'fork_plan_file'}
 
 
 def training_identity(config):
@@ -91,6 +94,71 @@ def read_resume(path, config, revision, plan):
                                          discarded_updates=result['last_completed_update'] - payload['update'])
 
 
+def read_fork(config, plan):
+    """Validate an explicit source transition and an immutable plan extension.
+
+    Only the optional endpoint residual may change. The original plan must have
+    completed, and every old draw and source pin must remain an exact prefix.
+    The operator pins the audited parent source; this is not ordinary resume.
+    """
+    path = Path(config['fork_from'])
+    if file_digest(path) != config['fork_sha256']:
+        raise ContractError('Fork checkpoint differs from its pinned digest')
+    reference = torch.load(path, map_location='cpu', weights_only=True)
+    old_plan = read_plan(config['fork_plan_file'], reference['config']['plan_sha256'])
+    payload, charged, parent = read_resume(path, reference['config'], config['fork_source_revision'], old_plan)
+    result = json.loads((path.parent / 'result.json').read_text())
+    if (result['status'] != 'completed' or payload['cursor'] != len(old_plan['draws']) or
+            parent['discarded_updates'] or result['source_revision'] != payload['source_revision']):
+        raise ContractError('Fork initialization requires a completed, fully durable parent plan')
+    old_identity, new_identity = (deepcopy(training_identity(c)) for c in (payload['config'], config))
+    old_mode = old_identity['model'].pop('endpoint_availability', 'none')
+    new_identity['model'].pop('endpoint_availability')
+    old_identity.pop('plan_sha256')
+    new_identity.pop('plan_sha256')
+    if old_mode != 'none' or old_identity != new_identity:
+        raise ContractError('Fork scientific configuration may change only endpoint availability and extend its plan')
+    base_keys = set(old_plan) - {'sampling', 'draws'}
+    if ({key: old_plan[key] for key in base_keys} != {key: plan.get(key) for key in base_keys} or
+            set(plan) != set(old_plan) or
+            {k: v for k, v in old_plan['sampling'].items() if k != 'milestones'} !=
+            {k: v for k, v in plan['sampling'].items() if k != 'milestones'} or
+            plan['sampling']['milestones'][:len(old_plan['sampling']['milestones'])] != old_plan['sampling']['milestones'] or
+            len(plan['draws']) <= len(old_plan['draws']) or
+            plan['draws'][:len(old_plan['draws'])] != old_plan['draws']):
+        raise ContractError('Fork plan must preserve every source, sampler setting and old draw prefix')
+    parent.update(kind='fork', source_revision=payload['source_revision'], checkpoint_sha256=config['fork_sha256'],
+                  plan_sha256=payload['config']['plan_sha256'], endpoint_availability=config['model']['endpoint_availability'])
+    return payload, charged, parent
+
+
+def restore_fork(model, optimizer, payload):
+    """Copy existing parameters and Adam state; appended residual moments start empty."""
+    settings = dict(payload['config']['model'])
+    settings['arm'] = Arm(settings['arm'])
+    previous = BoundedModel(ModelConfig(**settings))
+    previous.load_state_dict(payload['model'])
+    old_names = [name for name, _ in previous.named_parameters()]
+    new_names = [name for name, _ in model.named_parameters()]
+    added = new_names[len(old_names):]
+    if new_names[:len(old_names)] != old_names or any(not name.startswith('pointer.availability_residual.') for name in added):
+        raise ContractError('Fork model must preserve parameter order and append only the endpoint residual')
+    missing, unexpected = model.load_state_dict(payload['model'], strict=False)
+    if set(missing) != set(added) or unexpected:
+        raise ContractError('Fork model weights do not match its declared endpoint extension')
+    state = deepcopy(payload['optimizer'])
+    current_groups = optimizer.state_dict()['param_groups']
+    if len(state['param_groups']) != 1 or len(current_groups) != 1:
+        raise ContractError('Fork migration requires the single corpus AdamW parameter group')
+    old_ids, new_ids = state['param_groups'][0]['params'], current_groups[0]['params']
+    if len(old_ids) != len(old_names) or not set(state['state']).issubset(old_ids):
+        raise ContractError('Fork optimizer state does not match its parent parameters')
+    translation = dict(zip(old_ids, new_ids))
+    state['state'] = {translation[key]: value for key, value in state['state'].items()}
+    state['param_groups'][0]['params'] = new_ids
+    optimizer.load_state_dict(state)
+
+
 def run_training(config: TrainConfig, *, resolved_yaml=''):
     config.validate()
     if any(not getattr(config, key) for key in ('plan_file', 'plan_sha256', 'source_cache_dir')):
@@ -104,6 +172,8 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
     payload, prior_seconds, parent = None, 0., None
     if config.resume_from is not None:
         payload, prior_seconds, parent = read_resume(config.resume_from, flat, revision, plan)
+    elif config.fork_from is not None:
+        payload, prior_seconds, parent = read_fork(flat, plan)
     output = Path(config.output_dir)
     output.mkdir(parents=True, exist_ok=False)
     save_json(output / 'run-config.json', flat)
@@ -136,8 +206,11 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
             model = BoundedModel(config.model).to(config.device)
             optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
             if payload:
-                model.load_state_dict(payload['model'])
-                optimizer.load_state_dict(payload['optimizer'])
+                if config.fork_from is not None:
+                    restore_fork(model, optimizer, payload)
+                else:
+                    model.load_state_dict(payload['model'])
+                    optimizer.load_state_dict(payload['optimizer'])
                 torch.set_rng_state(payload['torch_rng'])
                 if config.device == 'mps':
                     torch.mps.set_rng_state(payload['device_rng'])

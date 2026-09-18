@@ -20,21 +20,24 @@ from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
 
 
-def setup(arm, device='cpu'):
+def setup(arm, device='cpu', availability='none'):
     torch.manual_seed(17)
-    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2)).to(device).eval()
+    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2,
+                                   endpoint_availability=availability)).to(device).eval()
+    if model.pointer is not None and model.pointer.availability_residual is not None:
+        torch.nn.init.normal_(model.pointer.availability_residual[-1].weight, std=.05)
     timing = Timing(tuple(100. * i for i in range(37)), None if arm == Arm.R0 else tuple(i % 5 != 4 for i in range(37)))
     seed = [CompleteRow(0., (2, 2, 0, 0)), CompleteRow(100., (0, 0, 1, 0)), CompleteRow(200., (0, 0, 0, 1))]
     rollout = Rollout.from_seed(model, timing, seed, None if arm == Arm.R0 else {0: 10, 1: 17})
     return model, timing, seed, rollout
 
 
-@pytest.mark.parametrize('arm', list(Arm))
+@pytest.mark.parametrize('arm,availability', [(arm, 'none') for arm in Arm] + [(Arm.O1, 'commitment')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-def test_native_rollout_preserves_task_support_and_round_trips_osu(arm, device, tmp_path):
+def test_native_rollout_preserves_task_support_and_round_trips_osu(arm, availability, device, tmp_path):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
-    model, timing, seed, rollout = setup(arm, device)
+    model, timing, seed, rollout = setup(arm, device, availability)
     generator = torch.Generator().manual_seed(71)
     rows, decisions = list(seed), []
     while not rollout.state.finished:
@@ -68,12 +71,12 @@ def test_native_rollout_preserves_task_support_and_round_trips_osu(arm, device, 
     assert reparsed.targets == tuple(rows) and report['notes'] == rollout.state.replay.note_count
 
 
-@pytest.mark.parametrize('arm', list(Arm))
+@pytest.mark.parametrize('arm,availability', [(arm, 'none') for arm in Arm] + [(Arm.O1, 'commitment')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-def test_owned_raw_checkpoint_rebuild_preserves_rng_actions_and_plans(arm, device, tmp_path):
+def test_owned_raw_checkpoint_rebuild_preserves_rng_actions_and_plans(arm, availability, device, tmp_path):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
-    model, timing, _, rollout = setup(arm, device)
+    model, timing, _, rollout = setup(arm, device, availability)
     generator = torch.Generator().manual_seed(91)
     for _ in range(10):
         rollout.step(generator, candidate_budget=3)
@@ -129,8 +132,9 @@ def test_unused_terminal_candidate_finishes_without_inventing_a_row():
         restored.step(generator)
 
 
-def test_selected_object_log_probability_uses_the_same_training_mixture():
-    model, timing, _, rollout = setup(Arm.O1)
+@pytest.mark.parametrize('availability', ['none', 'commitment'])
+def test_selected_object_log_probability_uses_the_same_training_mixture(availability):
+    model, timing, _, rollout = setup(Arm.O1, availability=availability)
     generator = torch.Generator().manual_seed(71)
     checked = 0
     while not rollout.state.finished:

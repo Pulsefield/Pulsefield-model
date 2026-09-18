@@ -22,8 +22,10 @@ samples the native tasks and rebuilds bounded caches from raw checkpoints;
 [`verification.py`](../../src/pulsefield_model/research/bounded_typed_continuation/verification.py)
 independently checks completed outputs against the external condition and plans.
 The packaged `bounded_typed_smoke` configuration provides a bounded learning-check
-runner. A 16-chart learning check has run; the corpus training and generated-quality
-comparison have not run.
+runner. A 16-chart learning check and a paired corpus trajectory through two million
+source-onset exposures have run. The development generation screen establishes
+learning progress and remaining allocation failures; overall playable quality and
+independent confirmation remain unproven.
 
 ## Conditions and prediction tasks
 
@@ -148,6 +150,31 @@ backward. Only factor contexts and the small logsumexp reduction graph persist.
 Tests compare likelihoods and all gradients with dense computation on CPU/MPS,
 and compare retained tensor storage with and without recomputation. Rare endpoints
 beyond a target window remain supervised; the window end does not truncate support.
+
+### Candidate-conditioned availability experiment
+
+`model.endpoint_availability` selects `none` (the original pointer), `zero` or
+`commitment`; the latter two are O1-only. Both add the same small residual scorer
+over encoded context and ordinary candidate features. `zero` fixes its additional
+availability inputs to zero as a capacity control. `commitment` supplies derived
+partial-plan facts. The final residual layer starts at zero, preserving the
+original conditional probabilities when existing weights are copied.
+
+For each candidate endpoint, the new inputs describe the future interval during
+which that LN and at least zero, one, two or three other known LNs remain held.
+Each interval supplies `log1p(value)/8` transforms of its H count, summed inverse
+H gaps in reciprocal seconds, and elapsed seconds. Two further inputs count known
+other holds and unassigned current LN factors, each divided by three. Occupancy
+includes an H exactly at a release because same-time close/restart is forbidden.
+The first H has no preceding gap; later gap weights use the previous supplied H.
+
+These fourteen inputs use R/H, earlier object commitments and earlier factors of
+the current endpoint order. Later within-row endpoints remain unknown. They do
+not forecast objects that will be generated afterward, reveal source suffix LN
+labels, constrain durations, or impose a burden penalty. Full endpoint support,
+normalization and the mirror-order mixture remain unchanged. Compare the two
+residual modes with continued training of `none` before attributing any gain to
+the new access path. The feature's generation-quality benefit is not established.
 
 ## Source projection and leakage checks
 
@@ -375,7 +402,7 @@ those diagnostics. Preparation, dense prefix/target forward, candidate scoring,
 backward, optimizer steps, checkpointing and evaluation are recorded or included
 in elapsed-time totals. The complete run has an 1800-second limit and explicit
 driver/RSS, available-memory, swap-growth and output guards. These settings bound
-a pipeline check; the main screen remains separately planned below.
+a pipeline check; corpus training is configured separately below.
 
 Use roughly matched, few-million-parameter common encoders, identical source
 intervals and training initialization seeds, with all arms trained from scratch.
@@ -394,7 +421,7 @@ LNs with different ends, long gaps and exact state at crop boundaries. Synthetic
 long-lived anchors supplement real examples where observed corpus LN spans
 are shorter than the full learned context.
 
-The planned main screen uses 250k/1M/2M source-onset exposure checkpoints with
+The initial main screen uses 250k/1M/2M source-onset exposure checkpoints with
 at most four training hours per arm, whichever comes first. Pin exact runnable
 source, data intervals, optimizer and resource limits after the learning/resource
 check. Report equal-exposure and equal-compute results separately, including
@@ -433,6 +460,24 @@ checkpoint in a fresh segment directory; it requires identical source and
 scientific/resource settings, verifies the parent journal prefix, and preserves
 the parent artifacts. No learned history is retained. Coverage counts the exact
 union of supervised source onsets rather than the number of draws.
+
+`fork_from`, `fork_sha256`, `fork_source_revision` and `fork_plan_file` provide a
+separate, explicit initialization path for an audited source transition. All four
+are required together and cannot be combined with `resume_from`. The parent must
+have completed its plan with a finalized runtime ledger and no discarded updates.
+The new plan must preserve every source pin, sampling setting, prior milestone
+and old draw, then append further draws. Existing plans and parent outputs are
+never edited. Scientific settings may change only the endpoint-availability mode;
+the parent must use `none`. Ordinary resume retains exact source/config identity.
+
+Fork initialization copies all existing weights, AdamW moments/steps and RNG,
+retains cumulative exposure/coverage/metrics, and charges the parent's entire
+measured compute time. Only residual parameters may be appended; their optimizer
+state starts empty. Subsequent segments use ordinary resume with the fork fields
+cleared. Each result links its immediate parent ledger, retaining the source and
+checkpoint transition without relabeling the parent checkpoint. The runner's
+source pin is an operator-declared audit boundary, not proof that arbitrary source
+changes preserve behavior.
 
 The four-hour compute limit includes plan loading, source preparation, forward,
 backward, checkpointing and verified recovery. It is checked before each update;
@@ -485,9 +530,9 @@ CPU is approximately 2.8 times faster than MPS for this varying-input workload
 and avoids its observed footprint growth. Four threads are only 8.2% faster than
 one in this single measurement. The corpus default therefore uses one CPU thread
 before changing model or pointer geometry. This preserves the probability model
-and leaves MPS optimization optional. These are bounded backward workloads;
-full optimizer training, longer-run memory and generated quality still require
-measurement. Neither a backend-wide leak nor universal CPU superiority is claimed.
+and leaves MPS optimization optional. These are bounded backward workloads; they do not measure full optimizer training
+or generated quality. The CPU corpus trajectory below supplies separate training
+evidence. Neither a backend-wide leak nor universal CPU superiority is claimed.
 
 Evidence lives under
 `artifacts/bounded-typed-continuation/corpus-20260918-v1/memory-probe-v1/`.
@@ -495,6 +540,48 @@ The varying MPS result SHA is
 `f54554b96f570a624f8bc5ffce8629e561277d4b63ddd7ffcd0d24c332d003a4`;
 one-thread CPU result SHA is
 `d28d936b8c9b069f16d42b2d86dd766138ce3333b3b29898515f20a000f943c0`.
+
+### Paired corpus learning through two million exposures
+
+At source `1693d62ffaca04b2a6127d8e3a72d1988adf441f`, all arms complete the same
+2,000,000 source-onset draws with model seed 171. Each covers 1,697,938 distinct
+onsets, 6,315 charts and 3,078 TRAIN groups. Cumulative CPU training takes
+2174.555/1501.429/1408.085 seconds for O1/R1/R0, with no swap growth or resource
+failure. These measurements support Mac feasibility for this bounded setup.
+
+The fixed development screen contains twelve ordinary and twelve stress groups,
+three generation seeds per group and complete-suffix likelihoods. At each of
+250k/1M/2M exposures all 216 generations pass mechanical/export/reparse checks.
+O1/R1 pooled NLL falls from 2.291069/2.268465 to 1.906802/1.915834 nats per source
+onset. At 2M the paired group-macro difference is -0.019613, with a group-bootstrap
+95% interval [-0.049635, 0.011185]. This development result does not select a stable
+winner. R0 conditions on different information, so its likelihood is not the same
+conditional comparison.
+
+Generation changes substantially with exposure. O1/R1/R0 quad attack counts rise
+to 17684/19354/19047 at 1M, then fall to 223/104/193 at 2M with unchanged decoding.
+Their 2M LN-head shares are 37.037%/27.651%/47.311%. In two preselected stress cores,
+Foundation-calibrated machine inspection finds sustained independent LN control
+for both O1 and R1 in the LN-rich case; both produce predominantly TAP arrangements
+in the dense case. Different source LN proportions are allowed. Those scoped
+judgments do not establish whole-chart playability or replace human preference.
+
+A remaining O1 failure concerns allocation: 439 of its 498 same-lane attack pairs
+below 40 ms occur when prior LN commitments leave only one available lane. A
+selected case has eight attacks on that lane over 241 ms, while three earlier LNs
+block the other lanes. The same timing permits distributed attacks in R1 and the
+source. R1 has 28 such rapid pairs overall and R0 has 30. The 40 ms diagnostic is
+a locator, not a semantic or universal playability threshold. It motivates testing
+candidate-conditioned availability against further training and a capacity control.
+
+The corpus plan SHA is
+`a6e727d0bbfa414e7d20c742a18d84e8786f155b91629d285e7abf04348cd82f`.
+The 2M development readout SHA is
+`262979f1deb1069f0ff9b401f5c2d83b55b79f0de4051b770b57d6ac64e828f3`;
+the occupancy readout SHA is
+`c7f2886ebb54a5f5d3e1e9c2ddd4ee7778e28f38fe11aad9379c7c3632acafd8`.
+Local evidence is under `artifacts/bounded-typed-continuation/corpus-20260918-v1/`;
+the findings above do not require those generated files to interpret their scope.
 
 Generation retains existing regression cases and adds separately sampled ordinary
 and stress groups, with multiple seeds. Mechanical failures cannot be averaged

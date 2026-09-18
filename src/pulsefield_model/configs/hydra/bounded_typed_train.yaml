@@ -9,6 +9,10 @@ plan_sha256: ''
 source_cache_dir: ''
 output_dir: artifacts/bounded-typed-continuation/corpus
 resume_from: null
+fork_from: null
+fork_sha256: ''
+fork_source_revision: ''
+fork_plan_file: ''
 stop_after_checkpoint: null
 device: cpu
 model_seed: 171
@@ -31,6 +35,7 @@ model:
   levels: 8
   expansion: 4
   coupling_rank: 16
+  endpoint_availability: none
 resources:
   driver_limit_bytes: 6442450944
   rss_limit_bytes: 6442450944

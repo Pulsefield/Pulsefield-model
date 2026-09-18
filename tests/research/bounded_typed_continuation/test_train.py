@@ -23,10 +23,14 @@ def test_hydra_packaged_projection_and_rejected_unknown_or_unused_fields():
     assert config.model.arm == Arm.R1 and config.batch_size == 3 and config.microbatch_size == 1
     assert config.device == 'cpu' and config.footprint_limit_bytes == 6 * 1024 ** 3
     assert config.stop_after_checkpoint == 250000
+    assert config.model.endpoint_availability == 'none' and config.fork_from is None
+    typed = compose_config(['model.endpoint_availability=commitment'])
+    assert typed.model.endpoint_availability == 'commitment'
     assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_train.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.check_every_rows=1'],
                       ['candidate_budget=0'], ['learning_rate=0'], ['microbatch_size=3'], ['cache_max_sources=129'],
-                      ['footprint_limit_bytes=0']):
+                      ['footprint_limit_bytes=0'], ['model.arm=R1', 'model.endpoint_availability=zero'],
+                      ['fork_from=parent.pt'], ['model.endpoint_availability=unknown']):
         with pytest.raises((ValueError, ContractError)):
             compose_config(overrides)
 

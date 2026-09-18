@@ -4,7 +4,8 @@ import torch
 
 from pulsefield_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
 from pulsefield_model.research.bounded_typed_continuation.features import (
-    CONTENT_DIM, QUERY_DIM, TIMING_DIM, TimingView, content_features, factor_features,
+    AVAILABILITY_DIM, CONTENT_DIM, QUERY_DIM, TIMING_DIM, EndpointAvailability,
+    TimingView, content_features, endpoint_availability, factor_features,
     query_features, time_features, transition_features,
 )
 from pulsefield_model.research.oracle_time_continuation.features import TIME_DIM, clock_features
@@ -86,3 +87,47 @@ def test_timing_uses_complete_supplied_future_without_action_labels():
     np.testing.assert_array_equal(typed.candidates(0, 1, 6), translated.candidates(0, 1, 6))
     with pytest.raises(ValueError):
         typed.times[0] = 5.
+
+
+def test_candidate_availability_matches_literal_future_holds_and_endpoint_inclusion():
+    times = (0., 30., 70., 100., 125., 170., 500., 900.)
+    roles = (True, True, False, True, True, True, False, False)
+    view = TimingView(Timing(times, roles))
+    facts = EndpointAvailability((5, 3), 1)
+    actual = view.availability(0, 1, len(times), facts)
+    expected = []
+    onset_indices = [i for i, role in enumerate(roles) if role]
+    weights = {b: 1000 / (times[b] - times[a]) for a, b in zip(onset_indices, onset_indices[1:])}
+    for end in range(1, len(times)):
+        row = []
+        for others in range(4):
+            bound = max([0] + [i for i in range(1, end + 1)
+                               if sum(other >= i for other in facts.other_ends) >= others])
+            included = [i for i in onset_indices if 0 < i <= bound]
+            row.extend(np.log1p([len(included), sum(weights[i] for i in included), times[bound] / 1000]) / 8)
+        expected.append(row + [2 / 3, 1 / 3])
+    assert actual.shape == (7, AVAILABILITY_DIM)
+    np.testing.assert_allclose(actual, expected, atol=2e-8, rtol=2e-7)
+    # At end index3, H at100ms still has three occupied columns. It cannot
+    # restart a lane that releases on that row.
+    assert actual[2, 6] == pytest.approx(np.log1p(2) / 8)
+    shifted = TimingView(Timing(tuple(t + 2. ** 40 for t in times), roles))
+    np.testing.assert_array_equal(actual, shifted.availability(0, 1, len(times), facts))
+    np.testing.assert_array_equal(actual, np.concatenate([view.availability(0, a, b, facts)
+                                                        for a, b in ((1, 3), (3, 8))]))
+
+
+def test_partial_endpoint_availability_has_only_prior_factors_and_mirrors():
+    timing = Timing((0., 100., 150., 200., 400., 900.), (True, True, False, True, False, False))
+    state, _ = Schedule(Arm.O1, timing).advance((2, 0, 0, 0), {0: 5})
+    reverse, _ = Schedule(Arm.O1, timing).advance((0, 0, 0, 2), {3: 5})
+    heads = (0, 2, 2, 2)
+    first = endpoint_availability(state, heads, {}, 1)
+    assert first == EndpointAvailability((5,), 2)
+    later = endpoint_availability(state, heads, {1: 3}, 2)
+    assert later == EndpointAvailability((5, 3), 1)
+    assert later == endpoint_availability(reverse, heads[::-1], {2: 3}, 1)
+    with pytest.raises(ContractError, match='partial endpoint'):
+        TimingView(timing).availability(1, 2, 6, EndpointAvailability((1,), 0))
+    with pytest.raises(ContractError, match='partial endpoint'):
+        TimingView(Timing(timing.times_ms)).availability(1, 2, 6, first)

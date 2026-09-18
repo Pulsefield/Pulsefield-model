@@ -7,6 +7,7 @@ object plans. Exact historical clocks are read separately at the current query.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -24,6 +25,22 @@ TIMING_DIM = (2 * LOOKAHEAD + 2 * len(GAP_THRESHOLDS_MS)) * TIME_DIM + LOOKAHEAD
 QUERY_DIM = 22 * TIME_DIM + 23 + TIMING_DIM
 CANDIDATE_DIM = 4 * TIME_DIM + 5
 FACTOR_DIM = 12 + 4 * TIME_DIM + 2
+AVAILABILITY_DIM = 14
+
+
+@dataclass(frozen=True)
+class EndpointAvailability:
+    """Known other endpoints and the count of still-unassigned current LNs."""
+    other_ends: tuple[int, ...]
+    pending: int
+
+
+def endpoint_availability(state: Schedule, heads, assigned, lane):
+    state.endpoint_bounds(heads, assigned, lane)
+    ends = [end for end in state.known_ends if end is not None and end > state.index]
+    ends.extend(assigned.values())
+    pending = sum(action == 2 for action in heads) - len(assigned) - 1
+    return EndpointAvailability(tuple(sorted(ends, reverse=True)), pending)
 
 
 def time_features(values):
@@ -96,9 +113,16 @@ class TimingView:
         self.times = np.asarray(timing.times_ms, dtype=np.float64)
         self.roles = None if timing.onsets is None else np.asarray(timing.onsets, dtype=np.bool_)
         self.role_prefix = None if self.roles is None else np.r_[0, np.cumsum(self.roles)]
+        self.onset_gap_mass_prefix = None
+        if self.roles is not None:
+            onsets = np.flatnonzero(self.roles)
+            gap_mass = np.zeros(len(self.times), dtype=np.float64)
+            gap_mass[onsets[1:]] = 1000. / np.diff(self.times[onsets])
+            self.onset_gap_mass_prefix = np.r_[0., np.cumsum(gap_mass)]
         self.gaps = np.diff(self.times)
         self.gap_starts = tuple(np.flatnonzero(self.gaps >= threshold) for threshold in GAP_THRESHOLDS_MS)
-        for array in (self.times, self.roles, self.role_prefix, self.gaps, *self.gap_starts):
+        for array in (self.times, self.roles, self.role_prefix, self.onset_gap_mass_prefix,
+                      self.gaps, *self.gap_starts):
             if array is not None:
                 array.setflags(write=False)
 
@@ -155,6 +179,33 @@ class TimingView:
                            np.zeros(len(selected)) if self.roles is None else self.roles[selected],
                            np.full(len(selected), self.roles is not None)), -1)
         return np.concatenate((time_features(clocks).reshape(len(selected), -1), extras), -1).astype(np.float32)
+
+    def availability(self, index: int, start: int, stop: int, facts: EndpointAvailability):
+        """Describe future H under a candidate and the known partial LN plan.
+
+        The target LN blocks its lane through its endpoint, including an H there.
+        Later within-row factors and future objects are unknown. Their endpoints
+        are never supplied here. Inverse-gap mass is a continuous timing feature,
+        not a legality restriction or prescribed burden penalty.
+        """
+        if (self.roles is None or not 0 <= index < start < stop <= len(self.times) or
+                len(facts.other_ends) > 3 or type(facts.pending) is not int or
+                not 0 <= facts.pending <= 3 - len(facts.other_ends) or
+                any(type(end) is not int or not index < end < len(self.times)
+                    for end in facts.other_ends)):
+            raise ContractError('Availability needs typed timing and a valid known partial endpoint plan')
+        selected = np.arange(start, stop)
+        ends = sorted(facts.other_ends, reverse=True)
+        columns = []
+        for others in range(4):
+            bound = (selected if others == 0 else np.minimum(selected, ends[others - 1])
+                     if others <= len(ends) else np.full_like(selected, index))
+            count = self.role_prefix[bound + 1] - self.role_prefix[index + 1]
+            mass = self.onset_gap_mass_prefix[bound + 1] - self.onset_gap_mass_prefix[index + 1]
+            seconds = (self.times[bound] - self.times[index]) / 1000.
+            columns.extend((np.log1p(count) / 8., np.log1p(mass) / 8., np.log1p(seconds) / 8.))
+        columns.extend((np.full(len(selected), len(ends) / 3.), np.full(len(selected), facts.pending / 3.)))
+        return np.stack(columns, -1).astype(np.float32)
 
 
 def query_features(states: Sequence[Schedule], view: TimingView):

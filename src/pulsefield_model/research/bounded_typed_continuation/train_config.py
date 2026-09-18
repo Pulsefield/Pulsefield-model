@@ -15,6 +15,10 @@ class TrainConfig:
     source_cache_dir: str = ''
     output_dir: str = 'artifacts/bounded-typed-continuation/corpus'
     resume_from: str | None = None
+    fork_from: str | None = None
+    fork_sha256: str = ''
+    fork_source_revision: str = ''
+    fork_plan_file: str = ''
     stop_after_checkpoint: int | None = None
     device: str = 'cpu'
     model_seed: int = 171
@@ -35,6 +39,14 @@ class TrainConfig:
     resources: SmokeResources = field(default_factory=SmokeResources)
 
     def validate(self):
+        fork_fields = (self.fork_from, self.fork_sha256, self.fork_source_revision, self.fork_plan_file)
+        if any(fork_fields) and (not all(fork_fields) or self.resume_from is not None):
+            raise ContractError('Fork initialization needs all four fork fields and cannot also resume')
+        if self.fork_from is not None:
+            for name, length in (('fork_sha256', 64), ('fork_source_revision', 40)):
+                value = getattr(self, name)
+                if len(value) != length or any(c not in '0123456789abcdef' for c in value):
+                    raise ContractError(f'{name} must be a full lowercase digest')
         if self.device not in ('cpu', 'mps', 'cuda'):
             raise ContractError('Training device must be cpu, mps or cuda')
         for name in ('cpu_threads', 'batch_size', 'microbatch_size', 'report_every', 'candidate_budget',

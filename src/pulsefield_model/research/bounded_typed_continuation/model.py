@@ -17,8 +17,8 @@ from torch.utils.checkpoint import checkpoint
 
 from ..scoped_style_modeling.dataset import ContractError
 from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule
-from .features import (CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
-                       TimingView, factor_features)
+from .features import (AVAILABILITY_DIM, CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
+                       EndpointAvailability, TimingView, endpoint_availability, factor_features)
 from .temporal import FiniteTemporal, TemporalConfig, pointwise
 
 
@@ -29,6 +29,7 @@ class ModelConfig:
     levels: int = 8
     expansion: int = 4
     coupling_rank: int = 16
+    endpoint_availability: str = 'none'
 
     def __post_init__(self):
         if not isinstance(self.arm, Arm):
@@ -36,6 +37,9 @@ class ModelConfig:
         TemporalConfig(CONTENT_DIM, self.hidden, self.levels, self.expansion)
         if type(self.coupling_rank) is not int or self.coupling_rank <= 0:
             raise ContractError('Joint action coupling rank must be a positive integer')
+        if (self.endpoint_availability not in ('none', 'zero', 'commitment') or
+                self.arm != Arm.O1 and self.endpoint_availability != 'none'):
+            raise ContractError('Endpoint availability must be none, zero or commitment, and is O1-only')
 
 
 class JointHead(nn.Module):
@@ -66,6 +70,7 @@ class EndpointFactor:
     start: int
     stop: int
     target: int | None = None
+    availability: EndpointAvailability | None = None
 
     def __post_init__(self):
         if (any(type(value) is not int for value in (self.index, self.start, self.stop)) or
@@ -76,14 +81,41 @@ class EndpointFactor:
 
 
 class EndpointPointer(nn.Module):
-    def __init__(self, hidden):
+    def __init__(self, hidden, availability='none'):
         super().__init__()
+        if availability not in ('none', 'zero', 'commitment'):
+            raise ContractError('Unknown endpoint availability mode')
+        self.availability = availability
         self.context = nn.Sequential(nn.Linear(hidden + FACTOR_DIM, hidden), nn.GELU(), nn.Linear(hidden, hidden))
         self.candidate = nn.Sequential(nn.Linear(CANDIDATE_DIM, hidden), nn.GELU(), nn.Linear(hidden, hidden))
         self.bias = nn.Linear(CANDIDATE_DIM, 1)
+        self.availability_residual = None
+        if availability != 'none':
+            self.availability_residual = nn.Sequential(
+                nn.Linear(hidden + CANDIDATE_DIM + AVAILABILITY_DIM, max(4, hidden // 2)),
+                nn.GELU(), nn.Linear(max(4, hidden // 2), 1))
+            nn.init.zeros_(self.availability_residual[-1].weight)
+            nn.init.zeros_(self.availability_residual[-1].bias)
+
+    def features(self, factor, start, stop):
+        base = factor.view.candidates(factor.index, start, stop)
+        if self.availability == 'none':
+            return base
+        if self.availability == 'commitment':
+            if factor.availability is None:
+                raise ContractError('Commitment endpoint scoring requires its known partial plan')
+            extra = factor.view.availability(factor.index, start, stop, factor.availability)
+        else:
+            extra = np.zeros((stop - start, AVAILABILITY_DIM), dtype=np.float32)
+        return np.concatenate((base, extra), -1)
 
     def score(self, context, features):
-        return (context * self.candidate(features)).sum(-1) / math.sqrt(context.shape[-1]) + self.bias(features).squeeze(-1)
+        base = features[..., :CANDIDATE_DIM].contiguous()
+        score = (context * self.candidate(base)).sum(-1) / math.sqrt(context.shape[-1]) + self.bias(base).squeeze(-1)
+        if self.availability_residual is not None:
+            expanded = context.expand(*features.shape[:-1], context.shape[-1])
+            score = score + self.availability_residual(torch.cat((expanded, features), -1)).squeeze(-1)
+        return score
 
     def log_prob(self, context: Tensor, factors: Sequence[EndpointFactor], *,
                  candidate_budget=8192, recompute=True):
@@ -102,13 +134,13 @@ class EndpointPointer(nn.Module):
         if not factors:
             return context.new_empty((0,))
         factors = tuple(factors)
-        targets = np.concatenate([f.view.candidates(f.index, f.target, f.target + 1) for f in factors])
+        targets = np.concatenate([self.features(f, f.target, f.target + 1) for f in factors])
         selected = self.score(context, context.new_tensor(targets))
         normalizers = [None] * len(factors)
 
         def consume(parts):
             def block(values, owned_parts=tuple(parts)):
-                features = np.concatenate([factors[i].view.candidates(factors[i].index, start, stop)
+                features = np.concatenate([self.features(factors[i], start, stop)
                                            for i, start, stop in owned_parts])
                 owner_ids = np.repeat([i for i, _, _ in owned_parts], [stop - start for _, start, stop in owned_parts])
                 owners = torch.as_tensor(owner_ids, dtype=torch.long, device=values.device)
@@ -148,7 +180,7 @@ class EndpointPointer(nn.Module):
         best, chosen = -math.inf, None
         for start in range(factor.start, factor.stop, candidate_budget):
             stop = min(factor.stop, start + candidate_budget)
-            features = context.new_tensor(factor.view.candidates(factor.index, start, stop))
+            features = context.new_tensor(self.features(factor, start, stop))
             logits = self.score(context, features).cpu().double()
             uniform = torch.rand(len(logits), generator=generator, dtype=torch.float64).clamp_min(torch.finfo(torch.float64).tiny)
             scores = logits - (-uniform.log()).log()
@@ -167,7 +199,7 @@ class BoundedModel(nn.Module):
         self.fuse = nn.Sequential(nn.LayerNorm(2 * config.hidden), nn.Linear(2 * config.hidden, config.hidden),
                                   nn.GELU(), nn.Linear(config.hidden, config.hidden))
         self.joint = JointHead(config.hidden, 3 if config.arm == Arm.O1 else 4, config.coupling_rank)
-        self.pointer = EndpointPointer(config.hidden) if config.arm == Arm.O1 else None
+        self.pointer = EndpointPointer(config.hidden, config.endpoint_availability) if config.arm == Arm.O1 else None
 
     @property
     def choices(self):
@@ -212,7 +244,9 @@ class BoundedModel(nn.Module):
                     start, stop = state.endpoint_bounds(group, assigned, lane)
                     contexts.append(hands[i, 0 if lane < 2 else 1])
                     raw.append(factor_features(state, group, assigned, lane))
-                    factors.append(EndpointFactor(view, state.index, start, stop, targets[lane]))
+                    availability = (endpoint_availability(state, group, assigned, lane)
+                                    if self.config.endpoint_availability == 'commitment' else None)
+                    factors.append(EndpointFactor(view, state.index, start, stop, targets[lane], availability))
                     owners.append(2 * i + order_id)
                     assigned[lane] = targets[lane]
         if ledger is not None:
@@ -238,6 +272,8 @@ class BoundedModel(nn.Module):
             start, stop = state.endpoint_bounds(heads, assigned, lane)
             raw = hands.new_tensor(factor_features(state, heads, assigned, lane))
             context = self.pointer.context(torch.cat((hands[0 if lane < 2 else 1], raw)))
-            assigned[lane] = self.pointer.sample(context, EndpointFactor(view, state.index, start, stop),
+            availability = (endpoint_availability(state, heads, assigned, lane)
+                            if self.config.endpoint_availability == 'commitment' else None)
+            assigned[lane] = self.pointer.sample(context, EndpointFactor(view, state.index, start, stop, availability=availability),
                                                  generator=generator, candidate_budget=candidate_budget)
         return assigned
