@@ -1728,3 +1728,115 @@ output and do not overwrite it. Broader gold and long-gap generation run
 concurrently, so timing is operational only. The result can refine the endpoint
 representation and its feasibility test; it cannot establish learned benefit or
 select a final architecture. Evaluation remains REFINE.
+
+### Broader clock100 review and completed representation audit
+
+The remaining ten gold-source generations and the one TRAIN stress generation
+completed, in814.953 and923.023 supervisor seconds respectively. Their readout
+SHAs are `7c6b936ab25f3bd1fc8e92c157bb61ca78881550c4030ab041ceaca5df779c2a`
+and `2344a168b1af638439e6be4f407b875168c7dd126b466a9957fc3c0160e9d4c4`.
+All38 additional generated gold-context pages were visually inspected; all38
+source pages match the previously inspected references byte-for-byte, and the
+eight canonical human documents remain unchanged. The broader review SHA is
+`d9210e6e61556b5c4b5782021e19a5322478857a014c7253fd6d93ad7b6d95f9` in
+`quality-clockreadout-clock-u100-gold-rest-t085/context-review.json`.
+
+In5b69/seed17, overlapping holds, staggered independent releases and intervening
+attacks persist through the context: a medium-confidence machine hypothesis of
+prominent LN coordination with supporting moving-head organization. Seed19
+instead produces coherent tap flow. The other four sources mainly produce
+moving singles and occasional chords; their source gold tags are not transferred
+to generated outputs. ece738/seed19's single short hold does not establish LN
+coordination. In713ef9/seed17, the4924ms final LN has exactly the source closing
+phrase's start/end times315465–320389, on a different column; duration alone is
+not evidence of a runaway hold. All58 generated gold pages across eight sources
+and two seeds have now been inspected. This remains local structural evidence,
+not whole-chart playability or controlled difficulty/style evidence.
+
+Full-output descriptive locators for these11 outputs are retained in
+`clock-readout-v1/coverage-recurrence.json`, SHA
+`5ac0c3eb337e70d95237062cce2179646aa60a72386e3b5a496af1bbe6b761dc`.
+For5b69/713ef9/98357f/e67f/ece738, fastest four same-column attacks span
+313/365,307/231,353/383,303/203,435/543ms for seeds17/19. Their adjacent attack
+pairs below40ms total7. These extrema have not all been visually inspected and
+are locators, not pass thresholds. The TRAIN long chart has one such pair,
+four-attack minimum222ms, and549LNs. Neither84.735s nor77.643s event gap is
+spanned by a hold. Its longest LN is13200ms at4335854–4349054, exactly the source
+closing LN's times on a different column. It also adds a terminal tap. This is
+one TRAIN seed, with a different checkpoint/policy from the earlier89s failure;
+no causal or held-out quality conclusion follows. Its visual quality is unreviewed.
+
+The all-TRAIN representation audit completed in9.741s with readout SHA
+`7ef9903f8856074642d92cf73f142a293e72654872bf436e2de655ef29fd016a`.
+Across11564charts,11522113event rows contain11014010onset rows and508103
+release-only rows (4.41%). There are2548286LNs;1852846releases coincide with an
+onset, and175872 of349291 multi-LN-head rows have different endpoints. Endpoint
+rank in the original event union is at most16 for99.9483% of LNs,32 for99.9958%,
+64 for99.9995%, and128 for all TRAIN LNs. Maximum physical duration is35375ms.
+Dropping release-only rows alone offers little sequence-length reduction. The
+plausible benefit is linked start/end credit assignment and freedom to leave
+unused candidate times unmaterialized. No rare target will be silently dropped
+or replaced by a true endpoint. The next probe uses all future candidates.
+
+### Exploratory Card: linked-endpoint-head-v1, revision1
+
+Owner is this proposed Note; accepted revision is none. The user's explicit
+authorization covers exploratory implementation, runs and skeleton redefinition.
+The immutable v8 runtime and pinned clock100 weights provide the reproducible
+baseline over the inherited dirty product tree; there is no clean intervention
+OID or formal Card acceptance. Evaluation can therefore end only in REFINE.
+
+Question: after a chosen LN head, can causal history and already chosen object
+endpoints improve prediction of its endpoint beyond a generic timing prior?
+This tests a prerequisite for onset-conditioned, linked-duration generation,
+not its superiority in free rollout. The analogue is REMI's linked duration
+representation above. Full source LN pairing as an inference input is rejected;
+candidate NO_EVENT learning remains a separate branch. Full-candidate scoring
+avoids an arbitrary128-row cutoff despite the TRAIN coverage result.
+
+Baseline identity: product f679269b92e96efb5bd7989e748bd42cf069379e plus the
+recorded dirty state; immutable runtime09469489 and clock100 weights29a2a29e,
+with full SHAs recorded above. Cataloge31b7e8f and split15175f45 are unchanged.
+Select128 TRAIN and32 validation song groups deterministically by SHA-ranked
+seed20260920, one eligible chart per group,16–6000event rows and at least16LN
+heads after the seed. Sample at most64 heads per chart without replacement.
+Selection uses counts and identities, never gold labels or model errors. Replay
+the full source prefix with frozen clock100 weights; retain pre-row hidden
+features only for selected heads. Do not read test payloads. Record the exact
+selection, targets, frozen features, code and runtime digests before fitting.
+
+Both arms score every future event-union time with the same candidate features
+(raw-time transforms, relative rank, candidate onset role and local timing).
+Baseline uses a learned constant query; intervention adds the frozen pre-row
+history, chosen current row actions, current lane and previously chosen LN
+endpoints. Prior LN endpoints are teacher-forced object decisions in this new
+factorization; a generated decoder must use its own predictions. The current
+head's endpoint and any later source actions or pairings are never input.
+Simultaneous heads are conditionally independent for this feasibility probe.
+Onset roles are declared additional skeleton information, beyond old untyped Γ.
+
+Fit each arm for400 AdamW updates, batch32, learning rate.001, weight decay.01,
+clip1, shared example draws and construction seed20260920; frozen backbone is
+never updated. Primary metric is equal-group mean endpoint negative log
+likelihood on the fixed32 held-out groups. Report per-head NLL, exact endpoint
+accuracy, timing error and5000 paired group-bootstrap replicates separately.
+No baseline endpoint metric exists yet; measure the trained generic-prior arm
+in this paired run rather than substituting row NLL. A decrease of at least.05
+nats with the95% paired CI below zero and no more than5percentage-point exact
+accuracy loss merits a generated-decoder pilot. No improvement rejects this
+particular context head; a noisy or conflicting result refines it. No quality
+or whole-model claim follows from teacher-forced endpoint accuracy.
+
+Procedure: implement artifact-local dataset/feature extraction and endpoint
+scoring, verify linked encoding reconstructs canonical rows, then run one fresh
+extraction and paired fitting. Use `uv run --offline --extra mps python` with
+v8 PYTHONPATH, CPU/four threads on this24GiB Mac. Bound extraction to30minutes,
+fitting to20minutes, each to6GiB RSS and2GiB minimum available memory, total
+owner to2GiB. Fresh owner is `linked-endpoint-head-v1`; implementation scripts
+and outputs have separate subdirectories. Stop on hash/round-trip mismatch,
+non-finite loss, impossible candidate targets or any resource bound. Preserve
+partial outputs; never overwrite or relaunch an existing output owner blindly.
+Record exact commands and source digests before launching. Sampling a moderate
+LN-rich slice, frozen features, known onset roles, teacher-forced prior endpoints
+and independent simultaneous duration heads limit all conclusions. Qualitative
+quality requires subsequent complete generated contexts and long-gap checks.
