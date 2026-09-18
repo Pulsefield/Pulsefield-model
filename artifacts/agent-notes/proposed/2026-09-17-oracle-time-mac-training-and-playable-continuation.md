@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-17
 Updated: 2026-09-18
-Product revision: f679269b92e96efb5bd7989e748bd42cf069379e, with uncommitted implementation; frozen source manifests accompany the exploratory runs
+Product revision: 89d5379f150cba9d1684822a44166765d38f644f (published review snapshot); earlier exploratory runs used f679269b92e96efb5bd7989e748bd42cf069379e plus the uncommitted implementation pinned by their frozen source manifests
 Scope: research/oracle_time_continuation M3 runtime, Mac resource envelope, optimizer calibration, corpus exposure and generated structure
 Related: 2026-09-15-oracle-time-continuation-resource-and-module-review; 2026-09-18-oracle-time-m3-session-handoff
 
@@ -20,7 +20,10 @@ current human gold, not only likelihood or legal output.
 
 The related resource review owns the earlier census and module proposals. This
 note owns new runtime measurements, tuning and generated-quality interpretation.
-No note lifecycle transition or external publication is requested.
+No note lifecycle transition or remote Note publication is requested. On
+2026-09-18 the user separately authorized publishing the product code and a
+self-contained question for an external researcher; that publication is
+recorded at the end of this Note.
 
 ## Baseline, analogues and alternatives
 
@@ -2126,3 +2129,99 @@ Preserve partial outputs and fail rather than overwrite. Record source/check
 digests and exact commands before launch. Arms may run concurrently; measured
 time is operational, not a clean speed comparison. This is a new exploratory
 Card, not adoption of a replacement product contract.
+
+Typed-scheduler checks pass: four focused tests and exact replay of186005rows
+across the160-chart endpoint slice. Round-trip readout SHA is
+`d62189c5d0bbbec500bc8fbc40cbb5beaab5d629f73658808b5a13abc3922944`;
+selected-checks SHA is
+`ee4c08eaf598573cdb28c8b597a57667cdfced4bbd99883b6eeb20ab6b30b793`.
+Source SHAs: generate.py
+`4fc1df355a725a0a5e4ee337aea820a34e5b16e904437bb1240124ecf431f8da`,
+schedule.py `ed68d216752e33f9a61ef86a4be870ebc9024136e8e232b998979eaba160a0b8`,
+supervise.py `df4428ea51fa966b42b58ff4eac7280e66481e63560b57c3fb28d9de199d9252`.
+The unchanged joint-conditioning helper SHA is
+`437e3e3ba33ca43464e067f90cd5bcc87f3cf3516709ee5917e2aedc40164149`.
+
+The exact launch command uses v8 PYTHONPATH and
+`caffeinate -i uv run --offline --extra mps python artifacts/oracle-time-continuation/m3-20260917/onset-endpoint-generation-v1/supervise.py prior`
+or final argument `context`. Both arms complete all three charts concurrently:
+145.074/147.074 supervisor seconds, readout SHAs
+`67cd5ba8c7dd2ecded5f314c9667ef5ea3804ca503842c87beddbbf282111a26`
+and `3393c8afa96eee521d4d1aa86b77fac3201af68fe3cdd7349b7bd69752ef59db`.
+All outputs pass mandatory-onset coverage, endpoint membership, occupancy,
+closure, independent export and reparsed note-count checks.
+
+For85058a/871955/ecc496, prior/context omit245/244,583/583 and4/3candidate slots.
+LN counts are6/6,6/6 and13/67; the older clock100 seed17 outputs had145,102 and23
+LNs. Their counts of materialized rows also differ by design. This is a major
+change in type dynamics, not yet an established quality improvement. The frozen
+row backbone has not been trained for the new conditional task; future onset
+roles and previous planned endpoints currently affect its support externally,
+while the endpoint head alone was fitted. The visual inspection is pending at
+this record. All eight canonical human documents are rechecked unchanged.
+
+### External formulation question and source publication, 2026-09-18
+
+The user requested one self-contained question for a stronger external model
+with GitHub access but no local runs, and explicitly required the relevant code
+to be pushed. The central question asks which conditional-input, prediction-object
+and training-context contract should be fixed next, and which bounded experiment
+can distinguish representation-induced pressure from insufficient learning.
+It permits replacing the existing skeleton, full-prefix replay and architecture;
+it does not adopt a replacement or declare the playable goal complete.
+
+The separate product branch `codex/oracle-time-formulation-review` is published
+at `89d5379f150cba9d1684822a44166765d38f644f`, with the remote OID verified equal.
+Its stack parent/merge base is `origin/witness-style-probe` at
+`4629686b1d38c6c52d65818a64c2d099046a066f`; it includes the existing local M2
+commit and the M3 implementation. The original product worktree and all 50
+copied dirty/untracked files remain unchanged. No Agent Notes were pushed.
+
+The forwarding document is
+`docs/research/oracle_time_expert_question.md`, available at
+https://github.com/Pulsefield/Pulsefield-model/blob/89d5379f150cba9d1684822a44166765d38f644f/docs/research/oracle_time_expert_question.md .
+GitHub returned its exact local bytes, SHA
+`a6985adcd03a9001441c209e5e89f17a339ea186363cac1f651dd3316cbfc19c`.
+It includes goals, information boundaries, mechanics, positive and negative
+comparisons, uncertainty, quality terminology and implementation entrypoints.
+The source bundle under `experiments/oracle_time_formulation/` contains 17
+byte-identical historical Python files, per-group endpoint summaries and an
+arithmetic verifier; full data/checkpoints/runs are not published. All 252
+`src/` files in frozen runtime v8 match the published code. Two unmodified
+85058a source/context render pages provide a visible example.
+
+Selected checks on the publication worktree: 227 pytest tests and 21 subtests
+pass, including scoped replay, package imports, CPU/MPS and Hydra/runtime
+owners; 10 endpoint/feasibility and four scheduler tests pass. The evidence
+verifier reproduces both 32-group bootstrap summaries and all 17 source hashes.
+Both training/generation `--cfg job` commands pass. Initial offline environment
+setup missed cached dependencies; installing them with Python3.10 resolved it
+before tests ran. No tests were weakened or skipped. Full legacy tests, CUDA,
+new model training and new full generation are not claimed. Exact commands and
+scope are in `docs/research/oracle_time_review_publication.md`.
+
+The final lineage coverage was additionally reconstructed from half-open target
+interval unions in four retained window journals, capped at their inherited
+checkpoint updates: corpus-mac20m-lr1e4-wd1e2/u500,
+skeleton-time-timing/u300, exposure-continuation-v1/long/u300, and
+clock-readout-v1/clock/u100. Stage supervised exposures are
+183849/104003/408820/129843. At the first two stages the reconstructed union
+exactly matches the previous249676-row audit. The final1200-update lineage has
+826515 supervised exposures,618689 distinct target rows,2083charts and1698groups,
+or5.36958% of11522113TRAIN rows. This excludes no-grad prefixes and rolled-back
+updates; it is a distinct-target coverage fraction, not a uniform epoch count.
+The copied evidence JSON records the four journal hashes and stage counts.
+
+At the publication boundary, all20new typed-onset generated gold pages were
+visually inspected. They mainly show moving taps/sparse chords;85058a has one
+isolated LN in the gold interval,871955 is tap-dominated, and ecc496's context
+arm's67LNs are mostly outside the inspected gold interval. Own-extremum inspection
+is complete for85058a both arms and871955 context. For871955 prior only the
+own source pages have been viewed; its generated pages, both ecc496 own
+generated contexts, and the matched generated contexts remain unreviewed.
+Do not upgrade this to an entire-chart or full pilot visual pass. Earlier
+source-render hash equivalence checks remain valid. No new training/generation
+process is running, and there is no typed-pilot context-review.json yet.
+
+The external review has not yet been received. Evaluation remains REFINE,
+Note status remains proposed, and no Card gains acceptance from publication.
