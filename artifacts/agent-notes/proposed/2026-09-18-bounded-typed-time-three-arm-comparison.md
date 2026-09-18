@@ -922,3 +922,65 @@ The 14,400-second cap still applies to each CPU arm's cumulative segments, while
 equal-compute interpretation must also disclose the discarded development cost.
 Evaluation remains pending; no representation or playability result follows from
 the execution-device choice.
+
+## Experiment Card: bounded-typed-development-screen-250k-v1
+
+Revision: 1. Acceptance: none. Exploratory development evaluation under standing
+user authority, before seeing any generated outputs from the CPU corpus run.
+Question: after broader native training, does O1 still show the short-fit LN-use
+deficit, and how do R1/O1 compare in full-suffix likelihood, burden and organization
+under the same external conditions? R0 remains a different-conditioning practical
+reference. None is selected from the expert's prior preference alone.
+
+Fixed source `1693d62ffaca04b2a6127d8e3a72d1988adf441f`; require all three
+`*-cpu-250k` runs paused at exactly 250,000 actual source-onset exposures. Verify
+each complete final checkpoint against its finalized result digest before loading.
+Use the previously frozen 24-condition manifest
+`f0ead07f41111c0413cae9b3f27b3a20c2abbedc2efea1b94f5c2b2707b808eb`, including
+ordinary/stress strata, fixed 16-second cores and optional 64-second contexts.
+These validation groups may have appeared in earlier development; no unused-group
+or independent confirmation claim. No model update or annotation mutation.
+
+First score each complete source suffix with 128-onset computation chunks,
+including every endpoint, normalizer and the full actual source-onset denominator.
+Then generate its complete suffix natively from the minimum seed at temperature
+one, for CPU RNG seeds 17/19/23. R1/O1 share R/H/complete-object seed; R0 receives
+only its permitted R/physical seed. Use full future endpoint support, candidate
+budget 8192, no quality masks or penalties. O1 endpoint log probabilities may
+remain explicitly unscored during sampling; this does not change the sampler.
+Verify all outputs independently and export/reparse exact physical rows. First
+source/seed17 for each arm must rebuild its raw cache after candidate 512 and
+match exact state, RNG and learned buffers before continuing.
+
+Required mechanical gate: all 216 generated charts and 72 complete-suffix scores
+finish, with zero occupancy/coverage/endpoint/terminal/export failures. One failure
+stops the run rather than being averaged into quality. Report ordinary and stress
+groups separately: macro and pooled source-onset NLL, paired R1/O1 group differences,
+proper binary LN scores, chord distributions, LN births/durations, held concurrency,
+independent release/attack relations, rapid same-lane pair frequency and run length,
+and cross-seed variation. Below-40ms counts are descriptive locators, not new
+playability or semantic thresholds. Source metrics describe conditions and do not
+require generated arrangements to reproduce their LN/chord proportions.
+
+No likelihood-only winner or synthetic semantic score is a quality pass. Retained
+LN variety with lower localized burden is a promising development signal; reduced
+burden through broad LN/organization loss is negative. Mixed or uncertain results
+remain unranked. The fixed cores and a smaller sustained-context subset must then
+receive time-proportional Foundation/human-calibrated inspection. New blinded human
+comparisons and another initialization/unused groups remain independent follow-ups.
+
+Execute sequentially after the three training arms stop; CPU one thread, same
+6 GiB footprint/RSS, 2 GiB available, 128 MiB swap-growth guard. Bound the complete
+screen to 3,600 seconds and 2 GiB outputs, individual checkpoints to 128 MiB, with
+1 GiB disk reserve. Check resources every scoring chunk and 128 generation
+candidates; retain raw checkpoints every 512 candidates and complete chart results.
+Fresh output `corpus-20260918-v1/development-screen-250k-v1/`; stop on any guard and
+preserve incomplete evidence. No automatic overwrite or quality-selective retry.
+
+Command:
+`uv run --offline --python 3.10 --extra mps --group dev python artifacts/bounded-typed-continuation/corpus-20260918-v1/development_screen.py`.
+Script SHA `30989d8da79e16e87b1f69b00fed693aeff8a84feef7a5bd5e1793f31640d199`;
+its reused descriptive helper is the pinned earlier generation script SHA
+`5b6f4286fa82d7ff9bee76284268fa761d0a099d127200f8ff6156aa174ea8c4`.
+The script passes syntax compilation; actual execution and checkpoint identities
+remain pending. Evaluation/Decision pending.
