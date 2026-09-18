@@ -126,3 +126,10 @@ motivate a prospective experiment but cannot establish independent generalizatio
 Append the exact run evidence and scoped semantic judgments. Keep this Note
 proposed. The current overall goal needs sustained organization and playable
 quality beyond this checkpoint diagnostic.
+
+## Pinned derivation driver
+
+`stability-20260919-v1/derive_models.py` SHA
+`cbb85bfa74b91725fdfed706753115fb14adc77587b9d3fb35a7cc2436dae20b`.
+It verifies exact alpha0/1 reconstruction, finite matching parameter tensors,
+strict model loading and inference-only serialization before producing a manifest.
