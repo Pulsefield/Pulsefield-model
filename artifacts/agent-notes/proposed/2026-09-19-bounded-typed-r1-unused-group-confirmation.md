@@ -175,3 +175,25 @@ adapts the prior source-only selector, SHA
 It checks clean product source, excludes the 24 prior groups before selection,
 uses the declared RNG and scope rules, and requires two eligible wider scopes.
 Its syntax compiles. No model inference or new training has run for this Card.
+
+## Selection result and pinned evaluation driver
+
+Selection completed in 3.705 s from 1511 eligible charts in 411 remaining groups.
+The 24 selected groups are distinct and disjoint from all 24 prior screen groups.
+`confirmation-20260919-v1/screen-conditions.json` SHA
+`4200b2c27b8d21ba617889d75add008d3a90efff4cb194b805b5c0ca0d5ac5dd`.
+The declared local indices are 0/3/6/9/12/16; the first two eligible ordinary wider
+indices are 1/2. Ordinary index 0 has only 200 physical rows, so its declared
+recovery uses an earlier nonterminal midpoint, with the before-512 condition
+recorded explicitly. The LN-rich recovery retains the candidate-512 check.
+
+`confirmation-20260919-v1/development_screen.py` SHA
+`8904a3d3f093fcb429feb378139fcf15e10bbca973b21160538331980f1237b7`
+adapts the previous completed native screen, SHA
+`e29439dd9ed2aea55d568e46c4c9ea3cbada98c5287cc0057d3647bcb87c9eba`.
+The reviewed changes load the two declared 2M checkpoints, verify this condition
+manifest and the existing behavior-neutral preflight, and perform the four
+declared recoveries. Generator inputs, likelihood, support, resource bounds and
+export/reparse checks are unchanged. Syntax compilation passes. The generation
+summary helper stays pinned at
+`5b6f4286fa82d7ff9bee76284268fa761d0a099d127200f8ff6156aa174ea8c4`.
