@@ -1857,3 +1857,37 @@ The driver verifies matched draw/row/prefix/padding/endpoint ledgers and coverag
 Invoke with the same explicit Python3.10/MPS-dependency/dev prefix as the preflight.
 Preserve any failure and stop the chain. Training is authorized exploratory work;
 acceptance remains none and the quality result remains pending.
+
+
+## Availability Card revision 3: fixed 2.25M readout drivers
+
+Proposed, acceptance none. After all three paired continuations complete, run the
+unchanged24-condition/three-seed full-suffix likelihood and native generation
+screen on the new source and exact finalized2.25M checkpoint digests. The model
+task remains O1 in every branch; `arm` in this comparison's readout names P0/C0/C1.
+This revision pins measurement drivers without changing intervention, selection,
+thresholds, resource bounds or interpretation.
+
+- `development_screen_2250k.py`: `b3a456635e34c444bdc36b4105bd97744c1a2bb8313cb105f320f4d880108a1a`;
+- `screen_readout_2250k.py`: `401b57e84d88b921a1ca4c8c89d6520d5cd74af4e8a72d0bb763989e6703b7a9`;
+- `render_screen_2250k.py`: `9e116cd7078a867d3ef47c69902c6868c96c39bc16575541d697520f3788b458`.
+
+All syntax-compile. Invoke through the same `uv run --offline --python 3.10
+--extra mps --group dev python` prefix after checking the completed training
+readout and checkpoint identities. Fresh outputs are
+`availability-20260919-v1/development-screen-2250k-v1/`,
+`development-readout-2250k.json` and `inspection-2250k-v1/`.
+Screen limit stays one hour,6GiB footprint and2GiB output; existing resource
+and exact-recovery/export/reparse checks remain. The rendering uses the same
+fixed LN-rich/dense cores and seed17 for all three branches, with canonical
+images and action listings. Later ordinary/64s inspection remains separate.
+
+The primary rate averages output rates over three seeds, then equally over source
+groups. For C1 versus each control, report its point ratio and paired bootstrap
+interval for the *difference* in group rates; the latter remains defined for
+zero-rate groups. A reduction gate requires a positive control mean, ratio<=0.75,
+and a95% percentile interval wholly below zero. Bootstrap units are groups with
+seeds nested inside, seed1971,10000 resamples. Separate pooled counts, one-free-
+lane pairs, LN shares/quantiles, chord histograms and complete-suffix fitting
+remain in the readout. Numeric guard success never substitutes for calibrated
+LN-control/mode/organization inspection. Scientific conclusions remain pending.
