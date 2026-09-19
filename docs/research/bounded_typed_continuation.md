@@ -799,3 +799,71 @@ Evidence lives under
 
 This is exploratory evidence without an accepted research Card. It does not
 establish the V3 architecture, human preference or final model adoption.
+
+### Difficulty and long-form coverage at 4M
+
+A further source-only selection excludes both earlier 24-group screens and
+chooses 28 distinct VAL groups, seven in each source band [2,3), [3,4), [4,5)
+and [5,6]. Each band has three group-uniform ordinary sources and four sources
+selected for independent LN starts, short-LN/tap adjacency, taps inside long LNs
+and continuation length. These mechanical descriptors locate contrasting cases;
+they are not semantic labels. Source ratings use the same pinned calculator and
+playback conditions as above. This collection is stratified rather than a
+population prevalence sample.
+
+Both fixed 4M models generate every complete suffix under three random seeds:
+168 outputs and 56 full-suffix likelihoods. All outputs pass mechanics and exact
+export/reparse, including six continuations of approximately 17.5 minutes. The
+complete evaluation takes 2,056 seconds on the same one-thread CPU setup, with
+sampled maximum process footprint 464 MB and no swap growth. Read-only inspection
+and rendering overlap some execution; this is an operating measurement rather
+than an isolated throughput benchmark.
+
+| Source-star band | 171 group-mean NLL | 172 group-mean NLL | 172 pairs below 40 ms per 1,000 supplied suffix onsets |
+| --- | --- | --- | --- |
+| [2,3) | 2.191116 | 2.177359 | 0 |
+| [3,4) | 2.233952 | 2.209003 | 0 |
+| [4,5) | 2.411728 | 2.397454 | 0.209691 |
+| [5,6] | 1.972021 | 1.993644 | 0.118249 |
+
+Initialization 172 passes the declared coarse numerical screens, but the
+collection does not pass the broader quality requirements. Its actual generated
+star bands contain 13/13/9/2 distinct groups respectively; a group can contribute
+to multiple bands. The last band falls short of the required three groups.
+Several 5-star source conditions produce 4-star outputs, so input coverage cannot
+be used as output coverage.
+
+More importantly, 172 still produces fourteen below-40-ms same-column pairs in
+nine outputs. Two context-inspected cases concentrate a 23-ms or 37-ms repeat on
+the only available lane while three others are held. Their source counterparts
+distribute the same onset sequence across lanes. Reconstructing the original
+generated histories reproduces all 44 inspected chosen log probabilities exactly.
+Immediately before those two repeats, the model assigns the choices that force
+them probabilities 0.268926 and 0.183571. Alternatives that avoid forcing this
+head repetition remain in the existing support. The failure therefore is not
+explained solely by tiny sampling tails or
+unavoidable timing. Source-history controls change the entire history and do not
+isolate whether representation, learning coverage or feedback causes the error.
+
+The surrounding generated passages contain real independent LN organization and
+tap/hold contrasts. Separate preselected views also show plausible phase and
+seed variation in the 2-star examples and prominent independent LN control in a
+4.25-star output. These positives do not resolve the localized burden concerns.
+Fourteen of sixty prospective primary scopes have been reviewed; the rest remain
+unreviewed. The failed output-coverage guard and inspected burden concerns are
+already sufficient to withhold an overall quality claim. Complete mechanical
+generation of a long chart is not evidence that its entire structure is good.
+
+The next model comparison should test the treatment of a candidate action's
+consequences for subsequent lane availability, while preserving the demonstrated
+LN/tap range. A separate evaluation must fill the actual 5–6-star coverage gap.
+Neither step is replaced by resampling until a favorable output appears.
+
+The evidence owner is
+`artifacts/bounded-typed-continuation/difficulty-ln-longform-20260920-v1/`.
+Complete readout SHA:
+`30b7e2a7484d84695c7ebe16ce66da1ed1a31ac92998af746738991ccd410ee3`;
+independent digest/resource audit SHA:
+`f313678fa2896255decac00bbb5b674070c80a9a3c31d6e6ebfd3777d972958d`;
+frozen-history probability report SHA:
+`ddb9312beda065057300ed9257dad1888a3cb54eec8f8f8153ff2175ff63bc65`.
