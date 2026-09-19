@@ -235,3 +235,18 @@ Command: `uv run --offline --python 3.10 --extra mps python
 artifacts/bounded-typed-continuation/persistent-seed-20260920-v1/finish_and_evaluate.py`.
 This orchestration implements the already declared procedure; no scientific
 field or budget changes. All decisions remain pending the full evaluation.
+
+Before new-model quality evaluation, refresh six already-consulted confirmed human
+contexts against the current local Beatmap Lens Foundation hash. Inspect canonical
+montages and full note endpoints for the supporting/prominent LN contrasts.
+The reused 37-example projection is frozen calibration, not the complete current
+annotation inventory. LN coordination depends on independent temporal control;
+synchronized pairs alone remain absent. The supporting example has a definite
+coordinated figure within a TAP-led passage. A prominent Stream example includes
+LN/TAP motion, while the repeated-chord counterexample is Stream absent: labels
+are independently judged, not inferred from note type. Human style decisions do
+not certify numerical demand or playable difficulty.
+Calibration-refresh SHA:
+`81268fc80ad9ff0f4024a3f90ceb10ecd8d55fe7d60499241729231ae91069eb`.
+The pinned source split confirms all six examples are validation sources. No new
+TEST chart or generated judgment becomes a training label.
