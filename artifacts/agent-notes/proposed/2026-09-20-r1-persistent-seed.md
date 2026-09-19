@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-20
 Updated: 2026-09-20
-Product revision: cefe3deb97c6e7510c3bbde6f7d679648ee5b06c
+Product revision: a64ac0a0ed5b1ec6b7af5ab3b571cd122b30a5c4
 Scope: R1 persistent seed representation, matched continuation and native development evaluation
 Related: 2026-09-20-r1-prefix-recovery; 2026-09-20-r1-action-consequence
 
@@ -301,7 +301,7 @@ The frozen comparison against both concurrently continued controls is unchanged.
 ## Result Log: complete numerical comparison
 
 All252 complete native outputs and84 full source suffix likelihoods finish in
-2,340.779seconds on the frozen a64ac0a runtime. Every output passes mechanical
+2,340.770400seconds on the frozen a64ac0a runtime. Every output passes mechanical
 verification and exact osu! export/reparse. An independent pass verifies756
 output digests and recomputes all phase fractions, short-interval counts, group
 aggregations, bootstrap intervals and decision gates from generated files.
@@ -340,3 +340,35 @@ Readout SHA: `b5b0188095158e0c3356f9cf7b10ef3b96595ad3d478a80568486bdaf8a57d1e`.
 Comparison SHA: `368cdfad6247ce1cd481b633f9d44b80fb495d614af8e7d9f8c6e0384483dfba`.
 Independent audit SHA: `46a79b9dce7fc8e0251dca0fc8ca1d6c5cd8e97e607db59ad005674b677e7a65`.
 Masked manifest SHA: `0cf0f5af17d4abc8c91392815cbeabb71c5321ee9a8f7daeb550a7dca1a2b490`.
+
+## Result Log: anonymous semantic judgments sealed before reveal
+
+All 31 cases and 93 variant judgments are saved against the frozen masked
+manifest. All 717 canonical panel hashes, 93 montage/action bindings, scoped
+metadata, judgment fields and the preserved correction ledger verify. Every
+complete time panel was displayed in the reading montages, with exact action
+records consulted and selected risk pages additionally read at full resolution.
+These are agent judgments calibrated with the pinned human examples, not new
+human gold or a fully blind human study. Numerical outcomes were visible before
+masking, so some variants may be recognizable. TEST remains unread.
+
+Risk 01 and risk 03 contain the same source 21 / seed 17 scope. Their complete
+paginated action content is identical under a label permutation after excluding
+the case-specific rendered-source identity. Their page bytes differ with the
+source identity printed on each page. They provide 30 unique contexts and 90
+unique variant/context outcomes, not 31 independent cases. An initial byte-
+equality assertion stopped before writing the final case; the verified packet
+comparison and qualification are preserved in duplicate-evidence.json.
+
+Before sealing, the ln18 B/C single-LN timestamps were corrected from a montage
+estimate to the exact 95735–96094 ms action reference. The original judgment bytes
+and before/after digests are retained; labels and preferences did not change.
+The numerical runtime above is also corrected to the exact 2,340.770400 seconds.
+
+The sealed manifest is
+`persistent-seed-20260920-v1/masked-judgments-v1/sealed-manifest.json`, SHA
+`e4bbcb249cdf3088fbbebd3189cab0731e59e8aa893cccd4319d2c289af84090`.
+It binds all judgments, the correction/duplicate evidence, recording helpers and
+calibration artifacts. The private model mapping has not been consulted. This
+local Note commit must precede reading that mapping; subsequent joining changes
+neither the frozen judgments nor the declared primary/guard definitions.
