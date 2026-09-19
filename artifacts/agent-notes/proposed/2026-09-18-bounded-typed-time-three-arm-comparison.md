@@ -2259,3 +2259,23 @@ difficulty/LN coverage frozen in its Card. Both R1 initializations and prior
 masked judgments remain unchanged. All processes are terminal; product and Notes
 commits are local only. The overall goal remains active and unfulfilled; no Note
 acceptance or model adoption occurred.
+
+### R1 mode review and additional-exposure experiment
+
+The scoped owner `2026-09-19-r1-additional-exposure` records the next investigation
+and proposed Card `r1-exposure-2m-to-4m`, revision1. All58 new phase/calibration
+images and the complete index21 timeline were inspected. The high-LN alternatives
+retain definite independent LN control in the early/middle/late seed17 cores and
+middle/late seed23 cores. Early seed23 is boundary-sensitive and unresolved for
+LN coordination; its LN/tap mixture is visible. The early divergence occurs with
+only65 physical rows, while all20 seed rows remain within the511-token context.
+Scalar LN variation does not establish collapse, and context truncation cannot
+alone explain the early separation. Whole-chart quality remains unproven.
+
+The selected experiment preserves both2M R1 models, task, data, optimizer/RNG state
+and native sampling, extending the common draw plan to4M. It tests whether more
+learning improves complete-suffix likelihood without burden or difficulty-band
+regression, then checks paired Foundation quality if those gates pass. The scoped
+Note freezes exact source, commands, pins, bounds and prospective decision rules.
+Preflight and fork tests pass; launch/results remain pending at this revision.
+No change to the existing goal, Note acceptance or model adoption is inferred.
