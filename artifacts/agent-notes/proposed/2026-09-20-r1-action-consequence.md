@@ -470,3 +470,26 @@ provenance, all driver digests,28 groups, seeds17/19/23,252 outputs and84 suffix
 scores. Execute the secondary frozen-history probe and full evaluator under that
 plan; then render and judge the masked scopes before revealing identities.
 Generated quality, all regression guards and the overall goal remain pending.
+
+## Secondary fixed-history result
+
+The revision3 diagnostic completes108 queries in12.534seconds: nine positions
+around each of three fixed histories, scored by original4M and all three4.5M
+candidates. Every original4M chosen log probability still equals its old journal
+exactly under the common batched runtime. Report SHA:
+`513fdbbf5eaae7c619c3488eeb84bfff05d57a016626d46ccab89ee55760caf4`.
+
+| Avoidable predecessor | 4M two-onset forcing mass | 4.5M none | 4.5M actions | 4.5M frontier |
+| --- | --- | --- | --- | --- |
+| 75065ms before23ms case | .684850 | .674005 | .673943 | .666298 |
+| 180266ms before37ms case | .143707 | .426304 | .426138 | .431860 |
+| 133271ms before3ms case | .048757 | .015656 | .015652 | .013830 |
+
+The feature branch makes small, mixed changes relative to continued learning.
+Additional exposure improves the all-four-LN example but increases the second
+example's conditional forcing mass substantially in every mode. These are fixed
+old generated histories; the probability of visiting those histories can change.
+Therefore this table establishes neither native population improvement nor
+regression. It does not select a checkpoint or alter the predefined comparison.
+The full252-output evaluator is running unchanged on9894761. Its outcome and
+the masked semantic evaluation remain pending.
