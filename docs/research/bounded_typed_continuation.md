@@ -240,6 +240,120 @@ probabilities match dense teacher-forced training across held LNs, context expir
 and a long gap. This rules out those tested train/inference projection mismatches;
 it does not establish stability on generated histories.
 
+### Portable condition and generation commands
+
+The generator accepts a standalone JSON condition and a digest-pinned model
+checkpoint. It needs no corpus catalog, split manifest or source suffix actions.
+The optional source preparation command derives the supplied timing and seed
+from a strictly admitted native 4K osu! file. By default it takes complete rows
+through the thirtieth note head, including every head on that final seed row.
+The source must contain that many heads and a remaining candidate suffix.
+
+The condition format is `bounded-typed/condition-v1`. `timing.times_ms` contains
+strictly increasing finite candidate times. `timing.onsets` is a same-length
+boolean H mask for R1/O1 and null for R0. `seed_rows` must be a nonempty, complete
+physical prefix of those candidates. Each row contains `time_ms` and four
+`actions`: 0 EMPTY, 1 TAP, 2 LN_START, 3 LN_CLOSE. `crossing_ends` has four
+lane-ordered entries. Each typed-arm seed LN still held at the boundary requires
+its zero-based release candidate index; other entries are null. All four entries
+are null for R0. The condition has no suffix lanes, note types or suffix-born LN
+endpoints. Unknown fields and inconsistent seed/role/endpoint assignments fail
+validation. Condition/source inputs are limited to 64 MiB; a condition can contain
+at most 250,000 timing candidates.
+
+For example, this valid R1 condition starts with an LN on lane zero, requires
+its release at candidate one and a new head somewhere at candidate two:
+
+```json
+{
+  "format": "bounded-typed/condition-v1",
+  "arm": "r1",
+  "timing": {"times_ms": [0, 100, 200, 300], "onsets": [true, false, true, false]},
+  "seed_rows": [{"time_ms": 0, "actions": [2, 0, 0, 0]}],
+  "crossing_ends": [1, null, null, null]
+}
+```
+
+These commands use the Mac dependency extra even when generation runs on CPU.
+Replace paths and uppercase digest placeholders with the actual files and their
+full lowercase SHA-256 values. Preparation prints the resulting condition digest.
+Each preparation output file and generation output directory must be fresh.
+
+```sh
+uv run --python 3.10 --extra mps python -m pulsefield_model.research.bounded_typed_continuation.condition_hydra \
+  source_file=/path/to/source.osu source_sha256=SOURCE_SHA256 \
+  output_file=artifacts/bounded-typed-continuation/condition.json arm=r1 seed_notes=30
+
+uv run --python 3.10 --extra mps python -m pulsefield_model.research.bounded_typed_continuation.generate_hydra \
+  checkpoint_file=/path/to/checkpoint.pt checkpoint_sha256=CHECKPOINT_SHA256 \
+  condition_file=artifacts/bounded-typed-continuation/condition.json condition_sha256=CONDITION_SHA256 \
+  output_dir=artifacts/bounded-typed-continuation/generated-example device=cpu cpu_threads=1 seed=17
+```
+
+Supported model formats are `bounded-typed/corpus-training-v1` and
+`bounded-typed/learning-check-v1`; their arm must match the condition. The runner
+loads the saved architecture and strict parameter state, within the supported
+128-hidden/eight-level/four-expansion/16-coupling-rank envelope. It retains native
+temperature-one sampling. `candidate_budget` bounds endpoint scoring work,
+not endpoint support; `score_endpoints=true` also computes marginalized endpoint
+log probabilities. CPU generation with one thread is the default. `--help` and
+`--cfg job` expose the packaged Hydra settings; `--cfg job` is inspection rather
+than semantic validation. Execution requires a clean, committed package checkout.
+
+The optional pair `presentation_source=/path/to/source.osu` and
+`presentation_sha256=SOURCE_SHA256` copies only playback metadata, timing/SV
+points and the audio filename into the exported header. It assigns new beatmap
+identifiers. These header values never enter prediction. Audio is neither read
+nor bundled; playback needs the matching original audio/mapset. Omitting the
+pair produces a generic header suitable for structural inspection.
+
+Each run writes its resolved/typed settings, input condition, model/environment
+provenance, physical rows, decisions, resource observations and `checkpoint.pt`.
+Completed runs independently verify the full output, export `generated.osu`,
+strictly reparse it into the same physical rows and write `result.json` with file
+digests. `max_seconds` or `stop_after_candidate` pauses at a consistent candidate
+boundary; a paused run has a checkpoint and result but no partial osu! export.
+The stopping cursor is absolute and zero-based: a cursor of 512 means candidates
+0 through 511 have been processed. Time is checked between generation steps;
+model loading, an individual step and final export can exceed the nominal limit.
+
+To recover, repeat the generation command with a new `output_dir` and add
+`resume_from=/path/to/parent/checkpoint.pt` plus `resume_sha256=RESUME_SHA256`, using
+the parent's reported checkpoint digest. The model, condition, presentation,
+source revision, device, CPU thread count, sampling seed, candidate budget and
+endpoint-scoring setting must match. Paths can change when file bytes do not.
+Resource limits, checkpoint cadence, time limit and stopping cursor may change;
+the stopping cursor cannot precede the restored cursor. Use the same library and
+hardware environment for exact numerical recovery.
+
+Recovery verifies journal prefix digests, physically replays their decisions and
+checks the saved exact state and bounded raw history. It then rebuilds only the
+finite learned context. Durable prefixes are copied into the new output
+directory; incomplete tails are excluded and the parent is untouched. A failure
+propagates and records `failure.json` when the runner owns the output directory.
+It leaves the last complete checkpoint available instead of saving a potentially
+partially written step. CPU thread settings are restored on exit.
+
+### Quality coverage required beyond mechanical verification
+
+Playable continuation must remain coherent through a complete suffix, across
+multiple source groups, generation seeds and difficulty levels. Independent 4K
+coverage in the 2★–6★ range is required alongside harder maps. Record source and
+generated star ratings separately with the calculator revision, mods and clock
+rate fixed. A source's star band does not certify the generated chart's difficulty,
+and matching star ratings do not establish human-like organization. Existing
+ordinary/stress selection alone does not establish this difficulty coverage.
+
+Inspect early, middle and late sections plus transitions, long gaps and the full
+chart's development. Evaluate long LNs, complex independent LN control, short and
+fragmented LN articulation, and their integration with taps. Durations need
+physical-time and beat context; short LNs are not intrinsically defects, and long
+or dense simultaneous holds do not by themselves establish complex organization.
+Track degeneration, difficulty drift and variation across seeds without selecting
+only successful excerpts. Use the Foundation and confirmed human examples for
+multi-scale judgments. Mechanical validity, total LN proportion and a few strong
+local sections cannot substitute for these quality and stability requirements.
+
 ### First native full-suffix diagnostic
 
 At source `21475e65d773b7e7199accf0750de584d9f10ce9`, the three short-fit checkpoints

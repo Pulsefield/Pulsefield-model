@@ -100,11 +100,16 @@ def admit_source(data: bytes, expected_sha256: str, *, group_id: str, split: str
     Group and split must come from the caller's existing song-group allocation.
     """
     source = parse_source(data, expected_sha256)
+    rows = source_rows(source.objects)
+    identity = SourceIdentity(source.source_sha256, source.arrangement_sha256, group_id, split)
+    return ContinuationSource(identity, TimeSkeleton(tuple(row.time_ms for row in rows)), rows)
+
+
+def source_rows(objects) -> tuple[CompleteRow, ...]:
+    """Project already admitted objects to complete rows without assigning a split."""
     events: dict[float, list[int]] = {}
-    for note in source.objects:
+    for note in objects:
         events.setdefault(note.start_ms, [0] * 4)[note.column] = LN_START if note.kind == "long" else TAP
         if note.kind == "long":
             events.setdefault(note.end_ms, [0] * 4)[note.column] = LN_CLOSE
-    rows = tuple(CompleteRow(time, tuple(actions)) for time, actions in sorted(events.items()))
-    identity = SourceIdentity(source.source_sha256, source.arrangement_sha256, group_id, split)
-    return ContinuationSource(identity, TimeSkeleton(tuple(row.time_ms for row in rows)), rows)
+    return tuple(CompleteRow(time, tuple(actions)) for time, actions in sorted(events.items()))

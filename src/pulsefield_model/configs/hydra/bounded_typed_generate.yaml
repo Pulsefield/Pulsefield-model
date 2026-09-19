@@ -1,0 +1,40 @@
+defaults:
+  - bounded_typed_generate_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+checkpoint_file: ''
+checkpoint_sha256: ''
+condition_file: ''
+condition_sha256: ''
+presentation_source: ''
+presentation_sha256: ''
+output_dir: artifacts/bounded-typed-continuation/generated
+resume_from: null
+resume_sha256: ''
+device: cpu
+cpu_threads: 1
+seed: 17
+candidate_budget: 8192
+score_endpoints: false
+checkpoint_every_candidates: 512
+stop_after_candidate: null
+max_seconds: 3600.0
+footprint_limit_bytes: 6442450944
+resources:
+  driver_limit_bytes: 6442450944
+  rss_limit_bytes: 6442450944
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 2147483648
+  max_swap_growth_bytes: 134217728
+  checkpoint_max_bytes: 134217728
+  disk_reserve_bytes: 1073741824
+  output_max_bytes: 536870912
+  release_mps_cache_at_boundaries: true
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

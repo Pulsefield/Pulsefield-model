@@ -26,8 +26,10 @@ learning setup.
 The [bounded three-arm continuation baseline](docs/research/bounded_typed_continuation.md)
 defines matched typed-row/object tasks alongside the original row task. Exact
 execution, a finite encoder, complete probability heads and bounded training
-windows are implemented; the native
-three-arm training and generated-quality comparison remain in development.
+windows are implemented. Packaged commands support corpus training, preparation
+of standalone timing/seed conditions, and native generation with durable recovery
+and verified osu! export. Long-form quality, consistency across difficulty levels,
+and varied LN/tap organization remain under evaluation.
 
 ## Legacy code boundary
 
