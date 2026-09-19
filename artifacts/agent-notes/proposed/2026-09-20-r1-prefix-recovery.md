@@ -181,3 +181,61 @@ revising the bound. Driver-v2 SHA: `7696dc178b6dfc708a4de5ff73bb1187aac9105f8068
 Execution-plan-v2 SHA: `a7624292caa5d14c51f93e78bbc07970b67f229165eea8d96d6b735dae18c27a`.
 Command: `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/prefix-recovery-20260920-v1/run_probe_v2.py`.
 The Card remains proposed with no accepted revision.
+
+
+## Result Log: complete frozen prefix replacement
+
+Revision2 completes all48 windows,24 paired histories,24576 required H and26550
+R decisions in168.157944seconds on the clean e525bda runtime. All24 reconstructed
+native-history chosen log probabilities match their original journals exactly;
+all8 source-history dense/cached distributions satisfy the revised numeric bound
+with identical supports. The process is terminal and reaped. Peak sampled RSS is
+283770880bytes, footprint226362328bytes, swap growth0, output9287564bytes.
+Run-v1's earlier1.272436-second unsampled engineering stop remains preserved.
+
+The independent audit replays every emitted action through exact mechanics from
+each initial snapshot to the final snapshot. It verifies H coverage, row/hold
+states, all source references, initial RNG seeds, every file digest, four-bin
+counts, short-interval diagnostics and paired bootstrap results. It does not
+rerun or retune native sampling. Report SHA:
+`d7fb165b2c316d0298233fa5379944f6441abce41a22bc2f86923cd714d8f9eb`.
+Audit SHA: `abffcaa5ba30d266fb865b23ec225d98d289023e8814e7947eb881aa8a8bbc62`.
+
+| Required-H bin | Generated-prefix absolute error | Source-prefix absolute error | Paired difference | Paired90% interval |
+| --- | --- | --- | --- | --- |
+| 0–127 | .350853 | .116417 | -.234436 | [-.441586,-.059069] |
+| 128–255 | .376258 | .129850 | -.246408 | [-.469963,-.037526] |
+| 256–383 | .434952 | .199266 | -.235686 | [-.453108,-.040778] |
+| 384–511 | .467922 | .228744 | -.239178 | [-.456941,-.044778] |
+
+The declared early diagnostic criterion passes: relative mean error reduction
+66.82%, with a negative upper interval. This is type-proportion recovery on
+reused selected groups, not a quality improvement by a deployable model. Effects
+are heterogeneous. In source27's mostly TAP reference segment, generated-prefix
+fractions average.9625 early and.9604 late; source-prefix fractions average.0156
+and.0431. In source11, a TAP-only reference segment changes from.5850 to0 early,
+but one replaced-prefix seed later reaches.6133 LN fraction. Resetting history
+can strongly change the trajectory without preventing later drift.
+
+Both LN-rich contrasts remain visible. Source17 improves early proportion error
+but later becomes LN-heavy again. Source20 is slightly worse early under source
+replacement and neither path matches every later bin. Source9 remains strongly
+LN-heavy under both prefixes. Source19 is already LN-light at its midpoint
+under generated histories despite its whole-chart excess; replacement is not a
+uniform correction. No successful-quality claim follows from these examples.
+
+The final128-H bin still begins with up to127 initial learned tokens in some
+TAP-heavy cases; it is not wholly beyond the511-physical-row field. The exact
+counter/clock state also differs between prefix conditions. Therefore this
+experiment establishes a causal dependence on prefix state as a whole, not a
+unique attribution to learned memory, a calibrated global style intent or an
+irreversible attractor. It does not license source-prefix refresh at inference.
+
+Decision: REFINE. Prioritize a bounded test of persistent permitted conditioning
+against a capacity control before treating a larger model or more exposure as
+sufficient. A persistent encoding of the original supplied seed is one candidate
+that preserves the task's input information. Explicit desired difficulty/LN
+amount is another candidate, but would change the stage's condition definition.
+Optimization averaging/annealing remains a separate live branch. Any new model,
+input, objective or sampler change requires its own proposed design and native
+quality evaluation; the overall goal remains active.
