@@ -356,3 +356,32 @@ Freeze the evaluation-plan with their exact digests and final checkpoint hashes
 after the three4.5M segments complete. Keep the private mapping unread until the
 scope judgments are sealed. Training/evaluation outcomes and the overall goal
 remain unresolved.
+
+## Evaluation logic and original-source spacing reference
+
+The secondary feasibility predicates agree with an independent exhaustive search
+over legal future action rows for942 one/two-onset queries on small typed timing
+fixtures, including fixed seed endpoints, unknown LN ends and intervening release
+candidates. The search permits future TAP/LN chords and release subsets; it does
+not reuse the greedy readiness computation. Synthetic comparison records also
+verify that identical candidates fail the improvement threshold, while a positive
+arithmetic control is rejected after either an NLL regression or LN collapse.
+This tests evaluator logic only. `evaluation-logic-check.json` SHA:
+`7af1dfb9417a6437bc0a6e315b473c361a19f5b635c57fbff4b4bd93b218ac2f`.
+
+On the original28 source maps, the same suffix diagnostic counts zero short
+head/head intervals and six release/head intervals. All six are31ms and occur
+in source21. Four restart an outer-lane pair after94ms between heads; two are
+single TAP restarts after125ms between heads. At those heads zero or one other
+lane is held. This is descriptive context, not an automatic negative label or a
+claim that every original source is expert-approved. The mean union rate is
+.112309074573 per1000 supplied onsets, versus1.044819221932 for the84 fixed4M
+outputs after averaging three seeds per source: approximately9.30x. The unequal
+raw sample counts must not be compared without that normalization.
+
+`source-spacing-reference.json` SHA is
+`52a19219221969033211934a328b5fbd82f39d6b716a7594adb31d9260837c0b`.
+The original cases reinforce why the40ms counter is a diagnostic proxy rather
+than a universal quality boundary. No hard gap limit or source-label change is
+introduced. The complete episode, LN articulation, concurrent occupancy and
+surrounding TAP organization remain necessary for semantic judgment.
