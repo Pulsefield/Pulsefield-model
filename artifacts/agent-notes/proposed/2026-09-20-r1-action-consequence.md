@@ -301,3 +301,58 @@ also receives the original16-candidate timing lookahead. This experiment does
 not provide a learned multi-step planner. Failure against the controls would
 reject this particular access/learning choice, not all candidate-conditioned
 models or all longer-horizon formulations.
+
+## Result Log: initial125k-per-mode engineering boundary
+
+Owning Note/Card: this proposed Note, r1-action-consequence-v1 revision1 training
+freeze; revision2 only refines the forthcoming secondary diagnostic. Accepted
+revision: none. Baseline and clean intervention source remain the pinned
+ca28511/4a98c02 full OIDs above. Python3.10.20/Torch2.11, CPU1 and model seed172
+are unchanged. All three initial forks complete162 updates and exactly125000
+added TRAIN onsets, then stop durably at the prescribed4.125M boundary.
+
+| Mode | Segment seconds | Mean TRAIN NLL/onset | Maximum footprint bytes | Residual output norm |
+| --- | --- | --- | --- | --- |
+| none | 251.733575 | 1.93557888 | 869697144 | absent |
+| actions | 309.533403 | 1.93558104 | 1170180064 | .00527125 |
+| frontier | 318.361474 | 1.93559269 | 1169950688 | .00847939 |
+
+All saved parameter tensors, losses and gradient norms are finite. Every update's
+cursor, exposure, batch onset count and source coverage agree across modes.
+Coverage is3007405 unique onsets,8893 charts and3167 groups. Swap growth is zero.
+New output weights are nonzero, so the residual path receives optimization; its
+small current norm and nearly identical teacher losses do not demonstrate any
+native-quality improvement. Equal added data exposure is the comparison; elapsed
+time includes small read-only artifact checks and is not an isolated throughput
+benchmark.
+
+| Mode | Durable checkpoint SHA-256 |
+| --- | --- |
+| none | `a8350d05b2d2185e0a8eaf92b0e62bbe222b44bd946c7243f0300f6ff537cc5d` |
+| actions | `675162d716d87950f82ad1b849fafb1455cb671d629f66d8806724141d5f3c84` |
+| frontier | `7a33241144e47932f6e9e32bd24068bd6643e15ee26ea2cbf42b298d2198196d` |
+
+`initial-training-audit.json` SHA is
+`13313289eae9ce7679ce80d84e6006f9cb4d35247e98dd085b4f4a5e2bb01054`.
+All engineering guards pass. Strict final continuation starts with `none-4500k`;
+the actions/frontier final segments remain pending until it terminates, preserving
+the declared serial execution. All initial sessions have terminated and been
+reaped. No final-mode checkpoint has yet been selected or evaluated.
+
+The artifact-owned `evaluate.py` now implements all252 native outputs,84 suffix
+scores, the paired group bootstrap and the primary/component/LN-retention guards.
+Its new union counter reproduces the independently derived14 head,153 release
+and167 union cases on all84 frozen original outputs, including the1.044819221932
+mean rate. A synthetic overlap case verifies that one head meeting both conditions
+is counted once. `evaluation-metric-check.json` SHA:
+`1852aae4b866a1418599766d4937b7baaea1d83792c92fe96ab3b797f7051c34`.
+
+The two-onset feasibility diagnostic passes synthetic examples distinguishing an
+immediate forced restart from an avoidable two-onset occupancy trap. The masked
+renderer resolves all28 exact prospective scopes and adds each mode's minimum-
+interval case, with deterministic anonymous A/B/C assignment and a separate
+private mapping. These drivers compile; their complete execution remains pending.
+Freeze the evaluation-plan with their exact digests and final checkpoint hashes
+after the three4.5M segments complete. Keep the private mapping unread until the
+scope judgments are sealed. Training/evaluation outcomes and the overall goal
+remain unresolved.
