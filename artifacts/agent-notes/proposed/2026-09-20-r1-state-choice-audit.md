@@ -99,3 +99,80 @@ Preflight SHA: `8f971ff9a24ba6b069f54609f37688193c6988d27c77141ebc35c4fdfe0c8423
 Freeze SHA: `630ab10d76f9837b533af0f8d499e33fa2663afdfb4f5d87274edd084043fcb2`.
 The clean runtime is the stated 67107af product revision. All population results
 remain unread and pending. No model code or generation policy changes.
+
+## Result Log: complete population decomposition
+
+All 252 generated outputs and 28 source references replay exactly in
+55.174534 seconds. Their short-event partitions recover every published
+40 ms union and component count. Every alternative TAP row passes the exact
+support predicate. Peak RSS is 250,871,808 bytes, footprint 200,131,472 bytes,
+and swap growth zero; the new artifact owner occupies about 6.2 MiB. The process
+is completed and reaped. No model, generated chart or sealed judgment changes.
+
+Complete readout SHA:
+`8a7a3fce2458e880f6f35b49b4e5a63f8d08f919e6d313f91c1f534503dc95d0`.
+A separate physical-row implementation, which does not use Schedule or the
+classifier helper, recounts all 280 charts at all four thresholds and verifies
+all pooled counts, group/seed mean rates and 280 witness-file digests. Audit SHA:
+`72a7a64304688913bb9387a0c0342fd663d136f93f362102572871a504b8f1bc`.
+
+| Population | Under 40 ms heads | Heads with no recovered option | Additional minimum from chosen cardinality | Excess above cardinality minimum |
+| --- | ---: | ---: | ---: | ---: |
+| source | 6 | 0 | 0 | 6 |
+| none | 558 | 263 | 75 | 220 |
+| zero | 547 | 264 | 86 | 197 |
+| observed | 540 | 258 | 80 | 202 |
+
+Each generated mode covers 171,723 required suffix onsets across 84 outputs;
+the source references cover 57,241 onsets once. The first partition counts all
+chosen heads in states with no recovered option, not a claim that their chosen
+cardinality is mandatory. Such required-onset counts are 254/257/238 for
+none/zero/observed. About 47–48% of generated short heads arise at these states,
+13–16% are additional minima imposed by retaining the chosen head count, and
+36–39% exceed that count-constrained minimum.
+
+At strict 20 ms, source count is zero; none/zero/observed have 7/10/8 short heads,
+of which 2/4/2 arise at states with no recovered option. At strict 30 ms, totals
+are 94/116/114, with 43/53/49 at such states. The six source under 40 ms events are
+31 ms release/head intervals on source 21's four onsets 79378/109034/169378/235409.
+All have recovered alternatives even at unchanged head count. This source
+counterexample prevents treating the predicate as an automatic playability
+rejection or a semantic LN definition. All 10 ms counts are zero.
+
+The 40 ms group/seed-mean total rates remain 2.990635/2.876967/2.954803 per 1,000
+required onsets, confirming that the decomposition has not changed the original
+measurement. The corresponding rates for heads in forced states are
+1.337974/1.327816/1.306300. These rates use equal groups after equal seeds;
+pooled head percentages above use a different, explicitly stated weighting.
+
+## Evaluation and next research boundary
+
+Disposition: REFINE. Both earlier state formation and immediate action choice
+contribute materially in all three models. At the frozen states without a
+recovered lane, changing the immediate lane choice cannot avoid a short head.
+A policy applied earlier can change which states are visited; this audit does
+not measure that effect. Persistent seed conditioning has not demonstrated a
+solution, while explicit profile conditioning remains untested. The audit is
+complete, but it does not select a unique neural mechanism or a training
+intervention. The Note remains proposed, with no accepted Card or adoption.
+
+The candidate alternatives preserve current release decisions and head count
+but use TAPs, so they can reduce LN participation and change future structure.
+They are support witnesses, not an inference repair, preference label or quality
+oracle. Any intervention must still undergo full native rollout and Beatmap Lens
+review; a favorable clock count cannot replace independent LN/TAP organization.
+
+The next design should keep explicit requested difficulty/structure separate
+from occupancy planning, current scoring, capacity and optimization. In
+particular, do not repackage source suffix statistics as permitted R1 inputs:
+a description-conditioned stage needs its own declared inference contract. The
+full training plan contains no star field or target-profile field in its source
+records; it does not itself establish a 2–6-star training population. A bounded
+TRAIN distribution/conditioning audit can clarify that information question
+before committing to a larger retraining run. No new filter, profile, parameter
+scale, objective or generation policy is selected or run in this Result Log.
+
+Product documentation commit `342fa15294670d9e790d94c7c604f2c525cc3057` preserves
+this decomposition and its limits. The table and denominator claims were
+checked against the readout; local links and whitespace checks pass. Model
+behavior is unchanged, so previously passing behavior tests were not repeated.
