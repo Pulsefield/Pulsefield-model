@@ -51,7 +51,7 @@ All new diagnostic artifacts belong to
 
 ## Experiment Card: r1-action-consequence-v1
 
-Card ID: r1-action-consequence-v1. Revision: 1. Accepted revision: none.
+Card ID: r1-action-consequence-v1. Revision: 2. Accepted revision: none.
 The user authorizes autonomous bounded implementation, training, evaluation and
 meaningful local commits toward the active goal. This is an exploratory proposed
 Card; execution does not accept the Note or adopt a final model.
@@ -192,10 +192,15 @@ and mean LN-head fraction, independent-LN-start count and taps-during-long-holds
 count at least90% of continued baseline, with source onsets as fixed denominator
 for counts. These scalar guards do not replace semantic inspection.
 
-Replay frozen generated histories from the3ms/23ms/37ms cases as mechanistic
-secondary probes. Report full legal probability mass on predecessor rows that
-force the next required onset into the combined diagnostic, including the
-intervening-release case; never hard-mask this set during generation.
+Replay the eight preceding queries and failing query from each frozen generated
+3ms/23ms/37ms case as mechanistic secondary probes. Report full legal probability
+mass on rows that make the next one or two required onsets unavoidably violate
+the combined diagnostic, allowing earliest permitted releases and single future
+TAPs. These maximize future availability under the equal per-lane40ms diagnostic:
+extra heads and new holds cannot improve it. Record when every legal current row
+already forces the future burden; that position cannot discriminate a change in
+model probabilities. Preserve such states and compare earlier avoidable choices.
+Never hard-mask or score-penalize this set during native generation.
 
 Qualitatively compare all three modes on the12 fixed LN cores (source indices
 12–14,16–18,20–22,24–26, seed17), the first ordinary source in each band at early/
@@ -263,3 +268,36 @@ and config digests, and every initial-mode durable boundary before final
 continuation. Fresh segment directories and inherited resource checks apply.
 The implementation is ready for the explicitly authorized exploratory run;
 training and generated-quality conclusions remain pending.
+
+## Secondary diagnostic correction: Card revision2
+
+Before evaluating any newly trained candidate, the release-aware feasibility
+probe shows that the old head-only predecessor query is already too late in both
+the23ms and37ms examples. At75089 and180304ms, every legal row forces a combined
+head/release burden at the next required onset. Releasing a different lane there
+would merely replace a short head/head interval with a short release/head
+interval. These states cannot measure improvement in native decision quality.
+
+One earlier query remains discriminating. At75065ms, mass forcing a burden by the
+next two required onsets is .684850, while one-onset forcing mass is .205154.
+The observed LN2 row has probability .257281. At180266ms, two-onset forcing mass
+is .143707, one-onset mass .000153841, and the observed LN2 row has probability
+.142955. At133271ms, both horizons give .0487574 for the all-four-LN choice.
+The next133350ms state is already unavoidably forced. All six frozen chosen
+log probabilities reproduce the original journals exactly. Artifact
+`baseline-feasibility-probe.json` SHA:
+`fff90f89b800d8aa95c3fb7a6714dc991c57092a0ac882d5db7da37c332c27fe`.
+
+Revision2 changes only the mechanistic secondary procedure, expanding its fixed
+history positions and making the one/two-onset distinction explicit. It changes
+no primary metric, threshold, model feature, TRAIN draw, learning setting, native
+sampling or semantic scope. The already running matched training continues under
+the preserved revision1 execution freeze; the evaluator will identify revision2.
+This is a declared diagnostic refinement based solely on the original4M outputs,
+not selection on a trained candidate's evaluation outcome.
+
+The readout explicitly supplies clocks at one future H. Its existing hand context
+also receives the original16-candidate timing lookahead. This experiment does
+not provide a learned multi-step planner. Failure against the controls would
+reject this particular access/learning choice, not all candidate-conditioned
+models or all longer-horizon formulations.
