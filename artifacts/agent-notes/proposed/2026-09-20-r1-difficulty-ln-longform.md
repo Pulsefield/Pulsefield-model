@@ -295,3 +295,38 @@ and final quantitative readout remain pending. Several5–6-star source conditio
 produce4-star outputs; source-band coverage must therefore remain separate from
 the required generated-band coverage. Do not infer a numerical or overall pass
 from the current partial semantic positives.
+
+## Complete primary generation and declared risk follow-up
+
+All84 primary outputs completed at1014.150seconds; the fixed171 comparator is
+running serially. Primary generated-band coverage is13/13/9/2 distinct groups
+in ascending2–6-star bands, with29/28/21/3 outputs respectively. Groups may
+appear in more than one generated band. The required three groups in5–6 stars
+are missing, so this collection cannot establish the full target coverage even
+if its other guards pass. It is not valid to substitute source ratings for this
+negative observation or to filter/resample outputs until the requirement passes.
+
+The declared shortest-pair locators are79ms (source0,seed19),73ms
+(source3,seed19),23ms (source21,seed17) and37ms (source9,seed19) in ascending
+source bands. The latter two have three other lanes occupied immediately before
+the later attack. This replicates the kind of burden concern that motivated the
+earlier investigation, while leaving the actual local organization to inspection.
+No whole-chart judgment is inferred from these scalars.
+
+`inspect_critical_risks.py`, SHA
+`6ad65240af6a8abb8c4090bcddd67aff397c3a8889f6d218f779664abe6f75e5`,
+implements the declared per-band minimum-pair inspection and an exploratory
+read-only probability diagnosis. It freezes selection across all84 completed
+primary receipts (ties: source SHA, then generation seed), reconstructs the
+eight preceding and two following candidate decisions from each generated
+history, and checks each chosen log probability against the original journal.
+The existing native probability-probe functions are reused at their pinned SHA.
+Source-history values are descriptive controls, not an isolated causal change.
+
+The diagnostic uses the same fixed172 checkpoint, draws no new output, applies
+no masks/penalties and changes no model source. It renders an8-second risk core
+with2-second flanks for both generated and source charts, preserving complete
+endpoints. CPU1,240seconds,128MiB diagnostic output and existing resource bounds
+apply. Its fresh owner is `critical-risks-v1`; the rendering receipts remain
+under unique `inspection-v1/risk-min-*` identities. This additional diagnostic
+does not alter the Card's numerical or semantic decision criteria.
