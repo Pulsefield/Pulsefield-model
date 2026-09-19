@@ -281,3 +281,19 @@ The evaluation plan now binds those exact checkpoint bytes, SHA:
 Its previously frozen procedure and decision gates are unchanged. All252 native
 outputs,84 source suffix scores, independent recount and masked semantic review
 remain pending; no generation-quality/adoption decision follows from training.
+
+## Descriptive reference: complete none-arm exposure change
+
+The complete5M none arm has84 outputs before the two residual-arm evaluations
+finish. Relative to the pinned4.5M parent on identical28 groups/seeds, four-bin
+phase MAE changes.255293964 to.156524949, group/seed-mean LN fraction.489053111
+to.339605270, and short-interval union rate6.482074836 to2.990635063 per1,000 H.
+The5M four-bin errors are[.148112508,.155137074,.168928257,.153921957]. There are
+558 union events. Actual generated stars range1.650119–8.029997, so improved type
+proportions do not establish difficulty control or playable structure. This is
+a complete descriptive exposure reference, not checkpoint selection or the
+Card's causal comparison. Additional data/updates and optimizer state both change;
+it does not isolate optimization noise. No intermediate model was evaluated.
+Reference artifact SHA:
+`f76aec990acfbfc623673d115789b6df3d4cc30b0d7daf185bf387a84732aea9`.
+The frozen comparison against both concurrently continued controls is unchanged.
