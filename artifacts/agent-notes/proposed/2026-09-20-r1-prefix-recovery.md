@@ -140,3 +140,18 @@ motivates a distinct conditioning/history experiment; it does not justify using
 source refresh at inference. A weak effect, a worsening LN-rich contrast or an
 effect explained by occupancy reset remains visible. Any new learning or decoding
 change requires its own declared design.
+
+
+## Execution freeze
+
+The artifact driver compiles and the product worktree remains clean at the
+declared e525bda revision. No product code is changed. Factory checks preserve
+unknown R1 ends, compare complete source exact state, match24 frozen native
+chosen probabilities and compare8 dense/cached source distributions before
+sampling any diagnostic window. Per-window initial/final raw snapshots and
+decision journals remain bound to the original timing condition.
+
+Driver SHA: `b074f4423e1fe106d70d2d1196ab7542e4219f185c20c3967300e1bce70f3d22`.
+Execution-plan SHA: `c41185500d9ea3e705d2dff1a027ba0d02de36c105e3afd90fd98967747f85bd`.
+Command: `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/prefix-recovery-20260920-v1/run_probe.py`.
+All48 windows are pending. The Note remains proposed, accepted revision none.
