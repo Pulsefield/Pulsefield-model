@@ -372,3 +372,64 @@ It binds all judgments, the correction/duplicate evidence, recording helpers and
 calibration artifacts. The private model mapping has not been consulted. This
 local Note commit must precede reading that mapping; subsequent joining changes
 neither the frozen judgments nor the declared primary/guard definitions.
+
+## Evaluation and Decision: complete matched comparison
+
+Disposition: REFINE. Both primary comparisons fail; both numerical regression
+guards and the scoped LN-presence guard pass. No generation-quality improvement,
+adoption, accepted Card, or SUPPORTED result is claimed. The Note remains
+proposed. All planned training, 252 full generations, 84 suffix likelihoods,
+independent numerical recount and 31-case semantic review are complete.
+
+The private map was first read after seal commit
+`73bdaf9b0c1deae2aaf85a32b541136564ee4866`. Its SHA is
+`6bebe7b8a925b4cb35c44dea856da743b5ba1475d24009c30c02abe8b5f4d74c`.
+The revealed readout is `persistent-seed-20260920-v1/semantic-readout-v1.json`,
+SHA `7aced070426f434dda5175b5c6e819b4bbd14def1c316db06c2c8112ba2f5eac`.
+An independent join/witness audit verifies all 93 judgment-field bindings,
+90 unique generated scopes, deduplicated counts and exact critical actions, SHA
+`d8fb680b5d120284fa3f2cc785c0fca1422a962f8e68db5cb188be7f75667e88`.
+No sealed judgment changes follow the reveal.
+
+Observed retains LN presence in all eight concurrently prominent-control cores:
+12, 13, 17, 20, 21, 22, 24, 25. Cores 12/17 weaken to supporting. Core 18's supporting
+none episode is absent in observed, outside the declared prominent-core guard.
+Long 15/27 have prominent none-arm coordination but only supporting observed
+organization; long 19/23 are absent in every arm. A fraction-only improvement
+therefore does not prove that arrangement strength is retained.
+
+Unique-context local-quality counts in none/zero/observed order are 23/22/24
+locally plausible, 5/3/3 unresolved and 2/5/3 concerning. These scoped agent
+categories are not an ordinal score, a human preference rate or a whole-chart
+acceptance measure. Observed is concerning in ordinary-09-late and both unique
+risk contexts. Its ordinary-09-late cluster has 37/38 ms release/head repeats under
+other holds, while each control has one isolated 38 ms event. Risk-02 observed
+forces a 24 ms restart while the other three lanes are held and later has a 12 ms
+restart. Risk-02 zero forces a 12 ms restart under three holds followed by more 12 ms
+rearticulations. Risk-01 observed avoids controls' 12 ms event but has coupled
+simultaneous 35/36 ms repeats. Risk-03 duplicates risk-01 and is not an additional
+independent outcome. Zero's ordinary-03-late retains lane 0 across 48 consecutive
+attack rows over 6,470 ms; its ln-22 has a 28 ms forced restart state and ln-25 has two
+37 ms TAP-to-LN head repetitions. These findings separate physical feasibility,
+head/head repetition, release/head articulation and semantic organization.
+
+The persistent information branch has a limited favorable phase-error signal
+against zero but does not meet either 20% threshold. Intro representativeness,
+shared-encoder training and continuation sensitivity remain alternative
+explanations. The full 5M none control also improves substantially over its 4.5M
+parent, so the common exposure/optimization change must not be credited to the
+seed residual. More parameter capacity, explicit desired structure, training
+state distribution and longer-horizon action planning remain distinct questions;
+no combination is selected or executed by this Result Log.
+
+The numerical figures were generated and visually read after the semantic seal.
+Their manifest SHA is
+`38f72124d1070a29738c90526947bbf71c67743365161363ad5de486c81b6f9e`.
+The artifact owner occupies about 639 MiB, below 6 GiB; all compute/memory/swap bounds
+are met. Required numerical training/evaluation drivers are finished and reaped.
+Curated product documentation now preserves the mechanism, denominators,
+matched numerical results, semantic limits and local execution witnesses.
+Documentation verification compares the displayed numbers and semantic counts
+to the result owners and checks local links and whitespace. No behavior changed
+in product documentation commit `67107af6c196de45dee311358237befd96026531`,
+so passing model tests were not repeated.
