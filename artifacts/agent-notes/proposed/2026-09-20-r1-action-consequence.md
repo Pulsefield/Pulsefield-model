@@ -545,3 +545,33 @@ They retain independent LN organization with different TAP/hold tradeoffs, not a
 quality winner. All other scopes remain unreviewed. Finish the declared masked
 review before revealing labels or making a semantic retention conclusion.
 The Card stays proposed, accepted revision none; overall goal remains active.
+
+
+## Masked semantic judgments sealed
+
+All31 declared triple comparisons are now inspected:28 prospective scopes and
+three risk selections,93 variant readings and717 complete canonical time panels.
+Exact action records support the cited hold endpoints, handoffs and local timing
+concerns. Two critical risk pages were also inspected at original1100x900
+resolution. The review distinguishes LN presence, ordinal salience, confidence,
+TAP/stream organization, scoped quality concerns and unreviewed tags. It is one
+agent's gold-calibrated interpretation, not human playtesting or new gold.
+Previously visible numeric summaries can make some variants recognizable.
+
+The private model mapping remains unread at this seal. Judgment manifest
+`masked-judgments-v1/manifest.json` SHA:
+`695e283beca32767f09c3e613b14689e140bc2d43f028853885bee6bc39294cf`.
+It pins every individual judgment and the renderer manifest. All action, montage
+and canonical-page digests were reverified. The immutable recorder SHA is
+`cb965ea948905eb669678383a5c2b67ec7c1ba570845d8c593eb819bfce694d8`.
+
+Risk-01 and risk-03 have identical full action payloads for each anonymous label
+once only the masked source identifier is removed. Both were inspected, but
+must be deduplicated as one risk context in interpretation. They are not two
+independent successes or failures. The other risk context contains a3ms
+same-lane release/head restart under continuing holds. Strong LN organization
+can coexist with such localized exact-action concerns.
+
+Commit this seal before reading the private map. Next aggregate the declared LN
+retention comparison and scoped tradeoffs, preserving uncertainties and duplicate
+risk provenance. No overall quality or successful primary result is claimed.
