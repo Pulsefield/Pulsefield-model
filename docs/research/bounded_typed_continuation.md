@@ -25,8 +25,10 @@ The packaged `bounded_typed_smoke` configuration provides a bounded learning-che
 runner. A 16-chart learning check and paired R1 corpus trajectories through four
 million source-onset exposures have run. Additional R1 training improves held-out
 likelihood and the inspected local burden failures while retaining some independent
-LN organization. Long-form quality, difficulty consistency and the complete range
-of LN/tap expression still require broader confirmation.
+LN organization. A matched continuation to 4.5M tests candidate action-consequence
+features but does not meet its native-generation improvement criterion. Long-form
+quality, difficulty consistency and the complete range of LN/tap expression
+remain unresolved.
 
 ## Conditions and prediction tasks
 
@@ -164,7 +166,8 @@ native sampling and raw-history recovery consume the same energy.
 The optional readout supports matched comparisons against continued `none`
 learning and the equally sized `actions` branch. Equal parameter count does not
 imply equal effective input capacity: the action-only control zeros all exact
-consequence and timing fields. Its generation-quality benefit remains untested.
+consequence and timing fields. The matched 4.5M comparison below does not establish
+a generation-quality benefit from these features.
 
 ## Object endpoint probability
 
@@ -901,10 +904,9 @@ unreviewed. The failed output-coverage guard and inspected burden concerns are
 already sufficient to withhold an overall quality claim. Complete mechanical
 generation of a long chart is not evidence that its entire structure is good.
 
-The next model comparison should test the treatment of a candidate action's
-consequences for subsequent lane availability, while preserving the demonstrated
-LN/tap range. A separate evaluation must fill the actual 5–6-star coverage gap.
-Neither step is replaced by resampling until a favorable output appears.
+These findings motivate the candidate action-consequence comparison below.
+Actual generated difficulty and independent LN/tap organization remain separate
+requirements; neither is established by resampling until a favorable output appears.
 
 The evidence owner is
 `artifacts/bounded-typed-continuation/difficulty-ln-longform-20260920-v1/`.
@@ -914,3 +916,74 @@ independent digest/resource audit SHA:
 `f313678fa2896255decac00bbb5b674070c80a9a3c31d6e6ebfd3777d972958d`;
 frozen-history probability report SHA:
 `ddb9312beda065057300ed9257dad1888a3cb54eec8f8f8153ff2175ff63bc65`.
+
+### Matched R1 action-consequence comparison at 4.5M
+
+Three continuations of initialization 172 start from the same 4M checkpoint and
+add 500,000 onsets with identical draws, optimizer settings and inherited Adam
+state. `none` preserves the original model; `actions` adds the candidate-action
+residual; `frontier` adds the exact consequence features described above. The
+two residuals start at zero and have identical parameter shapes. All final runs
+reach 3,206,045 unique training onsets across 9,178 charts and 3,168 groups.
+
+The comparison reuses the 28 development groups, three generation seeds and
+unchanged native temperature-one sampling. All 252 full outputs pass mechanical
+verification and exact export/reparse. All 84 full-suffix likelihoods are finite.
+Evaluation takes 2,464 seconds on one M5 CPU thread, with sampled footprint
+544 MB and no swap growth. Batched support evaluation changes implementation
+cost, not legal candidates or model inputs; separate native replay checks produce
+byte-identical outputs and decision journals against the scalar runtime.
+
+The primary diagnostic counts a suffix head once if its preceding same-lane head
+or latest LN release is less than 40 ms earlier. Rates use supplied suffix onsets
+as denominator, then average seeds within groups and groups equally. This locates
+potential action problems; release/head and head/head intervals need not impose
+equal burden, and the threshold is not a universal playability boundary.
+
+| Mode | Union rate per 1,000 supplied onsets | Head/head events | Release/head events | Group/seed-mean LN fraction |
+| --- | --- | --- | --- | --- |
+| none | 6.482075 | 21 | 1,248 | 0.489053 |
+| actions | 6.792055 | 21 | 1,330 | 0.483170 |
+| frontier | 5.886852 | 23 | 1,118 | 0.530932 |
+
+One `frontier` event meets both interval conditions and counts once in the union.
+Its relative reductions are 9.18% against `none` and 13.33% against `actions`,
+below the predefined 25% requirement. Paired whole-group 90% bootstrap intervals
+for rate differences are [-1.672207, 0.265617] and [-2.633005, 0.285602]. Both
+include zero. Numeric regression guards pass, but the primary criterion fails.
+The original 4M checkpoint has union rate 1.044819 and group/seed-mean LN fraction
+0.180448 on these same conditions. The large shared change after further learning
+requires investigation; it cannot be attributed to the consequence residual.
+
+A complete masked agent review uses Beatmap Lens Foundation V2, confirmed human
+examples, full endpoints and canonical time-proportional views. It covers 12 LN
+cores, 12 ordinary early/middle/late scopes, four long-chart late scopes and three
+selected risks. Two risk selections identify the same context. Judgments are
+sealed before model identities are revealed, but earlier numeric summaries allow
+partial recognition; these are neither blind human preferences nor new gold.
+
+`frontier` retains independent organization in all eight LN cores judged prominent
+for `none`; one changes to supporting strength. It also introduces localized
+coupled-restart concerns in two LN cores. At a selected risk it avoids the controls'
+12 ms restart, while a different source/seed produces its own 3 ms release/head
+restart under continuing holds. The four long-chart late scopes remain locally
+organized, including near twelve minutes, but style can differ markedly between
+branches: a TAP-led passage may become a sustained LN body. Conversely, one
+six-minute late scope changes from prominent LN coordination in `none` to absent
+in `frontier`. These scoped positives do not establish whole-chart stability or
+organic LN/TAP diversity throughout.
+
+Each mode now has five distinct groups with some actual 5–6-star outputs, but
+generated ranges extend from about 1.74 to 7.02/7.02/7.24 stars. Coverage therefore
+does not establish requested difficulty control. The result supports revising the
+learning and conditioning investigation, not adopting a final model or turning
+the diagnostic threshold into a decoding rule.
+
+Evidence owner: `artifacts/bounded-typed-continuation/action-consequence-20260920-v1/`.
+Native readout SHA:
+`b7e825369e6fe8065184406868bcf5f07c68593a24a841b192577d4b9cef1ac1`;
+sealed semantic manifest SHA:
+`695e283beca32767f09c3e613b14689e140bc2d43f028853885bee6bc39294cf`;
+revealed semantic readout SHA:
+`e4ec43256cacd6a6e02f5a4c54acbd262a4ddff09b4f8e7f3e37ca68312fb652`.
+This is exploratory evidence without an accepted research Card.
