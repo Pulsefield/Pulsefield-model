@@ -244,3 +244,46 @@ command projection passes. The focused fork owner has two passing tests.
 
 No training has launched at this Note revision. Results, evaluation and decision
 remain pending. No Note acceptance, model adoption or goal completion is inferred.
+
+## Result Log: Launch and evaluation preparation
+
+The prelaunch Card and diagnostic were committed at Notes revision
+`57dd75570b98e915a315f64f414f7d2c2431a833`; acceptance remains none. The exact
+frozen controller command was then launched from unchanged clean product source
+`50dda55040f51a7afc9a13994b762f953fe3064d`. Execution session53813 owns controller
+PID49232, which started the171 command through uv PID49235 and Python PID49236.
+Those processes were explicitly observed alive; at the recorded check the
+Python child used99.1% CPU and had committed exposure3293657/update4362. The
+latest resource sample had RSS818905088, physical footprint566347384, available
+memory9048342528 bytes and zero swap growth. Stderr was empty. These are live
+observations, not final maxima or completed-training evidence. The172 arm is
+queued serially and has not yet started.
+
+`active.json` locates the current process, but its contents alone never prove
+liveness. Poll the existing execution session or verify those PIDs before
+deciding whether the job ended. Do not relaunch because a progress observation
+times out. The controller retains stdout/stderr and each run's resource/training
+journals; successful terminal completion produces `training-pair.json`.
+
+The frozen evaluation procedure is implemented in `evaluate_pair.py`, SHA
+`9bac6614fdc9b5033290237774886435670b544e913d55fc986dd5395473d4d5`.
+It requires both completed4M ledgers and their exact final checkpoint digests
+before creating its fresh `evaluation-v1` output. It prepares standalone
+conditions, checks them against the original cache, scores full suffixes and
+uses the packaged generation runner for all144 outputs. It verifies source
+summaries against the original readout, rates every new export, and computes
+the declared group-paired bootstrap and regression guards. A synthetic arithmetic
+check confirms zero change for identical baseline inputs and detection of a
+3% NLL decrease; this is analysis-code validation, not4M evidence. No evaluation
+has run on an intermediate checkpoint.
+
+After both training arms complete, run:
+
+```sh
+uv run --offline --python 3.10 --extra mps python \
+  artifacts/bounded-typed-continuation/r1-exposure-20260919-v1/evaluate_pair.py
+```
+
+Training results, quality evaluation and the research decision remain pending.
+The continuation goal stays active, with long-form, cross-difficulty and varied
+LN/tap quality requirements intact. All commits remain local.

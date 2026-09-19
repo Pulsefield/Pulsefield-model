@@ -2277,5 +2277,12 @@ and native sampling, extending the common draw plan to4M. It tests whether more
 learning improves complete-suffix likelihood without burden or difficulty-band
 regression, then checks paired Foundation quality if those gates pass. The scoped
 Note freezes exact source, commands, pins, bounds and prospective decision rules.
-Preflight and fork tests pass; launch/results remain pending at this revision.
-No change to the existing goal, Note acceptance or model adoption is inferred.
+Preflight and fork tests pass. The frozen controller is running in execution
+session53813 (controller PID49232, initial171 Python child PID49236); the last
+verified live check reached exposure3293657 with zero swap growth and empty
+stderr. Initialization172 remains queued serially. Verify the existing session
+or live PIDs before interpreting `active.json`; never restart on observation
+timeout alone. The scoped Note records a ready evaluation driver, which requires
+both completed4M checkpoints before running the fixed comparison. Results remain
+pending. No change to the existing goal, Note acceptance or model adoption is
+inferred.
