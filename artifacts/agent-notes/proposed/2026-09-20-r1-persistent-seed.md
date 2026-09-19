@@ -297,3 +297,46 @@ it does not isolate optimization noise. No intermediate model was evaluated.
 Reference artifact SHA:
 `f76aec990acfbfc623673d115789b6df3d4cc30b0d7daf185bf387a84732aea9`.
 The frozen comparison against both concurrently continued controls is unchanged.
+
+## Result Log: complete numerical comparison
+
+All252 complete native outputs and84 full source suffix likelihoods finish in
+2,340.779seconds on the frozen a64ac0a runtime. Every output passes mechanical
+verification and exact osu! export/reparse. An independent pass verifies756
+output digests and recomputes all phase fractions, short-interval counts, group
+aggregations, bootstrap intervals and decision gates from generated files.
+Peak evaluation RSS614,727,680bytes, footprint493,323,752bytes, swap growth0.
+The training/evaluation/rendering orchestrator is completed and reaped.
+
+| Mode | Phase MAE | Source suffix NLL | Group/seed-mean LN fraction | Union rate per1,000 H | Head/head events | Release/head events |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| none | .156524949 | 2.151509580 | .339605270 | 2.990635063 | 31 | 528 |
+| zero | .154748897 | 2.151372115 | .321759338 | 2.876967486 | 29 | 518 |
+| observed | .133154569 | 2.156256586 | .301195538 | 2.954803465 | 15 | 525 |
+
+Observed-minus-none phase MAE is-.023370379, a14.93% reduction, with paired
+whole-group90% interval[-.058117454,.005820549]. Observed-minus-zero is
+-.021594328, a13.95% reduction, interval[-.038156390,-.004962161]. Both fail
+the declared20% threshold; the comparison against none also fails the interval
+condition. All declared numeric regression guards pass. This is a limited signal
+for persistent seed information, not a successful primary result.
+
+Observed per-quarter errors are[.119397553,.147553258,.127285278,.138382189].
+Raw union counts are558/547/540 in none/zero/observed order; none has one event
+meeting both component definitions. Every mode's minimum interval is12ms, with
+no below10ms witnesses. Avoidance of the earlier3ms case is shared by controls
+and cannot be credited to persistent conditioning. The release/head burden is
+not materially reduced by observed conditioning.
+
+Actual star ranges are1.650119–8.029997,1.671171–8.105052 and1.566954–7.882192.
+Distinct output groups per[2,3)/[3,4)/[4,5)/[5,6] band are6/10/9/7 for none,
+7/13/9/6 for zero and7/12/5/6 for observed; groups may occupy multiple bands.
+These are output measurements, not source-band substitutions or a playability
+certificate. The frozen31-case masked packet contains717 full time-proportional
+panels. Semantic review and the complete Decision remain pending. The private
+variant mapping has not been opened for agent review.
+
+Readout SHA: `b5b0188095158e0c3356f9cf7b10ef3b96595ad3d478a80568486bdaf8a57d1e`.
+Comparison SHA: `368cdfad6247ce1cd481b633f9d44b80fb495d614af8e7d9f8c6e0384483dfba`.
+Independent audit SHA: `46a79b9dce7fc8e0251dca0fc8ca1d6c5cd8e97e607db59ad005674b677e7a65`.
+Masked manifest SHA: `0cf0f5af17d4abc8c91392815cbeabb71c5321ee9a8f7daeb550a7dca1a2b490`.
