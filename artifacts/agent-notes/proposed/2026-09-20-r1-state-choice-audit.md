@@ -86,3 +86,16 @@ LN amount as its final demand/style representation.
 Pending exact replay and count decomposition. A new training design must retain
 the distinction between supplied intent, local action choice, earlier planning,
 model capacity and optimization; this audit cannot silently combine them.
+
+## Execution freeze
+
+Seven synthetic cases pass before population replay: forced single free lane,
+all lanes recently released, an alternative at unchanged head cardinality,
+one-head versus chosen-cardinality distinction, current-row release exclusion,
+head-only repetition and exact strict-threshold equality. Every constructed TAP
+alternative is checked through the existing exact Schedule support predicate.
+Driver SHA: `4956732b7bab1da53b8c890840c42e8b3dbbd4195934ff3a85234528d287750b`.
+Preflight SHA: `8f971ff9a24ba6b069f54609f37688193c6988d27c77141ebc35c4fdfe0c8423`.
+Freeze SHA: `630ab10d76f9837b533af0f8d499e33fa2663afdfb4f5d87274edd084043fcb2`.
+The clean runtime is the stated 67107af product revision. All population results
+remain unread and pending. No model code or generation policy changes.
