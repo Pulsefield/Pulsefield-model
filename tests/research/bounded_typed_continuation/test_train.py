@@ -28,6 +28,11 @@ def test_hydra_packaged_projection_and_rejected_unknown_or_unused_fields():
     assert typed.model.endpoint_availability == 'commitment'
     consequence = compose_config(['model.arm=R1', 'model.row_consequence=frontier'])
     assert consequence.model.row_consequence == 'frontier' and config.model.row_consequence == 'none'
+    conditioned = compose_config(['model.arm=R1', 'model.seed_context=observed'])
+    assert conditioned.model.seed_context == 'observed' and config.model.seed_context == 'none'
+    for overrides in (['model.seed_context=observed'], ['model.arm=R1', 'model.seed_context=unknown']):
+        with pytest.raises((ContractError, ValueError)):
+            compose_config(overrides)
     assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_train.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.check_every_rows=1'],
                       ['candidate_budget=0'], ['learning_rate=0'], ['microbatch_size=3'], ['cache_max_sources=129'],

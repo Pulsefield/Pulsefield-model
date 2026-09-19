@@ -20,14 +20,17 @@ from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
 
 
-def setup(arm, device='cpu', availability='none', consequence='none'):
+def setup(arm, device='cpu', availability='none', consequence='none', seed_context='none'):
     torch.manual_seed(17)
     model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2,
-                                   endpoint_availability=availability, row_consequence=consequence)).to(device).eval()
+                                   endpoint_availability=availability, row_consequence=consequence,
+                                   seed_context=seed_context)).to(device).eval()
     if model.pointer is not None and model.pointer.availability_residual is not None:
         torch.nn.init.normal_(model.pointer.availability_residual[-1].weight, std=.05)
     if model.row_consequence is not None:
         torch.nn.init.normal_(model.row_consequence.output.weight, std=.05)
+    if model.seed_residual is not None:
+        torch.nn.init.normal_(model.seed_residual[-1].weight, std=.05)
     timing = Timing(tuple(100. * i for i in range(37)), None if arm == Arm.R0 else tuple(i % 5 != 4 for i in range(37)))
     seed = [CompleteRow(0., (2, 2, 0, 0)), CompleteRow(100., (0, 0, 1, 0)), CompleteRow(200., (0, 0, 0, 1))]
     rollout = Rollout.from_seed(model, timing, seed, None if arm == Arm.R0 else {0: 10, 1: 17})

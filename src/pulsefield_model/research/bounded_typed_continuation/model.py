@@ -33,6 +33,7 @@ class ModelConfig:
     coupling_rank: int = 16
     endpoint_availability: str = 'none'
     row_consequence: str = 'none'
+    seed_context: str = 'none'
 
     def __post_init__(self):
         if not isinstance(self.arm, Arm):
@@ -46,6 +47,9 @@ class ModelConfig:
         if (self.row_consequence not in ('none', 'actions', 'frontier') or
                 self.arm != Arm.R1 and self.row_consequence != 'none'):
             raise ContractError('Row consequence must be none, actions or frontier, and is R1-only')
+        if (self.seed_context not in ('none', 'zero', 'observed') or
+                self.arm != Arm.R1 and self.seed_context != 'none'):
+            raise ContractError('Seed context must be none, zero or observed, and is R1-only')
 
 
 class JointHead(nn.Module):
@@ -208,15 +212,44 @@ class BoundedModel(nn.Module):
         self.pointer = EndpointPointer(config.hidden, config.endpoint_availability) if config.arm == Arm.O1 else None
         self.row_consequence = (RowConsequence(config.hidden, config.row_consequence)
                                 if config.row_consequence != 'none' else None)
+        self.seed_residual = None
+        if config.seed_context != 'none':
+            self.seed_residual = nn.Sequential(nn.Linear(2 * config.hidden, config.hidden), nn.GELU(),
+                                               nn.Linear(config.hidden, config.hidden, bias=False))
+            nn.init.zeros_(self.seed_residual[-1].weight)
 
     @property
     def choices(self):
         return HEAD_ACTIONS if self.config.arm == Arm.O1 else ROW_ACTIONS
 
-    def readout(self, before: Tensor, exact: Tensor):
+    def encode_seed(self, raw: Tensor, valid: Tensor):
+        """Pool only the externally supplied seed, under current shared weights.
+
+        Every seed token contributes, even when the seed exceeds the local
+        receptive field. Padding is a suffix; suffix-label features are forbidden
+        by the caller's seed projection. This learned value is not durable state.
+        """
+        if (self.config.seed_context != 'observed' or raw.ndim != 4 or
+                raw.shape[2:] != (2, CONTENT_DIM) or valid.shape != raw.shape[:2] or
+                valid.dtype != torch.bool or valid.device != raw.device or raw.shape[1] == 0 or
+                not bool(valid[:, 0].all()) or bool((valid[:, 1:] & ~valid[:, :-1]).any())):
+            raise ContractError('Observed seed encoding requires a nonempty prefix-padded seed per sample')
+        encoded = self.temporal(raw, valid)
+        return (encoded * valid[..., None, None]).sum(1) / valid.sum(1)[:, None, None]
+
+    def readout(self, before: Tensor, exact: Tensor, seed: Tensor | None = None):
         if before.shape[:-1] != exact.shape[:-1] or before.shape[-2:] != (2, self.config.hidden) or exact.shape[-1] != QUERY_DIM:
             raise ContractError('Readout requires aligned pre-decision history and exact hand features')
-        return pointwise(self.fuse, torch.cat((before, pointwise(self.exact, exact)), -1))
+        hands = pointwise(self.fuse, torch.cat((before, pointwise(self.exact, exact)), -1))
+        if self.config.seed_context == 'observed':
+            if seed is None or seed.shape != hands.shape or seed.device != hands.device or seed.dtype != hands.dtype:
+                raise ContractError('Observed readout requires aligned original seed hand vectors')
+        elif seed is not None:
+            raise ContractError('Unconditioned and zero controls do not consume observed seed vectors')
+        if self.seed_residual is not None:
+            context = seed if self.config.seed_context == 'observed' else torch.zeros_like(hands)
+            hands = hands + pointwise(self.seed_residual, torch.cat((hands, context), -1))
+        return hands
 
     def decision_log_probs(self, hands: Tensor, states: Sequence[Schedule]):
         if hands.shape != (len(states), 2, self.config.hidden) or not states or any(s.arm != self.config.arm for s in states):

@@ -34,6 +34,7 @@ model:
   coupling_rank: 16
   endpoint_availability: none
   row_consequence: none
+  seed_context: none
 resources:
   driver_limit_bytes: 6442450944
   rss_limit_bytes: 6442450944

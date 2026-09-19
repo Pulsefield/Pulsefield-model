@@ -169,13 +169,17 @@ class PreparedBatch:
     physical_rows: int
     prefix_rows: int
     context_spans_ms: list[float]
+    seed_raw: np.ndarray
+    seed_valid: np.ndarray
 
 
 def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: int):
     """Materialize finite raw prefixes and all supervised physical suffix rows.
 
     The oldest content gap reads one preceding timestamp. No source action older
-    than receptive_tokens enters learned content; exact facts stay complete.
+    than receptive_tokens enters rolling content; exact facts stay complete.
+    The original supplied seed is separately projected for optional persistent
+    conditioning. Its endpoints follow the same arm-specific visibility rule.
     Forced O1 releases still write content but do not create stochastic queries.
     """
     if not intervals or type(receptive_tokens) is not int or receptive_tokens <= 0:
@@ -185,9 +189,14 @@ def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: i
     raw = np.zeros((len(intervals), length, 2, CONTENT_DIM), dtype=np.float32)
     valid = np.zeros((len(intervals), length), dtype=np.bool_)
     truncated = np.zeros(len(intervals), dtype=np.bool_)
+    seed_length = max(item.chart.seed_rows for item in intervals)
+    seed_raw = np.zeros((len(intervals), seed_length, 2, CONTENT_DIM), dtype=np.float32)
+    seed_valid = np.zeros((len(intervals), seed_length), dtype=np.bool_)
     states, labels, endpoints, views, facts, batches, positions, spans = [], [], [], [], [], [], [], []
     for batch, (item, (first, stop)) in enumerate(zip(intervals, crops)):
         chart, view = item.chart, item.chart.view(arm)
+        seed_raw[batch, :chart.seed_rows] = chart.content(arm, 0, chart.seed_rows)
+        seed_valid[batch, :chart.seed_rows] = True
         raw[batch, :stop - first] = chart.content(arm, first, stop)
         valid[batch, :stop - first] = True
         truncated[batch] = first > 0
@@ -205,7 +214,8 @@ def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: i
         spans.append(float(view.times[item.start] - view.times[max(0, item.start - receptive_tokens - 1)]))
     return PreparedBatch(raw, valid, truncated, np.concatenate(facts), np.asarray(batches), np.asarray(positions),
                          states, labels, endpoints, views, sum(i.onset_count for i in intervals),
-                         sum(i.stop - i.start for i in intervals), sum(i.start - first for i, (first, _) in zip(intervals, crops)), spans)
+                         sum(i.stop - i.start for i in intervals), sum(i.start - first for i, (first, _) in zip(intervals, crops)),
+                         spans, seed_raw, seed_valid)
 
 
 def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None):
@@ -221,7 +231,11 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
     before = model.temporal.before(content, valid, truncated_start=torch.as_tensor(batch.truncated, device=like.device))
     batches = torch.as_tensor(batch.batch_indices, dtype=torch.long, device=like.device)
     positions = torch.as_tensor(batch.positions, dtype=torch.long, device=like.device)
-    hands = model.readout(before[batches, positions], like.new_tensor(batch.query_features))
+    seed = None
+    if model.config.seed_context == 'observed':
+        seed = model.encode_seed(like.new_tensor(batch.seed_raw),
+                                 torch.as_tensor(batch.seed_valid, dtype=torch.bool, device=like.device))[batches]
+    hands = model.readout(before[batches, positions], like.new_tensor(batch.query_features), seed)
     probabilities = model.decision_log_probs(hands, batch.states)
     lookup = {choice: i for i, choice in enumerate(model.choices)}
     labels = torch.tensor([lookup[row] for row in batch.labels], dtype=torch.long, device=like.device)

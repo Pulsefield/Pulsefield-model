@@ -1,12 +1,14 @@
 """Native sampling with exact commitments and bounded raw-state recovery.
 
 Only the supplied timing and seed enter initialization. Durable state contains
-exact gameplay facts, a finite raw physical history and CPU RNG state. Learned
-convolution buffers are rebuilt under verified parameters instead of serialized.
+exact gameplay facts, a finite raw physical history and CPU RNG state. Optional
+persistent conditioning also retains the original raw seed. Learned values are
+rebuilt under verified parameters instead of serialized.
 """
 from __future__ import annotations
 
 from collections import deque
+from bisect import bisect_left
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -56,7 +58,11 @@ def model_signature(model):
 
 def model_digest(model):
     """Device-independent identity of configuration and exact parameter bytes."""
-    digest = hashlib.sha256(json.dumps(asdict(model.config), sort_keys=True).encode())
+    config = asdict(model.config)
+    # Preserve the identity of checkpoints predating optional seed conditioning.
+    if config['seed_context'] == 'none':
+        config.pop('seed_context')
+    digest = hashlib.sha256(json.dumps(config, sort_keys=True).encode())
     for name, tensor in model.state_dict().items():
         digest.update(json.dumps((name, str(tensor.dtype), tuple(tensor.shape))).encode())
         digest.update(tensor.detach().cpu().contiguous().view(torch.uint8).numpy().tobytes())
@@ -67,6 +73,25 @@ def timing_digest(timing):
     return hashlib.sha256(json.dumps(asdict(timing), sort_keys=True, allow_nan=False).encode()).hexdigest()
 
 
+def seed_events(arm, timing, rows, crossing_ends):
+    """Project complete supplied objects into raw events with permitted plans."""
+    state = Schedule.from_seed(arm, timing, rows, crossing_ends)
+    plans, pending = [{} for _ in rows], {}
+    if arm != Arm.R0:
+        for i, row in enumerate(rows):
+            for lane, action in enumerate(row.actions):
+                if action == 2:
+                    pending[lane] = i
+                elif action == 3:
+                    plans[pending.pop(lane)][lane] = i
+        for lane, start in pending.items():
+            plans[start][lane] = state.known_ends[lane]
+    events = tuple(RawEvent(row, None if i == 0 else rows[i - 1].time_ms,
+                            tuple(timing.times_ms[plans[i][c]] if c in plans[i] else None for c in range(4)))
+                   for i, row in enumerate(rows))
+    return state, events
+
+
 class Rollout:
     """A single-chart predictor; construction owns no source suffix or labels.
 
@@ -75,7 +100,8 @@ class Rollout:
     timestamp. Deterministic candidates consume no random draws. Temperature is
     one and no additional repetition, duration or source-style policy is applied.
     """
-    def __init__(self, model, state: Schedule, history: Sequence[RawEvent], *, seed_rows: int):
+    def __init__(self, model, state: Schedule, history: Sequence[RawEvent], *, seed_rows: int,
+                 seed_history: Sequence[RawEvent] | None = None):
         if state.arm != model.config.arm:
             raise ContractError('Rollout state and model must use the same arm')
         if type(seed_rows) is not int or not 0 <= seed_rows <= state.replay.row_count:
@@ -103,6 +129,35 @@ class Rollout:
         self.model, self.state = model, state
         self.seed_rows = seed_rows
         self.history = deque(history, maxlen=capacity)
+        self.seed_history, self.seed_context = (), None
+        if model.config.seed_context == 'observed':
+            if seed_history is None or len(seed_history) != seed_rows or not seed_rows:
+                raise ContractError('Observed recovery requires the complete original raw seed')
+            seed_history = tuple(seed_history)
+            crossing = {lane: bisect_left(state.timing.times_ms, end)
+                        for event in seed_history for lane, end in enumerate(event.new_end_times)
+                        if end is not None and end > seed_history[-1].row.time_ms}
+            seeded, expected = seed_events(state.arm, state.timing, [event.row for event in seed_history], crossing)
+            if (seed_history != expected or seeded.index > state.index or
+                    seeded.replay.first_time_ms != state.replay.first_time_ms or
+                    seeded.replay.note_count > state.replay.note_count):
+                raise ContractError('Persistent raw seed differs from its supplied objects or exact prefix')
+            first_row = state.replay.row_count - len(history)
+            if any(event != seed_history[i] for i, event in enumerate(history, first_row) if i < seed_rows):
+                raise ContractError('Persistent seed and rolling history disagree in their overlapping rows')
+            for lane, end in enumerate(seeded.known_ends):
+                if end is not None and end >= state.index and (
+                        end != state.known_ends[lane] or
+                        seeded.replay.open_ln_start_ms[lane] != state.replay.open_ln_start_ms[lane]):
+                    raise ContractError('An unexpired original seed commitment is missing from exact state')
+            self.seed_history = seed_history
+            raw = model.temporal.input.weight.new_tensor(content_features(
+                [event.row for event in seed_history], [event.previous_time_ms for event in seed_history],
+                [event.new_end_times for event in seed_history]))[None]
+            with torch.no_grad():
+                self.seed_context = model.encode_seed(raw, torch.ones(raw.shape[:2], dtype=torch.bool, device=raw.device))[0]
+        elif seed_history is not None:
+            raise ContractError('Only observed seed conditioning retains a persistent raw seed')
         self.view = TimingView(state.timing)
         self.signature = model_signature(model)
         self.parameter_digest = model_digest(model)
@@ -112,22 +167,10 @@ class Rollout:
 
     @classmethod
     def from_seed(cls, model, timing: Timing, rows: Sequence[CompleteRow], crossing_ends: Mapping[int, int] | None = None):
-        state = Schedule.from_seed(model.config.arm, timing, rows, crossing_ends)
-        plans, pending = [{} for _ in rows], {}
-        if model.config.arm != Arm.R0:
-            for i, row in enumerate(rows):
-                for lane, action in enumerate(row.actions):
-                    if action == 2:
-                        pending[lane] = i
-                    elif action == 3:
-                        plans[pending.pop(lane)][lane] = i
-            for lane, start in pending.items():
-                plans[start][lane] = state.known_ends[lane]
+        state, events = seed_events(model.config.arm, timing, rows, crossing_ends)
         first = max(0, len(rows) - model.temporal.config.receptive_tokens)
-        history = [RawEvent(rows[i], None if i == 0 else rows[i - 1].time_ms,
-                            tuple(timing.times_ms[plans[i][c]] if c in plans[i] else None for c in range(4)))
-                   for i in range(first, len(rows))]
-        return cls(model, state, history, seed_rows=len(rows))
+        return cls(model, state, events[first:], seed_rows=len(rows),
+                   seed_history=events if model.config.seed_context == 'observed' else None)
 
     def _check(self):
         if model_signature(self.model) != self.signature:
@@ -141,7 +184,8 @@ class Rollout:
             raise ContractError('Completed rollout has no prediction query')
         like = self.model.temporal.input.weight
         history = self.model.temporal.read(self.cache)[None]
-        hands = self.model.readout(history, like.new_tensor(query_features([self.state], self.view)))
+        seed = None if self.seed_context is None else self.seed_context[None]
+        hands = self.model.readout(history, like.new_tensor(query_features([self.state], self.view)), seed)
         return hands[0], self.model.decision_log_probs(hands, [self.state])[0]
 
     @torch.no_grad()
@@ -202,15 +246,20 @@ class Rollout:
         self._check()
         if generator.device.type != 'cpu':
             raise ContractError('Durable rollout RNG must use the CPU generator')
-        return dict(format='bounded-typed/rollout-v1', model_config=json.loads(json.dumps(asdict(self.model.config))),
+        result = dict(format='bounded-typed/rollout-v1', model_config=json.loads(json.dumps(asdict(self.model.config))),
                     parameter_sha256=self.parameter_digest, timing_sha256=timing_digest(self.state.timing),
                     seed_rows=self.seed_rows, index=self.state.index, replay=asdict(self.state.replay),
                     known_ends=list(self.state.known_ends), history=[asdict(event) for event in self.history],
                     rng=generator.get_state().clone())
+        if self.model.config.seed_context == 'observed':
+            result['seed_history'] = [asdict(event) for event in self.seed_history]
+        return result
 
     @classmethod
     def restore(cls, model, timing, snapshot):
-        if (snapshot['format'] != 'bounded-typed/rollout-v1' or snapshot['model_config'] != asdict(model.config) or
+        config = dict(snapshot['model_config'])
+        config.setdefault('seed_context', 'none')
+        if (snapshot['format'] != 'bounded-typed/rollout-v1' or config != asdict(model.config) or
                 snapshot['parameter_sha256'] != model_digest(model) or snapshot['timing_sha256'] != timing_digest(timing)):
             raise ContractError('Rollout checkpoint differs from its model parameters, configuration or timing condition')
         replay_values = dict(snapshot['replay'])
@@ -222,6 +271,8 @@ class Rollout:
                          tuple(snapshot['known_ends']))
         history = [RawEvent(CompleteRow(**value['row']), value['previous_time_ms'], tuple(value['new_end_times']))
                    for value in snapshot['history']]
-        result = cls(model, state, history, seed_rows=snapshot['seed_rows'])
+        seed_history = ([RawEvent(CompleteRow(**value['row']), value['previous_time_ms'], tuple(value['new_end_times']))
+                         for value in snapshot['seed_history']] if 'seed_history' in snapshot else None)
+        result = cls(model, state, history, seed_rows=snapshot['seed_rows'], seed_history=seed_history)
         generator = torch.Generator().set_state(snapshot['rng'].clone())
         return result, generator

@@ -22,8 +22,8 @@ from pulsefield_model.research.scoped_style_modeling.dataset import ContractErro
 from .test_generation import setup
 
 
-def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none'):
-    model, timing, seed, _ = setup(arm, device, availability)
+def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context='none'):
+    model, timing, seed, _ = setup(arm, device, availability, seed_context=seed_context)
     checkpoint = tmp_path / 'trained.pt'
     torch.save(dict(format='bounded-typed/corpus-training-v1', source_revision='a' * 40,
                     config=dict(model=json.loads(json.dumps(asdict(model.config)))),
@@ -41,13 +41,15 @@ def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none'):
     return model, condition, config
 
 
-@pytest.mark.parametrize('arm,availability', [(a, 'none') for a in Arm] + [(Arm.O1, 'commitment')])
+@pytest.mark.parametrize('arm,availability,seed_context', [(a, 'none', 'none') for a in Arm] +
+                         [(Arm.O1, 'commitment', 'none'), (Arm.R1, 'none', 'zero'), (Arm.R1, 'none', 'observed')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-def test_packaged_run_matches_native_and_exact_resume_without_modifying_parent(tmp_path, monkeypatch, arm, availability, device):
+def test_packaged_run_matches_native_and_exact_resume_without_modifying_parent(tmp_path, monkeypatch, arm, availability,
+                                                                              seed_context, device):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
     monkeypatch.setattr(generate_run, 'source_revision', lambda: 'b' * 40)
-    model, condition, config = inputs(tmp_path, arm, device, availability)
+    model, condition, config = inputs(tmp_path, arm, device, availability, seed_context)
     before_threads = torch.get_num_threads()
     torch.set_num_threads(config.cpu_threads)
     try:
@@ -104,6 +106,21 @@ def test_hydra_projection_packaging_and_rejected_fields():
     for overrides in (['+unused=1'], ['arm=other'], ['seed_notes=0'], ['source_sha256=bad']):
         with pytest.raises((ValueError, ContractError)):
             prepare_config(overrides)
+
+
+def test_resume_binds_expired_persistent_seed_objects_to_external_condition(tmp_path, monkeypatch):
+    monkeypatch.setattr(generate_run, 'source_revision', lambda: 'b' * 40)
+    _, _, config = inputs(tmp_path, seed_context='observed')
+    paused = generate_run.run_generation(replace(config, stop_after_candidate=25))
+    payload = torch.load(paused['checkpoint_path'], weights_only=True)
+    # Both seed LN commitments have expired and their rows left rolling history.
+    # The external condition must still own the persistent learned input.
+    payload['rollout']['seed_history'][0]['new_end_times'] = (1100., 1700., None, None)
+    changed = tmp_path / 'whole/tampered.pt'
+    torch.save(payload, changed)
+    with pytest.raises(ContractError, match='Persistent seed differs'):
+        generate_run.run_generation(replace(config, output_dir=str(tmp_path / 'rejected'),
+            resume_from=str(changed), resume_sha256=file_digest(changed)))
 
 
 def source_bytes(later_lane=2):

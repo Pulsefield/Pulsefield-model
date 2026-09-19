@@ -17,11 +17,12 @@ from pulsefield_model.research.scoped_style_modeling.dataset import ContractErro
 
 
 def test_packaged_composition_arm_selection_and_complete_projection():
-    config = compose_config(['model.arm=R1', 'model.hidden=32', 'model.row_consequence=actions',
+    config = compose_config(['model.arm=R1', 'model.hidden=32', 'model.row_consequence=actions', 'model.seed_context=observed',
                              'candidate_budget=321', 'updates=7'])
     assert config.model.arm == Arm.R1 and config.model.hidden == 32
     assert config.candidate_budget == 321 and config.updates == 7
     assert config.model.row_consequence == 'actions'
+    assert config.model.seed_context == 'observed'
     assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_smoke.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.unused=1'], ['learning_rate=0'],
                       ['candidate_budget=0'], ['model.levels=9'], ['batch_size=5']):

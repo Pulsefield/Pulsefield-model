@@ -97,7 +97,7 @@ def read_resume(path, config, revision, plan):
 def read_fork(config, plan):
     """Validate an explicit source transition and an immutable plan extension.
 
-    Only an optional candidate residual may be added. The original plan must have
+    Only optional zero-initialized residuals may be added. The original plan must have
     completed, and every old draw and source pin must remain an exact prefix.
     The operator pins the audited parent source; this is not ordinary resume.
     """
@@ -113,13 +113,13 @@ def read_fork(config, plan):
         raise ContractError('Fork initialization requires a completed, fully durable parent plan')
     old_identity, new_identity = (deepcopy(training_identity(c)) for c in (payload['config'], config))
     old_modes = [old_identity['model'].pop(field, 'none')
-                 for field in ('endpoint_availability', 'row_consequence')]
-    for field in ('endpoint_availability', 'row_consequence'):
+                 for field in ('endpoint_availability', 'row_consequence', 'seed_context')]
+    for field in ('endpoint_availability', 'row_consequence', 'seed_context'):
         new_identity['model'].pop(field, 'none')
     old_identity.pop('plan_sha256')
     new_identity.pop('plan_sha256')
     if any(mode != 'none' for mode in old_modes) or old_identity != new_identity:
-        raise ContractError('Fork scientific configuration may only add a candidate residual and extend its plan')
+        raise ContractError('Fork scientific configuration may only add optional residuals and extend its plan')
     base_keys = set(old_plan) - {'sampling', 'draws'}
     if ({key: old_plan[key] for key in base_keys} != {key: plan.get(key) for key in base_keys} or
             set(plan) != set(old_plan) or
@@ -131,7 +131,7 @@ def read_fork(config, plan):
         raise ContractError('Fork plan must preserve every source, sampler setting and old draw prefix')
     parent.update(kind='fork', source_revision=payload['source_revision'], checkpoint_sha256=config['fork_sha256'],
                   plan_sha256=payload['config']['plan_sha256'], endpoint_availability=config['model']['endpoint_availability'],
-                  row_consequence=config['model']['row_consequence'])
+                  row_consequence=config['model']['row_consequence'], seed_context=config['model']['seed_context'])
     return payload, charged, parent
 
 
@@ -144,12 +144,12 @@ def restore_fork(model, optimizer, payload):
     old_names = [name for name, _ in previous.named_parameters()]
     new_names = [name for name, _ in model.named_parameters()]
     added = new_names[len(old_names):]
-    prefixes = ('pointer.availability_residual.', 'row_consequence.')
+    prefixes = ('pointer.availability_residual.', 'row_consequence.', 'seed_residual.')
     if new_names[:len(old_names)] != old_names or any(not name.startswith(prefixes) for name in added):
-        raise ContractError('Fork model must preserve parameter order and append only a candidate residual')
+        raise ContractError('Fork model must preserve parameter order and append only optional residuals')
     missing, unexpected = model.load_state_dict(payload['model'], strict=False)
     if set(missing) != set(added) or unexpected:
-        raise ContractError('Fork model weights do not match its declared candidate extension')
+        raise ContractError('Fork model weights do not match its declared residual extension')
     state = deepcopy(payload['optimizer'])
     current_groups = optimizer.state_dict()['param_groups']
     if len(state['param_groups']) != 1 or len(current_groups) != 1:

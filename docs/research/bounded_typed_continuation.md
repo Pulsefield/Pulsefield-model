@@ -96,8 +96,9 @@ The common starting encoder uses shared hand coordinates and one causal width-
 three convolution at each dilation 1, 2, 4, 8, 16, 32, 64, 128. Its content dependency is
 exactly `1 + 2 * sum(dilations) = 511` materialized tokens. Encoding the preceding
 physical gap of the oldest relevant token needs one additional timestamp, so
-the raw history envelope is 512 physical rows. Current complete exact facts and
-external time conditions are separate inputs to the prediction query.
+the rolling raw history envelope is 512 physical rows. Current complete exact
+facts, external time conditions and optional persistent seed conditioning are
+separate inputs to the prediction query.
 
 This is a concrete finite-context implementation choice, motivated by the
 auditable dependency boundary and batched computation of temporal convolution.
@@ -120,7 +121,8 @@ Durable recovery can rebuild learned state from raw history and exact facts.
 BOS and TRUNCATED are distinct boundaries. Padding is outside a contiguous
 materialized sequence; it cannot stand in for skipped timing candidates.
 Tests hold exact facts and external timing fixed while changing action tokens
-older than the declared field. Such changes must not affect the learned output.
+older than the declared field. Such changes must not affect the learned output
+unless they belong to the explicitly enabled persistent original seed below.
 The tests also check parameter gradients under crop recomputation, so matching
 forward logits alone is insufficient.
 
@@ -129,6 +131,32 @@ can read R; only typed arms can read H. Use full supplied timing for nearby
 offsets, future gap descriptors and multiscale counts, independent of training
 window endpoints. Report how 512 physical rows translate into seconds across
 density strata before interpreting this as musical or phrase-scale context.
+
+### R1 persistent original-seed conditioning
+
+`model.seed_context` selects `none`, `zero` or `observed`; the latter two are
+R1-only. `observed` re-encodes only the supplied complete seed with the shared
+temporal module. A masked mean over all seed-token outputs gives two canonical
+hand vectors. Each token contributes even when a supplied seed exceeds the local
+receptive field. The readout concatenates each current hand vector with its seed
+vector, applies a shared `Linear(2h,h), GELU, Linear(h,h,bias=False)` residual,
+and adds it to that current vector before joint decision scoring. The final
+projection starts at zero, preserving the parent model's distribution.
+
+`zero` uses the same residual with a zero seed vector; `none` preserves the
+original readout. The two residual modes add 49,280 parameters at hidden 128.
+This is a matched information/capacity comparison; zeroed inputs do not provide
+equal effective capacity. Both retain the same likelihood objective, support and sampler.
+The representation introduces no source suffix action or endpoint, desired
+difficulty or target LN fraction. Supplied seed endpoints remain permitted.
+
+Training re-encodes the original raw seed under current weights for each batch,
+with gradients through the shared temporal module. Inference computes its vector
+once under fixed parameters. Only original seed facts persist in addition to
+the rolling history; unrelated older generated actions remain outside the
+learned field. This global-condition adaptation is motivated by the prefix-state
+diagnostic below. Its generation-quality benefit has not been established, and
+an introductory seed need not represent later chart structure.
 
 ### R1 candidate action consequences
 
@@ -274,6 +302,13 @@ timestamp and permitted plans chosen when that event was committed. No learned
 buffers are serialized. Restoration checks timing/configuration/parameter-byte
 identities and replays those bounded raw events using the same online kernels.
 This includes the extra timestamp needed for the 512-row raw dependency envelope.
+With observed seed conditioning, the snapshot additionally retains the complete
+original raw seed, including supplied endpoints of objects that have since ended.
+Restoration rebuilds its learned vector under the verified model. The packaged
+runner checks this seed against the external condition as well as checking the
+rolling state against journals. Storage depends on supplied seed length and
+fixed rolling capacity, not generated duration. Default-disabled models retain
+their pre-extension parameter digest and can read older unconditioned snapshots.
 Parameter updates invalidate a live rollout. A failed step leaves its exact and
 learned state uncommitted, but callers must restore RNG from a durable boundary
 before retrying if sampling had begun.
@@ -631,8 +666,9 @@ are required together and cannot be combined with `resume_from`. The parent must
 have completed its plan with a finalized runtime ledger and no discarded updates.
 The new plan must preserve every source pin, sampling setting, prior milestone
 and old draw, then append further draws. Existing plans and parent outputs are
-never edited. Scientific settings may only add an endpoint-availability or R1
-row-consequence residual to an original model with both modes set to `none`.
+never edited. Scientific settings may only add endpoint-availability, R1
+row-consequence or R1 seed-context residuals to an original model with all three
+modes set to `none`.
 Ordinary resume retains exact source/config identity.
 
 Fork initialization copies all existing weights, AdamW moments/steps and RNG,

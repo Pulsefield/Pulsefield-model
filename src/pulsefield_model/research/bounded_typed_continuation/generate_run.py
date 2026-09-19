@@ -93,6 +93,8 @@ def _endpoints(value):
 def _verify_parent(model, condition, restored, parent, payload):
     """Tie the snapshot's exact state and bounded history to its complete logs."""
     initial = Rollout.from_seed(model, condition.timing, condition.seed_rows, condition.crossing)
+    if restored.seed_history != initial.seed_history:
+        raise ContractError('Persistent seed differs from the external generation condition')
     state = initial.state
     history = deque(initial.history, maxlen=model.temporal.config.receptive_tokens)
     rows = iter(_records(parent / 'rows.jsonl', payload['rows']['bytes']))
