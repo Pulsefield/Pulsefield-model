@@ -2277,12 +2277,31 @@ and native sampling, extending the common draw plan to4M. It tests whether more
 learning improves complete-suffix likelihood without burden or difficulty-band
 regression, then checks paired Foundation quality if those gates pass. The scoped
 Note freezes exact source, commands, pins, bounds and prospective decision rules.
-Preflight and fork tests pass. The frozen controller is running in execution
-session53813 (controller PID49232, initial171 Python child PID49236); the last
-verified live check reached exposure3293657 with zero swap growth and empty
-stderr. Initialization172 remains queued serially. Verify the existing session
-or live PIDs before interpreting `active.json`; never restart on observation
-timeout alone. The scoped Note records a ready evaluation driver, which requires
-both completed4M checkpoints before running the fixed comparison. Results remain
-pending. No change to the existing goal, Note acceptance or model adoption is
-inferred.
+Both continuations have now completed 4M, with identical 2652-update additions
+and independently verified cumulative coverage of2940384 distinct onsets. Added
+training takes1465.917/1494.112 seconds, with zero swap growth. Final weight SHAs
+are `6f940f0e2c710b7a8c7f365d5703ce0190ad707b449d23c4a87aec78a81651af`
+and `ed4ad7dcec30fb2c6f13ee39908bb34c45b06b41799cdf30cfe410d96efdac28`.
+
+The frozen 48-score/144-generation evaluation completes in420.350 seconds, all
+mechanics/export/reparse passing. Both numerical gates pass: macro NLL improves
+4.698%/3.481%, every2–6-star source band improves, and below40ms same-lane pair
+counts fall10→3 and43→2. Both maximum runs aretwo. The paired bootstrap intervals
+are strictly negative. The readout SHA is
+`ab80ec8e351a3d537d1b387c37cdf41af7d76f9e9aa18544c7ac1102477007de`.
+
+LN use also contracts: aggregate suffix fractions fall25.342%→11.857% and
+53.857%→10.597%, with fewer outputs containing multi-second suffix LNs. The
+maximum suffix LN remains20646ms; existence alone does not prove organization.
+The scoped Note records source-history type tradeoffs and all metric identities.
+
+The required masked2M/4M packet now contains16 pairs/416 pages, manifest SHA
+`1ceaaec56d6af5e0f65e5059d984e32eba9caa00be18ca2d951f0d9bb0f14731`.
+**Only the two LN-rich pairs have been fully reviewed (32 pages).** All four
+masked variants retain definite independent LN control; one171 variant is
+supporting rather than prominent, with a limited expressive preference for its
+partner. The172 pair is a descriptive tie. No exposure-stage mapping has been
+opened. Complete the other14 pairs, including all four64s comparisons, and
+freeze every judgment before unmasking. Numerical improvement alone does not
+complete the Card or the goal. All processes are terminal; product source is
+unchanged and clean. No model adoption or Note acceptance occurred.

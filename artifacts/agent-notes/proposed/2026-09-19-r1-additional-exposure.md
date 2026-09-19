@@ -287,3 +287,145 @@ uv run --offline --python 3.10 --extra mps python \
 Training results, quality evaluation and the research decision remain pending.
 The continuation goal stays active, with long-form, cross-difficulty and varied
 LN/tap quality requirements intact. All commits remain local.
+
+## Result Log: Both 4M continuations and numerical evaluation complete
+
+Both serial arms completed at the frozen 4M endpoint under unchanged clean source
+`50dda55040f51a7afc9a13994b762f953fe3064d`. The original execution session ended
+successfully. Each segment performs 2652 updates and exactly 2M additional onset
+exposures. The complete 5297-update trajectory covers 2940384 distinct onsets,
+8799 charts and 3167 groups. An independent union of the plan's target intervals
+matches the checkpoint's coverage bitmaps; both segment exposure ledgers match
+each other and every declared draw/checkpoint boundary. Parent results remain
+unchanged. No protected Card field changed.
+
+| Initialization | Added training seconds | Cumulative charged seconds | Maximum sampled RSS / footprint, bytes | Swap growth |
+| --- | --- | --- | --- | --- |
+| 171 | 1465.917 | 2967.346 | 1091321856 / 874595960 | 0 |
+| 172 | 1494.112 | 3110.397 | 1154039808 / 928925328 | 0 |
+
+Final checkpoint SHA-256:
+
+- 171: `6f940f0e2c710b7a8c7f365d5703ce0190ad707b449d23c4a87aec78a81651af`.
+- 172: `ed4ad7dcec30fb2c6f13ee39908bb34c45b06b41799cdf30cfe410d96efdac28`.
+
+Final result SHA-256, respectively:
+`de832a35c4ae54ebd3a93a7b8df03fb79de5ed3b936a938d76c79c9fabf03bfa` and
+`7cf3bcfde4634e952a9149c57119329c84ff4171b364b030f0a5461d3aed06ce`.
+`training-pair.json` is
+`e121343b541f6743d53ae96b757887412884855e1fd231ff7dbb3a6ba7005a1d`;
+`audit_training_pair.py` is
+`317869096cae87775af909825e687231592d9f560243fed3e3b14a0397cbdeec`;
+`training-audit.json` is
+`08e168ffd34ff69594fbb7eb9b3be0fec1796e8c0ffcdcf9bad2abeb2b447e25`.
+
+The exact evaluation command completed all 48 suffix likelihoods and 144 native
+generations in 420.350 seconds. Every output passes independent mechanics and
+exact export/reparse. Sampled maximum RSS/footprint are 1141719040/1082542432 bytes,
+with zero swap growth. No output was resampled or filtered.
+
+| Initialization | Group-macro NLL, 2M → 4M | Reduction | Paired group-bootstrap 95% interval of 4M−2M | Pooled NLL, 2M → 4M |
+| --- | --- | --- | --- | --- |
+| 171 | 2.128667 → 2.028668 | 4.698% | [−0.151322, −0.057800] | 1.970716 → 1.883906 |
+| 172 | 2.073766 → 2.001587 | 3.481% | [−0.099802, −0.043235] | 1.920651 → 1.863659 |
+
+All declared numerical gates pass for both initializations. The rapid-pair rate
+per 1000 supplied source onsets falls .062648→.019530 for 171 and
+.293407→.013006 for 172; total below-40-ms same-lane pairs fall 10→3 and 43→2.
+The longest run is two for each 4M model. These counts are locators, not a new
+universal playability threshold. Source-band macro NLL differences are all
+negative, so none approaches the +.05-nat regression bound:
+
+| Source band | 171 mean NLL difference | 172 mean NLL difference |
+| --- | --- | --- |
+| [2,3) | −0.052956 | −0.090726 |
+| [3,4) | −0.069022 | −0.031474 |
+| [4,5) | −0.070577 | −0.038944 |
+| [5,6] | −0.102774 | −0.062215 |
+
+The type tradeoff needs semantic evaluation. Suffix LN-head fractions fall
+25.342%→11.857% and 53.857%→10.597%. All 72 outputs per 4M initialization contain
+suffix-born LNs. However, outputs containing a suffix LN at least 2 seconds long
+fall 48→21 and 34→23; at least 4 seconds, 19→6 and 15→9. The maximum remains
+20646 ms for both 4M models. These physical-duration locators exclude seed-born
+holds and do not define the semantic meaning of a long LN. They establish that
+long output objects still occur, not that their organization is good.
+
+Source-history head-conditional LN Brier scores improve .051674→.048965 and
+.052080→.048562, while negative log probability assigned to observed LN lane
+actions rises .956356→.964375 and .840921→.998330. Better aggregate calibration
+and lower overall NLL therefore coexist with a more conservative LN distribution.
+These source-history diagnostics do not identify the free-running mechanism.
+Do not call the lower rapid rate an unqualified quality win before checking
+the preserved range of LN/tap expression.
+
+Numerical artifacts under this experiment owner:
+
+- `evaluation-v1/readout.json`:
+  `ab80ec8e351a3d537d1b387c37cdf41af7d76f9e9aa18544c7ac1102477007de`.
+- `evaluation-v1/comparison.json`:
+  `bd1c1a612f0c6ca63788f661a8fae784fc5c4f7cc1a2936a287e81d4c7f61f69`.
+- `evaluation-v1/distribution-summary.json`:
+  `39991ea34aea0e53f4b72780fdb84b4bff453ac754b0e4252695ed07869bb9b9`.
+- `review-scope-difficulty.json`:
+  `317202e7f51a6e6f51ce32233f7669dbdd09206f3c0e0204dc9f26901c0dd0d9`.
+
+The existing eight semantic scopes do span all four 2–6-star source bands:
+indices1/9 in [2,3), index3 in [3,4), indices6/12 in [4,5), and index2 in [5,6].
+Index0 is below2 and index16 above6. This is a retrospective coverage description;
+their original selection used ordinary/stress descriptors. Some bands have one
+group and only generation seed17 has these semantic scopes, so this is not an
+independent cross-difficulty stability confirmation.
+
+## Masked quality comparison in progress
+
+The numerical pass activates the Card's original 16 paired comparisons. The new
+packet preserves every original scope/context boundary and compares 2M versus
+4M within each initialization at generation seed17. Presentation RNG seed1197
+only assigns A/B labels; it changes no sample, scope or decision rule. Real output
+hashes and stage names are hidden from public images/actions. Prior 2M scopes
+have already been inspected, so familiarity can reveal identity: this is a
+masked machine comparison, not a blinded new human study.
+
+The packet contains 416 canonical pages. The private mapping remains **unopened**.
+Freeze all 16 judgments before opening it. Public action-derived risk locators
+identify short same-lane pairs and short LNs without exposure-stage information;
+the thresholds locate review events and do not assign quality labels.
+
+Packet identities:
+
+- `render_masked_comparison.py`:
+  `6ad025945656e14a007b86cfd1fe1796b5a76b8c6acdd9097fb0820ae60ea42a`.
+- `masked-inspection-v1/manifest.json`:
+  `1ceaaec56d6af5e0f65e5059d984e32eba9caa00be18ca2d951f0d9bb0f14731`.
+- Private mapping digest, without opening its content:
+  `153758d5ebad9f9a1868979bdd3dad0ea4cc1a35ee78466bbb2ce355b9b67ba6`.
+- `masked-inspection-v1/risk-locators.json`:
+  `375b44ccaeb4b6dbb306c7ddea20a09ae1eb118de4d5ed25e941b6e8575a1b87`.
+
+Two LN-rich pairs are fully inspected: **32 of 416 pages**, with exact action
+witnesses checked. No other new packet pages have yet been reviewed.
+
+- `seed171-ln-rich-12-core_16s`: A and B are locally plausible. A has prominent
+  repeated anchor/independent-articulation organization; B has definite supporting
+  coordination in a more sequential-handoff/tap arrangement. Limited expressive
+  preference for A; greater LN density itself is not the rationale. Judgment SHA
+  `f5b3efdf97de1fce3823be36b78c024e650e06e8e1c33ff740beb6ef32752d17`.
+- `seed172-ln-rich-12-core_16s`: both variants are plausible with prominent
+  independent LN control; A emphasizes continuous interlocking holds and B more
+  tap/LN contrast. No decisive preference. Judgment SHA
+  `80ca26dfcf9111fa8da92cacdf25b6f4d987771810d6f94450cd4cb26b64c2e8`.
+
+These judgments are saved under `masked-inspection-v1/masked-judgments/` and the
+coverage ledger is `masked-inspection-v1/review-progress.json`. Do not infer
+either A/B stage or the full qualitative gate from this partial review. Fourteen
+pairs remain, including all four wide64s comparisons. Continue those reviews,
+freeze the complete judgment set, then open the mapping and evaluate the Card.
+No further training is authorized by this Card beyond its completed4M endpoint.
+The standing overall research authority persists, but a new intervention needs
+its own explicit recorded comparison.
+
+All training, numerical evaluation and rendering processes are terminal. Product
+source remains clean at the same revision; Notes stay proposed and commits local.
+Overall playability, long-range/cross-difficulty stability and the full LN/tap
+goal remain unproven. Research decision and model adoption remain pending.
