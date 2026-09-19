@@ -330,3 +330,82 @@ endpoints. CPU1,240seconds,128MiB diagnostic output and existing resource bounds
 apply. Its fresh owner is `critical-risks-v1`; the rendering receipts remain
 under unique `inspection-v1/risk-min-*` identities. This additional diagnostic
 does not alter the Card's numerical or semantic decision criteria.
+
+## Evaluation: complete numerical screen, unmet quality requirements
+
+The evaluator terminates successfully after2056.173seconds. All56 complete
+suffix scores are finite and all168 unique model/source/seed outputs pass
+mechanics and exact export/reparse. An independent final audit rechecks every
+osu!, row-journal and decision-journal digest. Sampled maximum RSS is569753600
+bytes, physical footprint464438712bytes and swap growth zero. Rendering and
+read-only diagnostics overlap part of the execution, so elapsed time is not an
+isolated throughput benchmark. All evaluation and rendering processes are
+terminal; the original execution session was reaped successfully.
+
+| Source band | 171 macro NLL | 172 macro NLL | 172 rapid pairs/1000 supplied suffix onsets |
+| --- | --- | --- | --- |
+| [2,3) | 2.191116 | 2.177359 | 0 |
+| [3,4) | 2.233952 | 2.209003 | 0 |
+| [4,5) | 2.411728 | 2.397454 | .209691 |
+| [5,6] | 1.972021 | 1.993644 | .118249 |
+
+The primary passes every declared coarse numerical guard. Its maximum rapid run
+is two, with14 below40ms pairs in9/84 outputs; comparator171 has24 such pairs
+in7/84 outputs and maximum run three. Primary/comparator whole-collection LN-head
+fractions are13.364%/13.681%. These aggregate similarities do not settle semantic
+quality or the relative merit of every source band. The final primary output-band
+coverage remains13/13/9/2 groups, so the separate5–6-star coverage requirement fails.
+
+The exact-history probability diagnosis completes four cases and44 generated
+query positions in12.728seconds. Every chosen log probability equals its original
+journal value (maximum absolute delta zero). At75089ms in source21/seed17, the
+chosen `(TAP,continue,continue,continue)` has probability.268926 and forces
+the23ms column0 repetition at75112. At180304ms in source9/seed19, the analogous
+column3 TAP has probability.183571 and forces the37ms repetition at180341.
+Both legal distributions retain alternative rows that avoid forcing that head
+repetition. This does not prove those alternatives' release-to-head burden or
+their eventual musical quality. Under the observed next states, rapid-head mass
+is numerically one. Source-history controls allocate the close attacks across
+lanes; they change the whole history and are not isolated causal interventions.
+
+Complete source/generated risk contexts were inspected for those two cases:
+20 canonical pages, plus a full-resolution reread of the23ms generated page.
+Both have real prominent independent LN structure around the localized concern;
+their quality stays unresolved. The two73/79ms diagnostic controls have exact
+probability results but their new paired image packets remain unreviewed. Their
+scalar gaps do not create a negative label.
+
+Decision: REFINE. Preserve the complete negative coverage result and localized
+burden evidence. Fourteen of60 prospective primary scopes are reviewed, plus the
+two risk contexts. The remaining prospective scopes are deliberately left
+unreviewed while the demonstrated limitation receives a targeted model probe:
+even positive judgments on all of them could not reverse the failed coverage
+guard or erase the observed burden concerns. This is an explicit partial semantic
+evaluation, not a completed qualitative pass. No output was filtered or resampled.
+
+The next bounded comparison should test an action-conditioned readout of the
+proposed row's exact occupancy and clocks, against both continued baseline
+learning and an action-only branch with the same trainable size. This targets
+the high-mass predecessor choices while retaining native support and learned
+LN/tap organization. The closest local analogue is the existing O1 endpoint-
+availability residual; R1 must use only current exact facts and supplied timing,
+without receiving future source endpoints or actions. A separate future cohort
+must establish actual5–6-star output coverage. Neither new direction has been
+adopted or run by this Card.
+
+| Evidence | SHA-256 |
+| --- | --- |
+| Complete readout | `30b7e2a7484d84695c7ebe16ce66da1ed1a31ac92998af746738991ccd410ee3` |
+| Numerical comparison | `0c648f01dffc34cd0deb423b3db517c502aed62a48a24a90e1cd9ca9c20abe2e` |
+| Final digest/resource audit | `f313678fa2896255decac00bbb5b674070c80a9a3c31d6e6ebfd3777d972958d` |
+| Exact-history risk report | `ddb9312beda065057300ed9257dad1888a3cb54eec8f8f8153ff2175ff63bc65` |
+| Inspected risk judgments | `d449365a237a1a8b9f716b6ad4bbda726fead34631f844d81c1131e5e68356a2` |
+| Partial prospective review ledger | `cef332cd3ae8033e3ad8195507905e3930a2012b0bb0828f11bb35b548c81772` |
+
+Curated findings are committed at product revision
+`ca28511cd69ccd0566bdb42be52e4651fb236369`. The new isolated product worktree on
+`codex/r1-action-consequence` is initialized at that same clean revision, with
+no model intervention yet. The source difference from the execution revision is
+documentation only. The original `witness-style-probe` worktree's pre-existing
+uncommitted work remains untouched. Notes stay proposed; all commits remain local
+and the overall goal remains active.
