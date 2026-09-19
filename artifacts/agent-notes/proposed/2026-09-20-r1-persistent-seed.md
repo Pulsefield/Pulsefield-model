@@ -180,9 +180,23 @@ The artifact-owned execution-plan binds source, driver, configs, parent, plan an
 preflight digests. The driver enforces a shared5,400-second added-training ceiling
 with a timed exception whose runtime ledger records interrupted work. Existing
 per-run memory/swap/output bounds stay unchanged. Execute each of none/zero/observed
-at4625k, then each at5000k, using `uv run --offline --python3.10 --extra mps python
+at4625k, then each at5000k, using `uv run --offline --python 3.10 --extra mps python
 artifacts/bounded-typed-continuation/persistent-seed-20260920-v1/run_training.py
-<mode> <milestone>` (the Python selector is the two arguments `--python 3.10`).
+<mode> <milestone>`.
 All directories are fresh and each final continuation verifies every initial
 mode's durable boundary. Training and final quality evaluation remain pending.
 The Note/Card remain proposed revision1, accepted revision none.
+
+The execution-plan SHA is
+`79f7d7c7b5a8a6cb54aea1a2ea6ebb5feaf8fb90f4ce7f3fe7609436a465f752`;
+training-driver SHA is
+`4375ed98f94c587fadd0615fbea7137386cc3b3f0b2963c128115e4e0c5058c0`.
+Before any candidate native-quality output, freeze the evaluation, independent
+recount and masking procedures in evaluation-procedure-freeze SHA
+`c64d48e4110517968720afac2283cc7ab2d7b08e997e3f9a0189417e3904ab50`.
+Its arithmetic check uses frozen parent rows and synthetic identical,50%-better,
+19%-better,NLL-regression and burden-regression cases. It also verifies unequal
+H-bin boundaries. Check SHA:
+`6a2136329d6a86ef2da7c5a6de4d447620baa2e47c199dff6474c739a50d8969`.
+The final evaluation plan will bind only the completed checkpoint identities;
+metrics, gates, cohorts, seeds and inspection scopes are already fixed.
