@@ -4,7 +4,7 @@ Note ID: 2026-09-19-r1-additional-exposure
 Status: proposed
 Kind: research
 Created: 2026-09-19
-Updated: 2026-09-19
+Updated: 2026-09-20
 Product revision: 50dda55040f51a7afc9a13994b762f953fe3064d
 Scope: LN-mode interpretation and matched R1 continuation from 2M to 4M onset exposures
 Related: 2026-09-18-bounded-typed-time-three-arm-comparison; 2026-09-19-native-inference-and-difficulty-coverage; 2026-09-19-bounded-typed-r1-burden-mechanism
@@ -429,3 +429,52 @@ All training, numerical evaluation and rendering processes are terminal. Product
 source remains clean at the same revision; Notes stay proposed and commits local.
 Overall playability, long-range/cross-difficulty stability and the full LN/tap
 goal remain unproven. Research decision and model adoption remain pending.
+
+## Result Log: Complete masked judgments frozen before reveal
+
+The complete packet now has 16 paired judgments over all 416 canonical pages.
+The existing six judgments (both LN-rich cores and all four wide contexts) were
+recovered from the local coverage ledger and preserved byte-for-byte. The four
+wide judgments had been completed after the preceding Notes commit. Their
+digests agree with that ledger. Ten remaining pairs were inspected using all
+eight time-proportional plot panels per variant in reading montages, with exact
+event times, LN endpoints and witness source lines checked in masked actions.
+The dense 172 risk page and its paired held passage were additionally inspected
+at full resolution. No scope, sample, mapping or numerical guard changed.
+
+The six frozen High-confidence human comparisons were reopened with their full
+review-context images. Stream prominent/supporting/absent and LN
+prominent/supporting/absent examples remain separate from the machine judgments.
+Only the LN-prominent example supplies a substantive human rationale in this
+projection. A further short-comment search for staggered/coincident relationships
+returned the same prominent example; query misses were not used as absence.
+
+The completed judgments retain three burden-unresolved variants: the previously
+reviewed 35-ms events in the wide scopes, and the dense 172 A event with a 26-ms
+column-0 repeat at 43422/43448 while other columns are held. All other variant
+quality judgments are plausible; none is marked inadequate. The dense 172 B
+variant's marginal LN-coordination presence is unresolved: its staggered two-hold
+passage ends together without further interaction while both are held. Its
+general quality remains plausible. This label uncertainty does not affect the
+separately judged definite coordination in the LN-rich core.
+
+There are 12 ties and four limited preferences: 171 LN-rich A, 171 wide02 B,
+172 dense16 B and 172 wide02 A. Their exposure-stage identities remain unknown
+at this commit. These are scoped machine preferences, not independent human
+votes, physical playtests or whole-chart quality certification. Timing/rhythm
+and density supplied by R/H are not credited as learned composition.
+
+`masked-inspection-v1/masked-judgments-seal.json` freezes all judgment hashes
+with SHA-256
+`a2023a2c8f6579d989fba1f684eb609d9d04470a4971d5be0c70b9b5bf83a6be`.
+The seal records the unchanged packet, calibration and reading-montage manifests.
+Every referenced page/action digest, witness line, scope/context and complete
+page coverage was checked before sealing. The six inherited judgments remain
+unchanged. `review-progress.json` now records 416/416 pages and 16/16 cases.
+
+The private stage mapping is still unopened. The next step is to verify its
+previously recorded digest, reveal the identities against this seal, and apply
+the original Card's qualitative gate without revising any judgment. Overall
+completion, model adoption and Note acceptance remain unestablished. The human
+owner reiterated local commits for meaningful progress on 2026-09-20; no remote
+publication was requested.
