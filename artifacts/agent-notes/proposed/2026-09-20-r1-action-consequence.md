@@ -432,3 +432,41 @@ Current evaluator/probe/renderer SHA values are
 and `5094f858bc21a826c65d510b4c1e22c0c68ff0dbec9c6cbf9876c0c329e61952`.
 The final evaluation-plan still awaits the frontier4.5M checkpoint; no evaluation
 or masked semantic judgment has started.
+
+## Result Log: complete matched4.5M training and evaluator freeze
+
+All six training segments terminate at their declared boundaries on clean
+4a98c0230549baa19ad860c3a13caf301e0f1f71. Each mode adds500000 onsets in661 updates
+and consumes the identical draw/cursor sequence. Final coverage is3206045 unique
+onsets,9178 charts and3168 groups for every mode. Every final parameter, loss
+and gradient norm is finite; checkpoint journal boundaries and parent result
+digests verify. No update is discarded. All original execution sessions are
+terminal and reaped.
+
+| Mode | Added measured seconds | Added-exposure mean TRAIN NLL | Peak footprint bytes | Final residual output norm |
+| --- | --- | --- | --- | --- |
+| none | 997.954619 | 1.92328633 | 869697144 | absent |
+| actions | 1257.840447 | 1.92329320 | 1170180064 | .00859360 |
+| frontier | 1272.945745 | 1.92322362 | 1169950688 | .06719391 |
+
+Swap growth is zero throughout. Measured cumulative charges including the shared
+parent are4108.352111/4368.237939/4383.343237seconds. Added exposure and scientific
+settings match; wall time is neither matched compute nor an isolated benchmark.
+The small teacher-loss differences and learned residual weights do not decide
+the native-quality question.
+
+| Mode | Final checkpoint SHA-256 |
+| --- | --- |
+| none | `2c452a954b57f0b412a0806dead0adffe11b227a22955f4fb9920d0fdf03d288` |
+| actions | `8c04110f56736507afcc3df8554c402ed1ca46a11c756d56a111c6d927781317` |
+| frontier | `72c96c58175fcf52ba654f6ccb2a565b8254e9f911d50db69539bac6f8081126` |
+
+`final-training-audit.json` SHA:
+`39308a13ad18fc639f92f93425e879099dc9b9528e1437b7f76d9c30788950ee`.
+The complete evaluator plan is now frozen at SHA
+`f78d68bddb4de3c104df21ea9dcfc738c53d4a1866d4e69e23af80232374c741`.
+It pins all final checkpoints, revision3, source9894761, original4a98c02 training
+provenance, all driver digests,28 groups, seeds17/19/23,252 outputs and84 suffix
+scores. Execute the secondary frozen-history probe and full evaluator under that
+plan; then render and judge the masked scopes before revealing identities.
+Generated quality, all regression guards and the overall goal remain pending.
