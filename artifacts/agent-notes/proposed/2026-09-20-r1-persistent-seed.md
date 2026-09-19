@@ -221,3 +221,17 @@ The initial-training audit SHA is
 `0a3ebfae4909946be68459c22ad4c0c2ebfcc60ada5ed9b910c867eb80945087`.
 No intermediate native-quality evaluation or checkpoint selection occurs.
 The declared5M continuation is underway; final evaluation and Decision are pending.
+
+The none control completes5M with checkpoint SHA
+`42f81541eb190d462e74cb4bfc1b3e92fac09cc4593053e101e2f150cd62427e`;
+its final375k segment takes409.929568seconds. The remaining zero/observed final
+segments execute sequentially in an artifact orchestrator, then verify all
+checkpoint identities, finite weights/Adam, equal exposure/coverage/configs and
+RNG. Only after that audit does it bind completed checkpoints into the frozen
+evaluation plan and run numeric evaluation, independent recount and masked
+rendering. It never opens the private variant map for agent review.
+Orchestrator SHA: `e19b2d37ead713edc9b5e84033d0962635eac5afd1eff48b5706fcd1cfc170a5`.
+Command: `uv run --offline --python 3.10 --extra mps python
+artifacts/bounded-typed-continuation/persistent-seed-20260920-v1/finish_and_evaluate.py`.
+This orchestration implements the already declared procedure; no scientific
+field or budget changes. All decisions remain pending the full evaluation.
