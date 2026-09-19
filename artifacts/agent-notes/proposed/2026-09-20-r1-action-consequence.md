@@ -493,3 +493,55 @@ Therefore this table establishes neither native population improvement nor
 regression. It does not select a checkpoint or alter the predefined comparison.
 The full252-output evaluator is running unchanged on9894761. Its outcome and
 the masked semantic evaluation remain pending.
+
+
+## Full native comparison: primary gate not met
+
+The revision3 evaluation completes all252 full continuations and84 suffix scores
+on the common9894761 runtime in2464.104808seconds. Every native export reparses
+exactly and every mechanical receipt passes. Independent audit verifies all
+osu!, action-row and decision digests, unique identities and finite scores.
+Peak RSS is669925376bytes, footprint543622632bytes and swap growth zero.
+
+| Comparison | Paired mean rate difference | Relative reduction | Paired90% interval |
+| --- | --- | --- | --- |
+| frontier minus none | -.595222751 | 9.1826% | [-1.672207428, .265617081] |
+| frontier minus actions | -.905202972 | 13.3274% | [-2.633005490, .285602155] |
+
+Both primary comparisons fail the predefined25% reduction and negative upper
+interval requirements. All numeric regression guards pass. Mean union rates per
+1000 supplied suffix H are6.482074836/6.792055057/5.886852085 for
+none/actions/frontier; raw counts are1269/1351/1140. Head/head components are
+21/21/23 and release/head components1248/1330/1118; one frontier event qualifies
+for both and is counted only once in the union. Minima are12/12/3ms. This is a
+failed quantitative primary, not evidence that the feature design is effective.
+
+All modes increase LN participation substantially relative to the original4M
+checkpoint. Equal-group/seed mean LN fractions are.489053111/.483170115/.530931723;
+4M was.180447819. Pooled note-weighted LN fractions differ from these macro means:
+4M was.133641613 and continued none is.564090348. These aggregations must not be
+interchanged. The three models have five distinct groups with some actual5–6-star
+outputs each, but ranges extend from about1.74 to7.02/7.02/7.24 stars. This is
+neither stable requested difficulty nor proof of playable high-difficulty quality.
+
+Below40ms release/head timing is a diagnostic locator. A release followed by a
+head need not have the same burden as two heads, and higher LN participation
+changes its opportunity count. Six31ms release/head events also occur in the
+source references. Exact action, surrounding held lanes and longer organization
+must determine whether a located event is a material concern. The counter is not
+a calibrated demand metric and will not become a decoder rule on this evidence.
+
+Readout SHA: `b7e825369e6fe8065184406868bcf5f07c68593a24a841b192577d4b9cef1ac1`.
+Comparison SHA: `0bcfa82343203b8af1d19d7ffb0123ffaf6bf18c408e73d894d5318f53938231`.
+Independent audit SHA: `704f76774e792eba186addb6a345bbcb405a920913afc7996e5b28e5be00d823`.
+
+The complete anonymous packet contains31 triple comparisons and717 canonical
+pages, manifest SHA
+`a599407b10d002d1e14443d3fc0316ac076584289d2de6edefa53ae5d9de7d0d`.
+The private label map remains unread. Review has begun with ln-12 only; its three
+scope judgments are sealed in `masked-judgments-v1/ln-12.json`, SHA
+`cd5684e82a8a0ff9764fd8a03ddf84db1b1282665cd0f6aa6080165ff019e9eb`.
+They retain independent LN organization with different TAP/hold tradeoffs, not a
+quality winner. All other scopes remain unreviewed. Finish the declared masked
+review before revealing labels or making a semantic retention conclusion.
+The Card stays proposed, accepted revision none; overall goal remains active.
