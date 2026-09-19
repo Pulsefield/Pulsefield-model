@@ -52,7 +52,7 @@ claim follows from this adaptation.
 
 ## Experiment Card: r1-prefix-recovery-v1
 
-Card ID: r1-prefix-recovery-v1. Revision:1. Accepted revision:none.
+Card ID: r1-prefix-recovery-v1. Revision:2. Accepted revision:none.
 The user separately authorizes autonomous bounded implementation, execution and
 local commits toward the active goal. This proposed diagnostic changes no weights,
 training data, native sampler or legal support, and does not adopt a new task.
@@ -119,7 +119,8 @@ is not semantic correctness, desired difficulty or proof of playability.
 
 Before the main run, verify each reconstructed native-prefix first query against
 its frozen original chosen log probability and each source-prefix first query
-against dense teacher recomputation (maximum finite-log-probability error3e-6,
+against dense teacher recomputation (finite log-probability tolerance
+3e-6 +1e-6 times reference magnitude, probability absolute error at most5e-7,
 identical support). Inspect exact anchor occupancy and initial transitions; no
 new human/gold annotation or generated-quality claim is part of this diagnostic.
 
@@ -129,7 +130,7 @@ Run one artifact-owned driver from the clean product worktree using
 `uv run --offline --python 3.10 --extra mps python` on the M5, CPU1, Torch2.11.
 Freeze driver, inputs and resolved plan digests before execution. Fresh owner:
 `artifacts/bounded-typed-continuation/prefix-recovery-20260920-v1/`; main outputs
-in its fresh `run-v1/`. No overwrite or automatic resume. Bound the whole run to
+in its fresh `run-v2/`. No overwrite or automatic resume; failed run-v1 remains. Bound the whole run to
 1800seconds,6GiB RSS/footprint,128MiB swap growth and256MiB outputs. Stop on any
 parity, nonfinite, mechanical or resource failure; preserve an explicit failure
 receipt. Save initial/final raw snapshots and every generated decision for audit.
@@ -155,3 +156,28 @@ Driver SHA: `b074f4423e1fe106d70d2d1196ab7542e4219f185c20c3967300e1bce70f3d22`.
 Execution-plan SHA: `c41185500d9ea3e705d2dff1a027ba0d02de36c105e3afd90fd98967747f85bd`.
 Command: `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/prefix-recovery-20260920-v1/run_probe.py`.
 All48 windows are pending. The Note remains proposed, accepted revision none.
+
+
+## Engineering stop and Card revision2
+
+Run-v1 stops at the first source-prefix preflight after1.272436seconds, before
+any native-prefix match or sampled window. Maximum absolute FP32 log-probability
+difference is5.722046e-6, above the original unscaled3e-6 bound. Exact source
+state and support already agree. The failed driver, plan and output stay intact.
+
+A separate read-only check covers all eight anchors in FP32 and FP64 without
+sampling. FP32 maximum probability difference is1.788139e-7. FP64 maximum log-
+probability difference is7.105427e-15 and maximum probability difference4.440892e-16.
+Every support matches. This supports floating-point accumulation as the reason
+for the failed absolute-only check. Existing generation tests use2e-5 absolute
+and relative dense/native tolerances; the revised bound is tighter.
+Numeric diagnostic SHA: `9f376f40f64f117e1475504adcbd4aa3910f7bcf3ce1aaaa39e18961d0cc247d`.
+
+Revision2 changes only the engineering parity tolerance and fresh output/driver
+names. Scientific inputs, prefix replacement, native sampler, seeds, all metrics
+and decision criteria remain unchanged. Native-history chosen-log-probability
+matching remains bit-exact. No sampled diagnostic outcome was available when
+revising the bound. Driver-v2 SHA: `7696dc178b6dfc708a4de5ff73bb1187aac9105f80681e9a657b7c347d53d0f0`.
+Execution-plan-v2 SHA: `a7624292caa5d14c51f93e78bbc07970b67f229165eea8d96d6b735dae18c27a`.
+Command: `uv run --offline --python 3.10 --extra mps python artifacts/bounded-typed-continuation/prefix-recovery-20260920-v1/run_probe_v2.py`.
+The Card remains proposed with no accepted revision.
