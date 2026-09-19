@@ -5,7 +5,7 @@ Status: proposed
 Kind: research
 Created: 2026-09-18
 Updated: 2026-09-19
-Product revision: 15d27db0b0723d7f606b1429c901d26c1f61e5ac on codex/bounded-typed-continuation; initial corpus source 1693d62ffaca04b2a6127d8e3a72d1988adf441f; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
+Product revision: 50dda55040f51a7afc9a13994b762f953fe3064d on codex/bounded-typed-continuation; initial corpus source 1693d62ffaca04b2a6127d8e3a72d1988adf441f; generation source 21475e65d773b7e7199accf0750de584d9f10ce9; short-fit trained source a178bcfe2badaaea47ae9abce02f2494b8ff9643; published review base 89d5379f150cba9d1684822a44166765d38f644f
 Scope: Common finite-context training and generation for original event rows, typed event rows and complete note objects
 Related: 2026-09-17-oracle-time-mac-training-and-playable-continuation
 
@@ -2219,8 +2219,43 @@ minimum-gap rule follows automatically from this diagnosis. Implementing a
 reusable native generation entrypoint is independent practical work available
 now that all source-pinned evaluations are terminal.
 
-All processes are terminal. Product source is still clean at
-`15d27db0b0723d7f606b1429c901d26c1f61e5ac`; no new training, product edits or remote
-pushes occurred. A reusable bounded generation entrypoint remains an engineering
-gap, and this source-pinned screen is terminal. The overall goal remains active
-and unfulfilled; no Note acceptance or model adoption occurred.
+The burden diagnostic ended at clean source
+`15d27db0b0723d7f606b1429c901d26c1f61e5ac` without new training or a quality remedy.
+
+### Native inference and explicit difficulty/LN completion requirements
+
+The scoped owner `2026-09-19-native-inference-and-difficulty-coverage` records
+packaged condition preparation and native generation at clean product revision
+`50dda55040f51a7afc9a13994b762f953fe3064d`. The CLI accepts standalone R/H/seed
+conditions and pinned model weights, supports verified recovery into a new
+directory, and independently verifies/reparses complete osu! exports. Selected
+checks pass: 75 tests plus 22 import subtests, including CPU/MPS recovery. Real
+R0/R1/O1 checkpoints reproduce the frozen native rows, decisions, exported bytes
+and RNG; a long R1 continuation also reproduces them after pause/resume at cursor
+512. This closes the reusable inference-interface gap, without changing learned
+generation behavior or resolving quality findings.
+
+The human owner clarified completion: given skeleton and prefix, maintain highly
+playable human chart regularities throughout long generation and across difficulty
+levels, with independent 4K 2–6-star coverage alongside harder maps. Required LN
+coverage includes long holds, complex independent organization, short/fragmented
+holds and organic LN/tap integration. Whole-chart development, transitions,
+multiple groups/seeds and Foundation/human-gold judgments must support these
+claims; mechanics and a few strong sections cannot substitute for them.
+
+The new retrospective star audit rates all fixed 24 sources and 144 generations
+with pinned calculator 20241007, native 4K, no mods and clock rate one. It matches
+two upstream numerical test values exactly. Source-band group counts are
+3/4/7/4 in [2,3)/[3,4)/[4,5)/[5,6], plus three below 2 and three above 6. This
+establishes numeric coverage only. The most variable 172 example in 2–6 stars is
+index 21, source `6450d6ff0835` at 3.719836 stars: the three fixed generation seeds
+produce 4.138147–6.020917 stars and 0.626–90.604% suffix LN heads. Determine whether
+this is coherent multimodality or learned mode drift through whole-chart
+inspection; do not infer the answer from the scalar metrics. The scoped Note
+preserves all identities, limits and source/seed distinctions.
+
+The next research decision must address learned quality with the expanded
+difficulty/LN coverage frozen in its Card. Both R1 initializations and prior
+masked judgments remain unchanged. All processes are terminal; product and Notes
+commits are local only. The overall goal remains active and unfulfilled; no Note
+acceptance or model adoption occurred.
