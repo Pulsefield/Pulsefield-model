@@ -22,10 +22,11 @@ samples the native tasks and rebuilds bounded caches from raw checkpoints;
 [`verification.py`](../../src/pulsefield_model/research/bounded_typed_continuation/verification.py)
 independently checks completed outputs against the external condition and plans.
 The packaged `bounded_typed_smoke` configuration provides a bounded learning-check
-runner. A 16-chart learning check and a paired corpus trajectory through two million
-source-onset exposures have run. The development generation screen establishes
-learning progress and remaining allocation failures; overall playable quality and
-independent confirmation remain unproven.
+runner. A 16-chart learning check and paired R1 corpus trajectories through four
+million source-onset exposures have run. Additional R1 training improves held-out
+likelihood and the inspected local burden failures while retaining some independent
+LN organization. Long-form quality, difficulty consistency and the complete range
+of LN/tap expression still require broader confirmation.
 
 ## Conditions and prediction tasks
 
@@ -706,3 +707,95 @@ reducing the shortest attack interval is a success criterion. Foundation-based
 machine inspection and current human calibration do not replace new blinded
 human comparisons. Independent confirmation needs a second training initialization
 and groups unused during model selection.
+
+### Additional R1 exposure and the LN tradeoff
+
+Two R1 initializations, 171 and 172, continue from two to four million source-onset
+exposures at source `50dda55040f51a7afc9a13994b762f953fe3064d`. They retain the same
+width-128, eight-level encoder, 511-token context, exact state, R/H conditions,
+group/chart sampler, optimizer moments and native temperature-one decoding.
+The intervention is additional training, with no type penalty, duration floor,
+endpoint oracle or sampling filter. Both trajectories use the same draws and
+cover 2,940,384 distinct onsets in 8,799 TRAIN charts and 3,167 groups at 4M.
+
+The comparison reuses 24 development VAL groups with three generation seeds per
+model. Likelihood is computed over each complete suffix and normalized by source
+onsets. The table reports the unweighted mean of 24 per-chart values; uncertainty
+comes from 2,000 paired group-bootstrap resamples and does not estimate variation
+across model initializations.
+
+| Initialization | Group-mean NLL/onset, 2M → 4M | Relative decrease | 95% interval for mean difference | Generated same-lane pairs below 40 ms, 2M → 4M |
+| --- | --- | --- | --- | --- |
+| 171 | 2.128667 → 2.028668 | 4.698% | [−0.151322, −0.057800] | 10 → 3 |
+| 172 | 2.073766 → 2.001587 | 3.481% | [−0.099802, −0.043235] | 43 → 2 |
+
+All 144 new outputs pass independent mechanics and exact osu! export/reparse.
+Both models improve group-mean NLL in each source-star band [2,3), [3,4), [4,5)
+and [5,6]. Eighteen groups occupy those bands; they were originally selected by
+ordinary/stress descriptors rather than balanced difficulty sampling. Source and
+generated stars are separate whole-chart measurements using the pinned local
+20241007 calculator, native 4K, no mods and rate 1. A source's rating does not
+establish the output's rating or playability. The 40-ms pair count locates possible
+burden defects and is not a universal physical limit or a style label.
+
+The improvement has an expressive tradeoff. Generated suffix LN-head fractions
+fall from 25.342% to 11.857% for 171 and from 53.857% to 10.597% for 172. All
+72 outputs per 4M model contain suffix-born LNs, but outputs containing an LN of
+at least two seconds fall from 48 to 21 and from 34 to 23. Observed source LN
+actions also receive worse mean negative log probability despite the lower total
+NLL. Neither a lower LN share nor a physical duration quantile establishes better
+or worse organization; this discrepancy requires inspection of the actual roles.
+
+Six 16-second cores and two 64-second contexts per initialization were compared
+with their 2M counterparts at generation seed 17. Machine judgments were frozen
+before exposure-stage labels were revealed. Complete entering/exit context was
+inspected across 416 canonical time-proportional pages, with exact action and
+endpoint witnesses. The frozen Beatmap Lens V2 Foundation and six High-confidence
+human Stream/LN examples supplied calibration; these examples are not human
+judgments of the generated charts. Prior familiarity with some 2M outputs limits
+the masking.
+
+All sixteen 4M scopes were judged locally plausible. Both wider scopes per model
+retain recognizable development, ordinary scopes retain definite moving
+organization, and the LN-rich core retains definite independent LN control in
+both models. Twelve comparisons are ties; three have a limited preference for
+4M because it avoids a localized compressed repeat, and one prefers the stronger
+independent LN development at 2M. In that last 171 core, coordination remains
+present at 4M but changes from prominent to supporting. The 172 LN-rich core
+retains prominent independent coordination. The marginal LN-coordination label
+in the 172 4M dense core remains unresolved and is not needed to establish the
+separate LN-rich result.
+
+The three burden-unresolved 2M scopes contain isolated 26/35-ms same-lane events;
+the corresponding 4M scopes avoid them while preserving plausible motion or
+held articulation. This is evidence of improvement at those observed locations,
+not proof that all generated histories avoid occupancy traps. Synchronized holds,
+sequential short-LN handoffs and a single anchor with taps are distinguished from
+independent multi-LN control. All can be useful articulation without receiving
+the same Foundation label.
+
+On the Apple M5 with 24 GiB memory, Python 3.10.20 and Torch 2.11.0, each extra
+2M-exposure segment takes about 25 minutes using one CPU thread. The larger
+sampled process footprint is 929 MB, with no swap growth. These are measured
+operating points, not accelerator throughput claims. The complete 144-output
+evaluation takes 420 seconds under its stated resource bounds.
+
+The comparison's prospective numerical and scoped qualitative guards pass for
+both initializations. It supports further investigation of 4M R1 as a practical
+candidate while preserving the more expressive 2M alternatives. Reused groups,
+single-seed semantic scopes and incomplete difficulty/LN-form coverage prevent
+an overall quality claim. Additional exposure beyond 4M has not been evaluated
+by this comparison.
+
+Evidence lives under
+`artifacts/bounded-typed-continuation/r1-exposure-20260919-v1/`:
+
+- Evaluation readout SHA:
+  `ab80ec8e351a3d537d1b387c37cdf41af7d76f9e9aa18544c7ac1102477007de`.
+- Sealed masked judgments SHA:
+  `a2023a2c8f6579d989fba1f684eb609d9d04470a4971d5be0c70b9b5bf83a6be`.
+- Revealed comparison SHA:
+  `960d1c228eae09a120d20155102398da9fb00b6a79e111a3b5960b0cca37122a`.
+
+This is exploratory evidence without an accepted research Card. It does not
+establish the V3 architecture, human preference or final model adoption.
