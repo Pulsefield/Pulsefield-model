@@ -478,3 +478,40 @@ the original Card's qualitative gate without revising any judgment. Overall
 completion, model adoption and Note acceptance remain unestablished. The human
 owner reiterated local commits for meaningful progress on 2026-09-20; no remote
 publication was requested.
+
+## Evaluation: 4M improves the frozen screen with a retained expressive tradeoff
+
+After the masked seal was committed at Notes revision
+`10b2fd5667a2e5711d179b41c69bb8340871ff5c`, the private mapping
+was opened only after verifying its unchanged SHA. Every original generated
+osu! digest and sealed judgment digest was rechecked. No judgment changed.
+`masked-inspection-v1/revealed-comparison.json` has SHA
+`960d1c228eae09a120d20155102398da9fb00b6a79e111a3b5960b0cca37122a`.
+
+Both 4M initializations pass every original qualitative guard: both wide scopes
+are plausible, no core is inadequate, all ordinary scopes retain moving
+organization, and the LN-rich core retains definite independent coordination.
+All sixteen 4M quality judgments are plausible. The three burden-unresolved
+variants are all 2M; their corresponding 4M variants receive the three limited
+preferences for 4M. The sole 2M preference is the 171 LN-rich core's stronger
+independent held-role development. Its 4M counterpart remains positive but
+supporting, while the 172 LN-rich core remains prominent at both exposures.
+
+Decision: REFINE. The numerical and declared scoped semantic comparison favors
+continuing investigation of 4M R1. It does not eliminate the evidence that
+additional exposure reduces the prevalence/prominence of some LN forms. The
+comparison is exploratory without an accepted Card and reuses development
+groups; it therefore does not establish SUPPORTED research status, final model
+adoption, cross-difficulty stability or whole-chart playability. Preserve both
+2M and 4M candidates. A new source-only selection across explicit 2–6-star bands,
+long charts and contrasting LN forms is the next discriminating evaluation,
+before another model or training intervention.
+
+Curated source-independent findings are committed on the product branch at
+`23a91b04cafaedb57a9f61dc82ce532adcfda805` in
+`docs/research/bounded_typed_continuation.md`. That commit changes documentation
+only; runtime remains the evaluated `50dda55040f51a7afc9a13994b762f953fe3064d`
+implementation. Exact witness/action/page hashes and outgoing documentation
+claims were checked; the documentation diff passes whitespace validation.
+No unchanged runtime test suite was rerun. Both commits are local, and no
+training or generation process remains active from this comparison.
