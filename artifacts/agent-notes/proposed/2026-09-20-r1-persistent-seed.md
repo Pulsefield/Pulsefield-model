@@ -200,3 +200,24 @@ H-bin boundaries. Check SHA:
 `6a2136329d6a86ef2da7c5a6de4d447620baa2e47c199dff6474c739a50d8969`.
 The final evaluation plan will bind only the completed checkpoint identities;
 metrics, gates, cohorts, seeds and inspection scopes are already fixed.
+
+## Result Log: shared4.625M engineering boundary
+
+All three branches complete the initial125k added H,169 updates each, with exactly
+3,272,859 unique cumulative H,9,278 charts and3,168 groups. Every model and Adam
+tensor is finite, every segment is fully durable, and sampled swap growth is0.
+None/zero/observed segment times are139.381824/139.790419/148.170629seconds;
+peak footprints932,071,056/930,367,144/929,810,088bytes. Added TRAIN NLL is
+1.907905891/1.908499529/1.909884530; these teacher measurements are not native
+quality evidence. Zero/observed residual output norms are.242903456/.298357993.
+
+Checkpoint SHAs, in none/zero/observed order:
+
+- `3f375de1721799d6017298d5458cdc7c89c1934a173a877fc6aedcd3393473ad`
+- `858266ae2548683e532341ae96f732f308b14d39e381008db8f967841ceb4850`
+- `79154d9d0ff1914c980a784b807ce41759834456a091d1f683d203d331ad6d5d`
+
+The initial-training audit SHA is
+`0a3ebfae4909946be68459c22ad4c0c2ebfcc60ada5ed9b910c867eb80945087`.
+No intermediate native-quality evaluation or checkpoint selection occurs.
+The declared5M continuation is underway; final evaluation and Decision are pending.
