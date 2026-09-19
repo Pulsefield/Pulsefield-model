@@ -16,6 +16,7 @@ from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
 from ..scoped_style_modeling.dataset import ContractError
+from .consequence import RowConsequence
 from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule
 from .features import (AVAILABILITY_DIM, CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
                        EndpointAvailability, TimingView, endpoint_availability, factor_features)
@@ -30,6 +31,7 @@ class ModelConfig:
     expansion: int = 4
     coupling_rank: int = 16
     endpoint_availability: str = 'none'
+    row_consequence: str = 'none'
 
     def __post_init__(self):
         if not isinstance(self.arm, Arm):
@@ -40,6 +42,9 @@ class ModelConfig:
         if (self.endpoint_availability not in ('none', 'zero', 'commitment') or
                 self.arm != Arm.O1 and self.endpoint_availability != 'none'):
             raise ContractError('Endpoint availability must be none, zero or commitment, and is O1-only')
+        if (self.row_consequence not in ('none', 'actions', 'frontier') or
+                self.arm != Arm.R1 and self.row_consequence != 'none'):
+            raise ContractError('Row consequence must be none, actions or frontier, and is R1-only')
 
 
 class JointHead(nn.Module):
@@ -200,6 +205,8 @@ class BoundedModel(nn.Module):
                                   nn.GELU(), nn.Linear(config.hidden, config.hidden))
         self.joint = JointHead(config.hidden, 3 if config.arm == Arm.O1 else 4, config.coupling_rank)
         self.pointer = EndpointPointer(config.hidden, config.endpoint_availability) if config.arm == Arm.O1 else None
+        self.row_consequence = (RowConsequence(config.hidden, config.row_consequence)
+                                if config.row_consequence != 'none' else None)
 
     @property
     def choices(self):
@@ -217,7 +224,10 @@ class BoundedModel(nn.Module):
         mask = torch.tensor(supports, dtype=torch.bool, device=hands.device)
         if not bool(mask.any(-1).all()):
             raise ContractError('Decision query has no feasible action; O1 non-onsets execute deterministically')
-        return self.joint(hands).masked_fill(~mask, -torch.inf).log_softmax(-1)
+        scores = self.joint(hands)
+        if self.row_consequence is not None:
+            scores = scores + self.row_consequence(hands, states)
+        return scores.masked_fill(~mask, -torch.inf).log_softmax(-1)
 
     def endpoint_log_probs(self, hands: Tensor, states: Sequence[Schedule], heads, endpoints,
                            views: Sequence[TimingView], *, candidate_budget=8192, recompute=True, ledger=None):

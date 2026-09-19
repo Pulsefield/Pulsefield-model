@@ -68,22 +68,25 @@ def test_explicit_fork_then_strict_resume_matches_uninterrupted_extended_plan(tm
                                        resume_from=str(tmp_path / 'whole/checkpoint.pt')))
 
 
-def test_zero_residual_fork_preserves_function_existing_adam_state_and_control_initialization():
+@pytest.mark.parametrize('arm,field,modes', [(Arm.O1, 'endpoint_availability', ('none', 'zero', 'commitment')),
+                                          (Arm.R1, 'row_consequence', ('none', 'actions', 'frontier'))])
+def test_zero_residual_fork_preserves_function_existing_adam_state_and_control_initialization(arm, field, modes):
     torch.manual_seed(71)
-    settings = ModelConfig(Arm.O1, hidden=8, levels=2, coupling_rank=2)
+    settings = ModelConfig(arm, hidden=8, levels=2, coupling_rank=2)
     previous = BoundedModel(settings)
     source = mixed_chart()
-    batch = prepare_batch([SourceInterval(source, 0, len(source.onsets))], Arm.O1,
+    batch = prepare_batch([SourceInterval(source, 0, len(source.onsets))], arm,
                           previous.temporal.config.receptive_tokens)
     original_optimizer = torch.optim.AdamW(previous.parameters(), lr=.0003)
     batch_likelihood(previous, batch, candidate_budget=3)[0].backward()
     original_optimizer.step()
     payload = dict(config={'model': asdict(settings)}, model=previous.state_dict(), optimizer=original_optimizer.state_dict())
+    payload['config']['model'].pop('row_consequence')  # Pre-extension checkpoints omit the default field.
     expected = suffix_likelihood(previous, source, candidate_budget=3)
     models = []
-    for mode in ('none', 'zero', 'commitment'):
+    for mode in modes:
         torch.manual_seed(171)
-        model = BoundedModel(replace(settings, endpoint_availability=mode))
+        model = BoundedModel(replace(settings, **{field: mode}))
         optimizer = torch.optim.AdamW(model.parameters(), lr=.0003)
         train_run.restore_fork(model, optimizer, payload)
         for key, value in previous.state_dict().items():
@@ -97,6 +100,39 @@ def test_zero_residual_fork_preserves_function_existing_adam_state_and_control_i
             assert len(restored['param_groups'][0]['params']) > len(payload['optimizer']['param_groups'][0]['params'])
             loss, _ = batch_likelihood(model, batch, candidate_budget=3)
             loss.backward()
-            assert model.pointer.availability_residual[-1].weight.grad.norm() > 1e-8
+            output = model.pointer.availability_residual[-1] if arm == Arm.O1 else model.row_consequence.output
+            assert output.weight.grad.norm() > 1e-8
         models.append(model)
     compare_states(models[1].state_dict(), models[2].state_dict())
+
+
+@pytest.mark.parametrize('mode', ['actions', 'frontier'])
+def test_r1_residual_fork_and_resume_preserve_extended_training_exactly(tmp_path, monkeypatch, mode):
+    monkeypatch.setattr(train_run, 'source_revision', lambda: 'e' * 40)
+    config = config_fixture(tmp_path)
+    config.model = replace(config.model, arm=Arm.R1)
+    parent = train_run.run_training(config)
+    extension, digest = write_extension(config, tmp_path)
+    monkeypatch.setattr(train_run, 'source_revision', lambda: 'f' * 40)
+    target = replace(config, model=replace(config.model, row_consequence=mode), plan_file=extension, plan_sha256=digest,
+                     fork_from=str(tmp_path / 'whole/checkpoint.pt'), fork_sha256=parent['checkpoint_sha256'],
+                     fork_source_revision='e' * 40, fork_plan_file=config.plan_file,
+                     output_dir=str(tmp_path / 'extended'))
+    whole = train_run.run_training(target)
+    first = train_run.run_training(replace(target, output_dir=str(tmp_path / 'first'), stop_after_checkpoint=137))
+    assert first['status'] == 'paused' and first['parent']['row_consequence'] == mode
+    second = train_run.run_training(replace(target, output_dir=str(tmp_path / 'resumed'),
+        fork_from=None, fork_sha256='', fork_source_revision='', fork_plan_file='',
+        resume_from=str(tmp_path / 'first/checkpoint.pt')))
+    assert second['status'] == whole['status'] == 'completed'
+    a = torch.load(tmp_path / 'extended/checkpoint.pt', weights_only=True)
+    b = torch.load(tmp_path / 'resumed/checkpoint.pt', weights_only=True)
+    for key in ('model', 'optimizer', 'torch_rng', 'device_rng', 'coverage', 'cursor', 'source_onset_exposures'):
+        compare_states(a[key], b[key])
+    assert a['model']['row_consequence.output.weight'].norm() > 0
+    # A feature-mode switch with identical tensor shapes is still a scientific change.
+    other = 'actions' if mode == 'frontier' else 'frontier'
+    with pytest.raises(ContractError, match='scientific configuration'):
+        train_run.run_training(replace(target, output_dir=str(tmp_path / 'reinterpretation'),
+            model=replace(target.model, row_consequence=other), fork_from=str(tmp_path / 'extended/checkpoint.pt'),
+            fork_sha256=whole['checkpoint_sha256'], fork_source_revision='f' * 40, fork_plan_file=extension))

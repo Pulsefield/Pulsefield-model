@@ -26,22 +26,27 @@ def test_hydra_packaged_projection_and_rejected_unknown_or_unused_fields():
     assert config.model.endpoint_availability == 'none' and config.fork_from is None
     typed = compose_config(['model.endpoint_availability=commitment'])
     assert typed.model.endpoint_availability == 'commitment'
+    consequence = compose_config(['model.arm=R1', 'model.row_consequence=frontier'])
+    assert consequence.model.row_consequence == 'frontier' and config.model.row_consequence == 'none'
     assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_train.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.check_every_rows=1'],
                       ['candidate_budget=0'], ['learning_rate=0'], ['microbatch_size=3'], ['cache_max_sources=129'],
                       ['footprint_limit_bytes=0'], ['model.arm=R1', 'model.endpoint_availability=zero'],
-                      ['fork_from=parent.pt'], ['model.endpoint_availability=unknown']):
+                      ['fork_from=parent.pt'], ['model.endpoint_availability=unknown'],
+                      ['model.row_consequence=frontier'], ['model.arm=R1', 'model.row_consequence=unknown']):
         with pytest.raises((ValueError, ContractError)):
             compose_config(overrides)
 
 
-@pytest.mark.parametrize('arm', list(Arm))
+@pytest.mark.parametrize('arm,consequence', [(arm, 'none') for arm in Arm] + [(Arm.R1, 'frontier')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-def test_unequal_microbatches_have_same_summed_loss_gradients(arm, device):
+def test_unequal_microbatches_have_same_summed_loss_gradients(arm, consequence, device):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
     torch.manual_seed(42)
-    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2)).to(device)
+    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2, row_consequence=consequence)).to(device)
+    if model.row_consequence is not None:
+        torch.nn.init.normal_(model.row_consequence.output.weight, std=.05)
     source = mixed_chart()
     intervals = [SourceInterval(source, 0, 1), SourceInterval(source, 1, 3)]
     batch = prepare_batch(intervals, arm, model.temporal.config.receptive_tokens)
@@ -59,9 +64,11 @@ def test_unequal_microbatches_have_same_summed_loss_gradients(arm, device):
             torch.testing.assert_close(parameter.grad, gradient, atol=3e-6, rtol=5e-4)
 
 
-@pytest.mark.parametrize('arm', list(Arm))
-def test_full_suffix_code_length_is_invariant_to_onset_chunking(arm):
-    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2)).double()
+@pytest.mark.parametrize('arm,consequence', [(arm, 'none') for arm in Arm] + [(Arm.R1, 'frontier')])
+def test_full_suffix_code_length_is_invariant_to_onset_chunking(arm, consequence):
+    model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2, row_consequence=consequence)).double()
+    if model.row_consequence is not None:
+        torch.nn.init.normal_(model.row_consequence.output.weight, std=.05)
     source = mixed_chart()
     whole = suffix_likelihood(model, source, chunk_onsets=128, candidate_budget=3)
     chunks = suffix_likelihood(model, source, chunk_onsets=1, candidate_budget=2)

@@ -120,6 +120,44 @@ offsets, future gap descriptors and multiscale counts, independent of training
 window endpoints. Report how 512 physical rows translate into seconds across
 density strata before interpreting this as musical or phrase-scale context.
 
+### R1 candidate action consequences
+
+`model.row_consequence` selects `none`, `actions` or `frontier`; the latter two
+are R1-only. Both append a width-32 residual energy for each complete candidate
+row, with 26,912 parameters at hidden 128. A zero output layer preserves the
+existing conditional distribution when the original weights are copied.
+`actions` supplies candidate-action one-hots. `frontier` additionally supplies
+the exact post-action occupied flag and seven per-lane time bases:
+
+- Current head since the preceding same-lane head and release.
+- Current release's LN age.
+- Post-action head, release and open-LN clocks, passively advanced to the next
+  strictly future required onset H.
+- H minus the earliest possible release of a post-action occupied lane: its
+  supplied seed endpoint if known, otherwise the next R candidate.
+
+The shared timing block contains next-R and next-H gaps and the next-R onset
+role. Missing or inapplicable clocks use the existing unavailable encoding.
+All timestamp differences are computed in float64 before float32 conversion.
+The future views describe the candidate's immediate state; intervening actions
+remain unknown. A possible release is not a committed endpoint. These features
+use only exact prefix facts, candidate actions and supplied R/H.
+
+[`consequence.py`](../../src/pulsefield_model/research/bounded_typed_continuation/consequence.py)
+factorizes the first affine into four relative-lane projections, a timing
+projection and the encoded hand context. Sixteen lane/action descriptors are
+projected once and gathered for 256 complete candidates. GELU and a shared scalar
+projection combine their effects; averaging the two canonical hand views keeps
+mirror equivariance. This equals the dense concatenated-feature affine while
+avoiding its large candidate-feature tensor. The residual joins the common
+decision scorer before the unchanged exact support mask, so teacher likelihood,
+native sampling and raw-history recovery consume the same energy.
+
+The optional readout supports matched comparisons against continued `none`
+learning and the equally sized `actions` branch. Equal parameter count does not
+imply equal effective input capacity: the action-only control zeros all exact
+consequence and timing fields. Its generation-quality benefit remains untested.
+
 ## Object endpoint probability
 
 The object probability is the head-group probability times a joint
@@ -582,8 +620,9 @@ are required together and cannot be combined with `resume_from`. The parent must
 have completed its plan with a finalized runtime ledger and no discarded updates.
 The new plan must preserve every source pin, sampling setting, prior milestone
 and old draw, then append further draws. Existing plans and parent outputs are
-never edited. Scientific settings may change only the endpoint-availability mode;
-the parent must use `none`. Ordinary resume retains exact source/config identity.
+never edited. Scientific settings may only add an endpoint-availability or R1
+row-consequence residual to an original model with both modes set to `none`.
+Ordinary resume retains exact source/config identity.
 
 Fork initialization copies all existing weights, AdamW moments/steps and RNG,
 retains cumulative exposure/coverage/metrics, and charges the parent's entire

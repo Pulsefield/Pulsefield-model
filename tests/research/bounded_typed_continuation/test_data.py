@@ -92,13 +92,16 @@ def test_batched_bounded_source_likelihood_has_finite_gradients_and_actual_onset
     assert model.temporal.input.weight.grad.norm() > 0 and model.joint.unary.weight.grad.norm() > 0
 
 
-def test_crop_matches_full_bos_scoring_with_an_ancient_held_plan():
+@pytest.mark.parametrize('arm,consequence', [(Arm.O1, 'none'), (Arm.R1, 'frontier')])
+def test_crop_matches_full_bos_scoring_with_an_ancient_held_plan(arm, consequence):
     actions = [(2, 0, 0, 0)] + [(0, 1, 0, 0)] * 50 + [(3, 0, 0, 0), (1, 0, 0, 0)]
     source = chart(actions)
-    model = BoundedModel(ModelConfig(Arm.O1, hidden=8, levels=3, coupling_rank=2)).double()
+    model = BoundedModel(ModelConfig(arm, hidden=8, levels=3, coupling_rank=2, row_consequence=consequence)).double()
+    if model.row_consequence is not None:
+        torch.nn.init.normal_(model.row_consequence.output.weight, std=.05)
     item = SourceInterval(source, 32, 8)
-    cropped = prepare_batch([item], Arm.O1, model.temporal.config.receptive_tokens)
-    complete = prepare_batch([item], Arm.O1, 100)
+    cropped = prepare_batch([item], arm, model.temporal.config.receptive_tokens)
+    complete = prepare_batch([item], arm, 100)
     assert cropped.truncated[0] and not complete.truncated[0]
     assert cropped.states[0].replay.open_ln_start_ms[0] == 0.
     assert cropped.states[0].known_ends[0] == 51
