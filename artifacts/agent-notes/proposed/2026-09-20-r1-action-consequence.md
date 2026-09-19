@@ -575,3 +575,50 @@ can coexist with such localized exact-action concerns.
 Commit this seal before reading the private map. Next aggregate the declared LN
 retention comparison and scoped tradeoffs, preserving uncertainties and duplicate
 risk provenance. No overall quality or successful primary result is claimed.
+
+
+## Revealed semantic result and decision
+
+The seal is committed at0e64e25c93a66b62e08266ab144b133f7c00210e before opening
+private map SHA
+`6563f853ba9291cb6b15bff7c991d6cf7dd14301570820f05c62de1cdef81d68`.
+All mapped generated-file digests verify. Revealed semantic result SHA:
+`e4ec43256cacd6a6e02f5a4c54acbd262a4ddff09b4f8e7f3e37ca68312fb652`.
+It preserves all93 individual readings and reports risk01/risk03 as duplicate.
+
+On12 LN cores, none/actions each have8 prominent,2 supporting and2 absent
+judgments. Frontier has8 prominent,3 supporting and1 absent. Every one of the
+8 prominent-none cores retains independent LN organization in frontier; ln-12
+changes to supporting, while ln-18 changes from absent to prominent. This passes
+the declared semantic presence-retention guard without implying equal salience.
+
+Frontier has localized concern judgments on ln-21 and ln-24 where the controls
+remain burden-unresolved. The latter contains five consecutive37/38ms same-lane
+release/head restarts, each with the other three lanes held. Frontier improves
+the ordinary09 middle scope relative to controls' crowded restart chain and37ms
+head repetition, but every model remains concerning in ordinary09 late. LN25
+is locally plausible for none and unresolved for both residuals. These descriptive
+scope comparisons do not estimate population quality or human preference.
+
+All four long-late scopes are locally plausible, with different styles. None
+retains prominent LN organization in long15/19/27; actions in long27; frontier
+in long23/27. Other scopes are supporting or absent. The action-only branch can
+change long-run style despite nearly identical teacher loss and parameter norm,
+so small local probability changes can produce substantial free-running outcome
+changes; the cause is not uniquely assigned to a model-memory failure.
+
+The two distinct risk contexts show a tradeoff. At source21/seed17, none/actions
+restart lane3 after12ms; frontier avoids it but has a24ms unaccompanied restart
+elsewhere in that core. At source20/seed23, frontier restarts lane2 after3ms under
+continuing1/3 as0 releases, while controls avoid it and retain independent LN
+organization. Unlike the original4M/seed17 history, this new failure begins with
+existing0/3 holds before the1/2 start133271. Similar timing can fail through a
+different generated history; the old fixed-history probe is not enough.
+
+Decision: REFINE. The primary quantitative gate fails and no clean generation-
+quality advantage is established. Numeric and semantic retention guards pass,
+but localized burden, whole-chart style stability and2–6-star control remain
+unresolved. No final model adoption or accepted-Card SUPPORTED result follows.
+The next design must separate learning/optimization stability, finite generated-
+history feedback and insufficient externally specified chart intent. MoreLN,
+less LN, lower teacher NLL or mechanical completion alone cannot decide quality.
