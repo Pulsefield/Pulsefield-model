@@ -144,3 +144,45 @@ success nor failure settles requested2–6-star control or the full Pulsefield t
 Keep the Note proposed. Record implementation, execution and evaluation evidence
 as append-only results; any changed protected field increments the Card revision.
 Human acceptance of an exact revision remains separate from autonomous execution.
+
+## Implementation and execution freeze
+
+Clean intervention source: `a64ac0a0ed5b1ec6b7af5ab3b571cd122b30a5c4`, based on
+cefe3de above. The diff implements the declared optional residual, raw seed
+projection/recovery, explicit fork migration, packaged configs, focused tests and
+its curated contract. No objective, sampler, support, labels or optimizer setting
+changes. The worktree is clean; the original dirty user worktree is untouched.
+
+Selected local evidence covers130 distinct tests plus22 packaging subtests:
+`test_fork.py` and `test_generate_run.py` initially27 pass; the final affected
+seed/generation-run/train/data/Hydra/package owners65 pass plus22 subtests;
+`test_generation.py` and `test_model.py`57 pass. Counts overlap across commands.
+The new coverage includes CPU/MPS mirror, gradients, teacher/native parity,
+expired seed recovery, forbidden future suffix ends, bounded nonseed history,
+raw-seed/external-condition agreement, old default snapshot identity and exact
+fork/resume Adam/RNG behavior. Hydra `--cfg job model.arm=R1
+model.seed_context=observed` exposes the setting; typed projection and real runner
+consumption are tested separately. `git diff --check` passes.
+
+A real-checkpoint preflight takes38.624581seconds without an optimizer update.
+All existing weights, Adam states, likelihood factors and base-parameter gradients
+match bit-exactly for none/zero/observed on two identical actual TRAIN draws.
+Both added output projections receive nonzero gradients. Full original none
+native trajectories for source20/seed17 and source26/seed23 reproduce all9,035
+chosen actions and log probabilities, rows and final RNG exactly. Old snapshots
+restore, including the17.5-minute case. This is engineering parity, not a new
+quality outcome. Preflight report SHA:
+`723254b598ddde2ed0b27491bf32be31128df208b051773f37d2c8e7a4a8b0a1`.
+
+The new plan preserves23,820 parent draws and extends to26,462. Plan SHA:
+`3a8ebdc688ba1a94084f2826af525615ead940eb04a5fef99ebc117bcf666128`.
+The artifact-owned execution-plan binds source, driver, configs, parent, plan and
+preflight digests. The driver enforces a shared5,400-second added-training ceiling
+with a timed exception whose runtime ledger records interrupted work. Existing
+per-run memory/swap/output bounds stay unchanged. Execute each of none/zero/observed
+at4625k, then each at5000k, using `uv run --offline --python3.10 --extra mps python
+artifacts/bounded-typed-continuation/persistent-seed-20260920-v1/run_training.py
+<mode> <milestone>` (the Python selector is the two arguments `--python 3.10`).
+All directories are fresh and each final continuation verifies every initial
+mode's durable boundary. Training and final quality evaluation remain pending.
+The Note/Card remain proposed revision1, accepted revision none.
