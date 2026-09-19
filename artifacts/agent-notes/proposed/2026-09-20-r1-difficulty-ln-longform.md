@@ -175,3 +175,46 @@ automatically retried or its output replaced. Semantics and any residual failure
 remain in this owner. All previous checkpoints, outputs and judgments remain
 unchanged. Source-only selection and new diagnostics do not accept a Note or
 complete the overall goal.
+
+## Source-only selection and execution handoff
+
+The frozen selector completes in57.051seconds, within its five-minute bound.
+It finds1032 eligible 2–6-star charts in368 remaining VAL groups and selects
+exactly28 distinct groups, seven per band, disjoint from all48 prior groups.
+Every LN stratum has positive source support. No checkpoint was scored and no
+generation was performed during selection.
+
+The longest remaining selections span270.775,435.000,595.102 and852.187seconds
+after the seed in ascending source bands. The5–6-star long-LN/tap selection is
+even longer,1050.064seconds; it is already excluded when selecting the subsequent
+longest-remaining stratum. Thus complete generation covers nearly17.5minutes
+without changing the source-only selection rule. Numerical source ratings and
+these physical durations do not establish output difficulty or long-form quality.
+
+All artifacts are in the owner above:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `prepare_conditions.py` | `29cfbf839a4495090afec2f2cd0ac0fb4e983e1e8fd3a1c472ea2e73bd8589dc` |
+| `screen-conditions.json` | `7c757dbe90fcdaecb667af38e6b17b98a192595542d6aa62fcb742ea9e543bc7` |
+| `evaluate.py` | `4867bbda0c1c37f96762d671202f8edc787c2486bed4938d7cbb34fb21a4695c` |
+| `evaluation-plan.json` | `14575b73295f1fba371c014d0c7f939239802a4448d07f85e9bf72805a0837e1` |
+| `preflight.json` | `eb72d49c8d0c2324b2ab40187e705d0c1f684989eceb0c5105b18da03873daed` |
+
+Source-only preparation verifies raw source, admitted cache and portable condition
+identities. An independent preflight checks clean execution source, group/band
+counts, exclusions and phase bounds. Both checkpoint hashes match their completed
+parents. A synthetic action sequence verifies independent-start counts,
+short-LN/tap adjacency, unique taps inside long holds, integrated occupied-lane
+time and exact pre-row occupancy in the new descriptive locator. These are
+instrumentation checks, not model-quality evidence. The initially written
+pre-row occupancy locator was corrected before evaluation-plan freezing to
+capture all lanes before any same-row action; no model output was read.
+
+The evaluation runner uses the packaged generator and existing suffix likelihood
+without model changes. It first evaluates172, then171, retaining all outputs,
+per-chart diagnostics, full10-second timelines and continuous resource records.
+The readout is published only on complete success; a failure records its stage
+and leaves partial artifacts. Primary/comparator identities, the28-group cohort,
+the168 outputs and all Card thresholds are unchanged. The next action is the
+exact frozen evaluation command; semantic results remain pending.
