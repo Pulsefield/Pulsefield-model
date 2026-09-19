@@ -246,3 +246,52 @@ evaluation. It cannot change models, random draws, selected scopes or the later
 numerical decision. Output-selected risk scopes remain pending until the complete
 readout makes their deterministic extrema available. New cases start unreviewed;
 rendering itself is not a semantic judgment.
+
+## Partial semantic evidence and rendering correction
+
+Fourteen primary judgments are saved in `judgments-v1`: all nine phase/seed
+combinations for ordinary source0, the three seed17 phases for ordinary source3,
+and the source-selected LN cores12 and20. This accounts for112 generated and16
+source pages actually inspected. Other rendered cases remain unreviewed.
+`review-progress-01.json` freezes these individual judgment digests.
+
+Source0's three outputs rate2.213074,2.493926 and2.522272 stars. All nine inspected
+cores remain locally plausible, with distributed moving taps, changing accents
+and isolated/sequential short-held articulation. No independent multi-LN control
+is claimed in those cores. LN prevalence varies across seeds/phases, but the
+inspected tap organization does not degenerate into confined-lane repetition.
+Source3 seed17 rates3.047723 stars; its three phases also retain plausible moving
+tap organization and bounded held punctuation. These are two sources, not a
+cross-band population conclusion.
+
+The2.622067-star generated LN core12 is substantially simpler than its source.
+Repeated staggered-start/shared-release pairs give weak supporting coordination
+at medium confidence; they do not reproduce the source's sustained independent
+release organization. In contrast, the4.249286-star generated core20 has clear
+prominent independent LN control: a column1 anchor56221-57589 accompanies
+changing0/2/3 holds with distinct endpoints, then taps2 return before the anchor
+closes. Later a column3 anchor69246-70273 supports a tap-led contrast before
+layered holds resume. This preserves short holds, sustained roles and tap/LN
+interaction rather than treating LN count as the semantic target. Both cores
+are locally plausible; the first remains a weaker-form judgment, not proof of
+equivalent source style.
+
+Rendering source15's late scope exposed a numeric pagination edge: a20-second
+floating interval subtracts to slightly more than20000, but its reconstructed
+ninth-page start equals its end. The unchanged canonical renderer then divides
+by a zero page span. Evaluation and model outputs are unaffected. The caller
+now omits only pages whose reconstructed start is greater than or equal to the
+requested end; it changes no times, positive-width page, note, scope or glyph.
+The original driver is retained as `render_preselected_before_empty_page_fix.py`.
+The corrected driver SHA is
+`7ed6390986a6c79a2ef26c3a11d8d6ea4e8c074d09ecabebd9682b30d24a16fb`.
+The partial failed directory is preserved, and the same late scope renders
+successfully in the fresh `source15-seed17-late-recovery1` directory. No judgment
+had been made on that scope and no scientific Card field changed.
+
+The evaluator continues unchanged. At844.899seconds, primary172 had completed
+81 outputs, including all three1050.064-second continuations. The comparator
+and final quantitative readout remain pending. Several5–6-star source conditions
+produce4-star outputs; source-band coverage must therefore remain separate from
+the required generated-band coverage. Do not infer a numerical or overall pass
+from the current partial semantic positives.
