@@ -80,3 +80,49 @@ existing test resource envelope. No trained quality candidate is selected here.
 Publish only the scoped implementation and verified runtime contract after the
 focused owners pass. Final model quality and difficulty/LN results remain owned
 by their learning/evaluation experiments.
+
+## Implementation and verification result
+
+The scoped optimization is committed at clean product revision
+`9894761e8608ced818e94578a95649f5334b9d7b`, a descendant of the baseline above.
+`support.py` owns the batch Boolean implementation. Both the central model scorer
+and the native generator's deterministic-choice precheck use it; scalar
+`Schedule.row_possible`/`row_support` remain unchanged as the independent oracle.
+Model parameters, configs, checkpoint formats, candidate ordering and RNG calls
+are unchanged. No generated quality result is asserted by this commit.
+
+The new owner tests exhaust7696 typed-state combinations across occupancy, every
+pending known endpoint and all current/future H-role combinations on a small
+schedule, plus R0 and sampled generated prefixes, skips and complete schedules.
+CPU/MPS likelihoods and all gradients agree with the scalar path. Native
+R1 none/actions/frontier modes preserve complete decision records, probabilities,
+restored raw histories and final CPU RNG state against scalar scoring and scalar
+deterministic prechecks. Initial16 owner tests pass in23.05seconds. The selected
+model/data/fork/training/consequence/generation owners pass120 tests in89.07seconds.
+After routing the native precheck through batching, the invalidated support/
+generation/generation-run selection passes71 tests in39.90seconds. Counts overlap;
+these are selected local checks, not a full-repository suite. All commands use
+`uv run --offline --python 3.10 --extra mps --group dev pytest -q`.
+
+A real CPU1 AdamW comparison uses eight identical pinned TRAIN draws,1536 onset
+exposures and two updates from identical4M weights, moments and RNG. Model tensors,
+optimizer tensors/steps, RNG, gradient norms and all non-timing training metrics
+are bit-identical after both updates. Scalar update times are2.156403/1.452965s;
+batched times are1.145490/.846089s, a1.812x summed-time ratio. Observed footprint
+maxima are762365440/810206768bytes and swap growth is zero. The second path retains
+the first path's copied result state for equality checks, so that footprint
+difference is not a causal memory-cost estimate. A separate CPU1 training process
+also overlaps the probe; production throughput remains unmeasured.
+
+The new worktree's artifact owner is
+`artifacts/bounded-typed-continuation/support-batch-20260920-v1/`.
+`cpu-update-parity-v1/report.json` SHA:
+`68246aacb3c020b7e84d197021b2b233f6f177772bba11da09d375b0f9376956`.
+No probe-trained checkpoint is retained or selected. The final outgoing source,
+all affected callers, untracked owners, Note exclusion and `git diff --check`
+were inspected before committing. Product and notes commits remain local.
+
+The action-consequence learning comparison still runs on4a98c02 in its original
+worktree. Using9894761 for its evaluation would be a separately recorded common,
+behavior-preserving runtime transition, with an unchanged4a98c02 training-source
+pin. Do not conflate source provenance or reuse an old runtime's recovery segment.
