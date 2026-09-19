@@ -214,3 +214,52 @@ the action-only control, collapsed LN participation, or shifted head-to-release
 failure is negative or ambiguous for this mechanism. No `SUPPORTED` recommendation
 is available without accepted-Card evidence. Any result is recorded as exploratory
 with a REFINE decision and its precise limits.
+
+## Implementation and execution freeze
+
+The intervention is committed at clean product revision
+`4a98c0230549baa19ad860c3a13caf301e0f1f71`. The baseline-to-intervention diff
+contains only the declared model/config/fork changes, their tests and curated
+runtime documentation. It does not change data sampling, support, timing inputs,
+optimizer settings, inference temperature or parent weights. No Agent Note is
+tracked in product history. The original dirty product worktree is untouched.
+
+Selected local checks pass on CPU and available MPS. Initial consequence tests:
+10 passed in3.62seconds. Fork/generation/Hydra/training checks:63 passed in42.02
+seconds. After adding the current R1 crop, chunking and gradient checks, the
+consequence/data/model/training/generation-run/package selection passes76 tests
+and22 package-import subtests in47.19seconds. These counts overlap and must not
+be summed. The final source change after these checks is docstring spacing only.
+Commands use `uv run --offline --python 3.10 --extra mps --group dev pytest -q`
+with the named owning files under `tests/research/bounded_typed_continuation/`
+and `tests/test_package_layout.py`. The outgoing substantive diff and all direct
+callers were inspected; `git diff --check` is clean. This is selected evidence,
+not a full-repository test claim.
+
+The real CPU1 probe covers eight identical extension draws and two updates per
+mode. Baseline has2281104 parameters; both residual modes have2308016.
+
+| Mode | Summed update seconds | Maximum footprint bytes | Maximum RSS bytes | Swap growth |
+| --- | --- | --- | --- | --- |
+| none | 3.370936 | 720471504 | 784826368 | 0 |
+| actions | 4.167996 | 956991144 | 1021296640 | 0 |
+| frontier | 4.169554 | 976668304 | 1040990208 | 0 |
+
+The frontier update-time ratio is1.237, below the declared4x feasibility bound.
+This tiny probe establishes engineering feasibility, not a stable throughput
+estimate or generation quality. The first `none-v1` probe overlapped pytest; it
+is preserved and excluded from this comparison. The cited `none-v2`, `actions-v1`
+and `frontier-v1` probes ran serially after the test process terminated. No
+candidate checkpoint is retained from these engineering updates.
+
+The shared extended plan has23820 draws, preserving all21179 parent draws.
+Its SHA is `767138e58c5288593be284b29a9333544e048468efb8d3f3aae2e42ece4c0fc6`.
+The per-mode initial configs and exact six serial commands are pinned by
+`execution-plan.json`, SHA
+`0036fd35d1a15b09b3e719588dc448b9413663a38532846ed6232fdb5b74033d`.
+Each command runs the artifact-owned `run_training.py` with one mode and
+`4125k` or `4500k`. The driver verifies a clean source, its own digest, the plan
+and config digests, and every initial-mode durable boundary before final
+continuation. Fresh segment directories and inherited resource checks apply.
+The implementation is ready for the explicitly authorized exploratory run;
+training and generated-quality conclusions remain pending.
