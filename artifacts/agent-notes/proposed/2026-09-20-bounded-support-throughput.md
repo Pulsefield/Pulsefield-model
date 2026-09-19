@@ -126,3 +126,20 @@ The action-consequence learning comparison still runs on4a98c02 in its original
 worktree. Using9894761 for its evaluation would be a separately recorded common,
 behavior-preserving runtime transition, with an unchanged4a98c02 training-source
 pin. Do not conflate source provenance or reuse an old runtime's recovery segment.
+
+## Real native compatibility
+
+On the clean9894761 runtime, the original4M checkpoint regenerates two fixed
+prior outputs: source20/seed17 (LN-rich context containing the3ms release/head
+case) and source26/seed23 (1050.064-second continuation). Both complete exports,
+row journals and decision journals have exactly the same byte digests as the
+frozen original outputs. Both reparse successfully. The probe uses a90-second
+per-generation and120-second per-case bound, with the original conditions,
+seed, presentation metadata and CPU1 native sampling. No resampling or quality
+selection occurs. Report `native-parity-v1/report.json` SHA:
+`71495ffdd6ccca4775f08a9c95899c86cee5fe30802af12b8dc3d49876bd0521`.
+
+This is compatibility evidence, not a new quality result or an isolated speed
+benchmark. The action-consequence Card revision3 records adoption of this common
+evaluation runtime while leaving its ongoing training source unchanged. This
+operational use does not change either Note's proposed lifecycle status.

@@ -7,7 +7,7 @@ Created: 2026-09-20
 Updated: 2026-09-20
 Product revision: ca28511cd69ccd0566bdb42be52e4651fb236369
 Scope: R1 candidate-row residual, matched continuation controls, native burden and LN retention on the existing 28-group development cohort
-Related: 2026-09-20-r1-difficulty-ln-longform; 2026-09-19-bounded-typed-r1-burden-mechanism; 2026-09-19-r1-additional-exposure
+Related: 2026-09-20-r1-difficulty-ln-longform; 2026-09-19-bounded-typed-r1-burden-mechanism; 2026-09-19-r1-additional-exposure; 2026-09-20-bounded-support-throughput
 
 ## Question and new diagnostic evidence
 
@@ -51,7 +51,7 @@ All new diagnostic artifacts belong to
 
 ## Experiment Card: r1-action-consequence-v1
 
-Card ID: r1-action-consequence-v1. Revision: 2. Accepted revision: none.
+Card ID: r1-action-consequence-v1. Revision: 3. Accepted revision: none.
 The user authorizes autonomous bounded implementation, training, evaluation and
 meaningful local commits toward the active goal. This is an exploratory proposed
 Card; execution does not accept the Note or adopt a final model.
@@ -162,6 +162,13 @@ experiment. Training has the inherited14400-second cumulative per-mode bound
 (including parent charge),6GiB footprint/RSS,128MiB swap-growth bound, and512MiB
 per-segment outputs. Do not overwrite artifacts; only validated durable resume
 is allowed. No network or external compute is needed.
+
+Training stays pinned to `4a98c0230549baa19ad860c3a13caf301e0f1f71`.
+Evaluate every mode on the common clean runtime
+`9894761e8608ced818e94578a95649f5334b9d7b`; its only behavioral implementation
+change batches the same exact support predicate. The equality evidence and
+runtime transition are recorded below. It introduces no new input or support
+restriction and changes no trained checkpoint.
 
 Evaluate final modes on exactly the existing28 distinct groups, generation seeds
 17/19/23, full-suffix NLL and native exports:252 outputs and84 suffix scores.
@@ -385,3 +392,43 @@ The original cases reinforce why the40ms counter is a diagnostic proxy rather
 than a universal quality boundary. No hard gap limit or source-label change is
 introduced. The complete episode, LN articulation, concurrent occupancy and
 surrounding TAP organization remain necessary for semantic judgment.
+
+## Common evaluation runtime: Card revision3
+
+All three learning trajectories remain on the immutable4a98c02 implementation,
+same checkpoints, draws and configurations. The scalar exact-support enumeration
+was independently identified as a large host-side cost. Its batched equivalent
+is committed and tested at9894761; implementation and evidence belong to
+2026-09-20-bounded-support-throughput.
+
+Besides exhaustive Boolean and CPU/MPS likelihood/gradient/native tests, two
+real CPU Adam updates preserve every parameter, optimizer moment/step and RNG
+bit-exactly. A real generation check reproduces source20/seed17 and
+source26/seed23 from the original4M checkpoint on9894761. Complete exported osu!,
+row journals and decision journals are byte-identical to their frozen prior
+counterparts. The second case covers the1050.064-second continuation. Thus no
+quality gain is inferred from these repeats; they establish runtime compatibility.
+Native compatibility report SHA:
+`71495ffdd6ccca4775f08a9c95899c86cee5fe30802af12b8dc3d49876bd0521`.
+
+Revision3 changes only the common evaluation runtime source. The evaluator now
+records training-source4a98c02 and evaluation-source9894761 separately. All primary
+metrics, thresholds, native sampling, model features, exposure pairing, selected
+groups/seeds and semantic scopes remain unchanged. The original evaluator and
+probe drivers are preserved as `evaluate-before-batched-runtime.py` and
+`probe-before-batched-runtime.py`. AST equality confirms the primary burden and
+comparison functions are unchanged. No newly trained candidate has yet been
+evaluated. This declared behavior-neutral transition is authorized by the
+user's broad optimization request; the Card remains proposed.
+
+Run evaluation/probing/rendering from the clean `codex/bounded-support-batch`
+worktree, invoking the drivers in the original action-consequence artifact owner.
+Do not move or modify the active training worktree or reinterpret an old-source
+recovery segment. `runtime-transition.json` SHA:
+`f2c7b3be3f1350864a0839c4ffa6ea9273a06b1c847e27ce03d74f953eee8056`.
+Current evaluator/probe/renderer SHA values are
+`4420a84e658238fb6f1c09b89f16b0f0489e083c7187a58f3273eeaf516fe1c4`,
+`6c05a51b84c5fadb447a202c5d9dd6b5ddfcf9ad0299f08290b98ce4be4e1ba6`
+and `5094f858bc21a826c65d510b4c1e22c0c68ff0dbec9c6cbf9876c0c329e61952`.
+The final evaluation-plan still awaits the frontier4.5M checkpoint; no evaluation
+or masked semantic judgment has started.
