@@ -218,3 +218,31 @@ The readout is published only on complete success; a failure records its stage
 and leaves partial artifacts. Primary/comparator identities, the28-group cohort,
 the168 outputs and all Card thresholds are unchanged. The next action is the
 exact frozen evaluation command; semantic results remain pending.
+
+## Execution and prospective review preparation
+
+The frozen evaluation was launched from the clean product source above using
+the declared command. Execution session54323 initially owned uv PID46922 and
+Python PID46928. At132.585seconds the primary172 model had completed24 outputs
+through ordinary source index7. Those processes were observed alive; this is a
+progress observation, not final completion or a maximum resource measurement.
+`evaluation.log`, per-output durable results and `evaluation-v1/resources.jsonl`
+own the live evidence. Verify the existing process/session before deciding that
+an observation timeout means termination; do not launch a second evaluator.
+
+The behavior-neutral `render_preselected.py` has SHA
+`64c769168c615eec3112ed760281bdbb60140b61726d3cd3b5104b0ab1572c1e`.
+It renders only the Card's first ordinary sources, longest-remaining sources
+and twelve LN-form sources, using completed primary output receipts. Ordinary
+sources use all three seeds and phases; longest sources use seed17 and phases;
+LN-form sources use seed17 at the frozen source-selected core and include a
+source counterpart. It verifies the frozen condition, canonical renderer,
+Foundation and chart-reader hashes. Full original pages, exact action packets
+and derived reading montages retain source times and complete LN endpoints.
+Each new case owns a fresh directory; rerendering over an existing case fails.
+
+Rendering these preselected completed outputs may overlap the unchanged
+evaluation. It cannot change models, random draws, selected scopes or the later
+numerical decision. Output-selected risk scopes remain pending until the complete
+readout makes their deterministic extrema available. New cases start unreviewed;
+rendering itself is not a semantic judgment.
