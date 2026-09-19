@@ -26,9 +26,11 @@ runner. A 16-chart learning check and paired R1 corpus trajectories through four
 million source-onset exposures have run. Additional R1 training improves held-out
 likelihood and the inspected local burden failures while retaining some independent
 LN organization. A matched continuation to 4.5M tests candidate action-consequence
-features but does not meet its native-generation improvement criterion. Long-form
-quality, difficulty consistency and the complete range of LN/tap expression
-remain unresolved.
+features but does not meet its native-generation improvement criterion. A matched
+continuation to 5M adds persistent original-seed conditioning: it modestly reduces
+type-proportion error but misses its declared improvement threshold and retains
+local execution concerns. Long-form quality, difficulty consistency and the
+complete range of LN/tap expression remain unresolved.
 
 ## Conditions and prediction tasks
 
@@ -1077,3 +1079,107 @@ independent audit SHA:
 `abffcaa5ba30d266fb865b23ec225d98d289023e8814e7947eb881aa8a8bbc62`.
 This selected-cohort diagnostic is exploratory evidence without an accepted
 research Card.
+
+### Matched persistent original-seed comparison at 5M
+
+Persistent access to the complete supplied seed changes native type balance,
+but does not establish stable playable generation. The original 4.5M R1 model
+continues for another 500,000 source-onset exposures under three conditions:
+the unchanged model (`none`), an additional residual receiving a zero seed vector
+(`zero`), and the same residual receiving the learned original-seed representation
+(`observed`). The mechanism is defined under
+[persistent original-seed conditioning](#r1-persistent-original-seed-conditioning).
+The residual adds 49,280 parameters to the 2,281,104-parameter model. Its initial
+output is exactly zero; copied parameters, Adam state and initial likelihoods
+are preserved. Equal parameter count does not imply equal effective capacity.
+
+All three arms receive the same 661 additional updates, draw plan and optimizer
+settings. Final cumulative coverage is 3,459,305 unique onsets across 9,533 charts
+and 3,169 groups. Only the final 5M checkpoint is evaluated for quality. The
+comparison generates all 28 reused development conditions with three seeds per
+arm at temperature one, and scores each complete source suffix. The supplied
+seed, R/H, support, objective and sampling rule are unchanged; no source suffix
+type proportions or style labels enter the model.
+
+For each complete suffix, divide required onsets into four consecutive bins of
+nearly equal onset count. Compute absolute generated-versus-source LN-head-fraction
+error in each bin, then average bins and seeds within each group and the 28 groups
+equally. These bins are not equal-duration time windows. Source proportions are a
+diagnostic reference, not the uniquely correct continuation of a condition.
+Generated summary means use the same group/seed weighting. Source-suffix NLL is
+averaged over groups after normalization by each suffix's required-onset count.
+The interval numerator counts individual heads; its denominator is the number
+of required onsets, which can each contain several heads.
+
+| Mode | Four-bin proportion MAE | Mean NLL per required onset | Mean generated LN-head fraction | Short-interval union per 1,000 required onsets |
+| --- | ---: | ---: | ---: | ---: |
+| none | 0.156525 | 2.151510 | 0.339605 | 2.990635 |
+| zero | 0.154749 | 2.151372 | 0.321759 | 2.876967 |
+| observed | 0.133155 | 2.156257 | 0.301196 | 2.954803 |
+
+Observed reduces proportion error by 14.93% relative to none and 13.95% relative
+to zero. Both miss the declared 20% threshold. The observed-minus-control paired
+whole-group 90% bootstrap intervals are [-0.058117, 0.005821] and
+[-0.038156, -0.004962], respectively; the comparison against none also fails the
+requirement that the interval lie below zero. Both likelihood and short-interval
+regression guards pass. All 252 outputs pass mechanical verification and exact
+osu! export/reparse; all 84 suffix scores are finite. The minimum release-to-head
+interval remains 12 ms in every arm. Raw release/head counts are 528, 518 and 525;
+the corresponding head/head counts are 31, 29 and 15. A below-40-ms event is a
+screening observation, not a universal playability rejection rule.
+
+Beatmap Lens V2 and confirmed human examples calibrate 31 anonymous scoped
+comparisons: 12 LN cores, 12 ordinary early/middle/late scopes, four long-chart
+late scopes and three branch-specific worst-interval contexts. All 717 canonical
+time panels are inspected through complete montages, with exact action records
+and selected full-resolution risk pages. Judgments are sealed before model
+identities are revealed. Two risk cases select the same generated context, so
+there are 30 unique contexts and 90 unique variant/context judgments. These are
+agent judgments, not new human gold. Numerical outcomes were visible before
+masking, which permits partial recognition of variants.
+
+Observed retains independent LN presence in all eight cores where a concurrent
+control has prominent coordination, passing the declared presence-only guard.
+Two of those cores weaken to supporting organization. Another core with a
+supporting none-arm episode loses that episode entirely. In the long-chart late
+scopes, none's two prominent LN bodies become supporting in observed; the other
+two scopes have no independent LN organization in any arm. Local plausibility
+therefore does not establish preservation of the full arrangement.
+
+Specific execution concerns remain. In one ordinary late scope, observed creates
+a cluster of 37–38 ms release/head repetitions under other held lanes, while
+both controls have one isolated 38 ms event. In the selected high-risk condition,
+observed holds three lanes across a required onset and forces a 24 ms restart on
+the only free lane; it later restarts another lane after 12 ms. The zero control
+has a forced 12 ms restart under three holds and further 12 ms repetitions.
+Elsewhere, zero retains one column across 48 consecutive attack rows over
+6.47 seconds. These are distinct failure mechanisms; neither LN proportion nor
+the shortest interval alone measures them. Recognizable LN coordination does not
+excuse the execution burden.
+
+Actual generated star ranges are 1.650–8.030 for none, 1.671–8.105 for zero and
+1.567–7.882 for observed. The experiment therefore does not establish consistent
+2–6-star output. Persistent seed information has a limited signal relative to
+the equal-size zero control, but the primary failure, weakened structure and new
+local concern prevent a generation-quality improvement claim. A short intro may
+also be an inadequate condition for later form. This result does not rule out
+training from scratch or explicit desired structure as different interventions.
+
+All three continuations together take 1,696 seconds and evaluation takes
+2,341 seconds on one M5 CPU thread with PyTorch 2.11. Peak training RSS is
+1.10 GB and evaluation RSS is 615 MB; swap growth is zero. The experiment owner,
+including checkpoints and inspection panels, occupies about 639 MiB. This
+establishes local feasibility for this parameter scale and procedure, not an
+isolated throughput benchmark. One training seed, one continuation boundary,
+reused development groups and fixed-seed semantic scopes limit generalization;
+TEST remains unread.
+
+Evidence owner: `artifacts/bounded-typed-continuation/persistent-seed-20260920-v1/`.
+Runtime revision: `a64ac0a0ed5b1ec6b7af5ab3b571cd122b30a5c4`.
+Complete numerical readout SHA:
+`b5b0188095158e0c3356f9cf7b10ef3b96595ad3d478a80568486bdaf8a57d1e`;
+sealed semantic manifest SHA:
+`e4bbcb249cdf3088fbbebd3189cab0731e59e8aa893cccd4319d2c289af84090`;
+revealed semantic readout SHA:
+`7aced070426f434dda5175b5c6e819b4bbd14def1c316db06c2c8112ba2f5eac`.
+This is exploratory evidence without an accepted research Card.
