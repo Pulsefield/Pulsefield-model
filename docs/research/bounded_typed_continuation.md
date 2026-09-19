@@ -62,6 +62,14 @@ cannot be changed to free a lane; an unknown rowwise LN can be released at an
 available candidate. Support excludes any decision that leaves no possible
 way to make at least one lane free strictly before the next required onset.
 
+R0/R1 prediction computes the same mask for a batch of queries in
+[`support.py`](../../src/pulsefield_model/research/bounded_typed_continuation/support.py).
+It evaluates lane legality, fixed seed ends, terminal closure, onset roles and
+future availability with Boolean arrays in the original candidate order.
+`Schedule.row_possible` remains the scalar commit validator and independent
+test oracle. This batching adds no model input, duration limit or sampling rule;
+its temporary lane masks scale as queries × 256 × 4.
+
 At non-onset candidates O1 executes due releases, or creates no event. R1 may
 choose release subsets for unknown LNs while executing fixed seed releases;
 all EMPTY is legal when it leaves future onset feasibility intact. When all

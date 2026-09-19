@@ -19,6 +19,7 @@ from ..oracle_time_continuation.schema import CompleteRow, checked_time
 from ..scoped_style_modeling.dataset import ContractError
 from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule, Timing
 from .features import TimingView, content_features, query_features
+from .support import row_supports
 
 
 @dataclass(frozen=True)
@@ -156,7 +157,7 @@ class Rollout:
             actions = before.forced_row()
         else:
             choices = HEAD_ACTIONS if before.arm == Arm.O1 else ROW_ACTIONS
-            support = before.head_support() if before.arm == Arm.O1 else before.row_support()
+            support = before.head_support() if before.arm == Arm.O1 else row_supports([before])[0]
             legal = [i for i, allowed in enumerate(support) if allowed]
             if not legal:
                 raise ContractError('Current candidate has no feasible continuation')

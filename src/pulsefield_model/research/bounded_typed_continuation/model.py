@@ -20,6 +20,7 @@ from .consequence import RowConsequence
 from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule
 from .features import (AVAILABILITY_DIM, CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
                        EndpointAvailability, TimingView, endpoint_availability, factor_features)
+from .support import row_supports
 from .temporal import FiniteTemporal, TemporalConfig, pointwise
 
 
@@ -220,7 +221,7 @@ class BoundedModel(nn.Module):
     def decision_log_probs(self, hands: Tensor, states: Sequence[Schedule]):
         if hands.shape != (len(states), 2, self.config.hidden) or not states or any(s.arm != self.config.arm for s in states):
             raise ContractError('Decision queries must match the model task and encoded hands')
-        supports = [s.head_support() if s.arm == Arm.O1 else s.row_support() for s in states]
+        supports = [s.head_support() for s in states] if self.config.arm == Arm.O1 else row_supports(states)
         mask = torch.tensor(supports, dtype=torch.bool, device=hands.device)
         if not bool(mask.any(-1).all()):
             raise ContractError('Decision query has no feasible action; O1 non-onsets execute deterministically')
