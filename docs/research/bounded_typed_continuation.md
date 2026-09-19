@@ -987,3 +987,57 @@ sealed semantic manifest SHA:
 revealed semantic readout SHA:
 `e4ec43256cacd6a6e02f5a4c54acbd262a4ddff09b4f8e7f3e37ca68312fb652`.
 This is exploratory evidence without an accepted research Card.
+
+### R1 prefix-state recovery diagnostic
+
+The 4M-to-4.5M change is much larger under native generation than under source
+history. On the same 28 groups, mean conditional LN probability on source-head
+lanes where both TAP and LN are legal increases from 0.262043 to 0.281138;
+the observed positive fraction is 0.266066. Binary Brier score improves from
+0.087358 to 0.086733. Native group/seed-mean LN fraction increases from 0.180448
+to 0.489053. The conditioning and denominators differ, so this contrast does
+not by itself isolate a feedback mechanism.
+
+A frozen-checkpoint diagnostic replaces generated history at the middle of
+eight reused development charts with the corresponding source history. Six
+charts were selected for whole-chart LN excess and two are LN-rich contrasts.
+Three generated prefixes per chart each receive a paired 512-onset continuation
+with fresh, matching initial RNG states. Both paths retain the original timing,
+terminal, weights, support and temperature-one sampler. Only the original seed
+has supplied future endpoints; a source-prefix LN born later retains an unknown
+end until its release. The intervention changes the whole prefix state,
+including learned history, occupancy, clocks and counts.
+
+The primary diagnostic is absolute generated-versus-source LN-head-fraction
+error over the first 128 required onsets, averaging three seeds within each
+chart and eight charts equally. Source-prefix replacement reduces this error
+from 0.350853 to 0.116417, a 66.82% reduction. The paired difference is -0.234436
+with a whole-group 90% bootstrap interval of [-0.441586, -0.059069]. Over the
+final 128-onset bin, errors are 0.467922 and 0.228744. All 48 windows complete;
+an independent audit verifies their action journals, exact states, digests and
+statistics. Execution takes 168 seconds on one M5 CPU thread, with sampled
+footprint 226 MB and no swap growth.
+
+Recovery is heterogeneous. One mostly TAP reference changes from about 96%
+generated LN heads to about 2% in the first bin after source replacement.
+Another TAP-only reference recovers initially, but one replaced-prefix seed
+later reaches 61% LN heads. A mixed chart stays LN-heavy under both prefixes;
+the two LN-rich contrasts do not improve uniformly. The final bin can still
+begin with up to 127 tokens from the initial learned history, and exact global
+facts can persist longer. These observations establish dependence on prefix
+state as a whole, without uniquely identifying learned-memory drift or a
+missing global style condition.
+
+Source-prefix replacement is a diagnostic unavailable during ordinary inference.
+Matching a source type proportion is neither a semantic quality judgment nor
+evidence of playability. Persistent encoding of the original supplied seed,
+explicit desired structure, and optimization changes remain distinct hypotheses;
+the diagnostic does not select a proven remedy.
+
+Evidence owner: `artifacts/bounded-typed-continuation/prefix-recovery-20260920-v1/`.
+Complete report SHA:
+`d7fb165b2c316d0298233fa5379944f6441abce41a22bc2f86923cd714d8f9eb`;
+independent audit SHA:
+`abffcaa5ba30d266fb865b23ec225d98d289023e8814e7947eb881aa8a8bbc62`.
+This selected-cohort diagnostic is exploratory evidence without an accepted
+research Card.
