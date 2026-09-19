@@ -1183,3 +1183,62 @@ sealed semantic manifest SHA:
 revealed semantic readout SHA:
 `7aced070426f434dda5175b5c6e819b4bbd14def1c316db06c2c8112ba2f5eac`.
 This is exploratory evidence without an accepted research Card.
+
+### Native short intervals: inherited state and current choice
+
+The complete 5M population contains both unavoidable current-state clock events
+and avoidable action choices. A read-only diagnostic replays all 252 generated
+charts and the 28 source references against the original R1 conditions. Only
+seed endpoints are known to the schedule. At each required suffix onset, a lane
+is eligible for a head only if it is closed before the row; a lane released on
+that same row remains ineligible.
+
+For a strict threshold $\tau$, an eligible lane is called recovered here when
+both its latest-head and latest-release gaps are at least $\tau$; a missing
+predecessor imposes no restriction. This is a clock predicate, not a calibrated
+gameplay-demand definition. If no eligible lane is recovered, at least one short
+head is unavoidable at that state. If $k$ heads were chosen and $r$ recovered
+lanes are available, retaining that head count needs at least $\max(0,k-r)$ short
+heads. Any observed excess above that bound has an alternative at the same head
+count. The replay explicitly verifies alternative TAP rows with the original
+release decisions through `Schedule.row_possible`.
+
+The following disjoint counts use $\tau=40$ ms. Each generated arm has 84 charts
+and 171,723 required suffix onsets; sources are counted once, with 57,241 onsets.
+
+| Population | Short heads | Heads at states with no recovered lane | Additional minimum from chosen head count | Excess above that minimum |
+| --- | ---: | ---: | ---: | ---: |
+| Source | 6 | 0 | 0 | 6 |
+| none | 558 | 263 | 75 | 220 |
+| zero | 547 | 264 | 86 | 197 |
+| observed | 540 | 258 | 80 | 202 |
+
+About 47–48% of generated short heads occur after the history has already removed
+every recovered option. This category counts all chosen heads at those states;
+the corresponding required-onset counts are 254/257/238. A further 13–16% are
+required to retain the chosen head
+count, and 36–39% exceed that cardinality minimum. The source's six events are
+31 ms release/head transitions on four onsets, all with recovered alternatives.
+Their presence in source charts reinforces that this predicate is a diagnostic,
+not a universal rejection rule. At 20 ms, source count is zero; generated counts
+are 7/10/8, including 2/4/2 heads forced by the current state. All 10/20/30/40 ms
+partitions and macro rates are retained, and the 40 ms counts exactly recover
+the preceding evaluation for every output.
+
+This decomposition supports investigating both earlier occupancy/release
+planning and immediate action selection. It does not identify a unique neural
+cause or prove that substituting a recovered lane improves a complete chart.
+The verified alternatives use TAPs and can remove LN structure; they are bounds
+on available actions, not generated repairs or equal-style substitutes. Additional
+intent conditioning, larger capacity, training-state exposure and decoding
+remain separate interventions requiring their own native comparisons.
+
+Exact replay takes 55.2 seconds on one M5 CPU thread, peaking at 251 MB RSS and
+200 MB footprint with no swap growth. A separate implementation recounts all
+280 physical-row sequences without the schedule or classifier helper and
+verifies every partition, group/seed aggregation and witness-file digest.
+Evidence owner: `artifacts/bounded-typed-continuation/state-choice-audit-20260920-v1/`.
+Runtime revision: `67107af6c196de45dee311358237befd96026531`.
+Readout SHA: `8a7a3fce2458e880f6f35b49b4e5a63f8d08f919e6d313f91c1f534503dc95d0`;
+independent audit SHA:
+`72a7a64304688913bb9387a0c0342fd663d136f93f362102572871a504b8f1bc`.
