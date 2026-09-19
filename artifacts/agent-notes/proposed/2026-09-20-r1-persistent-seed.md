@@ -250,3 +250,34 @@ Calibration-refresh SHA:
 `81268fc80ad9ff0f4024a3f90ceb10ecd8d55fe7d60499241729231ae91069eb`.
 The pinned source split confirms all six examples are validation sources. No new
 TEST chart or generated judgment becomes a training label.
+
+## Result Log: complete matched5M training
+
+All modes reach5M exposures with500k added H and661 updates apiece. Cumulative
+coverage is exactly3,459,305 unique H,9,533 charts and3,169 groups. Parent/config/
+plan/checkpoint identities, final RNG and finite model/Adam tensors pass the
+independent training audit. There are no discarded updates. Total added training
+is1,696.164627seconds, within the5,400-second ceiling.
+
+| Mode | Added seconds | Added TRAIN NLL | Peak footprint bytes | Residual output norm |
+| --- | ---: | ---: | ---: | ---: |
+| none | 549.311392 | 1.869219777 | 947127904 | unavailable |
+| zero | 558.330918 | 1.869294129 | 955532944 | .313424647 |
+| observed | 588.522317 | 1.870330551 | 944932544 | .478056818 |
+
+Maximum process RSS is1,099,546,624bytes and swap growth is0 for every mode.
+These are operating measurements with read-only work overlapping some training,
+not isolated benchmarks. Teacher TRAIN loss differences do not establish native
+quality. Final checkpoint SHAs, in none/zero/observed order:
+
+- `42f81541eb190d462e74cb4bfc1b3e92fac09cc4593053e101e2f150cd62427e`
+- `b37d90220b82032eb96a9fb267af14a9f34de6c2da370a696c110e71c0876abd`
+- `f5c272f1eaa3e79a488e9e11ef3bf16c9c6015275167e5c2bc98861816daf491`
+
+Final-training audit SHA:
+`3e7145f31b88de7bad361b197fa1cabfb75a9867a00ab5b4b3145864541eae40`.
+The evaluation plan now binds those exact checkpoint bytes, SHA:
+`c8744f798018023a1b7fcf0ba0642e96ae140d1b5ea81a7aa8e575898e30da56`.
+Its previously frozen procedure and decision gates are unchanged. All252 native
+outputs,84 source suffix scores, independent recount and masked semantic review
+remain pending; no generation-quality/adoption decision follows from training.
