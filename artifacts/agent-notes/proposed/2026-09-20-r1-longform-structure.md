@@ -1140,3 +1140,35 @@ driver, checkpoint and source before running `evaluate.py` with offline Python3.
 and the mps dependency extra. A positive result supports continued use of this
 working candidate while addressing the remaining full-goal requirements; it does
 not change Note lifecycle or establish final2–6star quality.
+
+### Bounded state/action audit after release recovery
+
+Before choosing another learner, replay the existing32 routing6.25M outputs,
+their32 release6.5M counterparts, the16 unseen-group confirmation outputs and
+24 unique source references. This addresses new evidence: short-gap diagnostics
+increased310->366 while persistent held-state collapse improved. The older5M
+state/action audit already found mixed causes; do not reinterpret it as a unique
+neural explanation or repeat its old population.
+
+Use its unchanged `classify`/`analyze` helper SHA
+`4956732b7bab1da53b8c890840c42e8b3dbbd4195934ff3a85234528d287750b`
+and independently verify every count with the existing physical-row recount.
+The previously frozen seven-case threshold/support preflight remains available
+under SHA8f971ff9a24b. Replay original R/H and complete seed endpoints; no source
+suffix endpoint enters native state. At10/20/30/40ms, distinguish heads in states
+with no recovered lane, additional minima from retaining chosen cardinality,
+and excess short heads even at unchanged cardinality. Explicit TAP alternatives
+must pass exact support; they are lower-bound witnesses, not equal-style repairs
+or new training preferences. Recover every published40ms component/union count.
+
+Source is clean dfdbc75776cf. Freeze SHA
+`f45e67c8e654ed6c8af470828908af6bb5c01aab0cccac9b3c4be329357bc0a6`
+binds all five readout/condition inputs and both helper identities before the new
+aggregate is computed. Bound CPU1 replay to600s, RSS/footprint2GiB, swap growth128MiB
+and fresh outputs128MiB. Owner:
+`artifacts/bounded-typed-continuation/release-state-choice-20260920-v1/` in the
+release worktree. Stop on any digest, replay, partition, alternative-support or
+resource failure. No generation, optimizer update, label change or TEST read.
+The result will distinguish local scoring from earlier occupancy/type/closure
+decisions; it will not make star rating a V3 demand definition or silently add
+source suffix statistics to the inference condition.
