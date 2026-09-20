@@ -1054,3 +1054,45 @@ Its native-query counts separate the new segment from inherited routing training
 The checkpoint and completed training/audit receipts now bind the predeclared
 32-case native generation driver in `evaluation-freeze.json`. Quality remains
 unreviewed pending complete outputs and matched Lens inspection.
+
+### Release6.5M passes the scoped long-form and LN-retention screen
+
+All32 complete VAL outputs finish in293.156722seconds on CPU1; independent
+mechanics and exact export/reparse pass. Readout SHA:
+`d354a939829e0877ccbfa7815bfb312521b91c93692eca8f88c6033651aff0d5`.
+Generation sampled peak RSS734,330,880bytes, zero swap growth. Training used334
+new updates and668 recovery queries, sampled peak RSS1,850,736,640bytes and zero
+swap growth. All inherited model/Adam values remain exact.
+
+Maximum consecutive H under the same three unchanged holds falls26->4; maximum
+consecutive H containing a fixed lane falls26->14. Fresh01/seed17 now changes held
+lanes and releases through the density rise, then develops multi-column TAP/chord
+flow. The old26/seed23 late three-hold run also disappears (18->2 maximum H for
+that chart). The worst remaining14-H witness is a bounded2.17s Jack with varying
+entry/exit. Exact head-word cycles of31H/5.25s and21H/2.14s are recognizable
+bounded Trill figures; they are not treated as collapse just for repeating.
+
+Matched Lens views of old21 (Luster,220097–228097ms) and fresh04 (Gloomy Flash,
+52881–60881ms), both seeds, retain independent LN starts/holds/releases, varied
+lengths and TAP integration. Independent close-row counts change34/31->37/37 and
+36/32->28/47 respectively. Actual views, not those counts alone, establish the
+retention observation. Candidate views for all23 main scopes and4 extra scopes
+were inspected, including fixed early/middle/late samples, two longest lane/held
+witnesses, two cycle contexts and two short-gap clusters. Late passages around
+713–721s and882–890s retain organization. Not every second was manually reviewed.
+
+The scoped long-form recovery and LN-retention development gate passes. Overall
+goal/readiness remains incomplete; disposition REFINE. Below40ms diagnostic
+events increase310->366 over90,678 required onsets, with no below10ms event.
+The largest inspected2s cluster has20 release-to-head gaps of37–38ms versus17
+baseline diagnostic events. It is rhythmic short-LN rearticulation, not a new
+prolonged allocation collapse, but its execution cost and near6star suitability
+remain unresolved. Generated stars span2.137–6.717; fresh06 produces6.649/6.717
+from a5.863star source. No requested-difficulty calibration or player trial exists.
+
+Semantic review SHA:
+`2b7be2eb28d855f558e16cc676476f13ad4839662d91de326352273a22fa0bf6`.
+Current High human LN/Stream records and the frozen slow-Jack example were used;
+the slow-Jack example has unrecorded confidence, not High. No human record changes
+or semantic-label promotion occurred. Use release6.5M as the working candidate
+for further verification, retaining routing6.25M and all earlier evidence.
