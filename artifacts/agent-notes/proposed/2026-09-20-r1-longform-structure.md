@@ -1481,3 +1481,16 @@ Condition selection SHA31f0ecc28191080661e00f61800b7ac6803e3875e9f931903e1ae3215
 The evaluation freeze pins exact checkpoint, conditions, generation and review
 scripts before the sixteen complete native runs at seeds31/47. Source-only
 selection is unchanged after inspecting these metadata. Quality remains unreviewed.
+
+### Supplementary identity-masked LN reading
+
+The16 outputs complete before image inspection. Add a bounded supplementary reading
+of the four source-selected independent-LN cores: source and both generated seeds,
+twelve views total. Render neutral shuffled IDs, retain the mapping in a separate
+file, record action/organization judgments before opening the mapping. Numerical
+per-chart diagnostics have already been seen, so this is identity masking rather
+than a fully blinded independent evaluation. It supplements, and does not replace,
+the predeclared complete-chart/phase/locator inspection. Inspect independent versus
+synchronized or isolated LN relations, TAP interaction, coherent entry/exit and
+local execution concerns. Do not assign human authority or derive quality from
+LN percentage. No policy, selection, scope or annotation changes result from masking.
