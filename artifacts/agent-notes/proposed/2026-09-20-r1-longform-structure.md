@@ -130,3 +130,52 @@ proposal was an uncommitted draft and has no run, code or checkpoint to retain.
 Revision2 increases the memory width before implementation and records the human
 priority of quality over parameter/speed optimization. No run or implementation
 used revision1. The inherited local width is a starting point, not a quality cap.
+
+
+## Implementation and execution freeze
+
+Clean implementation: `ed1b9b945d4aa7dc01f5e70dba55031dd1292bc6`, branch
+`codex/r1-longform-memory`. The implemented256-wide GRU/landmark branch adds
+446,848 parameters, giving2,777,232 with the inherited observed-seed model.
+The base-to-intervention diff implements the declared full-history mechanism,
+its typed configuration/projection, causal readout, native raw recovery and
+journal binding, migration, tests and owning documentation. No quantity request,
+sampling policy, decoder rule or additional training arm was added.
+
+Selected CPU/MPS verification passes: the initial new-memory owner had7 passes;
+the subsequent memory/fork/native/seed/training selection had66 passes. After
+adding explicit full-history work counters and package coverage, the affected
+memory/fork/smoke/package selection has21 passes plus22 package subtests, and
+the final training/native selection has40 passes. These counts overlap and
+must not be summed. An earlier complete bounded suite had201 passes and one
+legacy-hash fixture failure: the fixture constructed its historical config with
+new optional memory fields. Removing those fields from the historical fixture
+restored the intended old-config test; its equality assertion was retained and
+passed. No behavior failure was bypassed or excluded.
+
+Real-data preflight finishes in12.690461 seconds. All inherited parameter values
+and Adam moments are exact; median-chart initial NLL and common gradients are
+exact;128 native initial decisions and RNG are exact against the parent, with
+at least one completed landmark. Full-prefix forward/backward is finite for the
+median770-row source and the largest26,976-row source. Their elapsed checks are
+1.811036 and7.917173 seconds; the median check also includes native comparison.
+Maximum sampled RSS is1,750,089,728 bytes, footprint1,620,609,184 bytes and swap
+growth zero. These counters overlap. This is feasibility/equivalence evidence,
+not generated-quality evidence.
+
+Under the declared output owner:
+
+- `prepare.py` SHA: `13bacc0e0800e8c30c36f59e120f909ebb75017277884eb3a8339db5e0d4bcbb`.
+- `preflight.json` SHA: `c894807510f9e6afaecc80b205c044156b8ec781ef0ad37ee22c35c3856dbce0`.
+- Extended plan SHA: `08e1a0980864aeaa994012b673bb4e7369913987fda2bd118c8474c6c298afc1`.
+- `train-config.json` SHA: `d49ba6932101fbb90ddf1bd595ba8142a9d352e592004fca3d5d058e63296826`.
+- `train.py` SHA: `ee3ba491cb2c04a12408ae4c3e8ba66058cdb8d066df291e9f676937e7616029`.
+- `execution-freeze.json` SHA: `fdf763a230497ea1536de4eec2b9743186840632a74b59470bd0bc7d1eb27ee5`.
+
+Run `uv run --offline --python 3.10 --extra mps python
+artifacts/bounded-typed-continuation/longform-memory-20260920-v1/train.py`.
+It runs one candidate serially, pausing at5.125M and resuming the same immutable
+plan to6M in a fresh segment. The original parent is untouched. An outer
+3,600-second alarm supplements the inherited cumulative training guard; caught
+failures preserve the last durable boundary and record the failure. Card revision2
+and its resource/quality scope remain unchanged; acceptance remains none.
