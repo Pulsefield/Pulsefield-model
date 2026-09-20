@@ -132,6 +132,34 @@ passages. Additional ordinary CE fitting is bundled with recovery training, so
 the comparison does not isolate their causal contributions. The full-parameter
 candidate is not a validated replacement for the earlier model.
 
+### Frozen-base head routing
+
+`model.head_routing=residual` adds an R1-only head-mask scorer. A shared MLP of
+width `model.routing_hidden` (default 512) reads both inherited hand vectors.
+Averaging direct and mirrored scores preserves lane-mirror equivariance. The
+last projection starts at zero, so adding the module initially leaves native
+probabilities and sampling unchanged.
+
+Each legal full action receives a score shift determined only by its binary
+head mask: `score(A) = base_score(A) + route_score(head_mask(A))`. With the
+inherited policy frozen, normalization within any fixed legal head-mask family
+therefore preserves `P(A | head_mask, state)` for the same supplied condition
+and committed history. This retains conditional TAP/LN
+kinds and simultaneous release choices while permitting different lane groups
+and chord sizes. R-only candidates receive exactly zero shift.
+
+`trainable=routing` freezes every inherited parameter, including seed and memory
+encoding. The existing parameters remain in AdamW with absent gradients, keeping
+their weights and optimizer moments unchanged; only the new scorer updates.
+An explicit fork can add the module, this trainable scope and a pinned native
+recovery objective while preserving the original source-plan prefix. Normal
+source CE and recovery complement loss both train the new scorer. Ordinary
+resume requires the same trainable scope and configuration.
+
+This is a conditional preservation guarantee, not a guarantee of identical LN
+trajectories: changed head masks change future states. The module's generated
+long-form quality and LN/TAP retention require separate native evaluation.
+
 ## Exact state and bounded learned context
 
 Exact state retains real LN starts, current occupancy, last attack/release clocks,
@@ -772,7 +800,9 @@ row-consequence or R1 seed-context residuals to an original model with all three
 modes set to `none`. An explicit landmark-memory extension may also preserve
 existing unchanged residuals while appending only the memory module; changing or
 removing their modes is rejected. A native-recovery objective fork instead keeps
-the entire architecture unchanged and adds its pinned training pool. Parameter
+the entire architecture unchanged and adds its pinned training pool. A head-routing
+fork instead appends its scorer and selects routing-only training, optionally
+adding the recovery objective in the same transition. Parameter
 order and inherited Adam state remain checked.
 Ordinary resume retains exact source/config identity.
 

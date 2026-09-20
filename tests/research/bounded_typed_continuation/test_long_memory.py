@@ -44,7 +44,7 @@ def test_configuration_and_default_parameter_digest_remain_compatible():
             ModelConfig(Arm.R1, **settings)
     model = BoundedModel(ModelConfig(Arm.R1, hidden=8, levels=2, coupling_rank=2))
     old = asdict(model.config)
-    for k in ('seed_context','long_memory','memory_hidden','memory_stride'):
+    for k in ('seed_context','long_memory','memory_hidden','memory_stride','head_routing','routing_hidden'):
         old.pop(k)
     h = hashlib.sha256(json.dumps(old, sort_keys=True).encode())
     for name, tensor in model.state_dict().items():

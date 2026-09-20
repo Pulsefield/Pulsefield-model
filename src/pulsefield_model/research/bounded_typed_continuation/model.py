@@ -22,6 +22,7 @@ from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule
 from .features import (AVAILABILITY_DIM, CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
                        EndpointAvailability, TimingView, endpoint_availability, factor_features)
 from .support import row_supports
+from .routing import HeadRouting
 from .temporal import FiniteTemporal, TemporalConfig, pointwise
 
 
@@ -38,6 +39,8 @@ class ModelConfig:
     long_memory: str = 'none'
     memory_hidden: int = 256
     memory_stride: int = 64
+    head_routing: str = 'none'
+    routing_hidden: int = 512
 
     def __post_init__(self):
         if not isinstance(self.arm, Arm):
@@ -56,6 +59,10 @@ class ModelConfig:
             raise ContractError('Seed context must be none, zero or observed, and is R1-only')
         if self.long_memory not in ('none', 'landmarks') or self.arm != Arm.R1 and self.long_memory != 'none':
             raise ContractError('Long memory must be none or landmarks, and is R1-only')
+        if self.head_routing not in ('none', 'residual') or self.arm != Arm.R1 and self.head_routing != 'none':
+            raise ContractError('Head routing must be none or residual, and is R1-only')
+        if type(self.routing_hidden) is not int or self.routing_hidden <= 0:
+            raise ContractError('Head-routing width must be a positive integer')
         if any(type(n) is not int or n <= 0 for n in (self.memory_hidden, self.memory_stride)):
             raise ContractError('Long-memory width and onset stride must be positive integers')
 
@@ -227,6 +234,8 @@ class BoundedModel(nn.Module):
             nn.init.zeros_(self.seed_residual[-1].weight)
         self.long_memory = (LandmarkMemory(CONTENT_DIM, config.memory_hidden, config.hidden, config.memory_stride)
                             if config.long_memory != 'none' else None)
+        self.route_residual = (HeadRouting(config.hidden, config.routing_hidden)
+                               if config.head_routing != 'none' else None)
 
     @property
     def choices(self):
@@ -278,6 +287,9 @@ class BoundedModel(nn.Module):
         scores = self.joint(hands)
         if self.row_consequence is not None:
             scores = scores + self.row_consequence(hands, states)
+        if self.route_residual is not None:
+            onsets = torch.tensor([s.timing.onsets[s.index] for s in states], device=hands.device)
+            scores = scores + self.route_residual(hands, onsets)
         return scores.masked_fill(~mask, -torch.inf).log_softmax(-1)
 
     def endpoint_log_probs(self, hands: Tensor, states: Sequence[Schedule], heads, endpoints,

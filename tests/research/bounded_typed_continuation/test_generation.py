@@ -20,11 +20,12 @@ from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
 
 
-def setup(arm, device='cpu', availability='none', consequence='none', seed_context='none', long_memory='none'):
+def setup(arm, device='cpu', availability='none', consequence='none', seed_context='none', long_memory='none', head_routing='none'):
     torch.manual_seed(17)
     model = BoundedModel(ModelConfig(arm, hidden=8, levels=2, coupling_rank=2,
                                    endpoint_availability=availability, row_consequence=consequence,
                                    seed_context=seed_context, long_memory=long_memory,
+                                   head_routing=head_routing, routing_hidden=16 if head_routing != 'none' else 512,
                                    **({'memory_hidden': 12, 'memory_stride': 4} if long_memory != 'none' else {}))).to(device).eval()
     if model.pointer is not None and model.pointer.availability_residual is not None:
         torch.nn.init.normal_(model.pointer.availability_residual[-1].weight, std=.05)
@@ -34,6 +35,8 @@ def setup(arm, device='cpu', availability='none', consequence='none', seed_conte
         torch.nn.init.normal_(model.seed_residual[-1].weight, std=.05)
     if model.long_memory is not None:
         torch.nn.init.normal_(model.long_memory.output.weight, std=.05)
+    if model.route_residual is not None:
+        torch.nn.init.normal_(model.route_residual.score[-1].weight, std=.05)
     timing = Timing(tuple(100. * i for i in range(37)), None if arm == Arm.R0 else tuple(i % 5 != 4 for i in range(37)))
     seed = [CompleteRow(0., (2, 2, 0, 0)), CompleteRow(100., (0, 0, 1, 0)), CompleteRow(200., (0, 0, 0, 1))]
     rollout = Rollout.from_seed(model, timing, seed, None if arm == Arm.R0 else {0: 10, 1: 17})

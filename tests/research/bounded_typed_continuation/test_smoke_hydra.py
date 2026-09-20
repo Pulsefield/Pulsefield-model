@@ -19,9 +19,10 @@ from pulsefield_model.research.scoped_style_modeling.dataset import ContractErro
 def test_packaged_composition_arm_selection_and_complete_projection():
     config = compose_config(['model.arm=R1', 'model.hidden=32', 'model.row_consequence=actions', 'model.seed_context=observed',
                              'model.long_memory=landmarks', 'model.memory_hidden=64', 'model.memory_stride=16',
-                             'candidate_budget=321', 'updates=7'])
+                             'model.head_routing=residual', 'model.routing_hidden=24', 'candidate_budget=321', 'updates=7'])
     assert config.model.arm == Arm.R1 and config.model.hidden == 32
     assert config.candidate_budget == 321 and config.updates == 7
+    assert config.model.head_routing == 'residual' and config.model.routing_hidden == 24
     assert config.model.row_consequence == 'actions'
     assert config.model.seed_context == 'observed'
     assert (config.model.long_memory, config.model.memory_hidden, config.model.memory_stride) == ('landmarks', 64, 16)
