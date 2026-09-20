@@ -825,3 +825,62 @@ over the complete generated physical history. All32 sources, seeds, selection
 criteria and limits are unchanged. The four complete prior trajectories can be
 compared byte-for-byte; none of the partial run is used for training. This
 exploratory correction remains proposed with acceptance none.
+
+### Ordinary TRAIN harvest supplies no release examples
+
+The corrected32-chart seed47 run finishes in286.247803seconds, with all schedules
+complete, all holds closed and independent mechanics checks passing. The earlier
+four complete trajectories are byte-identical. There are zero selected queries
+and zero eligible groups. A separate recount finds that the longest unchanged
+three-hold state spans only2 H anywhere in these outputs. Manifest SHA:
+`0f37e0d853a7718288a7f06d0c937339c8c8387df29d33460d2fa0597e9f2831`.
+This is insufficient-native-failures, not support for release-adapter training.
+No model change or training follows from this pool. The fresh VAL witness is
+a real conditional-routing limitation but these32 TRAIN generations do not
+establish a widespread defect. LN anchors and Jacks can be valid; final semantic
+judgment still requires their larger context and cannot come from12-H selection.
+
+The completed fresh-cohort results are curated in docs-only descendant
+`c1cd14c81d2058299144f4e41ec574853e5e0280`. This commit occurred while the
+already-imported baseline harvest ran; its sole change is explanatory Markdown,
+with no executable or data difference from the pinned8cf31e8 source.
+
+## Experiment Card: r1-release-transition-pool-v1
+
+Revision1, proposed, acceptance none. Test the more specific hypothesis that
+sparse-to-dense transitions expose persistent allocation states. This is one
+targeted TRAIN data probe, not adapter training or a model comparison.
+
+Use the unchanged routing6.25M checkpoint and plan, from clean docs descendant
+c1cd14c. Exclude the previous32 TRAIN groups. From existing TRAIN census and pinned
+row caches, admit2–6star sources lasting180–600s with256–4000 suffix H. Source-only
+H timing must contain a position whose preceding12 intervals span6–30s and following
+12 span at most3s, with ratio>=4 and no preceding interval>2.5s. This excludes a
+long empty break as the only explanation for sparsity. Rank charts by maximum
+ratio, qualifying-position count and SHA; select32 distinct groups. The resulting
+296 eligible charts cover176 groups. Selected ratios are8.51–19.08. Exact source
+identities and witnesses are frozen in selection SHA
+`3ea6dc066521cfab1efac1b8c69155008d6d13c94531f675d29ee4adb1be0666`.
+The earlier `selection.json` is an unused source-only draft that admitted long
+empty breaks; no generation used it.
+
+Generate each whole chart once with seed17, CPU1, native temperature1. Keep the
+same prospective native preference rule: three unchanged holds through12 H,
+single remaining head lane, contrasted with at least3 source masks and no source
+lane in more than9of12, at most one query per4 H and32 per chart. Use original
+external R/H and complete seeds; no suffix actions enter prediction. At least
+16 queries across4 groups are still required before considering adapter training.
+Do not relax the rule when this probe is negative. Recount stationary holds even
+when there are no eligible preferences, to separate rare state visitation from
+source-contrast filtering. Any positive pool must be inspected in full contexts
+before a training Card is frozen.
+
+Runtime1800s, RSS/footprint6GiB, swap growth128MiB, output2GiB. Stop on mechanics,
+nonfinite, digest or resource failure. Fresh owner is
+`artifacts/bounded-typed-continuation/release-transition-20260920-v1/`; no overwrite
+or scientific resume. `harvest.py` pins itself and selection before execution.
+Positive evidence would support the release-recovery branch; a second negative
+would leave that branch unsupported and favor broader structural planning/quality
+assessment over increasingly narrow hold-duration rules. No training or model
+readiness is authorized by the result alone; the user goal provides separate
+execution authority for an explicitly recorded subsequent intervention.
