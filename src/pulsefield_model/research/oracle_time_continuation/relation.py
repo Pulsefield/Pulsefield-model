@@ -10,7 +10,7 @@ from ..scoped_style_modeling.replay import HAND_COLUMNS
 from ..source_action_modeling.actions import ATTACK_ACTIONS, LN_CLOSE, LN_START
 from .attention import MemoryAttention
 from .config import BackboneConfig
-from .features import TIME_DIM, action_features, clock_features, relative_lanes
+from .features import TIME_DIM, clock_features, relative_lanes
 from .schema import CompleteRow
 
 EMPTY_INDICES = ((), (), (), ())
@@ -91,10 +91,8 @@ class RelationEncoder(nn.Module):
                  for ids in (*state.attacks, *state.releases)]
         hand_latest = [max((state.attacks[lane][-1] for lane in lanes if state.attacks[lane]), default=None)
                        for lanes in HAND_COLUMNS]
-        edges = []
+        all_times, all_tags, all_actions = [], [], []
         for node in state.nodes:
-            actions = action_features(node.row.actions, like)
-            hands = []
             for hand in range(2):
                 lanes = relative_lanes(hand)
                 times = [time_ms - node.row.time_ms]
@@ -109,10 +107,15 @@ class RelationEncoder(nn.Module):
                          node.lane_predecessors[lane] is not None)]
                 tags += [hand_latest[side] == node.row_id for side in (hand, 1 - hand)]
                 tags += [(row_id - node.row_id) / 32]
-                hands.append(torch.cat((clock_features(times, like).flatten(), actions[hand],
-                                        like.new_tensor(tags))))
-            edges.append(torch.stack(hands))
-        return torch.stack(edges)
+                all_times.extend(times)
+                all_tags.append(tags)
+                all_actions.append([float(node.row.actions[lane] == action)
+                                    for lane in lanes for action in range(4)])
+        # One device transfer/basis evaluation for the frontier avoids launching
+        # dozens of tiny MPS kernels for each individual historical node.
+        clocks = clock_features(all_times, like).reshape(len(state.nodes), 2, 11 * TIME_DIM)
+        return torch.cat((clocks, like.new_tensor(all_actions).reshape(len(state.nodes), 2, 16),
+                          like.new_tensor(all_tags).reshape(len(state.nodes), 2, 23)), -1)
 
     def forward(self, frontier: Tensor, state: RelationState, time_ms: float, row_id: int) -> Tensor:
         if state.nodes:

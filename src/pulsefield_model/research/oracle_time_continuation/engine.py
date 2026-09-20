@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class PredictionInput:
-    """The model's entire exact input: current time, terminal condition, history.
+    """Exact history and a bounded time-only projection of the supplied skeleton.
 
     Target rows, full skeleton, source identity and execution position stay in
     their owners. Reading this object cannot consume a row or advance a cache.
@@ -28,11 +28,19 @@ class PredictionInput:
     time_ms: float
     is_terminal: bool
     history: ExactReplayState
+    future_offsets_ms: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "time_ms", checked_time(self.time_ms))
         if type(self.is_terminal) is not bool:
             raise ContractError("The true skeleton terminal flag must be a boolean")
+        if not isinstance(self.future_offsets_ms, tuple) or len(self.future_offsets_ms) > 16:
+            raise ContractError('Future timing requires an immutable tuple of at most 16 offsets')
+        offsets = tuple(checked_time(t) for t in self.future_offsets_ms)
+        if (any(a >= b for a, b in zip((0., *offsets), offsets)) or
+                (self.is_terminal and offsets)):
+            raise ContractError('Future timing offsets must increase strictly after a nonterminal row')
+        object.__setattr__(self, 'future_offsets_ms', offsets)
         if self.history.is_complete or (self.history.last_row is not None and
                                         self.time_ms <= self.history.last_row.time_ms):
             raise ContractError("Prediction time must follow an unfinished committed prefix")
@@ -72,12 +80,17 @@ class ContinuationState:
     def finished(self) -> bool:
         return self.next_index == len(self.skeleton.times_ms)
 
-    def query(self) -> PredictionInput:
+    def query(self, time_lookahead_rows: int = 0) -> PredictionInput:
         """Return immutable pre-row input, rejecting an exhausted skeleton."""
         if self.finished:
             raise ContractError("The skeleton is exhausted; there is no next row")
-        return PredictionInput(self.skeleton.times_ms[self.next_index],
-                               self.next_index == len(self.skeleton.times_ms) - 1, self.replay)
+        if type(time_lookahead_rows) is not int or not 0 <= time_lookahead_rows <= 16:
+            raise ContractError('time_lookahead_rows must be an integer in [0,16]')
+        time = self.skeleton.times_ms[self.next_index]
+        offsets = tuple(self.skeleton.times_ms[i] - time for i in
+                        range(self.next_index + 1, min(len(self.skeleton.times_ms),
+                                                     self.next_index + 1 + time_lookahead_rows)))
+        return PredictionInput(time, self.next_index == len(self.skeleton.times_ms) - 1, self.replay, offsets)
 
     def commit(self, row: CompleteRow) -> ContinuationState:
         """Commit one true or sampled row at exactly the next skeleton time."""
@@ -107,8 +120,9 @@ class ContinuationEngine:
     stores raw layer inputs; call state.detached() at a TBPTT boundary.
     """
 
-    def __init__(self, model: CausalBackbone):
+    def __init__(self, model: CausalBackbone, *, parallel_frontiers: bool = False):
         self.model = model
+        self.parallel_frontiers = parallel_frontiers
 
     def start(self, skeleton: TimeSkeleton, *, inference: bool = False) -> NeuralState:
         from .local import LocalState
@@ -134,27 +148,63 @@ class ContinuationEngine:
     def predict(self, state: NeuralState) -> JointRowDistribution:
         """Read a pre-row distribution without mutating any exact or learned state."""
         self._check(state)
-        return self.model(state.execution.query(), state.local, state.relation, state.temporal)
+        return self.model(state.execution.query(self.model.config.time_lookahead_rows),
+                          state.local, state.relation, state.temporal)
 
     def commit(self, state: NeuralState, row: CompleteRow) -> NeuralState:
         """Validate a complete row, construct content privately, then publish new state."""
         from .state import NeuralState
 
         self._check(state)
-        query = state.execution.query()
+        query = state.execution.query(self.model.config.time_lookahead_rows)
         execution = state.execution.commit(row)
         content, local, relation = self.model.content_input(query, row, execution.replay, state.local, state.relation)
         temporal = self.model.temporal.commit(content, state.temporal, row.time_ms, inference=state.inference)
         return NeuralState(execution, local, relation, temporal, state.signature, state.inference)
 
-    def prefill(self, skeleton: TimeSkeleton, prefix: Iterable[CompleteRow], *, inference: bool = False) -> NeuralState:
+    def prefill(self, skeleton: TimeSkeleton, prefix: Iterable[CompleteRow], *, inference: bool = False, progress=None,
+                progress_every_rows: int = 128) -> NeuralState:
         """Content-only no-grad replay from true BOS; no prefix logits are computed."""
         import torch
 
         with torch.no_grad():
-            state = self.start(skeleton, inference=inference)
-            for row in prefix:
-                state = self.commit(state, row)
+            return self.prefill_from(self.start(skeleton, inference=inference), prefix, progress=progress,
+                                     progress_every_rows=progress_every_rows)
+
+    def prefill_from(self, state: NeuralState, prefix: Iterable[CompleteRow], *, progress=None,
+                     progress_every_rows: int = 128) -> NeuralState:
+        """Continue an exact same-parameter prefix; never carry it across updates."""
+        import torch
+
+        if type(progress_every_rows) is not int or not 1 <= progress_every_rows <= 128:
+            raise ContractError("Prefix progress interval must be in [1,128]")
+        from itertools import islice
+        from .state import NeuralState
+
+        with torch.no_grad():
+            self._check(state)
+            inference = state.inference
+            iterator = iter(prefix)
+            width = min(self.model.config.max_chunk, progress_every_rows)
+            while rows := tuple(islice(iterator, width)):
+                if self.parallel_frontiers:
+                    from .batch import frontiers
+                    _, contents, execution, local, relation, _, _, _ = frontiers(self.model, state, rows, score_queries=False)
+                else:
+                    execution, local, relation = state.execution, state.local, state.relation
+                    content_list = []
+                    for row in rows:
+                        query = execution.query(self.model.config.time_lookahead_rows)
+                        following = execution.commit(row)
+                        content, local, relation = self.model.content_input(query, row, following.replay, local, relation)
+                        content_list.append(content)
+                        execution = following
+                    contents = torch.stack(content_list)
+                _, temporal, _ = self.model.temporal.chunk(None, contents, state.temporal,
+                                                          tuple(row.time_ms for row in rows), inference=inference)
+                state = NeuralState(execution, local, relation, temporal, state.signature, inference).detached()
+                if progress is not None:
+                    progress("prefill", row=state.execution.next_index)
             return state.detached()
 
     def teacher_force(self, state: NeuralState, rows: Sequence[CompleteRow]) -> ChunkResult:
@@ -177,19 +227,27 @@ class ContinuationEngine:
             like = next(self.model.parameters())
             return ChunkResult(like.new_empty(0, 256), torch.empty(0, 256, dtype=torch.bool, device=like.device),
                                state, TemporalTrace((), (), ()), (), ())
-        execution, local, relation = state.execution, state.local, state.relation
-        queries, contents, inputs, relation_queries, relation_contents = [], [], [], [], []
-        for row in rows:
-            query = execution.query()
-            following = execution.commit(row)
-            inputs.append(query)
-            relation_queries.append(relation.visible_ids)
-            queries.append(self.model.query_input(query, local, relation))
-            content, local, relation = self.model.content_input(query, row, following.replay, local, relation)
-            contents.append(content)
-            relation_contents.append(relation.visible_ids)
-            execution = following
-        hidden, temporal, trace = self.model.temporal.chunk(torch.stack(queries), torch.stack(contents), state.temporal,
+        if self.parallel_frontiers:
+            from .batch import frontiers
+            queries, contents, execution, local, relation, inputs, before, after = frontiers(self.model, state, rows,
+                                                                                           score_queries=True)
+            relation_queries = [value.visible_ids for value in before]
+            relation_contents = [value.visible_ids for value in after]
+        else:
+            execution, local, relation = state.execution, state.local, state.relation
+            queries, contents, inputs, relation_queries, relation_contents = [], [], [], [], []
+            for row in rows:
+                query = execution.query(self.model.config.time_lookahead_rows)
+                following = execution.commit(row)
+                inputs.append(query)
+                relation_queries.append(relation.visible_ids)
+                queries.append(self.model.query_input(query, local, relation))
+                content, local, relation = self.model.content_input(query, row, following.replay, local, relation)
+                contents.append(content)
+                relation_contents.append(relation.visible_ids)
+                execution = following
+            queries, contents = torch.stack(queries), torch.stack(contents)
+        hidden, temporal, trace = self.model.temporal.chunk(queries, contents, state.temporal,
                                                            tuple(row.time_ms for row in rows), inference=state.inference)
         log_probs, legal = self.model.head(PreRowEncoding(hidden, tuple(inputs)))
         updated = NeuralState(execution, local, relation, temporal, state.signature, state.inference)

@@ -36,7 +36,7 @@ class CompleteRow:
 
 @dataclass(frozen=True)
 class TimeSkeleton:
-    """Scheduler data; only the current time and true terminal flag reach a query.
+    """Scheduler times; queries may receive a bounded, unlabeled future context.
 
     Source admission merges simultaneous events before constructing this type.
     Direct callers must supply strictly increasing times, without padding.

@@ -60,9 +60,11 @@ def test_default_archive_births_visibility_fifo_payload_and_no_pending_gap(width
             torch.testing.assert_close(token.inputs[0], expected, rtol=0, atol=0)
 
 
-def test_two_layer_step_dense_and_cached_inference_have_identical_layer_inputs():
+@pytest.mark.parametrize('expansion', [1, 3])
+def test_two_layer_step_dense_and_cached_inference_have_identical_layer_inputs(expansion):
     torch.manual_seed(44)
-    config = BackboneConfig(hidden=12, heads=3, recent=4, coarse_group=3, coarse_capacity=2)
+    config = BackboneConfig(hidden=12, heads=3, recent=4, coarse_group=3, coarse_capacity=2,
+                            temporal_expansion=expansion, temporal_bias_hidden=8 if expansion > 1 else None)
     encoder = TemporalEncoder(config).eval()
     contents, queries = torch.randn(36, 2, 12), torch.randn(36, 2, 12)
     times = tuple(index * 10. if index < 10 else 90000. + index * 10. for index in range(36))
@@ -147,13 +149,15 @@ def test_current_chunk_writers_get_later_loss_and_never_current_or_earlier_loss(
     assert not contents.grad[5:].any()
 
 
-def test_dense_and_step_gradient_paths_agree_without_tbptt():
+@pytest.mark.parametrize('expansion', [1, 3])
+def test_dense_and_step_gradient_paths_agree_without_tbptt(expansion):
     torch.manual_seed(80)
-    config = BackboneConfig(hidden=8, heads=2, recent=3, coarse_group=2, coarse_capacity=2)
+    config = BackboneConfig(hidden=8, heads=2, recent=3, coarse_group=2, coarse_capacity=2,
+                            temporal_expansion=expansion, temporal_bias_hidden=8 if expansion > 1 else None)
     encoder = TemporalEncoder(config)
     queries = torch.randn(12, 2, 8, requires_grad=True)
     contents = torch.randn(12, 2, 8, requires_grad=True)
-    weights = torch.randn_like(queries)
+    weights = torch.randn(12, 2, config.temporal_hidden)
     times = tuple(float(i * 30) for i in range(12))
     dense, _, _ = encoder.chunk(queries, contents, TemporalState(), times, inference=False)
     parameters = (queries, contents, *encoder.parameters())

@@ -93,12 +93,14 @@ def test_current_and_future_actions_endpoints_and_identities_are_isolated():
     assert a.targets != b.targets and a.identity != b.identity
     sa, sb = prefill(a.skeleton, a.targets[:2]), prefill(b.skeleton, b.targets[:2])
     assert sa.query() == sb.query()
+    assert sa.query(16) == sb.query(16)
     assert sa.query().clocks == sb.query().clocks
     assert sa.query().legal_actions == sb.query().legal_actions
     payload = asdict(sa.query())
-    assert set(payload) == {"time_ms", "is_terminal", "history"}
+    assert set(payload) == {"time_ms", "is_terminal", "history", "future_offsets_ms"}
     assert set(payload["history"]) == {"row_count", "note_count", "first_time_ms", "last_row",
                                       "open_ln_start_ms", "last_lane_attack_ms", "last_lane_release_ms", "is_complete"}
+    assert payload['future_offsets_ms'] == ()
     assert not any(word in json.dumps(payload) for word in ("sha256", "group", "end_ms", "remaining", "duration", "target"))
     sa, sb = sa.commit(a.targets[2]), sb.commit(b.targets[2])
     assert sa.query() != sb.query()
@@ -114,6 +116,26 @@ def test_future_time_changes_do_not_affect_current_query_except_true_terminal():
     terminal = prefill(TimeSkeleton((0, 10)), (CompleteRow(0, (2, 0, 0, 0)),))
     assert terminal.query().is_terminal and not a.query().is_terminal
     assert terminal.query().history == a.query().history
+
+
+def test_bounded_time_context_comes_from_full_skeleton_and_uses_float64_differences():
+    start = 1e12
+    times = tuple(start + i * .125 for i in range(40))
+    state = prefill(TimeSkeleton(times), (CompleteRow(times[0], (2, 0, 0, 0)),))
+    query = state.query(16)
+    assert query.future_offsets_ms == tuple(.125 * i for i in range(1, 17))
+    assert state.query().future_offsets_ms == ()
+    assert state.query(1).future_offsets_ms == (.125,)
+    terminal = prefill(TimeSkeleton(times[:2]), (CompleteRow(times[0], (2, 0, 0, 0)),))
+    assert terminal.query(16).is_terminal and terminal.query(16).future_offsets_ms == ()
+    for invalid in (-1, 17, True, .5):
+        with pytest.raises(ContractError, match='time_lookahead_rows'):
+            state.query(invalid)
+    for invalid in ((0.,), (2., 1.), (float('inf'),), [1.]):
+        with pytest.raises(ContractError):
+            replace(query, future_offsets_ms=invalid)
+    with pytest.raises(ContractError, match='nonterminal'):
+        replace(terminal.query(), future_offsets_ms=(1.,))
 
 
 @pytest.mark.parametrize("objects", [((0, 0, 100), (0, 100, 100)), ((0, 0, 100), (0, 100, 200)),

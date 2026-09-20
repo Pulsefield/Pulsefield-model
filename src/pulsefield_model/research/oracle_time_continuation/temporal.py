@@ -115,9 +115,12 @@ class TemporalEncoder(nn.Module):
     def __init__(self, config: BackboneConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.ModuleList(MemoryAttention(config.hidden, config.heads, TEMPORAL_EDGE_DIM)
+        self.input_projection = (nn.Identity() if config.temporal_expansion == 1 else
+                                 nn.Linear(config.hidden, config.temporal_hidden))
+        self.layers = nn.ModuleList(MemoryAttention(config.temporal_hidden, config.heads, TEMPORAL_EDGE_DIM,
+                                                    bias_hidden=config.temporal_bias_hidden)
                                     for _ in range(config.temporal_layers))
-        self.bos = nn.Parameter(torch.zeros(config.temporal_layers, config.hidden))
+        self.bos = nn.Parameter(torch.zeros(config.temporal_layers, config.temporal_hidden))
 
     def _project(self, layer: int, inputs: list[Tensor],
                  cached: list[tuple[Tensor, Tensor] | None]) -> tuple[Tensor, Tensor]:
@@ -133,6 +136,7 @@ class TemporalEncoder(nn.Module):
 
     def query(self, query: Tensor, state: TemporalState, time_ms: float) -> Tensor:
         """Pure pre-row read. Training projects raw history with current parameters."""
+        query = self.input_projection(query)
         position = (TokenPosition.row(state.row_count + 1, time_ms),)
         tokens = state.tokens
         positions = tuple(token.position for token in tokens) or (TokenPosition(0, 0, 0., 0., 0),)
@@ -146,6 +150,7 @@ class TemporalEncoder(nn.Module):
 
     def commit(self, content: Tensor, state: TemporalState, time_ms: float, *, inference: bool) -> TemporalState:
         """Construct every layer against the old bank plus self, then archive/evict."""
+        content = self.input_projection(content)
         position = TokenPosition.row(state.row_count + 1, time_ms)
         tokens = state.tokens
         positions = tuple(token.position for token in tokens) + (position,)
@@ -173,14 +178,18 @@ class TemporalEncoder(nn.Module):
             coarse = (coarse + (TemporalToken(position, means, projected),))[-self.config.coarse_capacity:]
         return TemporalState(state.row_count + 1, recent, coarse)
 
-    def chunk(self, queries: Tensor, contents: Tensor, state: TemporalState, times_ms: tuple[float, ...],
+    def chunk(self, queries: Tensor | None, contents: Tensor, state: TemporalState, times_ms: tuple[float, ...],
               *, inference: bool) -> tuple[Tensor, TemporalState, TemporalTrace]:
         """Evaluate a bounded dense chunk with per-call birth, eviction and self masks.
 
-        Inputs are [Q,2,D]. The caller builds local/relation inputs in causal
+        Inputs are [Q,2,D]; queries=None performs content-only prefix replay.
+        The caller builds local/relation inputs in causal
         order. Carry retains owned row tensors; detach at an explicit TBPTT
         boundary, not here, so later losses can still train current writers.
         """
+        contents = self.input_projection(contents)
+        if queries is not None:
+            queries = self.input_projection(queries)
         rows = tuple(TokenPosition.row(state.row_count + index + 1, time) for index, time in enumerate(times_ms))
         n_final = state.row_count + len(rows)
         fine = tuple(token.position for token in state.recent) + rows
@@ -195,9 +204,9 @@ class TemporalEncoder(nn.Module):
                          for row in rows]
         content_visible = [[visible_at(token, row.last_id - 1, self.config, content=True) for token in candidates]
                            for row in rows]
-        query_mask = torch.tensor(query_visible, device=queries.device, dtype=torch.bool)
-        content_mask = torch.tensor(content_visible, device=queries.device, dtype=torch.bool)
-        edges = temporal_edges(rows, candidates, queries, self.config)
+        query_mask = None if queries is None else torch.tensor(query_visible, device=contents.device, dtype=torch.bool)
+        content_mask = torch.tensor(content_visible, device=contents.device, dtype=torch.bool)
+        edges = temporal_edges(rows, candidates, contents, self.config)
         carried = {token.position.key: token for token in state.tokens}
         layer_inputs = {position.key: [] for position in coarse + fine}
         projected_inputs = {position.key: [] for position in coarse + fine}
@@ -218,7 +227,8 @@ class TemporalEncoder(nn.Module):
                     layer_inputs[token.key].append(raw[token.key])
                     if inference:
                         projected_inputs[token.key].append(tuple(value[:, :, index].clone() for value in kv))
-            queries = attention.read(queries, kv, edges, query_mask)
+            if queries is not None:
+                queries = attention.read(queries, kv, edges, query_mask)
             contents = attention.read(contents, kv, edges, content_mask)
 
         def materialize(position):
