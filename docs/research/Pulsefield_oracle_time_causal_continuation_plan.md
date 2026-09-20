@@ -2,9 +2,9 @@
 
 ## 下一阶段实现计划书
 
-- 日期：2026-09-15
-- 状态：M0–M2 已实现，M3–M4 待实现；接口与验证范围见[实现说明](oracle_time_continuation.md)。本文保留 M1–M4 的设计与验收合同。生成合同、梯度路径和缓存生命周期是实现要求；模块与数值配置是本轮选定的起始设计，不宣称已经证明其表示充分性或质量最优性。
-- 本轮交付：可以从真实谱面前缀开始、逐行更新全部历史特征与缓存、在固定时间骨架上生成合法非空完整 rows 的可训练系统。
+- 日期：2026-09-17
+- 状态：M0–M3 已实现，M4 实测与质量验收进行中；接口与验证范围见[实现说明](oracle_time_continuation.md)。本文保留 M1–M4 的设计与验收合同。生成合同、梯度路径和缓存生命周期是实现要求；模块与数值配置是本轮选定的起始设计，不宣称已经证明其表示充分性或质量最优性。
+- 本轮交付：在本机可持续训练、从真实前缀生成完整谱面的系统；给定时间骨架且不使用音频，但生成动作须开始呈现可玩的局部组织与合理的衔接。合法性、可恢复运行和预测损失分别验收，均不能代替生成质量。
 - 实现基础：`991d2f987f8a112220f5beb76bcf2d8a0903ade3` 已实现 M0 的 source/seed、exact replay 与 query/commit。继续扩展现有 `research/oracle_time_continuation` owners；旧 source-action 代码只按本文迁移范围复用，relation-matching 不作为新主干的前置或默认模块。
 
 ## 1. 本轮要解决的问题
@@ -13,7 +13,7 @@
 
 这一轮共同实现三个相互依赖的部分：局部因果摘要、可控制资源消耗的长程建模、窗口采样与 continuation likelihood。窗口长度、可读取的前向历史、梯度可穿过的历史分别定义；有界保存历史和学会利用历史分别验收。
 
-成功首先意味着获得正确、可训练、可完整 rollout 的新 baseline；预测质量与生成质量分别报告，不能以一项微小 NLL 改善代替整个交付，也不能保证新架构一定胜过某个旧模型。
+正确、可训练、可完整 rollout 是工程基础。阶段质量验收还要求真实生成中的动作组织可辨认，LN 与前后动作有可解释的配合，且长段不会退化为无意义的重复或持有。使用 Beatmap Lens 的 Foundation 与当前人工 gold 作组织判断参照；这些标签不等于难度或可玩性分数。预测质量与生成质量分别报告，不能以微小 NLL 改善代替交付。osuT5 与 Mug-Diffusion 是后续比较目标；没有同条件的真实输出比较时，不宣称超过它们。
 
 ### 范围冻结
 
@@ -47,20 +47,20 @@ $$
 $$
 p_\theta(a_{k+1:N}\mid H_k,\Gamma)
 =\prod_{i=k+1}^{N}
- p_\theta(a_i\mid H_{i-1},t_{\le i},e_i),
+ p_\theta(a_i\mid H_{i-1},t_{\le \min(i+r,N)},e_i),
 $$
 
-其中 `e_i` 是调度器提供的真实 skeleton 终点标志；历史在 teacher forcing 时由已经消费的真值构成，在 rollout 时由已经采样的输出构成。有限 neural memory 是对完整历史的实现性摘要，不宣称保留任意久远历史的所有信息。
+其中 `r` 是有界时间前视行数，`0 ≤ r ≤ 16`；`e_i` 是调度器提供的真实 skeleton 终点标志；历史在 teacher forcing 时由已经消费的真值构成，在 rollout 时由已经采样的输出构成。有限 neural memory 是对完整历史的实现性摘要，不宣称保留任意久远历史的所有信息。
 
 该分解定义主动限制信息访问的模型族，不是关于真实 action 与未来 skeleton 条件独立的结论。Oracle timing 已提供源谱 attack/release 时间并集；此任务的概率质量不能直接代表未知 timing 或 audio-conditioned generation 的质量。
 
-### 2.2 对“只使用历史”的严格解释
+### 2.2 动作因果性与已知时间条件
 
-本轮采用严格的在线 feature 合同：完整 skeleton 可以由调度器保存，但模型预测第 i 行时只获得当前时间和此前时间，不使用 following gap、未来局部 pace、未来 source-event 类型、未来 note count 或未来 action 派生信息。调度器允许在真实 skeleton 终点提供 `is_terminal`，用于完整谱面 LN closure；这是显式合法性条件，不是未来 action 信息。
+模型只能读取已提交动作。调度器持有完整 skeleton，并可通过 `model.time_lookahead_rows` 提供最多 16 个后续时间点相对当前时刻的偏移。独立时间编码器读取这些偏移及相邻间隔；它们没有 attack/release 类型、lane、note 数、LN 配对或 annotation 标签。`r=0` 保留无时间前视的对照配置。真实末行的 `is_terminal` 仍是显式合法性条件。
 
-已知未来时间可否用于模型，是以后单独的任务变更。本轮不悄悄引入。不要输入 target 窗口归一化位置、采样窗口的终点、annotation section 边界、source 标识或歌曲标题。计算分块本身不能改变预测。
+此合同修订了最初禁止 following gap 的限制。完整生成曾在新开 LN 后跨越 77.643 秒无事件空档：未来时间已经属于给定条件，却无法被模型用于开闭决策。允许时间前视使该错误可被学习纠正，不保证网络自动学会，也不额外强制长 gap 关闭。前视始终从完整 skeleton 取值，不依赖 target 窗口、训练 horizon 或计算 chunk。
 
-尤其要隔离原始 `.osu` 中已知的 LN endpoint：给定 LN_START 只意味着 lane 已占用、开始时间已知，不意味着它在未来何时关闭已知。原始 endpoint 可留在 target/source owner 中，不得进入模型的 prefix feature、关系边或 neural cache。
+不要输入 target 窗口归一化位置、采样窗口终点、annotation section 边界、source 标识或歌曲标题。原始 `.osu` 的 LN endpoint 与 head 的配对关系仍归 target/source owner：一个未来 skeleton 时间可能包含 release，但模型不知道它对应哪一条 LN，不能用源谱 endpoint 完成生成 LN。改变未来动作而保持 skeleton 不变，不能影响此前 logits；改变已给定的未来时间则允许影响启用前视的模型。
 
 ### 2.3 “至少前 30 个 note”采用明确的计数约定
 
@@ -153,13 +153,15 @@ K_{\ell,r}(e)=
 \operatorname{diag}\!\left(1+\tanh g_{\ell,r}(e)\right)W_{\ell,r},
 $$
 
-其中 $e$ 包含该边的 elapsed-time basis 和已提交 endpoint 的相对 hand/role actions。调制因子在 $(0,2)$ 内，只能抑制或放大固定通道映射，不能随条件直接翻转该映射的符号；它是低成本条件核，不是任意动态矩阵，也不构成表示充分性保证。该边界不意味着整个网络不能表达 alternation。删除双向 gather、following gap 与未来 action features。
+其中 $e$ 包含该边的 elapsed-time basis 和已提交 endpoint 的相对 hand/role actions。调制因子在 $(0,2)$ 内，只能抑制或放大固定通道映射，不能随条件直接翻转该映射的符号；它是低成本条件核，不是任意动态矩阵，也不构成表示充分性保证。该边界不意味着整个网络不能表达 alternation。动作边仍只连接已提交节点；已知未来时间由独立时间编码器提供，不通过双向 action gather 或未来动作边输入。
 
 每级摘要显式携带有效事件数和实际时间跨度。有效计数按原始 row 支持的并集计算，不能把重叠子摘要的计数直接相加。3/7/15 events 不是固定毫秒尺度；时间调制改变连接权重，不改变所读取的 event 集合。LN 持续期间的长 gap 不能自动当成“休息、状态归零”。原始 row facts、exact state 和各级摘要分别可访问。LayerNorm 仅沿通道，第一版 dropout=0，不引入跨 target 时间统计。
 
-时间特征只使用已发生 gaps 与当前 query gap。第一版 pace 采用最近 32 个已完成正 event gaps 的均值，并保留有效 count 与跨度。`predict(t_i)` 单独读取当前 gap $t_i-t_{i-1}$，其 pace 只取已 committed 行之间的 gaps；在 `commit(a_i)` 中将当前 gap 加入一次。重复 predict 不改变统计，首行没有前驱时保持 unavailable。
+Replay 的时间统计只使用已发生 gaps 与当前 query gap；独立的 skeleton 前视编码遵守第 2.2 节。第一版 pace 采用最近 32 个已完成正 event gaps 的均值，并保留有效 count 与跨度。`predict(t_i)` 单独读取当前 gap $t_i-t_{i-1}$，其 pace 只取已 committed 行之间的 gaps；在 `commit(a_i)` 中将当前 gap 加入一次。重复 predict 不改变统计，首行没有前驱时保持 unavailable。
 
 该均值仅是 event pace。31 个 100ms gaps 加一个约 92s gap 会使均值接近 3s；保留原始 gap、物理时间 basis、count 和 span，不只依赖均值归一化时间，也不称为 local BPM。绝对时间先在 float64 中做差，再转为网络精度；可复用 smooth basis 数值函数，不能复用旧双向 `event_geometry`。4ms basis 与 basis 数量搜索不属于当前里程碑。
+
+`model.time_lookahead_rows` 启用独立的时间 MLP：按事件顺序编码未来偏移与 successive gaps，缺失位置使用 availability 通道。`r=16`、hidden=128 时，它增加 110,848 个参数；共享输出同时加入两手 query/content facts，保持镜像等变。末层零初始化保留已有主干的初始函数，`training.timing_learning_rate` 可为新模块指定独立 AdamW 学习率；所有组共享 warmup、weight decay 和全局梯度裁剪。该路径不增加随曲长增长的 neural cache。
 
 ### 4.2 context 不完整时的初始化
 
@@ -270,6 +272,20 @@ $$
 
 hand swap 转置 coupling，outer/inner 顺序保持。head 的输入类型和测试必须排除已经消费当前真值的 post-content；删去旧 GRUCell history path。legality 与 terminal mask 在 joint log-softmax 前生效，输出按四条 serialized lanes 转回完整 row。
 
+可选 `model.clock_readout_hidden` 为每手 unary 增加一个直接物理时钟读出：
+$u(h,a)+c(z,a)$。默认值 0 关闭该路径。$z$ 只包含 pre-row 的 lane LN age、
+attack/release age、hand attack/release age、上一 event 间隔、已过去的曲长、
+上一完整 row、occupancy、真实 terminal flag，以及已允许的未来时间 offsets/gaps。
+共享 MLP 使用相同的 bounded/asinh 时间基和相对手坐标；它不读取 future actions、
+源 LN 配对或 annotation，也不改变 joint-row 空间、coupling、合法性或 neural cache。
+
+末层零初始化；从已有权重复制全部共享参数后，初始 logits 保持一致。
+hidden=128、lookahead=16 时增加 152,080 个参数。
+`training.clock_readout_learning_rate` 可指定独立 AdamW 学习率；各参数组共享
+warmup、weight decay 和一次全局梯度裁剪。零末层使首个 update 先训练输出层，
+随后梯度才能传入前层。该可选路径针对密集时间骨架下的快速重复按键问题，
+其质量收益需由配对训练和完整生成检验，不能由参数可训练或零初始化一致性推断。
+
 ## 5. 资源合同：把“不随整曲长度 OOM”做成架构性质
 
 ### 5.1 起始资源配置
@@ -314,6 +330,18 @@ $$
 
 不把 FlashAttention/CUDA fused backend 当作 MPS 上成立的假设。普通 SDPA/math fallback 的实际 workspace 也必须符合预算。
 
+#### 5.1.1 容量扩展与 Mac 训练配置
+
+128 维、两层 temporal 的 1,281,820 参数配置保留为工程基线，不再作为模型容量上限。`oracle_time_train_mac.yaml` 将容量集中到跨行组织：facts/local/relation 保持 128 维，共享的 query/content 输入投影映射到 512 维，temporal 使用六层、八个 attention heads，joint head 读取 512 维输出。时间边偏置 MLP 单独使用 64 维，不随内容网络扩大。完整模型有 19,976,776 个参数，其中 temporal 占 19,006,512；local 515,072、relation 236,552、facts 78,848、head 139,792。coupling rank 16 已覆盖每手 16 种动作的完整矩阵秩，不为增加参数量扩大它。
+
+该配置使用 FP32、microbatch 1、Q=64、effective batch 8。M/S、relation 的索引数与 LN pins 保持上述含义。Q=64 会缩短可反传的 writer 区间，不能称为与 Q=128 完全相同的训练。实际 prefix/target 仍保持完整；共享当前参数版本内的 prefix 可以节约重放。模型 width/layers、读写梯度和固定 loss 分母分别验证。
+
+每个 update 先独立抽取两个 song-group/chart，再各抽四个 stratum/start/horizon，按 start 排序以复用前缀。这保留 batch-average risk 的期望，但窗口相关；日志中的路径概率是排序前单条 draw 的边缘概率，不是排序后位置密度。最多缓存两个当前版本的 prefix states，optimizer step 前清空，绝不跨更新复用。
+
+Mac 配置采用四个 CPU threads；AdamW LR `3e-5`、weight decay `0.01`、clip norm 1，前 20 次更新线性 warmup。相同初始化与抽样序列的 200-update 对照中，`3e-5` 的固定 held-out NLL 为 2.8833，`1e-4` 为 3.0316；前者的早期完整生成也较少出现整体 LN 比例的大幅摆动。weight decay 的小规模对照未给出更改到 `0.001` 的充分证据。该选择仍须由更多训练和生成检验，不构成最优性或可玩性结论。
+
+2,000 万参数的实测训练 checkpoint 约 229 MiB，采用 512 MiB 单文件硬上限。每 25 个完整 updates 及请求的最后一步发布一次，首次抽样前发布 update 0；中断可能回退最多 24 个已完成但未持久化的 updates，并从保存的 RNG/日志边界重放。这减少连续训练的写盘量，恢复不会拼接不同权重版本的状态。具体资源证据与失效案例见[实测报告](oracle_time_m3_validation.md)。
+
 ### 5.2 必须落实的保护
 
 长 target 按 Q 分块，分块反传并释放图，跨 chunk 按第 4.4 节保留 detached layer inputs 和其余 learned carry。不能每 commit detach，也不能用 `retain_graph=True` 保存整段 sequence graph。detach 不改变 storage ownership：carry 必须放入自己拥有的固定容量存储，不能通过 view 持有整曲底层 tensor；也不能原地覆盖当前 backward 仍需的值。每行 logits、指标、生成文件和导出中间数据流式落盘。
@@ -327,6 +355,8 @@ CPU 数据沿用 M0 owners，再加入磁盘数组、分块读取和双重 LRU �
 OOM guard 不是“永不 OOM”的证明。目标是在声明的硬件/负载包络内保持有界并有余量；启动时同时记录系统 available memory、pressure 与 swap 增量，不能用物理总量代替当前余量。MPS fraction 乘的是 recommended maximum，不是机器物理内存；本机所测 8 GiB ceiling 对应 fraction 约 0.4504502，禁止用 0 关闭限制。
 
 训练在 update boundary 预先保存 durable checkpoint；window 中途资源异常时显式终止，丢弃未完成的梯度累积，从最后 durable update 重放同一 draw，不恢复半个 autograd graph 或部分 optimizer update。不能指望 allocator OOM 后仍有资源新建 checkpoint。推理快照将 model/cache 版本、全部状态、RNG、next event ID 和已持久化输出位置共同落盘；恢复须校验并对齐文件边界，不能保留旧行又重新生成同一行。保存采用临时文件与原子发布，预留 staging 空间；失败不以 EMPTY、teacher forcing 或截短输出兜底。
+
+生成的写盘间隔与资源检查分开：默认 `checkpoint_every_rows=512`，完成 prefill 和请求的生成段末也保存；导出直接使用已持久化的完成状态。中断恢复回退到最近一次成功发布。资源检查仍至少每 128 行一次，MPS 的持久 carry 在这些边界重新拥有存储并释放空闲分配，不依赖写盘来抑制后端保留。扩容模型的生成检查点实测约 45 MB，不能沿用小模型的高频写盘成本估计。
 
 ### 5.3 已有资源证据及适用范围
 
@@ -382,12 +412,20 @@ $$
 
 16 秒高密度 target 超过 Q 只增加 chunks，不缩短 target。记录整个抽样路径概率、prefix notes/rows/elapsed time、有效 recent/coarse coverage、target 时间与行数、terminal 标志、prefill 费用与实际监督事件总量。
 
+### 6.2.1 可选的已知时间空档混合采样
+
+`windows.gap_sampling_probability=p` 默认 0，保留上述分布和 RNG 序列。正值启用仅按 skeleton 时间选择的补充路径：依次均匀选择可行空档时长层、song group、chart、空档边界和起点。默认时长层为 `[2,8)`、`[8,32)`、`[32,+∞)` 秒，只索引完整 seed 后、有下一行的边界；`gap_context_rows=32` 限制起点距边界的行数，最长 horizon 必须实际包含该边界。完整 prefix、半开 horizon 和真实终点规则均保持。
+
+基础路径的概率乘以 `1-p`；空档路径的概率为 `p/(可行时长层数 × groups × charts × gaps × starts)`，各级计数取决于此前选择。相同区间可由多个 horizon 或空档产生，报告边际概率时须合并。此配置明确改变训练风险，不作回到原分布的 importance correction。空档位置、监督动作和 annotation 均不进入预测输入，时间编码仍遵守第 2.2 节的有界合同。验证窗口独立固定，不随训练混合比例变动。
+
+动机是一次 100-update 实测的 35,441 个 target rows 中，只有 18 个后续空档达到 2 秒，8 秒及以上为零。时间前视编码器在这份曝光下几乎没有学到长空档响应。`p=0.25` 是待验证的补充曝光配置；须检查固定验证退化、跨空档 LN、完整生成结构及真实采样曝光，不能仅凭增加样本就宣称质量改善。
+
 ### 6.3 新主 loss：完整 continuation code length，固定尺度归一化
 
 对 sample w 定义
 
 $$
-S_w=-\sum_{i\in I_w}\log p_\theta(a_i^\star\mid H_{i-1}^\star,t_{\le i},e_i).
+S_w=-\sum_{i\in I_w}\log p_\theta(a_i^\star\mid H_{i-1}^\star,t_{\le \min(i+r,N)},e_i).
 $$
 
 一次 optimizer update 累积 $B_{\mathrm{eff}}$ 个 sampled windows，主风险采用
@@ -489,7 +527,7 @@ $$
 \exp\{(s_\theta(a,H)+\beta b(a,H))/\tau\},
 $$
 
-再进行已声明的 nucleus 截断。首版 decode preset 为 temperature=1、top_p=0.95、beta=0；必须同时提供 temperature=1、top_p=1、beta=0 的 raw-model sampling 对照。0.95 是算法配置，不是已经有谱面依据的质量改进。低概率 LN_CLOSE 可能被 top-p 持续截掉，所以分别观察模型概率、策略裁切与最终 LN 持续/terminal closure。greedy 是调试对照，不能成为唯一 rollout。
+再进行已声明的 nucleus 截断。当前默认 temperature=1、top_p=1、beta=0，保留原始模型的正概率 LN_CLOSE；同时评估 top_p=0.95。早期长谱运行中，0.95 确实持续删除过 LN_CLOSE 概率，尚无证据证明它改善生成质量。分别观察模型概率、策略裁切与最终 LN 持续/terminal closure；不能把不同随机 seed 的差异单独归因于 top-p。greedy 是调试对照，不能成为唯一 rollout。
 
 验证 $\tau>0$、$0<top\_p\le1$ 及合法候选 scores 有限；cutoff 处保留全部同分候选，避免 row-ID tie-break 破坏截断 support 的镜像对称。模型分布等变不等于相同 RNG seed 下逐行输出镜像，后者还需要 categorical 排列及随机数的显式耦合。普通 checkpoint 恢复要求固定 runtime/配置下结果可复现。
 
@@ -535,15 +573,15 @@ loss 测试还须覆盖 ragged effective batch、长 target 短尾 chunk、完�
 ## 9. 里程碑与依赖
 
 实现状态：M0 的因果数据、seed、逐行 exact replay 与终点规则，M1 的在线主干，以及 M2 的窗口采样与序列训练已实现，接口与验证范围见
-[因果数据、在线主干与序列训练说明](oracle_time_continuation.md)。M1 包含逐行与分块 teacher forcing、训练重投影、显式 detach 和推理 K/V；M2 包含按 group/chart/stratum/start/horizon 抽样、固定 effective-batch 分母、三组精确 marginals、content-only prefill、分块 backward 与完整累积后的单次 clip/step。M3–M4 的实际 sampling、磁盘数组、双重 LRU 预算、资源 guard、持久检查点、流式导出与 corpus run 尚待实现。
+[因果数据、在线主干与序列训练说明](oracle_time_continuation.md)。M1 包含逐行与分块 teacher forcing、训练重投影、显式 detach 和推理 K/V；M2 包含按 group/chart/stratum/start/horizon 抽样、固定 effective-batch 分母、三组精确 marginals、content-only prefill、分块 backward 与完整累积后的单次 clip/step。M3 已补齐实际 sampling、磁盘数组、双重 LRU 预算、资源 guard、持久检查点与流式导出；实测范围和参数选择见 [M3 验证报告](oracle_time_m3_validation.md)。M4 的 corpus training 与同条件质量比较尚待完成。
 
 | Milestone | 实现内容 | 完成条件 | 不允许替代成交付 |
 | --- | --- | --- | --- |
-| M0：因果数据与 state 合同 | skeleton、30-note seed、ExactReplay、pre/post state、终点规则 | 真实谱面逐行 teacher replay 与 prefix 构造正确；未来信息隔离 | 再写一份旧 run audit |
+| M0：因果数据与 state 合同 | skeleton、30-note seed、ExactReplay、pre/post state、终点规则 | 真实谱面逐行 teacher replay 与 prefix 构造正确；未来动作隔离和有界时间前视 | 再写一份旧 run audit |
 | M1：在线主干 | 三层 causal local summary、row-node relation frontier、query/content temporal、joint head | query/content 可见性和 batch/step 一致；fine→coarse 无空窗；提交输出更新后续 features | 只验证一个 relation score 反例 |
 | M2：sampling 与 sequence training | WindowSamplingPolicy、固定 effective-batch sequence cost、三组可关 marginals、chunked backward/content-only prefill | 真实不同 history/时长可训练；历史读取投影与 chunk 内 writer 获得规定梯度；正 lambda 路径有效 | 旧等 block mean-row loss、只有配置字段的辅助项或只有 forward parity |
 | M3：实际生成与资源封装 | 两种 top-p sampling、持续 rollout、LN carry、导出、双重 cache 预算、durable checkpoints | seed 后纯生成；长谱合法非空；terminal 行可追踪；状态/输出一致恢复；实际路径资源有界 | 只输出 logits、teacher-forced accuracy 或算子级内存平台 |
-| M4：真实 corpus run 与交付 | 新任务训练曲线、固定 case outputs、概率/结构/资源报告 | 交付可复现 run、checkpoint、完整生成文件与明确局限 | 用 300-update 小差值宣告总体方向成败 |
+| M4：真实 corpus run 与可玩结构 | 全语料曝光、固定 held-out case outputs、人工 gold 参照与参数选择 | 可复现训练与完整续写；对完整动作、节奏、LN 配合和段落衔接作具体判断，呈现可玩的组织而非仅合法输出 | 用少量更新的 NLL、合法率或任意 pattern 计数代替生成质量 |
 
 M0 是基础；M1 与 M2 的设计需要共同对齐，不要求先获得旧任务的显著收益；M3 的 sampling/资源语义在 M0 即确定，不能最后补丁式修 LN；M4 使用已完成的同一系统。这里的 milestone 是一条主任务，不是五个可以分别“无收益、停止采用”的微型研究项目。
 
@@ -563,11 +601,11 @@ M0 是基础；M1 与 M2 的设计需要共同对齐，不要求先获得旧任�
 
 旧 checkpoint 不做 exact resume。需要迁移 embedding 等可兼容参数时，只允许 weights-only initialization，记录来源，optimizer/memory/sampler 使用新状态；首个 baseline 可直接从头训练，不将迁移变成前置。
 
-结束标准是：代码能用一份完整配置重现实验，固定真实前缀可生成完整合法谱面；所有 action-dependent features 来自实际已提交历史；训练读取梯度、chunk 内 writer 梯度和无空窗归档通过独立检查；长时间运行的全部常驻状态与资源有界；sequence risk、两种 sampling 与 terminal closure 的作用清楚；真实案例能展示学到了什么及仍失败在哪里。质量结果允许不理想，但不能用不相关小实验替代这些交付，也不能把有界历史存储直接当作学会利用历史的结论。
+结束标准是：代码能用一份完整配置重现实验，固定真实前缀可生成完整合法谱面；所有 action-dependent features 来自实际已提交历史；训练读取梯度、chunk 内 writer 梯度和无空窗归档通过独立检查；长时间运行的全部常驻状态与资源有界；sequence risk、两种 sampling 与 terminal closure 的作用清楚。工程结果可以记录失败，但不能据此把可玩结构验收标为完成。质量判断须展示完整动作与进入/退出上下文，对照当前人工 gold，说明可辨认的 motif、延续和转换，并保留退化反例；重复、Trill、Jack 或高密度本身不是错误。没有实际演奏测试时，结论限于谱面结构预审，不能代替玩家体验。也不能把有界历史存储直接当作学会利用历史的结论。
 
 ## 11. 防跑偏检查
 
-每个 PR/阶段说明都回答一个问题：它怎样推进“给定时间骨架、仅凭已提交历史进行真实逐行续写”？无法回答的改动不进入本轮。
+每个 PR/阶段说明都回答一个问题：它怎样推进“给定时间骨架、仅凭已提交动作历史进行真实逐行续写”？无法回答的改动不进入本轮。
 
 以下行为视为偏离本计划：重新接入 future action context；先按真值整窗建 relation graph 再 masking；种子之后偶尔塞回真值修复生成；把 batch/chunk 起点当作真实 BOS；在中间窗口关闭所有 LN；以长 target 费内存为由偷偷缩短语义窗口；把 hidden action 用于图选边；重新接入 style/action reader；以 generic repetition penalty 禁止谱面重复；用独立 toy 表达力测试或微小 aggregate NLL 差异代替完整续写交付。
 
