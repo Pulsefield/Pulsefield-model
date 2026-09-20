@@ -243,6 +243,76 @@ Defaults preserve earlier checkpoint identities. The module is an experimental
 candidate; its native quality and retention of independent LN/TAP relationships
 require complete-chart evaluation after training.
 
+#### Release recovery on complete charts
+
+A release-only continuation uses 72 machine recovery queries from four TRAIN
+song groups, alongside 250,000 additional ordinary source onsets. The native
+queries identify persistent three-held-lane states whose remaining lane carries
+repeated attacks while the corresponding source uses varied routing. These are
+machine preferences, not human semantic labels. Collection selected sources
+with sparse-to-dense timing transitions and stopped at its first adequate
+103-group prefix; it does not estimate corpus-wide failure prevalence.
+
+Training from routing 6.25M to release 6.5M takes 148 seconds on one CPU thread
+of the 24 GiB M5 Air. Sampled peak RSS is 1.85 GB and no swap growth is observed.
+All inherited model and Adam tensors remain bit-identical. The real-data
+preflight also checks exact initial native draws and conditional preservation
+after an optimizer update; its largest within-release log-probability difference
+is $9.54\times10^{-7}$, consistent with float32 rounding.
+
+The fixed comparison contains 32 complete continuations from 16 validation song
+groups, with seeds 17 and 23. It combines the earlier long-chart cohort and the
+fresh cohort described above, including continuations longer than 14 minutes.
+All outputs pass independent mechanics and exact export/reparse. Generation
+takes 293 seconds on CPU1, with sampled peak RSS 734 MB and no swap growth.
+
+Maximum consecutive required attack rows under the same three unchanged holds
+falls from 26 to 4. The earlier 26-row confinement through a density increase
+becomes a passage with changing held lanes, releases and multi-column TAP/chord
+flow. The maximum consecutive attack rows containing one fixed lane falls from
+26 to 14; the remaining 14-row witness is a bounded 2.17-second Jack with varied
+entry and exit. The largest exact head-word cycle is a 31-row, 5.25-second
+left/right-pair Trill. Its context establishes a bounded exchange, not prolonged
+allocation collapse. Neither Jack nor Trill presence is itself a defect.
+
+Matched canonical Beatmap Lens views retain independent LN/TAP relationships in
+both selected LN-rich passages and both seeds. In Luster (`ed29fd1a8c2d`,
+220097–228097 ms), independent release-row counts change from 34/31 to 37/37.
+In Gloomy Flash (`f2e23b5e0b78`, 52881–60881 ms), they change from 36/32 to 28/47.
+The views show staggered starts and releases while other lanes
+remain held, varied hold lengths and intervening TAP flow. These relations,
+calibrated against current High human LN and Stream examples, establish the
+retention observation; the counts alone do not. Inspected early/middle/late
+contexts and long-chart late excerpts retain changes of organization.
+
+This candidate passes the scoped long-form recovery and LN-retention development
+screen. Overall playability and 2–6-star consistency remain unestablished.
+Below-40ms same-lane attack or release-to-attack diagnostics increase from 310
+to 366 over 90,678 required onsets, with no below-10ms event. The largest inspected
+two-second cluster has 20 release-to-head gaps of 37–38 ms, versus 17 baseline
+diagnostic events in that scope. It is rhythmic short-LN rearticulation rather
+than a new sustained allocation collapse, but its execution cost still matters.
+Generated star ratings span 2.137–6.717; the 5.863-star source produces 6.649 and
+6.717 stars. No requested-difficulty calibration or player trial is implied.
+
+The review covers 27 generated contexts selected by fixed phase locations and
+whole-chart failure locators. It is an unblinded agent development review, not
+an inspection of every second or new human annotation. Human labels, confidence
+and comments were checked against six unchanged canonical source documents.
+The frozen slow-Jack calibration has no recorded confidence; it is not counted
+as a High-confidence judgment.
+
+Implementation and training source:
+`1e5f5da8d7e1fe54646934e4d512ff8e113bef93`. Final checkpoint SHA-256:
+`0a9c87afa43caa9d3647fe3315d79b3a048cc71261571c599c85cf49361dd1ec`.
+Local outputs belong to `release-recovery-20260920-v1/` under
+`artifacts/bounded-typed-continuation/`; its complete readout is
+`d354a939829e0877ccbfa7815bfb312521b91c93692eca8f88c6033651aff0d5`
+and scoped review is
+`2b7be2eb28d855f558e16cc676476f13ad4839662d91de326352273a22fa0bf6`.
+These local assets may be absent in a fresh clone. The portable generation
+command below reads the saved architecture directly from the checkpoint.
+
 ## Exact state and bounded learned context
 
 Exact state retains real LN starts, current occupancy, last attack/release clocks,
