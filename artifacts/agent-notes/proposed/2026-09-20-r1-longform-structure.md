@@ -1298,3 +1298,36 @@ prevents adopting the continuation. Inspect all worst regressions and the LN
 retention contexts, including rhythmic37–38ms short LN; no universal Jack ban,
 LN-duration cap or hard gap constraint is introduced. A positive result still
 leaves requested-difficulty calibration and full-goal verification outstanding.
+
+### Native response pool is adequate and inspected
+
+All32 preselected TRAIN trajectories complete in172.832413s. Pool SHA
+76912db12f9bcf6e0035d296bb1cfc35bb436835cf591f0010ab89727fbb4f19
+contains92 admitted queries from nine groups, including two R-only queries;
+81 preserve both head and LN-start counts. All complete trajectories pass exact
+mechanical verification. One largest cost-improvement context per contributing
+group was rendered and both source/candidate views were inspected (18 views).
+The examples retain changing independent holds and mixed TAPs; their local tight
+release/head transitions differ from the source execution. Three TAP-source
+contexts develop dense LN organization in generation; this does not itself prove
+failure or justify deleting LN. The conditional composition preference and source
+anchor are retained to avoid that shortcut. No new human annotation is created.
+
+A source-only opportunity census performed while harvest ran found589 of1,210
+eligible charts,452 groups, with an H less than30ms after a candidate. The selected
+32 charts include16 such charts and1,148 candidate/H opportunities. This diagnostic
+did not alter selection, query rules or the adequate pool. It is not a new harvest.
+
+The implementation adds frontier2 timing, recomputed conditional response families,
+consequence-only updates, source KL and named Adam-state migration in the isolated
+codex/r1-row-response worktree based on dfdbc75776cf. Focused checks cover exhaustive
+future enumeration, composition/mirror invariance, loss gradients, parent freezing,
+interleaved optimizer identities and exact fork/resume. Initial failures were in
+one new synthetic fixture: its first schedule had no improving action; the corrected
+schedule then needed a JSON serialization round-trip for the existing condition
+parser. Production support and assertions were unchanged. The corrected response
+owner passes8 tests; the preceding affected-owner run had65 other passing tests.
+Native generation, raw restore, teacher equivalence and packaging then pass47 tests
+plus22 subtests, including new frontier2 CPU/MPS cases. Hydra --cfg job projects
+frontier2, consequence scope and unit source KL. git diff --check passes. No CUDA,
+full legacy suite, push or PR-readiness claim is made.
