@@ -179,3 +179,51 @@ plan to6M in a fresh segment. The original parent is untouched. An outer
 3,600-second alarm supplements the inherited cumulative training guard; caught
 failures preserve the last durable boundary and record the failure. Card revision2
 and its resource/quality scope remain unchanged; acceptance remains none.
+
+
+## Focused baseline witnesses and evaluation procedure
+
+The running candidate has crossed its5.125M checkpoint and continues the same
+plan. No pilot quality selection or new intervention was introduced. Before
+new generation, the evaluation driver recomputes all16 selected parent outputs'
+clock counts and four-phase LN fractions exactly. Baseline-locator SHA:
+`45a5b9f2f6bffc006055b471be197e2f46354a24f4907470827e918c390e01a3`.
+
+Canonical Beatmap Lens source/generated contexts were inspected for the two
+largest parent runs of consecutive head rows containing one lane:
+
+- Source19,seed23: lane3 appears on77 consecutive required onsets over
+  103,565–112,458ms. Head-row gaps range107–429ms, median107ms; there is no
+  continuing hold and no rest of at least1,000ms. The generated context routes
+  nearly all activity into that lane while the reference distributes the same
+  rhythm across changing attack groups. Agent playability review: concerning
+  sustained concentration, without a universal prohibition on jack passages.
+- Source03,seed23: lane3 appears on54 consecutive required onsets over
+  86,797–95,842ms. A2,133ms rest separates91,944 from94,077ms, so this is not
+  nine seconds of uninterrupted physical load. Minimum/median head-row gaps
+  are73/147ms; no continuing holds force that lane choice. The surrounding
+  generated context also has extended concentration in another lane. Review:
+  concerning routing degeneration, with the rest explicitly preserved.
+
+All24 canonical pages across the two source/generated comparisons were viewed
+through their complete reading montages, with exact action packets checked.
+These are unblinded agent observations; formal style labels remain unreviewed
+and source arrangements are not human gold. Both runs fit inside511 physical
+tokens, so finite context length alone cannot explain these specific failures.
+The candidate changes access to historical organization; if concentration remains,
+planning/native-state recovery is more relevant than assuming that longer memory
+by itself is sufficient. No short-gap threshold would locate these two failures.
+Render-manifest SHA:
+`302233e4faa605b0d04a25a4e92ce8d7d8d1d60755f62666cb0a953a7b395a43`;
+review SHA `85799fe478d8589c95bec55af3122a2bb36a1d01bf753d26b39b35d7de9f07da`.
+
+`evaluate.py` SHA is
+`84d5ea653986f6e8147678df4b5c07a8e44d6d4497940e5cfda7f76918c244c6`.
+`evaluation-procedure.json` SHA is
+`1e68b5aee4a8845a48f9ac92eef86c892e068f6657f8c9200add7d6d45d19837`.
+The procedure fixes the declared eight sources and seeds17/23,128-onset
+nonoverlapping locator windows, the full matched parent/source references and
+the1,800-second/2GiB-output bounds. A final execution freeze adds the completed
+training receipt and checkpoint SHA before generation. Head-word entropy,
+concentration, repeated motifs and LN amount locate structural inspection; they
+are not optimization targets, calibrated style scores or acceptance by themselves.
