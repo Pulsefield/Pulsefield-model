@@ -57,10 +57,31 @@ def parse_source(data: bytes, expected_sha256: str) -> SourceChart:
     """
     if digest(data) != expected_sha256:
         raise ContractError("Source SHA-256 mismatch before source-line resolution")
+    objects = iter_source_objects(re.split(r"\r\n|\n|\r", data.decode("utf-8-sig")))
+    ordered = tuple(sorted(objects, key=lambda n: (n.start_ms, n.column, n.source_line)))
+    collisions = []
+    for lane in range(4):
+        previous = None
+        for note in (n for n in ordered if n.column == lane):
+            if previous:
+                if note.start_ms == previous.start_ms or note.start_ms < previous.end_ms:
+                    raise ContractError(f"Ambiguous same-lane source objects {previous.source_line}/{note.source_line}")
+                if previous.kind == "long" and note.start_ms == previous.end_ms:
+                    collisions.append((previous.source_line, note.source_line))
+            previous = note
+    signature = sorted((n.column, n.kind, n.start_ms, n.end_ms) for n in ordered)
+    return SourceChart(expected_sha256, ordered, digest(canonical_json(signature).encode()), tuple(collisions))
+
+
+def iter_source_objects(lines):
+    """Parse source lines incrementally using the canonical object rules.
+
+    Consumers must exhaust the iterator to validate Mode/CircleSize and must
+    separately verify bytes, ordering, lane collisions and arrangement identity.
+    """
     section = None
     mode = keys = None
-    objects = []
-    for line_number, raw in enumerate(re.split(r"\r\n|\n|\r", data.decode("utf-8-sig")), 1):
+    for line_number, raw in enumerate(lines, 1):
         text = raw.strip()
         if text.startswith("[") and text.endswith("]"):
             section = text
@@ -85,24 +106,11 @@ def parse_source(data: bytes, expected_sha256: str) -> SourceChart:
                     kind, end = "normal", start
                 else:
                     raise ValueError(f"unsupported hit-object type {flags}")
-                objects.append(NoteRef(line_number, column, kind, start, end))
+                yield NoteRef(line_number, column, kind, start, end)
             except (IndexError, ValueError) as exc:
                 raise ContractError(f"source line {line_number}: {exc}") from exc
     if mode != 3 or keys != 4:
         raise ContractError(f"Expected mania Mode:3 and CircleSize:4, found {mode}/{keys}")
-    ordered = tuple(sorted(objects, key=lambda n: (n.start_ms, n.column, n.source_line)))
-    collisions = []
-    for lane in range(4):
-        previous = None
-        for note in (n for n in ordered if n.column == lane):
-            if previous:
-                if note.start_ms == previous.start_ms or note.start_ms < previous.end_ms:
-                    raise ContractError(f"Ambiguous same-lane source objects {previous.source_line}/{note.source_line}")
-                if previous.kind == "long" and note.start_ms == previous.end_ms:
-                    collisions.append((previous.source_line, note.source_line))
-            previous = note
-    signature = sorted((n.column, n.kind, n.start_ms, n.end_ms) for n in ordered)
-    return SourceChart(expected_sha256, ordered, digest(canonical_json(signature).encode()), tuple(collisions))
 
 
 @dataclass(frozen=True)
