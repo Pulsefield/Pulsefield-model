@@ -31,6 +31,10 @@ of standalone timing/seed conditions, and native generation with durable recover
 and verified osu! export. Long-form quality, consistency across difficulty levels,
 and varied LN/tap organization remain under evaluation.
 
+The [vacation training queue](docs/research/vacation_training.md) provides serial
+audio caching, a 35M R1 teacher profile and fixed native stress runs, with frozen
+inputs, resumable segments and a macOS `caffeinate` launcher.
+
 ## Legacy code boundary
 
 > **Do not use mapper v2/v2.1, the pre-V3 timing stack, Control V3, or the
