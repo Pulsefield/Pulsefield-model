@@ -946,3 +946,84 @@ pool owners. Record actual parameter count and real-data preflight before traini
 This structural restriction addresses the failed full-policy LN-retention result,
 but it cannot guarantee unchanged whole trajectories; complete-chart quality
 and independent LN/TAP guards remain mandatory.
+
+### Release implementation and adequate pool
+
+Clean implementation: `1e5f5da8d7e1fe54646934e4d512ff8e113bef93` in the release-recovery
+worktree. Six release-specific CPU/MPS tests pass. The affected routing, recovery,
+fork, native export, seed/memory, smoke-Hydra and package selection passes70 tests
+and22 package subtests. `--cfg job` exposes the new module and release-only scope;
+this is configuration inspection, separate from the runner-consumption tests.
+The outgoing diff and default model/legacy checkpoint identities were checked.
+No remote push occurred.
+
+The expanded collector stops exactly at its first adequate complete-chart prefix:
+103 distinct TRAIN groups, with32 trajectories reused byte-for-byte and71 newly
+generated in701.429509seconds. Four groups supply72 queries (19/4/21/28); every
+query is H, with three persistent blocking lanes. Manifest SHA:
+`6c2c66482f6fd72686364b43b1e04c0840a8f078461b981a670d21b2195da7de`.
+Canonical source/candidate contexts covering every query cluster were inspected:
+ce0f1f7310f9 at23298–36765ms, 053e66bd0d06 at146496–153049ms,
+8f524a899141 at176024–196739ms, and7d18c54387e3 at151147–173315ms.
+The latter two show prolonged stationary holds redirecting successive dense/sparse
+episodes into one remaining lane; occasional lane swaps do not restore varied
+organization. Sources have varying routing and, in053e66bd0d06, articulated LN
+releases. These are machine recovery preferences, not semantic training labels.
+The stopping rule makes this an enriched training pool, not a prevalence estimate.
+
+## Experiment Card: r1-release-recovery-v1
+
+Revision1, proposed, acceptance none. The active goal separately authorizes this
+one exploratory continuation and its complete native comparison.
+
+**Question and intervention.** Can release-mask-only learning escape native
+persistent-hold states while retaining the parent's independent LN/TAP structure?
+Use the implemented512-wide residual, freezing all2,917,008 inherited parameters
+and their Adam states. Only139,776 added parameters train, for3,056,784 total.
+The mechanism preserves conditional complete actions within each release set
+and exact no-held predictions at a fixed state. It does not preserve whole
+trajectories. The analogue remains unlikelihood training; this is constrained
+conditional-family adaptation rather than a new novelty claim.
+
+**Frozen inputs and procedure.** Parent routing6.25M checkpoint SHA
+`dff1727bcb634666992dc4c836ee507c02f31917b1a32f2f1f1d5329eaf5f080`, training source8cf31e8,
+complete plan37aa23798a41. Intervention source1e5f5da. The exact pool above is
+TRAIN-only, with original external timing and raw generated prefixes. Extend
+the existing draw stream to6.375M and6.5M milestones; new plan SHA
+`14e1b05f7a212e83d97e0558dab8fb84b534716ba0d5b1362d5a6d0c5d7356b1`
+preserves every old draw and adds1335 draws totaling250k source onsets. Keep
+CPU1, model seed172, batch4/micro2, LR0.0003, decay0.01, clip1 and inherited
+warmup/RNG. Source CE plus mean0.25 native complement loss uses two queries per
+update, uniform by group then query, recovery seed954. No extra training arm,
+temperature change, release ban or LN-duration rule.
+
+**Preflight and bounds.** Before training, validate128 initial native draws and
+logits, exact inherited weights and Adam before/after one real source/native
+optimizer update, changed release residual, within-release conditional preservation
+and exact no-held logits. Preflight freeze SHA
+`c3a86a34d1e4908804095b6f001dbae94e34b594f2e925c7ebaf15b381e15624`
+pins source, driver, pool and plan. Bound preflight180s, new training1800s and
+evaluation1800s, process RSS/footprint6GiB, swap growth128MiB, fresh owner2GiB.
+The parent's charged6873.82s retains the14400s lineage training bound. Stop on
+mechanics, nonfinite, identity, accounting or resource failure. Preserve failed
+outputs; no silent overwrite or scientific resume.
+
+**Evaluation and decision.** Generate all32 complete VAL continuations: the earlier
+eight development groups at indices3/9/15/19/21/23/26/27 plus the eight fresh groups,
+seeds17/23. Reuse the exact recorded routing6.25M outputs; no baseline rerun. Use
+native temperature1, original seeds and supplied R/H. Require exact mechanics and
+export/reparse, no below10ms diagnostic regression, improvement of the fresh01/17
+held-state episode without a similarly concerning new persistent allocation,
+and retention of meaningful independent LN/TAP organization in old21 at
+220097–228097ms and fresh04 at52881–60881ms, both seeds. Inspect other worst held,
+repetition, cycle and type-loss contexts and the long old27 late passage against
+the frozen Foundation and refreshed human gold. Counts locate evidence rather
+than certify quality; an isolated Jack or Trill is not automatically collapse.
+Generated stars remain descriptive. Failure of LN retention, a displaced collapse
+or unresolved concerning context prevents readiness. A positive development result
+justifies further validation, not final goal completion or automatic adoption.
+
+Output owner in the release worktree:
+`artifacts/bounded-typed-continuation/release-recovery-20260920-v1/`.
+The preflight writes the complete typed train configuration. Freeze its digests,
+training/audit/evaluation drivers and checkpoint after preflight before execution.
