@@ -1350,3 +1350,22 @@ Owner is artifacts/bounded-typed-continuation/row-response-recovery-20260920-v1/
 in the row-response worktree. The execution freeze binds typed configuration,
 plan, preflight and training/audit/48-chart evaluation drivers before starting
 the one declared250k-onset continuation. No generated-quality conclusion yet.
+
+### Response6.75M training completes and fixed48-chart evaluation starts
+
+The single250k-onset continuation completes in235.354203s,328 updates and656
+new native-query draws. Checkpoint SHA
+195f1b0109696302addc1aa62bf896ca399d2a1656c15ba4fe27b4a47c8171ce.
+Training-result SHA5a472d4a48f2c3b182d317bb8399dd0bc57baa17c0d796d11585f7a617b3b9a8.
+The audit confirms exact inherited weights and named Adam states, finite weights,
+source coverage4,219,995 unique onsets/10,338 charts/3,169 groups and exact exposure
+and native-query accounting. Peak sampled RSS1,375,289,344bytes, footprint
+1,248,118,656bytes, zero swap growth. Source KL averages0.003546 per onset;
+first/last32 query-loss means1.3974/1.0886 are training diagnostics, not quality.
+
+Evaluation freeze1c290e98d6960dc50b3aa77d582ae254c7b219b8a312f3b11bd37c2cdfa8b6f1
+binds the completed training/audit, fixed candidate, native generation driver
+and inspection/state-decomposition procedures. Generate the same32 prior cases
+and16 confirmation cases at native temperature1 with unchanged original seeds/R/H
+and seeds17/23. Parent release6.5M remains the working candidate until complete
+output review justifies any change. No readiness/adoption conclusion yet.
