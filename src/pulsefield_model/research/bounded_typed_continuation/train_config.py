@@ -19,6 +19,11 @@ class TrainConfig:
     fork_sha256: str = ''
     fork_source_revision: str = ''
     fork_plan_file: str = ''
+    recovery_pool: str = ''
+    recovery_sha256: str = ''
+    recovery_weight: float = .25
+    recovery_queries: int = 2
+    recovery_seed: int = 954
     stop_after_checkpoint: int | None = None
     device: str = 'cpu'
     model_seed: int = 171
@@ -39,6 +44,19 @@ class TrainConfig:
     resources: SmokeResources = field(default_factory=SmokeResources)
 
     def validate(self):
+        if bool(self.recovery_pool) != bool(self.recovery_sha256):
+            raise ContractError('Native recovery needs both pool path and SHA-256')
+        if self.recovery_pool:
+            if (self.model.arm != Arm.R1 or len(self.recovery_sha256) != 64 or
+                    any(c not in '0123456789abcdef' for c in self.recovery_sha256)):
+                raise ContractError('Native recovery requires R1 and a lowercase SHA-256')
+        elif (self.recovery_weight, self.recovery_queries, self.recovery_seed) != (.25, 2, 954):
+            raise ContractError('Native recovery settings require an enabled pool')
+        if (type(self.recovery_queries) is not int or not 1 <= self.recovery_queries <= 8 or
+                type(self.recovery_seed) is not int or not 0 <= self.recovery_seed < 2 ** 63 or
+                isinstance(self.recovery_weight, bool) or not math.isfinite(self.recovery_weight) or
+                not 0 < self.recovery_weight <= 1):
+            raise ContractError('Native recovery needs 1–8 queries, a nonnegative seed and weight in (0,1]')
         fork_fields = (self.fork_from, self.fork_sha256, self.fork_source_revision, self.fork_plan_file)
         if any(fork_fields) and (not all(fork_fields) or self.resume_from is not None):
             raise ContractError('Fork initialization needs all four fork fields and cannot also resume')

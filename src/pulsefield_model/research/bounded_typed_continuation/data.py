@@ -235,12 +235,8 @@ def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: i
                          spans, seed_raw, seed_valid, memory_raw, memory_valid, memory_onsets)
 
 
-def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None):
-    """Sum every task factor, normalized by actual supervised source onsets.
-
-    Returned head/endpoint sums describe local training factor costs. They are
-    not a complete-suffix R1/O1 comparison unless this batch covers that suffix.
-    """
+def batch_predictions(model, batch: PreparedBatch):
+    """Causal hand vectors and legal action log-probabilities for prepared queries."""
     like = model.temporal.input.weight
     raw = like.new_tensor(batch.raw)
     valid = torch.as_tensor(batch.valid, dtype=torch.bool, device=like.device)
@@ -262,7 +258,17 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
         absolute = torch.tensor([s.replay.row_count for s in batch.states], dtype=torch.long, device=like.device)
         memory = bank.query(batches, absolute)
     hands = model.readout(before[batches, positions], like.new_tensor(batch.query_features), seed, memory)
-    probabilities = model.decision_log_probs(hands, batch.states)
+    return hands, model.decision_log_probs(hands, batch.states)
+
+
+def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None):
+    """Sum every task factor, normalized by actual supervised source onsets.
+
+    Returned head/endpoint sums describe local training factor costs. They are
+    not a complete-suffix R1/O1 comparison unless this batch covers that suffix.
+    """
+    hands, probabilities = batch_predictions(model, batch)
+    like = model.temporal.input.weight
     lookup = {choice: i for i, choice in enumerate(model.choices)}
     labels = torch.tensor([lookup[row] for row in batch.labels], dtype=torch.long, device=like.device)
     selected = probabilities.gather(1, labels[:, None]).squeeze(1)

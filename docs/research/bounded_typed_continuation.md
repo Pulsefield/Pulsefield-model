@@ -86,6 +86,38 @@ the candidate cursor without changing exact physical clocks or writing learned
 content. A schedule may finish on an unused terminal candidate after its last
 physical action; completion still requires every LN closed.
 
+## Native-prefix recovery training
+
+Optional `recovery_pool` and `recovery_sha256` settings add R1 training on pinned,
+complete model-generated TRAIN trajectories. The loader checks source identity,
+cache pins, original timing and complete seed, generation provenance, trajectory
+legality and query counts. Empty R candidates remain in the replay schedule.
+No source suffix lane/type or endpoint enters predictor features. Original seed
+and complete generated prefix are re-encoded under the current weights.
+
+Each pool query specifies a repeated core of lanes and optional blocking held
+lanes. At H, alternatives omit at least one core lane or release a specified
+blocking lane; at R, alternatives release a blocking lane. Both alternative
+and negative families must contain legal actions. The objective is negative log
+probability mass of all legal alternatives, computed with logsumexp. It does
+not select a unique correct action or change native sampling support.
+
+`recovery_weight` (default 0.25) multiplies the mean loss over
+`recovery_queries` (default 2) per optimizer update. Normal source-onset CE
+continues with its original denominator. Queries are sampled uniformly by group,
+then within group, using `recovery_seed` (default 954) and the absolute update
+number; strict resume reproduces the selections. Recovery query/loss/time
+counters are separate from ordinary source exposure and coverage. An explicit
+same-architecture fork may introduce the objective while preserving model,
+Adam and RNG state and extending the immutable source plan.
+
+The negative preferences are machine heuristics, not human semantic annotations.
+They require a separate pool-generation procedure and quality evaluation.
+Repeated attacks and long anchors can be intentional: avoiding all repetition,
+maximizing diversity or reducing LN quantity is not the training-quality goal.
+Native recovery has no demonstrated long-form benefit until generated outputs
+pass focused playability review.
+
 ## Exact state and bounded learned context
 
 Exact state retains real LN starts, current occupancy, last attack/release clocks,
@@ -178,7 +210,15 @@ residual. Hand encoders and projections are shared, preserving mirror symmetry.
 The default-width memory adds 446,848 parameters; with observed seed conditioning
 the model has 2,777,232 parameters. This changes access to past organization,
 without providing a future source plan, quantity request, minimum gap or
-repetition rule. Its effect on generated long-form quality remains unmeasured.
+repetition rule. A 256-wide memory candidate continued from the observed-seed
+5M checkpoint to 6M and was evaluated on 16 complete development generations
+(eight fixed sources, two seeds). It reduced below-40ms diagnostic counts from
+152 to 69, but produced a passage with 143 quadruple TAP rows among 152 head
+rows over about 18 seconds, with no held lanes forcing the routing. Another
+passage retained a single-column stream under three long holds. The candidate
+fails the long-form playability gate; more past memory and fitting did not
+prevent collapse. This comparison does not isolate architecture from the
+additional training.
 
 Training explicitly prepares full physical prefixes for this branch and
 recomputes them with current weights, including gradients through older history.
@@ -717,8 +757,9 @@ never edited. Scientific settings may only add endpoint-availability, R1
 row-consequence or R1 seed-context residuals to an original model with all three
 modes set to `none`. An explicit landmark-memory extension may also preserve
 existing unchanged residuals while appending only the memory module; changing or
-removing their modes is rejected. Parameter order and inherited Adam state remain
-checked.
+removing their modes is rejected. A native-recovery objective fork instead keeps
+the entire architecture unchanged and adds its pinned training pool. Parameter
+order and inherited Adam state remain checked.
 Ordinary resume retains exact source/config identity.
 
 Fork initialization copies all existing weights, AdamW moments/steps and RNG,

@@ -13,6 +13,11 @@ fork_from: null
 fork_sha256: ''
 fork_source_revision: ''
 fork_plan_file: ''
+recovery_pool: ''
+recovery_sha256: ''
+recovery_weight: 0.25
+recovery_queries: 2
+recovery_seed: 954
 stop_after_checkpoint: null
 device: cpu
 model_seed: 171

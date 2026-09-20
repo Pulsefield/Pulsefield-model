@@ -26,9 +26,11 @@ from .contract import Arm
 from .data import batch_likelihood, prepare_batch
 from .model import BoundedModel, ModelConfig
 from .memory import footprint_bytes
+from .recovery import RecoveryPool
 from .smoke_run import save_json, source_revision, synchronize
 from .train_config import TrainConfig
 
+RECOVERY_FIELDS = ('recovery_pool', 'recovery_sha256', 'recovery_weight', 'recovery_queries', 'recovery_seed')
 FORMAT = 'bounded-typed/corpus-training-v1'
 EXECUTION_FIELDS = {'output_dir', 'resume_from', 'stop_after_checkpoint', 'plan_file', 'source_cache_dir',
                     'fork_from', 'fork_sha256', 'fork_source_revision', 'fork_plan_file'}
@@ -36,6 +38,9 @@ EXECUTION_FIELDS = {'output_dir', 'resume_from', 'stop_after_checkpoint', 'plan_
 
 def training_identity(config):
     result = deepcopy({key: value for key, value in config.items() if key not in EXECUTION_FIELDS})
+    if not result.get('recovery_pool'):
+        for field in RECOVERY_FIELDS:
+            result.pop(field, None)
     if result['model'].get('long_memory', 'none') == 'none':
         for field in ('long_memory', 'memory_hidden', 'memory_stride'):
             result['model'].pop(field, None)
@@ -105,8 +110,8 @@ def read_resume(path, config, revision, plan):
 def read_fork(config, plan):
     """Validate an explicit source transition and an immutable plan extension.
 
-    Only optional zero-initialized residuals may be added. The original plan must have
-    completed, and every old draw and source pin must remain an exact prefix.
+    Optional zero-initialized residuals or a native recovery objective may be
+    added. The original plan must have completed, and every old draw and source pin must remain an exact prefix.
     The operator pins the audited parent source; this is not ordinary resume.
     """
     path = Path(config['fork_from'])
@@ -120,6 +125,10 @@ def read_fork(config, plan):
             parent['discarded_updates'] or result['source_revision'] != payload['source_revision']):
         raise ContractError('Fork initialization requires a completed, fully durable parent plan')
     old_identity, new_identity = (deepcopy(training_identity(c)) for c in (payload['config'], config))
+    added_recovery = not old_identity.get('recovery_pool') and bool(new_identity.get('recovery_pool'))
+    if added_recovery:
+        for field in RECOVERY_FIELDS:
+            new_identity.pop(field)
     fields = ('endpoint_availability', 'row_consequence', 'seed_context', 'long_memory')
     old_modes = [old_identity['model'].pop(field, 'none') for field in fields]
     new_modes = [new_identity['model'].pop(field, 'none') for field in fields]
@@ -129,11 +138,13 @@ def read_fork(config, plan):
             new_identity['model'].pop(field)
     old_identity.pop('plan_sha256')
     new_identity.pop('plan_sha256')
-    # Existing residuals may remain only for the explicit appended-memory fork.
-    # Their parameters keep their original order and optimizer states.
-    preserved = added_memory and old_modes[:-1] == new_modes[:-1]
-    if (any(mode != 'none' for mode in old_modes) and not preserved) or old_identity != new_identity:
-        raise ContractError('Fork scientific configuration may only add optional residuals and extend its plan')
+    # Objective forks keep the entire architecture; residual extensions append
+    # parameters while retaining the existing order and optimizer states.
+    preserved = ((added_memory and not added_recovery and old_modes[:-1] == new_modes[:-1]) or
+                 (added_recovery and not added_memory and old_modes == new_modes))
+    if ((added_recovery and old_modes != new_modes) or
+            (any(mode != 'none' for mode in old_modes) and not preserved) or old_identity != new_identity):
+        raise ContractError('Fork scientific configuration may only add optional residuals or native recovery and extend its plan')
     base_keys = set(old_plan) - {'sampling', 'draws'}
     if ({key: old_plan[key] for key in base_keys} != {key: plan.get(key) for key in base_keys} or
             set(plan) != set(old_plan) or
@@ -147,6 +158,8 @@ def read_fork(config, plan):
                   plan_sha256=payload['config']['plan_sha256'], endpoint_availability=config['model']['endpoint_availability'],
                   row_consequence=config['model']['row_consequence'], seed_context=config['model']['seed_context'],
                   long_memory=config['model']['long_memory'])
+    if added_recovery:
+        parent.update(recovery_pool_sha256=config['recovery_sha256'])
     return payload, charged, parent
 
 
@@ -207,6 +220,7 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
     coverage = Coverage(plan['sources'], payload['coverage'] if payload else None)
     cache = ChartCache(config.source_cache_dir, plan['sources'], max_sources=config.cache_max_sources,
                         max_bytes=config.cache_max_bytes)
+    recovery = None
     durable_exposure, durable_update, checkpoint_sha = exposure, update, None
     status, failure, result = 'completed', None, None
     with (output / 'resources.jsonl').open('w') as resource_log, (output / 'training.jsonl').open('wb') as journal:
@@ -221,6 +235,9 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
                 if sum(p.stat().st_size for p in output.iterdir() if p.is_file()) > config.resources.output_max_bytes:
                     raise ContractError('Corpus segment exceeds its output byte budget')
 
+            if config.recovery_pool:
+                recovery = RecoveryPool(config.recovery_pool, config.recovery_sha256, plan, cache)
+                check('native-recovery-loaded')
             torch.manual_seed(config.model_seed)
             model = BoundedModel(config.model).to(config.device)
             optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
@@ -280,6 +297,11 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
                     del intervals
                 record['load_seconds'] = time.monotonic() - before_load - sum(record[k] for k in
                     ('prepare_seconds', 'forward_seconds', 'backward_seconds'))
+                if recovery is not None:
+                    before_recovery = time.monotonic()
+                    record.update(recovery.backward(model, update=update, count=config.recovery_queries,
+                        seed=config.recovery_seed, weight=config.recovery_weight, check=check))
+                    record['recovery_seconds'] = time.monotonic() - before_recovery
                 before_step = time.monotonic()
                 norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.max_grad_norm, error_if_nonfinite=True)
                 optimizer.step()
