@@ -639,6 +639,12 @@ choose a valid full-length window uniformly. Short sources use their actual
 length. Draws are shortened at 250k/1M/2M exposures so every arm reaches exactly
 the same boundaries. This distribution is not uniform over onsets or song time.
 
+The [complete 5M TRAIN distribution census](r1_training_distribution.md)
+measures difficulty, LN amount, action clocks and exact consumed windows. It
+finds 80.08% of exposures within 2–6 source stars and 1.39% above 6; the sampler
+does not impose those bands. Original-seed LN amount often differs from later
+phases, and raw human records cover 149 of the 11,563 eligible charts.
+
 The corpus entrypoint is
 `python -m pulsefield_model.research.bounded_typed_continuation.train_hydra`.
 Supply `plan_file`, `plan_sha256`, `source_cache_dir` and a fresh `output_dir`.
