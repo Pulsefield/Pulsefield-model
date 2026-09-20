@@ -1494,3 +1494,135 @@ the predeclared complete-chart/phase/locator inspection. Inspect independent ver
 synchronized or isolated LN relations, TAP interaction, coherent entry/exit and
 local execution concerns. Do not assign human authority or derive quality from
 LN percentage. No policy, selection, scope or annotation changes result from masking.
+
+### Unused response confirmation: structural retention, local scoring defect
+
+The fixed16 outputs complete in89.040346s at the pinned source and checkpoint,
+with mechanics and exact osu! reparse passing. Readout SHA
+427fd4fa34826c95de241de6a51ed563f95e1ef25d3657c43622280161a5602a.
+Generated stars span2.552–5.916; the four source bands are all represented. All24
+fixed phase views, eight generated LN cores and four source LN cores under the
+masked protocol, two maximal lane contexts, two maximal cycles, two main sharp
+contexts and six further held/short/cluster contexts were read. Nine additional
+source counterparts were read. These are targeted contexts, not whole-song manual
+coverage or human player validation. Semantic review SHA
+575584c9a3976924be1ebb24086a3c17868ef99e23bbc0f99fa7137351357462.
+
+No sustained allocation/diversity collapse is visible. Longest unchanged three
+holds is2H over33ms and occurs within changing independent LN organization. The
+longest head-mask cycle is82H/6.532s of left/right-pair alternation with a clear
+exit into LN/TAP organization. A20H/1.532s lane recurrence sits in a moving
+chord-Jack body. These are strong local repeated demands, not proof of effortless
+playability. Each of the four intended LN cores retains independent starts and
+ends and TAP interaction in both seeds; changes in LN density are not a semantic
+presence test. The twelve masked judgments were frozen before revealing labels,
+SHA63cf515c9cbb647e59e2d9ebbaabe55b998d643910c2e1dbb8c2c9915b46d46e.
+Numeric chart diagnostics had already been seen, so masking is not full blindness.
+
+The16 outputs have0/4/21/146 heads below10/20/30/40ms, whereas their source
+references have zero at each threshold. Four15–17ms heads have same-composition
+recovered alternatives. A read-only probability replay at all21 below30ms times
+pins the original native history, not teacher-forced state. Audit SHA
+95a8c5e02c2ef0be79dee37b9b7ef2b951a84b591dae1dc864a693961ff56317.
+At source7599d9d85832,seed47,time68803ms, the under20ms action class receives
+0.805888 probability, versus0.602083 when bypassing only the consequence residual
+on that same state. The top two actions begin LNs just16ms after lane release;
+a recovered lane with the same head/LN counts remains available. This is not
+merely a rare sampling-tail event. The other three witnesses have unsafe mass
+0.124185,0.017778 and0.026873. The bypass comparison is a local component audit,
+not a counterfactual parent trajectory. Disposition REFINE; retain the working
+candidate, and address selection within feasible compositions before readiness.
+
+## Experiment Card: r1-composition-response-calibration-v1
+
+Revision1, proposed, acceptance none. The active goal separately authorizes this
+implementation and bounded exploratory run; no Note lifecycle transition follows.
+Owner remains2026-09-20-r1-longform-structure.
+
+Question: can exact physical response features repair the rare but sometimes
+high-probability short-recovery action class while preserving the learned local
+head/LN composition? Freeze the complete response6.75M network and fit only two
+nonnegative scalar coefficients: immediate under30ms head count and the optimistic
+additional count over the next two required H. Both are computed from the native
+state and supplied R/H timing using the existing exact response bound. No semantic
+annotation, source suffix action, future endpoint, or new audio input is consumed.
+
+Closest analogue is the exponential posterior tilt in Ganchev et al.,2010,
+Proposition2.1 (https://www.jmlr.org/papers/volume11/ganchev10a/ganchev10a.pdf).
+It reweights a base distribution by feature costs while retaining normalization.
+Here normalization is conditional on complete-row (head count,LN-start count),
+keeping each base composition marginal exactly; coefficients are fit globally by
+supervised source likelihood and TRAIN native preferences, rather than solving
+per-instance expectation constraints or performing its latent-variable EM.
+REPS (https://ojs.aaai.org/index.php/AAAI/article/view/7727) is the related policy
+information-preservation branch; this experiment does not learn a value function
+or estimate full returns. Provisional, source-bounded novelty assessment: a task
+adaptation of conditional log-linear calibration with exact mechanics features,
+not a claim of a new general learning objective. Temperature reduction cannot
+select against the demonstrated dominant unsafe class without a separate cost
+signal. Another unconstrained MLP continuation could help, but does not isolate
+feature generalization and could again shift composition; defer it for this test.
+
+Clean baseline isdb0a9b8b1a24d481e18bbb40e1a1266bf885756b; checkpoint
+195f1b0109696302addc1aa62bf896ca399d2a1656c15ba4fe27b4a47c8171ce.
+At each fixed state, define g=(head count,LN-start count) and
+p(a)=q(g)*q(a|g)*exp(-w dot C(a))/Z_g. Legal support remains unchanged, and actions
+with equal cost vectors within a composition retain their odds. Zero coefficients
+recover the base exactly. These are fixed-state invariants, not promises about
+future trajectory composition or LN duration. Store the two fitted values in an
+explicit model-only calibration bundle with base weights and provenance; do not
+fabricate optimizer state or count calibration as another neural-training exposure.
+Ordinary training/checkpoint formats must not silently accept calibration bundles.
+
+Data preparation is TRAIN-only. Reuse the32 source-only group choices in selection
+073da8ff6404ab212f9520d612e3b926e8751ab435c8e0dbe91bd42fa55ec4de,
+but regenerate complete native trajectories from response6.75M at seed31. Admit
+states in the sampled composition only when response cost has both zero and
+positive legal alternatives and source immediate/next-two-H short count is zero.
+This includes states whose actual sampled choice is safe; it does not condition
+only on a realized error. Retain at most64 evenly spaced admitted states per
+chart; require at least64 queries from8 groups. Cache frozen probabilities and
+features after replaying full native history and original seed. Source calibration
+uses a new deterministic group/chart-uniform draw_plan over the pinned TRAIN
+sources of plana613d4b77839e181c6474ba01e9e1a7d275efe35322608ac25c3e24f9853dc00:
+seed20260924,horizons128/256,seed probability.125,milestone16,384onsets.
+All physical-row source factors contribute, normalized by those16,384onsets.
+
+One fit minimizes source NLL +.25 times group-mean native negative log probability
+of zero response cost within sampled composition +.00005*||w||². Use CPU float64
+L-BFGS-B from[0,0],bounds[0,infinity),maxiter100,ftol1e-12,gtol1e-8. Zero-cost
+alternatives have both features zero, so this log-linear objective is convex;
+regularization gives finite coefficient scale. No coefficient selection on VAL.
+Source NLL increase must be<=.01nat/onset; invariants, finite logits, mirrored
+states, empty-family gradients and native raw restore must pass before generation.
+Any optimizer failure, insufficient query pool or invariant failure stops the run.
+
+Paired quality comparison uses the existing48 outputs (seeds17/23) and the unused
+confirmation16 (seeds31/47), unchanged R/H, original seeds and temperature1.
+Baseline totals below20/30/40ms are17/91/324 over64 outputs, with zero below10ms;
+uncertainty is small-cohort, seed-dependent, and not population confidence.
+Primary improvement gate: below20ms heads<=8 and below30ms<=45, each cohort
+strictly improves below30ms, and aggregate below40ms<=324. No new below10ms;
+any per-chart below20ms increase or below40ms increase requires exact inspection
+and prevents an unqualified pass until explained. Mechanics and osu! reparse all
+pass. Inspect fixed phase/LN scopes in the16 cohort, matched old Luster/Gloomy
+Flash cores, both longest charts' late scopes, and maximal held, lane, cycle and
+short-gap contexts. Use the existing Lens Foundation and human gold calibration.
+Independent LN roles/TAP interaction must remain, and sustained held allocation or
+organizational collapse rejects the candidate. Report stars and local load without
+requiring source-star equality. Positive supports retaining a candidate within this
+scope; a local probability gain without full-trajectory improvement is negative;
+conflicting burden/organization changes are ambiguous and require REFINE.
+
+Create an isolated clean descendant for implementation. Likely source owners are
+response/calibration utilities, model config/scoring, generation checkpoint loading
+and identity, minimal packaged config projections and focused tests. Cache and
+experiment drivers remain in their fresh artifact owner. Before execution, pin
+clean intervention OID, every driver, plan, selection and checkpoint. Run through
+uv run --offline --python3.10 --extra mps with CPU1; rendering additionally uses
+--extra render. Bounds: preparation1800s, fitting120s, generation2400s total and
+600s/chart,6GiB RSS/footprint,128MiB swap growth,3GiB new artifacts. No overwrite,
+scientific resume, selection replacement or hyperparameter sweep. Stop on resource,
+identity, nonfinite or mechanics failures. Changed state distribution, optimistic
+future bound and biased query selection remain limitations; mathematical local
+marginals cannot establish global style retention or full2–6 playability.
