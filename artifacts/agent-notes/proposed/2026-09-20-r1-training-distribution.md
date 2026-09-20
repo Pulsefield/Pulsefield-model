@@ -109,3 +109,29 @@ was computed before this freeze. The freeze-writing command succeeded; its
 subsequent console-only resource summary failed on a startup journal entry
 without a footprint field and was corrected without changing the freeze bytes.
 Acceptance remains none; execution follows the active goal's separate authority.
+
+
+## Population receipt and independent recount freeze
+
+The complete source census finished all 11,563 charts in 783.143477 seconds.
+All original/cache comparisons and exact 5M exposure-accounting guards passed.
+`results-v1/readout.json` SHA is
+`c4f93fe8560b2e791a0ef66c662e97613682e08bf70009203777689e58501bab`;
+`results-v1/charts.jsonl` SHA is
+`bd77030a9452bb31228bf530c78f0cc567eee4c86d95f5c96734d092fd282905`.
+Maximum sampled RSS is 531,939,328 bytes, footprint 443,843,856 bytes and swap
+growth zero. The output owner occupies 45,763,873 bytes before independent audit.
+
+Before interpreting the aggregates, independently replay every cached physical
+row without `SourceChart` or the census helper. Direct per-onset draw multiplicity
+weights must recover the exact window totals and each milestone interval. Check
+seed boundaries, all four phase counts, strict clocks, band membership, group
+probabilities, annotation source-only coverage and all aggregate weightings.
+This verifies counting, not a second implementation of the pinned star formula.
+The serial CPU1 audit uses the same 2,400-second, 2GiB process, 128MiB swap-growth
+and 128MiB whole-owner output limits. Its driver `check_result.py` SHA is
+`b6db95d2af74dfec3a8d525e3654fb67a578356658e6c27391096210340c039f`;
+`audit-freeze.json` SHA is
+`9a0a8cdb8841735ae6719c87a18b3e83070ff3c6bc69a634fe8af4a9fd02ec20`.
+Run with the same Python3.10/mps-extra command, replacing `census.py` with
+`check_result.py`. The audit uses a fresh `independent-audit-v1/` directory.
