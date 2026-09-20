@@ -82,7 +82,7 @@ remain unchanged.
 
 ## Result
 
-Pending source/object preflight and complete TRAIN census.
+Complete source census and independent physical-row recount; descriptive interpretation is REFINE. No model-quality or adoption claim follows.
 
 
 ## Execution freeze
@@ -135,3 +135,59 @@ and 128MiB whole-owner output limits. Its driver `check_result.py` SHA is
 `9a0a8cdb8841735ae6719c87a18b3e83070ff3c6bc69a634fe8af4a9fd02ec20`.
 Run with the same Python3.10/mps-extra command, replacing `census.py` with
 `check_result.py`. The audit uses a fresh `independent-audit-v1/` directory.
+
+
+## Complete result and interpretation
+
+The independent recount passes all 11,563 charts in 405.994565 seconds. Its
+receipt `independent-audit-v1/audit.json` SHA is
+`c5076a25249e87d46c391071c1287502c2b688f934bc3cd9cb2c32f06b6125a1`.
+Maximum sampled RSS is 537,690,112 bytes, footprint 437,863,672 bytes and swap
+growth zero; the complete owner uses 45,777,799 bytes. This independently checks
+counting and weighting, not a second star-rating implementation.
+
+Of the actual 5M onset exposures, 4,004,015 (80.0803%) are on 2–6-star sources,
+926,288 (18.52576%) below 2, and 69,697 (1.39394%) above 6. Thus excessive
+high-star training mass is not a strong simple explanation for over-difficult
+generation. The 5–6 band still receives only 9.72486% of exposure despite
+17.63990% of available onset mass, so targeted rebalancing remains distinct
+from broadly removing hard charts. The census reproduces 3,459,305 unique
+onsets, 9,533 exposed charts and all 3,169 groups.
+
+Consumed windows contain 1,295,558 LN heads among 7,214,828 heads (17.9569%);
+source suffixes contain 2,482,778 among 15,728,453 (15.7853%). The full four-phase
+seed-to-suffix LN-fraction discrepancy has chart mean 0.145142, expected-draw
+mean 0.158651 and actual-exposure-weighted chart mean 0.160111. Empty phases in
+very short suffixes are omitted, as fixed in the frozen driver. A descriptive
+follow-up gives median 0.097536 and 90th percentile 0.351811. Replacing the
+seed fraction with the full-suffix fraction gives chart-mean phase discrepancy
+0.046123; this is a future-informed arithmetic reference, not a generator or
+an R1-permitted estimate. Charts with suffix LN fraction at least 0.5 receive
+5.83064% of exposures; at least 0.75 receive 1.27144%. None is a style label.
+
+Available suffixes have 132 head/head and 1,450 release/head events below40ms,
+union 1,582. Consumed windows have 19 and 327, union 346 (0.0692/1000 required
+onsets). Below20ms the source/consumed unions are 9/2, all release/head. These
+source events are not rejected or converted into a universal demand threshold.
+The population differs from the enriched generation screen, preventing a causal
+claim from a direct train/generated rate ratio.
+
+Source-only human-table projection joins 466 raw records on 149 TRAIN charts
+(1.2886% of admitted charts), including 409 records on 140 charts within 2–6.
+No label/evidence/rationale column was read. This does not recompute effective
+concept cells or label balance, and supplies no new semantic training label.
+
+No chart was skipped, no population gate changed, and all declared runtime and
+resource limits passed. The descriptive follow-ups use the completed per-chart
+census and are not prospective decision gates. Durable findings are published
+in `docs/research/r1_training_distribution.md` with a link from the bounded
+continuation owner, product commit `7fdeb7a282923670947514da4db65453a6c4d8be`.
+Those two Markdown files pass scoped numeric/digest/link checks and diff checks;
+no behavior or model tests are claimed for this documentation-only change.
+
+Disposition: REFINE. Long-form structural stability now has priority; cross-difficulty
+control is secondary. The unexecuted global star/LN-request draft is withdrawn
+before its first commit or implementation. Preserve this census as evidence,
+without starting its previously considered control ablation. The next owner is
+`2026-09-20-r1-longform-structure`. The census does not identify a unique cause
+of collapse or native traps. Acceptance remains none and status remains proposed.
