@@ -1027,3 +1027,17 @@ Output owner in the release worktree:
 `artifacts/bounded-typed-continuation/release-recovery-20260920-v1/`.
 The preflight writes the complete typed train configuration. Freeze its digests,
 training/audit/evaluation drivers and checkpoint after preflight before execution.
+
+### Release real-data preflight passes
+
+Preflight completes in5.797547seconds. One actual768-onset batch plus two native
+queries takes0.440288seconds; gradient norm0.957650. Every inherited parameter
+and Adam value remains bit-identical after the update, and only release parameters
+receive gradients. The128 initial native logits/draws/RNG match exactly. Maximum
+within-release conditional log-probability difference after the real update is
+9.54e-7; no-held logits remain exact. Counts are2,917,008 parent,3,056,784 candidate
+and139,776 trainable parameters. This verifies the mechanism, not generated quality.
+The execution freeze pins typed configuration, plan, preflight and training,
+audit and32-chart evaluation drivers before the declared single continuation.
+The audit separates new recovery queries from the inherited head-routing query
+counter; recovery losses from different pools are not treated as one quality metric.
