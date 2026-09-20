@@ -1626,3 +1626,20 @@ scientific resume, selection replacement or hyperparameter sweep. Stop on resour
 identity, nonfinite or mechanics failures. Changed state distribution, optimistic
 future bound and biased query selection remain limitations; mathematical local
 marginals cannot establish global style retention or full2–6 playability.
+
+### Calibration Card revision2: isolate the compatible fitting runtime
+
+Protected environment/procedure revision only; card remains proposed, acceptance
+none. Initial test collection in Python3.10.20 fails before executing tests because
+SciPy1.15.3's packaged _spropack Mach-O library is rejected by macOS27.0 with a
+nonzero offset in its zero-fill __thread_bss section. This is a reproduced native
+loader error, not a failed hypothesis or fitted result. The already installed
+Python3.11.15 with SciPy1.17.1 successfully imports scipy.optimize. Keep native
+model preparation and generation in the unchanged Python3.10/PyTorch environment;
+run only the pure NumPy/SciPy convex fitting owner and its tests in an isolated
+Python3.11.15/SciPy1.17.1 environment. Runtime scoring does not import the optimizer.
+Use uv run --offline --python3.11 --no-project --with scipy==1.17.1 for fitting
+and add pytest for its focused owner tests, with the clean source path explicitly
+set. All objective, data, seeds, bounds and decision gates remain revision1.
+The cache's frozen logits separate this runtime from model prediction, so no
+Python/PyTorch migration is part of the scientific comparison. No run has started.
