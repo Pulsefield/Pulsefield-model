@@ -645,3 +645,86 @@ fixed complete-chart generations. The driver independently recounts pinned5M,
 counts use the same09/21 contexts for both seeds; canonical visual judgment and
 periodic-cycle inspection remain necessary. No adoption or quality conclusion
 is made from frozen-parameter checks alone.
+
+### Completed routing evaluation and handoff recovery
+
+The completed 16-output evaluation takes 328.793489 seconds. Mechanics and
+export/reparse pass; no below-10ms event appears. Maximum consecutive H containing
+one fixed lane falls from 152 for memory6M to 22 for routing6.25M. Below-40ms
+diagnostic events are 69 and 68 respectively, which is not a meaningful measured
+improvement. The declared native sampler remains temperature one. Readout SHA:
+`ddae474b166e426dcd4c29943e0f3b2e97da95e19f347a5e3589bcd0e20f574d`.
+
+Canonical source/candidate images recorded in Note ID
+2026-09-20-r1-longform-handoff show improved historic quadruple and held-lane
+collapse contexts. LN retention is mixed: source21/seed17 at 220097–228097ms
+has 72 LN heads, 20 H with at least two held lanes, and 34 independent close rows,
+close to memory6M's 73/19/36. Source09/seed17 at 97684.5–105684.5ms is mostly TAP,
+18/1/1 versus memory6M's 79/35/22; seed23 has brief meaningful LN passages, 30/10/7.
+These are agent visual observations and exact action counts, not human labels.
+Late source27 is LN-heavy relative to the source. Residual static allocations
+and fixed-group exchanges need episode context; Trill presence is not collapse.
+Retention recount SHA:
+`309e78601bc505a522ebf0aa1cbcf8e3b03f06dc7ef782cf3ffb2b5137149a5f`.
+Disposition remains REFINE. No candidate is accepted as playable.
+
+## Experiment Card: r1-routing-fresh-cohort-v1
+
+Revision1, proposed; acceptance none. The active goal independently authorizes
+this exploratory evaluation and local commits. It continues the first priority
+of long-form structure and diversity; requested-star optimization stays secondary.
+
+**Question.** Does the unchanged routing6.25M candidate sustain organization on
+previously unused validation musical groups, and do its failures point toward
+release policy or larger-scale planning? This is a generalization screen of one
+fixed checkpoint, not a causal ablation or an independent final test set.
+
+**Frozen source and inputs.** Product `8cf31e8d177fab28060ce92be4f5e92f8f8585f3`;
+checkpoint SHA `dff1727bcb634666992dc4c836ee507c02f31917b1a32f2f1f1d5329eaf5f080`.
+Source-only census SHA
+`48ba7f52dd0dd507eece8dc993b941f0d26b6d69766e152f41ec8088e9add062`
+and previous28 conditions SHA
+`7c757dbe90fcdaecb667af38e6b17b98a192595542d6aa62fcb742ea9e543bc7`
+provide selection metadata. Exclude their 48 previous groups plus the28 selected
+groups; close exclusions across catalog and original allocation group IDs.
+This excludes76 catalog groups and14 represented original allocation groups.
+No TEST payload is opened.
+
+Choose two new groups per source band [2,3), [3,4), [4,5), [5,6], with suffix
+duration at least180seconds. Seed20260920 samples groups uniformly, then charts
+uniformly within a group. In each band select one with at least16 source
+independent-LN-start witnesses and one ordinary long chart; the latter may also
+contain LNs. Every selected group is distinct under both available identities.
+The witness threshold selects evidence; it is not a semantic label. Selected
+source SHA prefixes in order are dd580ab2be42, 18bad88a6007, 3d80203596f1,
+5d452f8134f8, f2e23b5e0b78, a2f9ae5c5069, d34487d31198, 3352f5ed768a.
+Suffix lengths are187.106–302.388seconds. Exact identities, paths, source row
+hashes and fixed early/middle/late8-second scopes are in conditions SHA
+`3e9a4cd57b576612eacee66025652f38cba11b8a8f4a2a6ad95d5d16a0759a43`.
+
+**Procedure and bounds.** Generate all16 complete suffixes, seeds17/23, CPU1,
+native temperature1. No new training, support bans, LN caps or routing edits.
+Keep complete original seeds and supplied R/H timing; source suffix actions
+are evaluation references only. Bound the run to1800seconds, each generation
+to600seconds, process RSS/footprint6GiB, swap growth128MiB, owner output2GiB.
+Use the fresh owner
+`artifacts/bounded-typed-continuation/routing-fresh-20260920-v1/` in the longform
+worktree; no overwrite or scientific resume. Run `uv run --offline --python 3.10
+--extra mps python artifacts/bounded-typed-continuation/routing-fresh-20260920-v1/evaluate.py`.
+Freeze SHA `19024335a07db1073ff8504abe93430883fc880484d227e3a2ced3d9cf2c27a7`
+pins checkpoint, selection, drivers and source before generation.
+
+**Readout and decision.** Require complete legal mechanics and exact export/reparse.
+Inspect fixed early/middle/late contexts, the source-selected LN witness, and
+worst repeated-lane, periodic-cycle, held-state and type-loss contexts using the
+frozen Beatmap Lens Foundation and relevant High human examples. Begin with seed17;
+inspect seed23 wherever the locators indicate worse or inconsistent organization.
+Counts, LN fractions and star ratings locate and describe outcomes; they cannot
+pass playability. One clear sustained degeneration or lost independent LN/TAP
+relationship defeats a readiness claim and permits focused failure inspection
+instead of an exhaustive review of already-failed candidates. A below10ms event
+requires an exact source/condition/native witness and prevents an unchecked pass.
+Mechanical, nonfinite, identity or resource failure stops the run. Positive
+evidence would justify wider validation, not difficulty certification or adoption.
+Raw results and images remain in the artifact owner. Append results here and
+publish reusable conclusions in curated product documentation.
