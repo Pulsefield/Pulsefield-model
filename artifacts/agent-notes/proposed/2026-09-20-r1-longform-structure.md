@@ -1369,3 +1369,63 @@ and inspection/state-decomposition procedures. Generate the same32 prior cases
 and16 confirmation cases at native temperature1 with unchanged original seeds/R/H
 and seeds17/23. Parent release6.5M remains the working candidate until complete
 output review justifies any change. No readiness/adoption conclusion yet.
+
+### Response6.75M retains long-form/LN structure and improves sharp burden
+
+All48 full outputs complete in460.915661s with mechanics and exact osu! reparse.
+Readout SHA9d364a3a994f9928c43e8d9d5156742bc180407e46c365c27698487f1c401586.
+There are120,416 required suffix H; total heads166,272->177,531. Sampled generation
+peak RSS613,187,584bytes, footprint911,722,272bytes, swap growth zero.
+
+At10/20/30/40ms the parent->response head counts are0->0,45->13,160->70,442->178.
+No paired chart increases at20 or30ms. At40ms five increase: fresh03 seeds17/23,
+fresh04 seed17, earlier09 seed23 and confirmation02 seed17. All five exact contexts
+were inspected; their minimum gaps are38/37/33/37/30ms respectively. These local
+costs remain limitations. No new sustained allocation failure is visible there.
+The96-chart state/action audit agrees with the independent physical-row recount;
+SHA44bf9f418a44a946c0297a4ecc514334ac30a6b95260a43ba7b3580eeb672daa.
+At30ms, heads in states with no recovered lane71->13, additional cardinality
+minimum12->5, and same-cardinality excess77->52. At40ms forced heads223->43.
+The earlier state-formation concern is reduced, not only rerouted at its final H.
+
+The longest unchanged three-hold allocation falls4->2H. The longest fixed-lane
+run increases14->18H, but its2.357s witness lies in moving chord-Jack figures with
+entry/exit. Two largest head-mask cycles are76H/5.357s full-lane traversal and
+71H/5.468s left/right-pair alternation. They are bounded figures, not a continuing
+one-free-slot trap. Head-mask repetition is not identical complete-row repetition.
+All24 confirmation phase contexts retain changing organization. Four added views
+cover the17.50min chart's early/middle/late scopes and both late seeds882–890s;
+the14.20min chart is inspected at713–721s, both seeds. No entire-song manual claim.
+
+Matched retention views preserve independent LN starts/holds/releases, varied
+lengths and TAP integration. Luster independent closes37/37->34/30; Gloomy Flash
+28/47->23/16. The latter visibly has less simultaneous hold pressure and more TAP
+activity, but it retains actual independent LN relationships. Four source-selected
+confirmation LN cores also retain them. Do not equate decreased LN percentage with
+failure, nor use remaining green-note quantity alone as proof of retention.
+The `H_with_two_continuing_holds` field in the new retention file excludes lanes
+released on the current H; it is not the older `H held>=2` counter.
+
+Fifty candidate contexts and eleven baseline counterparts were viewed. Four High
+human LN/Stream calibration montages were revisited from the unchanged current-gold
+projection. The Stream-negative b8e955 example is changing dense chords/quads, not
+pure left/right Trill; pattern-presence gold is not a numeric playability score.
+Semantic review SHA781e908bbe028a309c4d0d4e519b3f7aa629bfac97d34baab8d1f1de43c304c5.
+The scoped long-form/LN-retention and response improvement screen passes; use
+response6.75M as the next working development candidate, preserve release6.5M.
+Overall disposition remains REFINE and global goal active.
+
+Stars span2.142–6.128. Fresh06 changes6.649/6.717->6.011/5.758 from a5.863star
+source. However earlier27/17 changes5.463->6.128 from5.089, and earlier19 gives
+4.235/4.384 from3.143. This does not prove failure merely by differing from source
+stars: the goal is playable quality across2–6, not exact source reconstruction.
+It does prevent claiming difficulty consistency from the improved global range.
+Residual13 under20ms heads, altered chord/hold pressure and stronger repeated
+figures require honest limits. No hard inference gap cap or repetition ban exists.
+
+Next freeze this exact candidate on a small unused VAL musical-group cohort before
+another learner or final readiness claim. Exclude all previous selections and
+consulted gold identities through both group systems; include both ordinary and
+independent-LN long sources across2–6, and use fixed new sampling seeds. Do not
+restart failed ablations or immediately optimize another threshold from this
+readout. No new architecture or new human-label interpretation has been selected.
