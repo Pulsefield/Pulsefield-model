@@ -1331,3 +1331,22 @@ Native generation, raw restore, teacher equivalence and packaging then pass47 te
 plus22 subtests, including new frontier2 CPU/MPS cases. Hydra --cfg job projects
 frontier2, consequence scope and unit source KL. git diff --check passes. No CUDA,
 full legacy suite, push or PR-readiness claim is made.
+
+### Response real-data preflight passes; single continuation starts
+
+Implementation source9da67258d76c8359964d81aafa33ed177c2de6fd is clean on
+codex/r1-row-response. The added module has27,648 parameters, total3,084,432;
+all3,056,784 inherited parameters are frozen. Preflight completes in4.607982s.
+One real896-onset update plus two native queries and preference verification
+takes1.279798s. Initial128 native logits, draws and RNG match exactly. Every
+inherited weight and Adam value remains exact after the update, despite inserted
+parameter positions. The frozen reference distribution remains exact, and all92
+production response preferences match their pinned admission metadata.
+Only consequence parameters receive gradients; gradient norm0.136414.
+
+The source-plan extension SHAa613d4b77839e181c6474ba01e9e1a7d275efe35322608ac25c3e24f9853dc00
+adds1,312 draws through6.625M and6.75M with every earlier draw/source unchanged.
+Owner is artifacts/bounded-typed-continuation/row-response-recovery-20260920-v1/
+in the row-response worktree. The execution freeze binds typed configuration,
+plan, preflight and training/audit/48-chart evaluation drivers before starting
+the one declared250k-onset continuation. No generated-quality conclusion yet.
