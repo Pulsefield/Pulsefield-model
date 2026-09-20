@@ -144,7 +144,8 @@ default stress profile supports the small working candidate.
   --config-name local mode=run
 ```
 
-Preflight verifies inputs, caches, readout separation and codecs. It is not a
+Preflight verifies inputs, caches, readout separation, codecs, and native model
+loading/task compatibility. It is not a
 sustained hardware benchmark or scientific acceptance gate. The ordinary CPU
 teacher runner has an exact optimizer-recovery and native-generation regression
 test; long-run throughput still depends on corpus shape and host conditions.

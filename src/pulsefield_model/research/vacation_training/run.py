@@ -1,5 +1,6 @@
 """One serial queue with frozen inputs and durable, inspectable stage receipts."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
+import gc
 import json
 from pathlib import Path
 import platform
@@ -9,10 +10,11 @@ import time
 import torch
 import psutil
 
+from ..bounded_typed_continuation import generate_run
 from ..bounded_typed_continuation.corpus import ChartCache, read_plan
 from ..bounded_typed_continuation.condition import GenerationCondition
 from ..bounded_typed_continuation.smoke_run import source_revision
-from ..oracle_time_continuation.runtime import ResourceLimit
+from ..oracle_time_continuation.runtime import ResourceGuard, ResourceLimit
 from ..oracle_time_continuation.storage import file_digest
 from ..scoped_style_modeling.dataset import ContractError
 from .audio import run_audio, validate_manifest
@@ -78,6 +80,18 @@ def preflight(config, root, resolved_yaml):
         g = config.stress.generation
         if file_digest(Path(g.checkpoint_file), g.resources.checkpoint_max_bytes) != g.checkpoint_sha256:
             raise ContractError('Stress checkpoint differs from its frozen digest')
+        guard = ResourceGuard('cpu', config.resources)
+        try:
+            model, _ = generate_run._model(replace(g, device='cpu'))
+        except Exception as error:
+            raise ContractError('Stress checkpoint cannot be loaded by the native generation runner') from error
+        for case in cases['cases']:
+            condition = GenerationCondition.from_payload(read_json(case['condition_file'], case['condition_sha256']))
+            if condition.arm != model.config.arm:
+                raise ContractError('Stress condition task arm differs from the pinned model')
+        guard.check('stress-model-preflight')
+        del model
+        gc.collect()
         inputs.update(stress_manifest_sha256=config.stress.manifest_sha256,
                       stress_checkpoint_sha256=g.checkpoint_sha256, stress_cases=len(cases['cases']))
     environment = dict(python=platform.python_version(), torch=str(torch.__version__), platform=platform.platform())

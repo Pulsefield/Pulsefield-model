@@ -11,6 +11,7 @@ from pulsefield_model.research.bounded_typed_continuation.contract import Arm
 from pulsefield_model.research.bounded_typed_continuation.corpus import ChartCache, read_plan
 from pulsefield_model.research.vacation_training import run
 from pulsefield_model.research.vacation_training.config import VacationConfig, AudioConfig, TeacherConfig, StressConfig
+from pulsefield_model.research.bounded_typed_continuation.generate_config import GenerateConfig
 from pulsefield_model.research.vacation_training.control import Control, publish_json, run_lock
 from pulsefield_model.research.oracle_time_continuation.storage import file_digest
 from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
@@ -126,3 +127,19 @@ def test_stage_budget_does_not_block_independent_next_stage_and_failures_are_not
     assert result['status'] == 'finished_with_incomplete_stages'
     run.run_queue(replace(cfg, mode='resume'))
     assert calls == ['audio', 'teacher', 'stress']
+
+
+def test_preflight_loads_fixed_model_before_any_stage_starts(tmp_path, monkeypatch):
+    monkeypatch.setattr(run, 'source_revision', lambda: 'e' * 40)
+    cfg = configuration(tmp_path)
+    cases = json.loads(Path(cfg.teacher.evaluation_file).read_text())['native_cases']
+    path = tmp_path / 'cases.json'
+    sha = publish_json(path, dict(format='vacation/native-cases-v1', cases=cases))
+    weights = tmp_path / 'not-a-checkpoint.pt'
+    weights.write_bytes(b'its digest is valid but it is not a usable model')
+    cfg.stress = StressConfig(manifest_file=str(path), manifest_sha256=sha, generation=GenerateConfig(
+        checkpoint_file=str(weights), checkpoint_sha256=file_digest(weights), resources=cfg.resources))
+    cfg.teacher.enabled = False
+    with pytest.raises(ContractError, match='cannot be loaded'):
+        run.run_queue(cfg)
+    assert not (Path(cfg.output_dir) / 'ledger.json').exists()
