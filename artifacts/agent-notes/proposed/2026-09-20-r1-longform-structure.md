@@ -619,3 +619,29 @@ It makes the declared single250k-onset continuation to6.25M with routing-only
 updates, unchanged optimizer settings and the1800-second new-runtime bound.
 The final audit will compare every inherited parameter and Adam value with the
 pinned6M parent; no control-training arm or new negative pool is added.
+
+
+### Routing continuation completes; native comparison is frozen
+
+Training completes in299.934137 seconds with333 updates,250k new source onsets
+and666 native recovery queries. Final coverage matches the full-parameter run:
+4,022,343 unique source onsets,10,176 charts and3,169 groups. The audit verifies
+every inherited model tensor and Adam state tensor remains bit-identical to the
+6M parent. The route output projection norm is1.168693. First/last32-update
+sampled recovery losses are1.514103/0.114654; these are training-pool values,
+not evidence of native playability. Maximum sampled RSS955,990,016 bytes,
+footprint779,699,808 bytes, swap growth zero. The declared guards all hold.
+
+Final checkpoint SHA:
+`dff1727bcb634666992dc4c836ee507c02f31917b1a32f2f1f1d5329eaf5f080`.
+Training receipt SHA:
+`e30075119f9d18a512ac7ab548c836576a277618d29cb4290836fc5420949b22`.
+Audit driver SHA:
+`4512c15921ac6cd8ce9311165fdddad9c6f0146833c6976ec9260f38fc604ae0`.
+The completed checkpoint, receipt, audit and predeclared generation driver are
+now bound by `routing-recovery-20260920-v1/evaluation-freeze.json` before all16
+fixed complete-chart generations. The driver independently recounts pinned5M,
+6M and full-parameter-recovery rows before comparing the new candidate. Retention
+counts use the same09/21 contexts for both seeds; canonical visual judgment and
+periodic-cycle inspection remain necessary. No adoption or quality conclusion
+is made from frozen-parameter checks alone.
