@@ -594,3 +594,28 @@ real-data execution. The180-second preflight checks128 exact initial native
 draws and logits, then applies one real source/native optimizer update and
 verifies every inherited weight and Adam value unchanged, nonzero new-module
 gradients, conditional-family preservation and exact R-only logits.
+
+
+### Routing preflight passes; one continuation is frozen
+
+Real-data preflight completes in7.539603 seconds. The model grows from2,777,232
+to2,917,008 parameters; only139,776 routing parameters train. All128 initial
+native logits, sampled decisions and RNG states match the6M parent exactly.
+One actual640-onset source batch plus two native queries completes in1.203953
+seconds. Its gradient norm is0.457191; every inherited gradient is absent and
+all inherited weights/Adam values remain exact after the optimizer step. The
+maximum observed conditional-family log-probability difference is9.54e-7,
+consistent with float32 normalization; R-only logits remain exact. This proves
+the mechanism at fixed inputs, not long-form quality.
+
+Preflight driver SHA:
+`55b8c11090ebeaef62b441293a0ebd3ca23ff81e73ef3fb25311628711c8f666`.
+The fresh routing owner contains `execution-freeze.json`, pinning the completed
+preflight, source8cf31e8, full typed configuration, unchanged shared plan/pool,
+training driver, audit driver and focused evaluation driver before training.
+Run `uv run --offline --python 3.10 --extra mps python
+artifacts/bounded-typed-continuation/routing-recovery-20260920-v1/train.py`.
+It makes the declared single250k-onset continuation to6.25M with routing-only
+updates, unchanged optimizer settings and the1800-second new-runtime bound.
+The final audit will compare every inherited parameter and Adam value with the
+pinned6M parent; no control-training arm or new negative pool is added.
