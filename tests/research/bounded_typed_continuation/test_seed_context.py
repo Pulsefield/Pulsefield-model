@@ -187,9 +187,10 @@ def test_seed_snapshot_validation_and_legacy_default_identity():
         Rollout.restore(model, timing, bad)
     plain, timing, _, original = setup(Arm.R1)
     legacy = original.snapshot(rng)
-    legacy['model_config'].pop('seed_context')
     old_config = asdict(plain.config)
-    old_config.pop('seed_context')
+    for field in ('seed_context', 'long_memory', 'memory_hidden', 'memory_stride'):
+        legacy['model_config'].pop(field)
+        old_config.pop(field)
     digest = hashlib.sha256(json.dumps(old_config, sort_keys=True).encode())
     for name, tensor in plain.state_dict().items():
         digest.update(json.dumps((name, str(tensor.dtype), tuple(tensor.shape))).encode())

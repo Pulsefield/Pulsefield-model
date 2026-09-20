@@ -130,7 +130,8 @@ def run_smoke(config: SmokeConfig, *, resolved_yaml=''):
 
             def measure(items, *, backward=False):
                 before_prepare = time.monotonic()
-                batch = prepare_batch(items, config.model.arm, model.temporal.config.receptive_tokens)
+                batch = prepare_batch(items, config.model.arm, model.temporal.config.receptive_tokens,
+                                      full_history=model.long_memory is not None)
                 after_prepare = time.monotonic()
                 diagnostics = {}
                 loss, factors = batch_likelihood(model, batch, candidate_budget=config.candidate_budget,
@@ -149,6 +150,8 @@ def run_smoke(config: SmokeConfig, *, resolved_yaml=''):
                               context_spans_ms=batch.context_spans_ms, prepare_seconds=after_prepare - before_prepare,
                               forward_seconds=after_forward - after_prepare, backward_seconds=after_backward - after_forward,
                               **diagnostics)
+                if batch.memory_valid is not None:
+                    record.update(full_history_rows=int(batch.memory_valid.sum()), full_history_padded_rows=int(batch.memory_valid.size))
                 return record
 
             @torch.no_grad()

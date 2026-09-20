@@ -142,3 +142,37 @@ def test_r1_residual_fork_and_resume_preserve_extended_training_exactly(tmp_path
         train_run.run_training(replace(target, output_dir=str(tmp_path / 'reinterpretation'),
             model=replace(target.model, **{field: other}), fork_from=str(tmp_path / 'extended/checkpoint.pt'),
             fork_sha256=whole['checkpoint_sha256'], fork_source_revision='f' * 40, fork_plan_file=extension))
+
+
+def test_memory_extension_preserves_seed_module_adam_and_then_trains_through_real_runner(tmp_path, monkeypatch):
+    monkeypatch.setattr(train_run, 'source_revision', lambda: 'e'*40)
+    config = config_fixture(tmp_path)
+    config.model = replace(config.model, arm=Arm.R1, seed_context='observed')
+    parent = train_run.run_training(config)
+    payload = torch.load(tmp_path/'whole/checkpoint.pt', weights_only=True)
+    settings = replace(config.model, long_memory='landmarks', memory_hidden=12, memory_stride=4)
+    previous = BoundedModel(config.model)
+    previous.load_state_dict(payload['model'])
+    model = BoundedModel(settings)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+    train_run.restore_fork(model, optimizer, payload)
+    for name, value in previous.state_dict().items():
+        torch.testing.assert_close(value, model.state_dict()[name], atol=0, rtol=0)
+    compare_states(payload['optimizer']['state'], optimizer.state_dict()['state'])
+    source = mixed_chart()
+    a = suffix_likelihood(previous, source)
+    b = suffix_likelihood(model, source)
+    assert a['head_nll_sum'] == b['head_nll_sum']
+    extension, digest = write_extension(config, tmp_path)
+    monkeypatch.setattr(train_run, 'source_revision', lambda: 'f'*40)
+    target = replace(config, model=settings, plan_file=extension, plan_sha256=digest,
+        fork_from=str(tmp_path/'whole/checkpoint.pt'), fork_sha256=parent['checkpoint_sha256'],
+        fork_source_revision='e'*40, fork_plan_file=config.plan_file, output_dir=str(tmp_path/'memory'))
+    result = train_run.run_training(target)
+    assert result['status']=='completed' and result['source_onset_exposures']==167
+    final = torch.load(tmp_path/'memory/checkpoint.pt', weights_only=True)
+    assert final['model']['long_memory.output.weight'].norm()>0
+    assert final['metrics']['full_history_rows']>0
+    with pytest.raises(ContractError,match='scientific configuration'):
+        train_run.run_training(replace(target, output_dir=str(tmp_path/'changed-seed'),
+            model=replace(settings,seed_context='zero')))

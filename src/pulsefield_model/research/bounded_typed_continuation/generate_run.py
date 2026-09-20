@@ -97,6 +97,7 @@ def _verify_parent(model, condition, restored, parent, payload):
         raise ContractError('Persistent seed differs from the external generation condition')
     state = initial.state
     history = deque(initial.history, maxlen=model.temporal.config.receptive_tokens)
+    memory_history = list(initial.memory_history)
     rows = iter(_records(parent / 'rows.jsonl', payload['rows']['bytes']))
     count = 0
     for index, row in enumerate(condition.seed_rows):
@@ -120,9 +121,12 @@ def _verify_parent(model, condition, restored, parent, payload):
             ends = tuple(state.timing.times_ms[end] if action == 2 and end is not None else None
                          for action, end in zip(row.actions, following.known_ends))
             history.append(RawEvent(row, previous, ends))
+            if model.long_memory is not None:
+                memory_history.append(history[-1])
             count += 1
         state = following
-    if next(rows, None) is not None or state != restored.state or list(history) != list(restored.history):
+    if (next(rows, None) is not None or state != restored.state or list(history) != list(restored.history) or
+            memory_history != restored.memory_history):
         raise ContractError('Durable generation logs and rollout snapshot disagree')
 
 

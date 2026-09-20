@@ -17,6 +17,7 @@ from torch.utils.checkpoint import checkpoint
 
 from ..scoped_style_modeling.dataset import ContractError
 from .consequence import RowConsequence
+from .long_memory import LandmarkMemory, MemoryQuery
 from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule
 from .features import (AVAILABILITY_DIM, CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
                        EndpointAvailability, TimingView, endpoint_availability, factor_features)
@@ -34,6 +35,9 @@ class ModelConfig:
     endpoint_availability: str = 'none'
     row_consequence: str = 'none'
     seed_context: str = 'none'
+    long_memory: str = 'none'
+    memory_hidden: int = 256
+    memory_stride: int = 64
 
     def __post_init__(self):
         if not isinstance(self.arm, Arm):
@@ -50,6 +54,10 @@ class ModelConfig:
         if (self.seed_context not in ('none', 'zero', 'observed') or
                 self.arm != Arm.R1 and self.seed_context != 'none'):
             raise ContractError('Seed context must be none, zero or observed, and is R1-only')
+        if self.long_memory not in ('none', 'landmarks') or self.arm != Arm.R1 and self.long_memory != 'none':
+            raise ContractError('Long memory must be none or landmarks, and is R1-only')
+        if any(type(n) is not int or n <= 0 for n in (self.memory_hidden, self.memory_stride)):
+            raise ContractError('Long-memory width and onset stride must be positive integers')
 
 
 class JointHead(nn.Module):
@@ -217,6 +225,8 @@ class BoundedModel(nn.Module):
             self.seed_residual = nn.Sequential(nn.Linear(2 * config.hidden, config.hidden), nn.GELU(),
                                                nn.Linear(config.hidden, config.hidden, bias=False))
             nn.init.zeros_(self.seed_residual[-1].weight)
+        self.long_memory = (LandmarkMemory(CONTENT_DIM, config.memory_hidden, config.hidden, config.memory_stride)
+                            if config.long_memory != 'none' else None)
 
     @property
     def choices(self):
@@ -237,7 +247,8 @@ class BoundedModel(nn.Module):
         encoded = self.temporal(raw, valid)
         return (encoded * valid[..., None, None]).sum(1) / valid.sum(1)[:, None, None]
 
-    def readout(self, before: Tensor, exact: Tensor, seed: Tensor | None = None):
+    def readout(self, before: Tensor, exact: Tensor, seed: Tensor | None = None,
+                memory: MemoryQuery | None = None):
         if before.shape[:-1] != exact.shape[:-1] or before.shape[-2:] != (2, self.config.hidden) or exact.shape[-1] != QUERY_DIM:
             raise ContractError('Readout requires aligned pre-decision history and exact hand features')
         hands = pointwise(self.fuse, torch.cat((before, pointwise(self.exact, exact)), -1))
@@ -249,6 +260,12 @@ class BoundedModel(nn.Module):
         if self.seed_residual is not None:
             context = seed if self.config.seed_context == 'observed' else torch.zeros_like(hands)
             hands = hands + pointwise(self.seed_residual, torch.cat((hands, context), -1))
+        if self.long_memory is not None:
+            if memory is None:
+                raise ContractError('Landmark readout requires its complete causal memory query')
+            hands = hands + self.long_memory.read(hands, memory)
+        elif memory is not None:
+            raise ContractError('A model without long memory cannot consume landmark queries')
         return hands
 
     def decision_log_probs(self, hands: Tensor, states: Sequence[Schedule]):

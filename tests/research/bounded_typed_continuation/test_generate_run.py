@@ -22,8 +22,8 @@ from pulsefield_model.research.scoped_style_modeling.dataset import ContractErro
 from .test_generation import setup
 
 
-def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context='none'):
-    model, timing, seed, _ = setup(arm, device, availability, seed_context=seed_context)
+def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context='none', long_memory='none'):
+    model, timing, seed, _ = setup(arm, device, availability, seed_context=seed_context, long_memory=long_memory)
     checkpoint = tmp_path / 'trained.pt'
     torch.save(dict(format='bounded-typed/corpus-training-v1', source_revision='a' * 40,
                     config=dict(model=json.loads(json.dumps(asdict(model.config)))),
@@ -41,15 +41,16 @@ def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context
     return model, condition, config
 
 
-@pytest.mark.parametrize('arm,availability,seed_context', [(a, 'none', 'none') for a in Arm] +
-                         [(Arm.O1, 'commitment', 'none'), (Arm.R1, 'none', 'zero'), (Arm.R1, 'none', 'observed')])
+@pytest.mark.parametrize('arm,availability,seed_context,long_memory', [(a, 'none', 'none', 'none') for a in Arm] +
+                         [(Arm.O1, 'commitment', 'none', 'none'), (Arm.R1, 'none', 'zero', 'none'),
+                          (Arm.R1, 'none', 'observed', 'none'), (Arm.R1, 'none', 'observed', 'landmarks')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
 def test_packaged_run_matches_native_and_exact_resume_without_modifying_parent(tmp_path, monkeypatch, arm, availability,
-                                                                              seed_context, device):
+                                                                              seed_context, long_memory, device):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
     monkeypatch.setattr(generate_run, 'source_revision', lambda: 'b' * 40)
-    model, condition, config = inputs(tmp_path, arm, device, availability, seed_context)
+    model, condition, config = inputs(tmp_path, arm, device, availability, seed_context, long_memory)
     before_threads = torch.get_num_threads()
     torch.set_num_threads(config.cpu_threads)
     try:

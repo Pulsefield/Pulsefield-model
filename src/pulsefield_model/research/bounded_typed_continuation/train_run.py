@@ -35,13 +35,18 @@ EXECUTION_FIELDS = {'output_dir', 'resume_from', 'stop_after_checkpoint', 'plan_
 
 
 def training_identity(config):
-    return {key: value for key, value in config.items() if key not in EXECUTION_FIELDS}
+    result = deepcopy({key: value for key, value in config.items() if key not in EXECUTION_FIELDS})
+    if result['model'].get('long_memory', 'none') == 'none':
+        for field in ('long_memory', 'memory_hidden', 'memory_stride'):
+            result['model'].pop(field, None)
+    return result
 
 
 def measure(model, intervals, *, candidate_budget, backward, denominator, check):
     """Accumulate one microbatch's summed loss over the effective batch onsets."""
     started = time.monotonic()
-    batch = prepare_batch(intervals, model.config.arm, model.temporal.config.receptive_tokens)
+    batch = prepare_batch(intervals, model.config.arm, model.temporal.config.receptive_tokens,
+                          full_history=model.long_memory is not None)
     prepared = time.monotonic()
     diagnostics = {}
     loss, factors = batch_likelihood(model, batch, candidate_budget=candidate_budget,
@@ -56,11 +61,14 @@ def measure(model, intervals, *, candidate_budget, backward, denominator, check)
         check('backward')
     finished = time.monotonic()
     head, endpoint = factors.detach().cpu().tolist()
-    return dict(head_nll_sum=head, endpoint_nll_sum=endpoint, source_onsets=batch.source_onsets,
+    result = dict(head_nll_sum=head, endpoint_nll_sum=endpoint, source_onsets=batch.source_onsets,
                 physical_rows=batch.physical_rows, prefix_rows=batch.prefix_rows,
                 padded_rows=int(batch.valid.size), context_spans_ms=batch.context_spans_ms,
                 prepare_seconds=prepared - started, forward_seconds=forwarded - prepared,
                 backward_seconds=finished - forwarded, **diagnostics)
+    if batch.memory_valid is not None:
+        result.update(full_history_rows=int(batch.memory_valid.sum()), full_history_padded_rows=int(batch.memory_valid.size))
+    return result
 
 
 def add_metrics(total, record):
@@ -112,13 +120,19 @@ def read_fork(config, plan):
             parent['discarded_updates'] or result['source_revision'] != payload['source_revision']):
         raise ContractError('Fork initialization requires a completed, fully durable parent plan')
     old_identity, new_identity = (deepcopy(training_identity(c)) for c in (payload['config'], config))
-    old_modes = [old_identity['model'].pop(field, 'none')
-                 for field in ('endpoint_availability', 'row_consequence', 'seed_context')]
-    for field in ('endpoint_availability', 'row_consequence', 'seed_context'):
-        new_identity['model'].pop(field, 'none')
+    fields = ('endpoint_availability', 'row_consequence', 'seed_context', 'long_memory')
+    old_modes = [old_identity['model'].pop(field, 'none') for field in fields]
+    new_modes = [new_identity['model'].pop(field, 'none') for field in fields]
+    added_memory = old_modes[-1] == 'none' and new_modes[-1] == 'landmarks'
+    if added_memory:
+        for field in ('memory_hidden', 'memory_stride'):
+            new_identity['model'].pop(field)
     old_identity.pop('plan_sha256')
     new_identity.pop('plan_sha256')
-    if any(mode != 'none' for mode in old_modes) or old_identity != new_identity:
+    # Existing residuals may remain only for the explicit appended-memory fork.
+    # Their parameters keep their original order and optimizer states.
+    preserved = added_memory and old_modes[:-1] == new_modes[:-1]
+    if (any(mode != 'none' for mode in old_modes) and not preserved) or old_identity != new_identity:
         raise ContractError('Fork scientific configuration may only add optional residuals and extend its plan')
     base_keys = set(old_plan) - {'sampling', 'draws'}
     if ({key: old_plan[key] for key in base_keys} != {key: plan.get(key) for key in base_keys} or
@@ -131,7 +145,8 @@ def read_fork(config, plan):
         raise ContractError('Fork plan must preserve every source, sampler setting and old draw prefix')
     parent.update(kind='fork', source_revision=payload['source_revision'], checkpoint_sha256=config['fork_sha256'],
                   plan_sha256=payload['config']['plan_sha256'], endpoint_availability=config['model']['endpoint_availability'],
-                  row_consequence=config['model']['row_consequence'], seed_context=config['model']['seed_context'])
+                  row_consequence=config['model']['row_consequence'], seed_context=config['model']['seed_context'],
+                  long_memory=config['model']['long_memory'])
     return payload, charged, parent
 
 
@@ -144,7 +159,7 @@ def restore_fork(model, optimizer, payload):
     old_names = [name for name, _ in previous.named_parameters()]
     new_names = [name for name, _ in model.named_parameters()]
     added = new_names[len(old_names):]
-    prefixes = ('pointer.availability_residual.', 'row_consequence.', 'seed_residual.')
+    prefixes = ('pointer.availability_residual.', 'row_consequence.', 'seed_residual.', 'long_memory.')
     if new_names[:len(old_names)] != old_names or any(not name.startswith(prefixes) for name in added):
         raise ContractError('Fork model must preserve parameter order and append only optional residuals')
     missing, unexpected = model.load_state_dict(payload['model'], strict=False)

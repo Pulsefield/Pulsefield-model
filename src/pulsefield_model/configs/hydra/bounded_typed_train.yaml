@@ -38,6 +38,9 @@ model:
   endpoint_availability: none
   row_consequence: none
   seed_context: none
+  long_memory: none
+  memory_hidden: 256
+  memory_stride: 64
 resources:
   driver_limit_bytes: 6442450944
   rss_limit_bytes: 6442450944

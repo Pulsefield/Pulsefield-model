@@ -1,9 +1,10 @@
-"""Native sampling with exact commitments and bounded raw-state recovery.
+"""Native sampling with exact commitments and raw-state recovery.
 
 Only the supplied timing and seed enter initialization. Durable state contains
 exact gameplay facts, a finite raw physical history and CPU RNG state. Optional
-persistent conditioning also retains the original raw seed. Learned values are
-rebuilt under verified parameters instead of serialized.
+persistent conditioning also retains the original raw seed. Landmark memory
+retains the complete raw prefix. Learned values are rebuilt under verified
+parameters instead of serialized.
 """
 from __future__ import annotations
 
@@ -62,6 +63,9 @@ def model_digest(model):
     # Preserve the identity of checkpoints predating optional seed conditioning.
     if config['seed_context'] == 'none':
         config.pop('seed_context')
+    if config['long_memory'] == 'none':
+        for field in ('long_memory', 'memory_hidden', 'memory_stride'):
+            config.pop(field)
     digest = hashlib.sha256(json.dumps(config, sort_keys=True).encode())
     for name, tensor in model.state_dict().items():
         digest.update(json.dumps((name, str(tensor.dtype), tuple(tensor.shape))).encode())
@@ -101,7 +105,8 @@ class Rollout:
     one and no additional repetition, duration or source-style policy is applied.
     """
     def __init__(self, model, state: Schedule, history: Sequence[RawEvent], *, seed_rows: int,
-                 seed_history: Sequence[RawEvent] | None = None):
+                 seed_history: Sequence[RawEvent] | None = None,
+                 memory_history: Sequence[RawEvent] | None = None):
         if state.arm != model.config.arm:
             raise ContractError('Rollout state and model must use the same arm')
         if type(seed_rows) is not int or not 0 <= seed_rows <= state.replay.row_count:
@@ -158,6 +163,40 @@ class Rollout:
                 self.seed_context = model.encode_seed(raw, torch.ones(raw.shape[:2], dtype=torch.bool, device=raw.device))[0]
         elif seed_history is not None:
             raise ContractError('Only observed seed conditioning retains a persistent raw seed')
+        self.memory_history, self.memory_cache = [], None
+        if model.long_memory is not None:
+            if memory_history is None or len(memory_history) != state.replay.row_count or not seed_rows:
+                raise ContractError('Landmark recovery requires the complete raw physical history')
+            memory_history = tuple(memory_history)
+            if tuple(history) != memory_history[-len(history):]:
+                raise ContractError('Long memory and local history disagree')
+            original = memory_history[:seed_rows]
+            crossing = {lane: bisect_left(state.timing.times_ms, end)
+                        for event in original for lane, end in enumerate(event.new_end_times)
+                        if end is not None and end > original[-1].row.time_ms}
+            replayed, expected = seed_events(state.arm, state.timing, [e.row for e in original], crossing)
+            if original != expected or self.seed_history and original != self.seed_history:
+                raise ContractError('Long memory differs from the complete original seed')
+            pending = iter(memory_history[seed_rows:])
+            event = next(pending, None)
+            while replayed.index < state.index:
+                current = event if event is not None and event.row.time_ms == replayed.time_ms else None
+                if current is not None:
+                    if current.previous_time_ms != replayed.replay.last_row.time_ms or any(e is not None for e in current.new_end_times):
+                        raise ContractError('Long memory has an invalid predecessor or unavailable suffix plan')
+                    event = next(pending, None)
+                replayed, emitted = replayed.advance(None if current is None else current.row.actions)
+                if emitted != (None if current is None else current.row):
+                    raise ContractError('Long memory differs from the permitted committed rows')
+            if event is not None or replayed != state:
+                raise ContractError('Complete long memory and exact state disagree')
+            self.memory_history = list(memory_history)
+            self.memory_cache = model.long_memory.empty_cache()
+            for event in memory_history:
+                self.memory_cache = model.long_memory.append(self.memory_cache,
+                    model.temporal.input.weight.new_tensor(event.features()), any(a in (1, 2) for a in event.row.actions))
+        elif memory_history is not None:
+            raise ContractError('A model without long memory cannot retain a full raw memory history')
         self.view = TimingView(state.timing)
         self.signature = model_signature(model)
         self.parameter_digest = model_digest(model)
@@ -170,7 +209,8 @@ class Rollout:
         state, events = seed_events(model.config.arm, timing, rows, crossing_ends)
         first = max(0, len(rows) - model.temporal.config.receptive_tokens)
         return cls(model, state, events[first:], seed_rows=len(rows),
-                   seed_history=events if model.config.seed_context == 'observed' else None)
+                   seed_history=events if model.config.seed_context == 'observed' else None,
+                   memory_history=events if model.long_memory is not None else None)
 
     def _check(self):
         if model_signature(self.model) != self.signature:
@@ -185,7 +225,8 @@ class Rollout:
         like = self.model.temporal.input.weight
         history = self.model.temporal.read(self.cache)[None]
         seed = None if self.seed_context is None else self.seed_context[None]
-        hands = self.model.readout(history, like.new_tensor(query_features([self.state], self.view)), seed)
+        memory = None if self.memory_cache is None else self.model.long_memory.cached_query(self.memory_cache)
+        hands = self.model.readout(history, like.new_tensor(query_features([self.state], self.view)), seed, memory)
         return hands[0], self.model.decision_log_probs(hands, [self.state])[0]
 
     @torch.no_grad()
@@ -226,19 +267,24 @@ class Rollout:
                         endpoint_logp = None
                 actions = tuple(3 if end == before.index else head for end, head in zip(before.known_ends, heads))
         after, row = before.advance(actions, ends)
-        cache, event = self.cache, None
+        cache, memory_cache, event = self.cache, self.memory_cache, None
         if row is not None:
             previous = None if before.replay.last_row is None else before.replay.last_row.time_ms
             new_plans = tuple(before.timing.times_ms[end] if action == 2 and end is not None else None
                               for action, end in zip(row.actions, after.known_ends))
             event = RawEvent(row, previous, new_plans)
             cache = self.model.temporal.append(cache, self.model.temporal.input.weight.new_tensor(event.features()))
+            if memory_cache is not None:
+                memory_cache = self.model.long_memory.append(memory_cache,
+                    self.model.temporal.input.weight.new_tensor(event.features()), any(a in (1, 2) for a in row.actions))
         # Exact and learned state advance together only after the full decision
         # and content update succeeded. Callers should checkpoint RNG/state before
         # a resource boundary if they need to retry an interrupted step.
-        self.state, self.cache = after, cache
+        self.state, self.cache, self.memory_cache = after, cache, memory_cache
         if event is not None:
             self.history.append(event)
+            if memory_cache is not None:
+                self.memory_history.append(event)
         return GeneratedStep(before.index, row, ends, selected_logp, endpoint_logp)
 
     def snapshot(self, generator):
@@ -253,12 +299,17 @@ class Rollout:
                     rng=generator.get_state().clone())
         if self.model.config.seed_context == 'observed':
             result['seed_history'] = [asdict(event) for event in self.seed_history]
+        if self.memory_cache is not None:
+            result['memory_history'] = [asdict(event) for event in self.memory_history]
         return result
 
     @classmethod
     def restore(cls, model, timing, snapshot):
         config = dict(snapshot['model_config'])
         config.setdefault('seed_context', 'none')
+        config.setdefault('long_memory', 'none')
+        config.setdefault('memory_hidden', 256)
+        config.setdefault('memory_stride', 64)
         if (snapshot['format'] != 'bounded-typed/rollout-v1' or config != asdict(model.config) or
                 snapshot['parameter_sha256'] != model_digest(model) or snapshot['timing_sha256'] != timing_digest(timing)):
             raise ContractError('Rollout checkpoint differs from its model parameters, configuration or timing condition')
@@ -273,6 +324,9 @@ class Rollout:
                    for value in snapshot['history']]
         seed_history = ([RawEvent(CompleteRow(**value['row']), value['previous_time_ms'], tuple(value['new_end_times']))
                          for value in snapshot['seed_history']] if 'seed_history' in snapshot else None)
-        result = cls(model, state, history, seed_rows=snapshot['seed_rows'], seed_history=seed_history)
+        memory_history = ([RawEvent(CompleteRow(**v['row']), v['previous_time_ms'], tuple(v['new_end_times']))
+                           for v in snapshot['memory_history']] if 'memory_history' in snapshot else None)
+        result = cls(model, state, history, seed_rows=snapshot['seed_rows'], seed_history=seed_history,
+                     memory_history=memory_history)
         generator = torch.Generator().set_state(snapshot['rng'].clone())
         return result, generator

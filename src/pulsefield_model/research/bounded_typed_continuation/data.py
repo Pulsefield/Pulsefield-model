@@ -171,17 +171,24 @@ class PreparedBatch:
     context_spans_ms: list[float]
     seed_raw: np.ndarray
     seed_valid: np.ndarray
+    memory_raw: np.ndarray | None = None
+    memory_valid: np.ndarray | None = None
+    memory_onsets: np.ndarray | None = None
 
 
-def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: int):
+def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: int, *, full_history=False):
     """Materialize finite raw prefixes and all supervised physical suffix rows.
 
     The oldest content gap reads one preceding timestamp. No source action older
     than receptive_tokens enters rolling content; exact facts stay complete.
     The original supplied seed is separately projected for optional persistent
     conditioning. Its endpoints follow the same arm-specific visibility rule.
+    full_history additionally materializes the true BOS prefix for causal landmark
+    memory; it never substitutes a truncated learned state from an earlier update.
     Forced O1 releases still write content but do not create stochastic queries.
     """
+    if type(full_history) is not bool:
+        raise ContractError('Full-history preparation must be explicitly boolean')
     if not intervals or type(receptive_tokens) is not int or receptive_tokens <= 0:
         raise ContractError('Batch preparation needs intervals and a positive learned token range')
     crops = [(max(0, item.start - receptive_tokens), item.stop) for item in intervals]
@@ -192,11 +199,21 @@ def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: i
     seed_length = max(item.chart.seed_rows for item in intervals)
     seed_raw = np.zeros((len(intervals), seed_length, 2, CONTENT_DIM), dtype=np.float32)
     seed_valid = np.zeros((len(intervals), seed_length), dtype=np.bool_)
+    memory_raw = memory_valid = memory_onsets = None
+    if full_history:
+        memory_length = max(item.stop for item in intervals)
+        memory_raw = np.zeros((len(intervals), memory_length, 2, CONTENT_DIM), dtype=np.float32)
+        memory_valid = np.zeros((len(intervals), memory_length), dtype=np.bool_)
+        memory_onsets = np.zeros_like(memory_valid)
     states, labels, endpoints, views, facts, batches, positions, spans = [], [], [], [], [], [], [], []
     for batch, (item, (first, stop)) in enumerate(zip(intervals, crops)):
         chart, view = item.chart, item.chart.view(arm)
         seed_raw[batch, :chart.seed_rows] = chart.content(arm, 0, chart.seed_rows)
         seed_valid[batch, :chart.seed_rows] = True
+        if full_history:
+            memory_raw[batch, :stop] = chart.content(arm, 0, stop)
+            memory_valid[batch, :stop] = True
+            memory_onsets[batch, :stop] = chart.typed.roles[:stop]
         raw[batch, :stop - first] = chart.content(arm, first, stop)
         valid[batch, :stop - first] = True
         truncated[batch] = first > 0
@@ -215,7 +232,7 @@ def prepare_batch(intervals: list[SourceInterval], arm: Arm, receptive_tokens: i
     return PreparedBatch(raw, valid, truncated, np.concatenate(facts), np.asarray(batches), np.asarray(positions),
                          states, labels, endpoints, views, sum(i.onset_count for i in intervals),
                          sum(i.stop - i.start for i in intervals), sum(i.start - first for i, (first, _) in zip(intervals, crops)),
-                         spans, seed_raw, seed_valid)
+                         spans, seed_raw, seed_valid, memory_raw, memory_valid, memory_onsets)
 
 
 def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None):
@@ -235,7 +252,16 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
     if model.config.seed_context == 'observed':
         seed = model.encode_seed(like.new_tensor(batch.seed_raw),
                                  torch.as_tensor(batch.seed_valid, dtype=torch.bool, device=like.device))[batches]
-    hands = model.readout(before[batches, positions], like.new_tensor(batch.query_features), seed)
+    memory = None
+    if model.long_memory is not None:
+        if batch.memory_raw is None or batch.memory_valid is None or batch.memory_onsets is None:
+            raise ContractError('Long-memory training requires explicitly prepared full histories')
+        bank = model.long_memory.encode(like.new_tensor(batch.memory_raw),
+            torch.as_tensor(batch.memory_valid, device=like.device),
+            torch.as_tensor(batch.memory_onsets, device=like.device))
+        absolute = torch.tensor([s.replay.row_count for s in batch.states], dtype=torch.long, device=like.device)
+        memory = bank.query(batches, absolute)
+    hands = model.readout(before[batches, positions], like.new_tensor(batch.query_features), seed, memory)
     probabilities = model.decision_log_probs(hands, batch.states)
     lookup = {choice: i for i, choice in enumerate(model.choices)}
     labels = torch.tensor([lookup[row] for row in batch.labels], dtype=torch.long, device=like.device)

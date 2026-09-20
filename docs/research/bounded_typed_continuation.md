@@ -99,8 +99,8 @@ three convolution at each dilation 1, 2, 4, 8, 16, 32, 64, 128. Its content depe
 exactly `1 + 2 * sum(dilations) = 511` materialized tokens. Encoding the preceding
 physical gap of the oldest relevant token needs one additional timestamp, so
 the rolling raw history envelope is 512 physical rows. Current complete exact
-facts, external time conditions and optional persistent seed conditioning are
-separate inputs to the prediction query.
+facts, external time conditions, optional persistent seed conditioning and
+optional full-history landmark memory are separate prediction inputs.
 
 This is a concrete finite-context implementation choice, motivated by the
 auditable dependency boundary and batched computation of temporal convolution.
@@ -124,7 +124,8 @@ BOS and TRUNCATED are distinct boundaries. Padding is outside a contiguous
 materialized sequence; it cannot stand in for skipped timing candidates.
 Tests hold exact facts and external timing fixed while changing action tokens
 older than the declared field. Such changes must not affect the learned output
-unless they belong to the explicitly enabled persistent original seed below.
+unless they belong to an explicitly enabled persistent seed or full-history
+landmark memory below.
 The tests also check parameter gradients under crop recomputation, so matching
 forward logits alone is insufficient.
 
@@ -154,11 +155,47 @@ difficulty or target LN fraction. Supplied seed endpoints remain permitted.
 
 Training re-encodes the original raw seed under current weights for each batch,
 with gradients through the shared temporal module. Inference computes its vector
-once under fixed parameters. Only original seed facts persist in addition to
-the rolling history; unrelated older generated actions remain outside the
-learned field. This global-condition adaptation is motivated by the prefix-state
+once under fixed parameters. When landmark memory is disabled, only original
+seed facts persist in addition to the rolling history; unrelated older generated
+actions remain outside the learned field. This global-condition adaptation is motivated by the prefix-state
 diagnostic below. Its generation-quality benefit has not been established, and
 an introductory seed need not represent later chart structure.
+
+### R1 full-history landmark memory
+
+`model.long_memory=landmarks` enables an R1-only learned history branch. Its
+shared-hand GRU reads every committed physical row from the true beginning,
+using the same action/gap/permitted-plan features as local content. It stores a
+landmark after every `model.memory_stride` head rows (default 64). These are
+bookkeeping intervals, not asserted musical phrases. Memory width is controlled
+by `model.memory_hidden` (default 256), independently of the local TCN width.
+
+The current hand representation attends to all earlier landmark keys and values.
+A zero-initialized output projection adds the resulting context before joint
+row scoring. Landmarks written by the current target or a future row are masked
+before softmax. Queries before the first completed landmark receive a zero
+residual. Hand encoders and projections are shared, preserving mirror symmetry.
+The default-width memory adds 446,848 parameters; with observed seed conditioning
+the model has 2,777,232 parameters. This changes access to past organization,
+without providing a future source plan, quantity request, minimum gap or
+repetition rule. Its effect on generated long-form quality remains unmeasured.
+
+Training explicitly prepares full physical prefixes for this branch and
+recomputes them with current weights, including gradients through older history.
+Local TCN computation remains cropped to its finite field. No parameter-dependent
+memory survives an optimizer update. Inference updates the GRU only when a
+physical row is emitted and writes keys/values only at completed landmark
+boundaries; empty timing candidates do not become content. The active local
+history continues to cover recent detail between landmarks.
+
+Recovery retains the complete raw committed history and replays it under verified
+parameters, rebuilding the GRU and landmark bank. The constructor verifies that
+history against the exact schedule, original seed, permitted endpoint visibility
+and rolling history; the packaged runner also binds it to the complete committed
+row/decision journal. Thus this optional mode has history storage and recovery
+work that grow with generated duration, and full-prefix training work that grows
+with crop position. Resource limits still apply. The default `none` mode retains
+its earlier parameter identity and bounded-history behavior.
 
 ### R1 candidate action consequences
 
@@ -308,8 +345,10 @@ With observed seed conditioning, the snapshot additionally retains the complete
 original raw seed, including supplied endpoints of objects that have since ended.
 Restoration rebuilds its learned vector under the verified model. The packaged
 runner checks this seed against the external condition as well as checking the
-rolling state against journals. Storage depends on supplied seed length and
-fixed rolling capacity, not generated duration. Default-disabled models retain
+rolling state against journals. Without landmark memory, storage depends on
+supplied seed length and fixed rolling capacity, not generated duration. Landmark
+memory additionally retains the complete raw history, as described above.
+Default-disabled models retain
 their pre-extension parameter digest and can read older unconditioned snapshots.
 Parameter updates invalidate a live rollout. A failed step leaves its exact and
 learned state uncommitted, but callers must restore RNG from a durable boundary
@@ -676,7 +715,10 @@ The new plan must preserve every source pin, sampling setting, prior milestone
 and old draw, then append further draws. Existing plans and parent outputs are
 never edited. Scientific settings may only add endpoint-availability, R1
 row-consequence or R1 seed-context residuals to an original model with all three
-modes set to `none`.
+modes set to `none`. An explicit landmark-memory extension may also preserve
+existing unchanged residuals while appending only the memory module; changing or
+removing their modes is rejected. Parameter order and inherited Adam state remain
+checked.
 Ordinary resume retains exact source/config identity.
 
 Fork initialization copies all existing weights, AdamW moments/steps and RNG,

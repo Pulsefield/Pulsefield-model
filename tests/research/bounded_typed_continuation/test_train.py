@@ -30,6 +30,13 @@ def test_hydra_packaged_projection_and_rejected_unknown_or_unused_fields():
     assert consequence.model.row_consequence == 'frontier' and config.model.row_consequence == 'none'
     conditioned = compose_config(['model.arm=R1', 'model.seed_context=observed'])
     assert conditioned.model.seed_context == 'observed' and config.model.seed_context == 'none'
+    memory = compose_config(['model.arm=R1', 'model.long_memory=landmarks', 'model.memory_hidden=192', 'model.memory_stride=32'])
+    assert memory.model.long_memory == 'landmarks' and memory.model.memory_hidden == 192 and memory.model.memory_stride == 32
+    assert config.model.long_memory == 'none'
+    for overrides in (['model.long_memory=landmarks'], ['model.arm=R1', 'model.long_memory=unknown'],
+                      ['model.memory_hidden=0'], ['model.memory_stride=0']):
+        with pytest.raises((ContractError, ValueError)):
+            compose_config(overrides)
     for overrides in (['model.seed_context=observed'], ['model.arm=R1', 'model.seed_context=unknown']):
         with pytest.raises((ContractError, ValueError)):
             compose_config(overrides)
