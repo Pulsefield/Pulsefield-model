@@ -256,3 +256,105 @@ Run the same Python3.10/mps-extra command with `evaluate.py`. Driver, cohort,
 seeds and limits match the frozen procedure. Long-form structure, native
 repetition and LN/TAP organization remain the quality decision; stars remain
 secondary diagnostics. No generation-quality conclusion is yet established.
+
+
+## Long-memory result: REFINE
+
+The fixed 16 complete generations finish in 275.199619 seconds. All exports,
+reparses and mechanics pass; no below-10ms event appears. Below-40ms union
+counts improve from 152 to 69, but the long-form quality gate fails. Candidate
+19/seed17 has 143 quadruple TAP rows among 152 consecutive head rows containing
+column 2 over 376458–394672ms. All 152 pre-states have no continuing holds;
+there is no rest of at least 1000ms. Candidate 23/seed23 instead has 78 column-0
+singles in a 79-head-row episode over 316175–324800ms, with three other lanes
+occupied for 69 rows. The first is unforced chord collapse; the second persists
+through a source transition from a preceding single-column episode into flow.
+
+The source and candidate reading montages for both contexts were viewed in
+full, using the pinned Beatmap Lens renderer and exact actions. These are
+unblinded agent playability observations, not new human labels. Jack presence
+is not itself a failure; the concern is sustained degeneration of the complete
+passage. Source arrangements are reference examples, not human gold. A shorter
+54-to-7 lane run on source03/seed23 does not offset these new failures. More
+past memory plus fitting is insufficient in this candidate; the test does not
+isolate memory from the additional 1M training exposures.
+
+Readout SHA: `89479813c81ad1dff64f13631d2be1b3cf0fe32f1310f42a87448225fe91e581`.
+Candidate render manifest SHA:
+`54c0cf9a191f06651be73f78d630b85a19df785c9a4f9c5ad7f6efe399246af9`.
+Candidate review SHA:
+`782235dad1915f34655088d2ab05ab755cb0fec0199b14a915bc4ba5f53ae2fa`.
+All live under the declared longform-memory artifact owner. Deviation: after
+these decisive failures, stop the broader fixed-context semantic acceptance
+review to honor the owner's reduced experiment/review scope. Those remaining
+contexts are unreviewed. No adoption or final playability claim follows.
+
+## Experiment Card: r1-native-recovery-v1
+
+Revision 1, proposed, acceptance none. Execution is separately authorized by
+the active goal. This is the active next Card; the memory Card's result remains
+above. Start at clean product `ed1b9b945d4aa7dc01f5e70dba55031dd1292bc6`
+with the completed 6M checkpoint pinned above. Preserve architecture, all
+weights, Adam state, ordinary source sampler, support and native temperature.
+
+**Mechanism.** Add a small complement-set likelihood term on the parent's own
+TRAIN-generated prefixes. Ordinary teacher-forced CE continues. Penalize
+continuing a sustained concentrated attack group, or continuing every long
+blocking hold when that prevents escape; do not invent a unique correct next
+action. Score the probability mass of legal alternatives using logsumexp.
+[Unlikelihood training](https://arxiv.org/abs/1908.04319) is the primary analogue
+for training against self-generated repetition. This is a 4K action-family
+adaptation, not a novelty claim or inherited evidence of playability. Extra
+memory alone is rejected as sufficient; explicit future planning remains an
+alternative if learning escape from native states fails.
+
+**Pool and heuristic.** Deterministically select 32 distinct TRAIN groups from
+pinned census charts with 1500–6000 suffix onsets and at least 180 seconds,
+ordered by SHA256 of `953:source_sha256`; no VAL or TEST payload is admitted.
+Use generation seed43 and the fixed 6M policy. Replay the original R/H timing,
+including empty R candidates, and only committed generated rows. A locator
+requires 32 preceding head rows without a 1000ms rest; a core contains each
+lane present on at least 28 of those rows. The source's corresponding 32-row
+window must have maximum lane participation at most 24. These are conservative
+machine-negative preferences, not human judgments or universal Jack rules.
+At H, alternatives either omit at least one core lane or release a blocking
+lane held since the start of that window. At R, alternatives release at least
+one such blocking lane. Keep a query only when both families have legal mass;
+never modify inference support. Space candidates by at least eight head rows,
+cap each chart at 32 retained queries selected evenly through the chart. Stop
+if fewer than 16 queries across four TRAIN groups are available; do not silently
+relax thresholds. Freeze the complete pool and generation provenance before
+training. The source comparison is training supervision only.
+
+**Training.** Append 250k ordinary source-onset exposures to the unchanged 6M
+plan prefix, with one final 6.25M checkpoint. At each update add two separately
+recomputed native-prefix queries, mean-weight 0.25, selected deterministically
+with seed954 and group-balanced sampling. All original optimizer settings,
+batch4/micro2, CPU1 and seeds remain unchanged. Full generated histories and
+original seeds are recomputed under current weights; no stale learned bank is
+trained through. Keep the original runtime/resource guards. New pool generation
+at most1800 seconds, training at most1800 seconds, evaluation at most1800
+seconds; RSS/footprint6GiB, swap growth128MiB, total owner2GiB. Fail on provenance,
+mechanics, nonfinite loss or resource violations. No automatic extra arms.
+
+**Decision.** Reuse the fixed 16 development outputs, compare against both the
+existing 5M parent and 6M memory candidate. Primary practical gate: neither of
+the newly inspected collapse mechanisms persists in a comparable sustained
+form, and no new equally concerning long-form episode emerges. Locators rank
+review only; lower repetition alone does not establish quality. Check complete
+chart mechanics, no new below-10ms events, and inspect the worst repetitions
+plus LN/TAP contexts against Beatmap Lens foundation and relevant human gold.
+Reject indiscriminate randomization, removal of authored Jack behavior or loss
+of LN/TAP coordination. Cross-difficulty stability remains deferred. A positive
+result supports further focused playability review; negative or ambiguous
+results are REFINE, with no claim of causal isolation from extra CE fitting.
+
+**Implementation and handoff.** Add native-prefix batch preparation, reusable
+batch action log-probabilities, pinned TRAIN-only recovery pool, explicit typed
+training objective configuration and same-architecture objective fork support.
+Verify dense/native agreement including skipped R slots, source/suffix plan
+visibility, finite complement gradients, legal/nonempty alternatives, pool
+split/digest rejection, default checkpoint compatibility, and runner consumption.
+Commit source and freeze driver/config/inputs before each model-backed run.
+Use fresh output owner `artifacts/bounded-typed-continuation/native-recovery-20260920-v1/`
+in the longform-memory worktree. No implicit overwrite or unmeasured resume.
