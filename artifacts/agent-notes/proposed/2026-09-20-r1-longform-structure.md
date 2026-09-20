@@ -386,3 +386,37 @@ threshold, cohort or policy. The implementation source is fe69830; the policy
 checkpoint and its training source remain the pinned 6M/ed1b9b9 parent. The new
 freeze pins the complete repaired driver before its first draw. No training
 will run unless the fixed minimum query/group gate passes.
+
+
+### Native pool and training freeze
+
+Pool-v2 completes all32 trajectories in269.439678 seconds:80 eligible queries
+from8 TRAIN groups. Its manifest SHA is
+`f712c597eefb8269f61a540c3459aad284c247b0ce3e61d9d8cc6fd5af4abbc3`.
+The first13 trajectory files exactly equal the pre-repair outputs. Total
+conservatively charged harvest is below710 seconds. No threshold or selection
+was relaxed. All queries are H decisions with no blocking-hold mask: this pool
+trains escape from unforced concentration, not demonstrated recovery from LN
+starvation. The latter remains an independent evaluation failure condition.
+
+Real-data preflight takes8.235387 seconds. All inherited weights/Adam values are
+exact. The longest selected native prefix is1818 physical rows; its dense/native
+logits agree, complement loss is2.945007 and backward is finite. That full query
+check takes1.805457 seconds. Preflight driver SHA:
+`a77b1792645be114515451d98a0f4f82ff685824c5c0bdb1ab6d40e0320e00e2`.
+The complete hashed configuration, plan, pool, preflight and training driver are
+bound in `native-recovery-20260920-v1/execution-freeze.json` before training.
+Run `uv run --offline --python 3.10 --extra mps python
+artifacts/bounded-typed-continuation/native-recovery-20260920-v1/train.py`.
+The one candidate keeps all declared settings and stops at6.25M, with the
+1800-second new-training guard and inherited lineage/resource limits.
+
+The focused generation driver has SHA
+`e6b32c9b92417cbddf5550b04b50fd94215812ff4f3f419b55569ac1c443823b`.
+It reuses all16 fixed source/seed pairs and verifies both existing5M and6M
+row journals before comparison. Final checkpoint and completed training receipt
+will be pinned before generation. No exploratory pilot selection is added.
+Beatmap Lens human gold images03f7e3 (LN prominent),2af746 (Stream prominent with
+LN/TAP) andb8e955 (Stream absent with repeated changing chords) were refreshed.
+Their style judgments distinguish organization from counts; the last example
+is not a judgment that repeated chords are universally unplayable.
