@@ -1429,3 +1429,43 @@ consulted gold identities through both group systems; include both ordinary and
 independent-LN long sources across2–6, and use fixed new sampling seeds. Do not
 restart failed ablations or immediately optimize another threshold from this
 readout. No new architecture or new human-label interpretation has been selected.
+
+## Experiment Card: r1-response-unseen-confirmation-v1
+
+Revision1, proposed, acceptance none. Exploratory fixed-policy confirmation under
+the active goal. The previous goal turn is progress: it implements, trains and
+reviews response6.75M, with authoritative checkpoint and complete48-chart evidence.
+This next run tests whether that improvement survives unused VAL musical groups
+and new native random seeds. It does not train, change support or select a new model.
+
+Freeze checkpoint195f1b0109696302addc1aa62bf896ca399d2a1656c15ba4fe27b4a47c8171ce
+and clean docs-only execution descendantdb0a9b8b1a24d481e18bbb40e1a1266bf885756b.
+Use the existing source-only census48ba7f52dd0d. Exclude original48 groups,
+28-group screen, routing-fresh8, release-confirmation8 and consulted gold sources;
+close exclusions across catalog and original allocation groups before source reads.
+Selection seed20260923 chooses two distinct groups per2–3/3–4/4–5/5–6 source-star
+band, suffix>=180s: one ordinary long source and one with at least16 independent-LN
+start witnesses. Group then chart sampling remains unchanged. The witness is
+selection metadata, not a human semantic label or model input. Generate all16
+complete outputs at native seeds31/47, temperature1, CPU1. Preserve original full
+seed and R/H; no source suffix actions or LN endpoints enter inference. No TEST.
+
+Before generation, freeze source/condition/checkpoint identities and drivers.
+Inspect fixed early/middle/late8s scopes, source-selected LN cores, worst unchanged
+held allocation, lane recurrence, head-mask cycle and sharp-gap contexts. Use Lens
+Foundation and the unchanged current human gold projection. Mechanics and exact
+osu! round-trip are mandatory. Any new below10ms event requires an exact witness
+and prevents an unchecked pass. Sustained allocation/diversity collapse or absent
+independent LN organization in the intended source-rich conditions is a failure
+signal requiring inspection, not a numeric-threshold shortcut. Evaluate playable
+structure across the source bands and report actual generated stars and local
+burden. Source-star matching alone is neither success nor failure; no requested
+star control is silently added to this task. A positive confirmation can retain
+this candidate, but does not replace the full-goal completion audit or player evidence.
+
+Bounds:1800s total,600s per generation,6GiB RSS/footprint,128MiB swap growth and
+2GiB fresh owner. Stop on mechanics, identity, nonfinite or resource failure.
+No overwrite, reselection after outputs, scientific resume or new training.
+Owner: artifacts/bounded-typed-continuation/row-response-confirmation-20260920-v1/
+in the row-response worktree. Reuse the already verified census and diagnostics;
+do not rerun prior completed experiments or expand into an ablation suite.
