@@ -728,3 +728,83 @@ Mechanical, nonfinite, identity or resource failure stops the run. Positive
 evidence would justify wider validation, not difficulty certification or adoption.
 Raw results and images remain in the artifact owner. Append results here and
 publish reusable conclusions in curated product documentation.
+
+### Fresh cohort result: persistent held-state failure
+
+All16 generations finish in184.943946seconds. Mechanics and exact export/reparse
+pass; no below10ms diagnostic event appears. Candidate below40ms events total242
+versus26 in the source references counted once per seed. Most are in sources06/07;
+source06 generates6.835/7.213stars from a5.863star source. Difficulty is descriptive
+and remains unresolved. Readout SHA:
+`fae14c90363c793ed7895e9d2edd159a862afa878722829eb365ea3c1d1d2350`.
+
+Canonical rendered review of source01/seed17 confirms three persistent holds
+confining26 consecutive H to lane1 over154651–163818ms. Holds began at147985,
+149318 and153318ms. A denser passage starts near160318ms while these holds persist.
+This differs from the human slow-Jack example's deliberate local repeated attacks:
+the generated passage has no changing independent hold/release roles and cannot
+route attacks elsewhere before releasing. Source-reference organization varies
+across columns. Gold presence is not an automatic quality judgment; the persistent
+allocation through the density change is the concern.
+
+Native-state recomputation preserves the external schedule and every generated
+prefix row. All26 states have15 legal full actions but the sole head mask2.
+Release probability is initially0.814, then declines; at161651–163651ms its range
+is0.0221–0.0419. The final163818ms action releases lanes0/3. A constant head-mask
+score cannot change any of these conditional release choices. This is a concrete
+limit of the trained routing intervention, not proof that all long holds are bad.
+The exact audit is `routing-fresh-20260920-v1/locked-state-audit.json`.
+
+Also inspected: the four source-selected LN cores for indices00/02/04/06 and the
+source06/seed17 short-restart source/candidate context. The candidates retain
+short-LN flow, varying lengths and some staggered independent releases;04 is a
+clearer rich LN/TAP guard than00/02. Source06 is substantially denser in LN
+articulation than its source. These observations are calibrated against existing
+High human LN/Stream positive and LN negative examples. They do not establish
+complete long-form quality. Fixed phase montages, other-seed and other source
+dimensions remain unreviewed after the clear held-state failure. Disposition
+REFINE; no model-ready claim.
+
+## Experiment Card: r1-release-native-pool-v1
+
+Revision1, proposed, acceptance none. The active goal authorizes this bounded
+TRAIN-only preparation. Baseline is clean8cf31e8 and unchanged routing6.25M SHA
+`dff1727bcb634666992dc4c836ee507c02f31917b1a32f2f1f1d5329eaf5f080`.
+Before changing the model, determine whether its own TRAIN continuations contain
+enough analogous persistent-held states for a focused learned release correction.
+
+Use the existing TRAIN census SHA
+`bd77030a9452bb31228bf530c78f0cc567eee4c86d95f5c96734d092fd282905`
+and6.25M plan SHA
+`37aa23798a4184e3990daf791033a46dbf790bb1acfda29001a5b645555a565a`.
+Choose32 distinct groups by SHA sorting with prefix957, suffix duration>=180s
+and256–3000 suffix H; seed47 generates each complete native trajectory on CPU1.
+At a state with exactly three held lanes, require the same three holds to precede
+all previous12 H, whose generated head mask is the sole other lane. Select only
+when the corresponding TRAIN source H use at least3 masks and no lane in more
+than9of12. The candidate preference is any legal action releasing a blocking
+lane. At H all legal heads share the free lane, so the existing complement-mask
+API already represents that preference. At R it selects release directly.
+Keep at most one query per4 H and32 evenly spaced queries per chart.
+
+This is source-contrasted heuristic negative supervision, not human annotation
+or a universal prohibition of triple holds, long LNs or Jacks. Source actions
+select TRAIN examples but never become native predictor inputs. Require at least
+16 queries across4 groups before considering adapter training. Fewer examples
+means insufficient evidence; do not silently relax selection or add VAL examples.
+Bounds:1800s, RSS/footprint6GiB, swap growth128MiB, fresh owner2GiB. Stop on
+mechanics, identity, nonfinite or resource failure. No overwrite or scientific
+resume. `release-recovery-20260920-v1/harvest.py` freezes its digest, exact sources
+and settings before generation; its command uses offline Python3.10 with mps extra.
+
+If the pool is adequate, the selected follow-up branch is a zero-initialized,
+mirror-equivariant release-mask residual with all inherited weights and Adam
+states frozen. A common correction per release mask preserves conditional
+head routing and TAP/LN kinds within that mask at a fixed state. It can change
+release timing without directly refitting the learned head/type distribution;
+trajectory retention still needs evaluation. Full-policy recovery already lost
+LN structure. A planner is the alternative if this focused correction fails or
+only displaces degeneration. The learning analogue is
+[unlikelihood training](https://arxiv.org/abs/1908.04319); conditional family
+reweighting is an adaptation, not a novelty or quality claim. Freeze a separate
+training procedure and guards only after inspecting the actual TRAIN pool.
