@@ -808,3 +808,20 @@ only displaces degeneration. The learning analogue is
 [unlikelihood training](https://arxiv.org/abs/1908.04319); conditional family
 reweighting is an adaptation, not a novelty or quality claim. Freeze a separate
 training procedure and guards only after inspecting the actual TRAIN pool.
+
+### Pool driver correction before evidence collection
+
+The first harvest fails on chart5 after four completed outputs because its final
+assertion tests `replay.is_complete`, which refers to a materialized terminal
+row. R1 may skip an unused final R with all lanes closed. The driver mistakenly
+reintroduced the original pool-v1 assertion already repaired in the earlier
+native-recovery harvest-v2. This is a driver error, not a generated mechanics
+failure or usable pool. Preserve the partial pool-v1 and failure receipt.
+
+Card revision2 changes only this completion check and fresh output identity:
+`harvest-v2.py`, `harvest-v2-freeze.json`, and `pool-v2/`. It requires schedule
+completion, all occupancy closed, exact H count, and independent `verify_complete`
+over the complete generated physical history. All32 sources, seeds, selection
+criteria and limits are unchanged. The four complete prior trajectories can be
+compared byte-for-byte; none of the partial run is used for training. This
+exploratory correction remains proposed with acceptance none.
