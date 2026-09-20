@@ -35,6 +35,11 @@ The [vacation training queue](docs/research/vacation_training.md) provides seria
 audio caching, a 35M R1 teacher profile and fixed native stress runs, with frozen
 inputs, resumable segments and a macOS `caffeinate` launcher.
 
+The [staged R1 reconstruction](docs/research/r1_staged_restoration.md) rebuilds the
+small response candidate from plain R1, adding seed, memory and the three native
+correction modules in order. New trajectories and final quality require evaluation;
+it is separate from the 35M teacher queue.
+
 ## Legacy code boundary
 
 > **Do not use mapper v2/v2.1, the pre-V3 timing stack, Control V3, or the

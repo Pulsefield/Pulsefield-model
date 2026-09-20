@@ -148,25 +148,28 @@ def main(root):
     audio = prepare_audio_inputs(plan_file=plan_receipt['path'], plan_sha256=plan_receipt['sha256'],
         catalog_file=inputs / 'catalog.json', catalog_sha256=CATALOG_SHA, catalog_root=REPO,
         source_cache_dir=CACHE, output_file=inputs / 'audio.json')
-    config = dict(defaults=['vacation_training_r1_response', '_self_'], mode='preflight', output_dir=str(root / 'run'),
+    teacher_config = dict(defaults=['vacation_training', '_self_'], mode='preflight', output_dir=str(root / 'teacher35m-run'),
         audio=dict(manifest_file=audio['manifest_file'], manifest_sha256=audio['manifest_sha256']),
         teacher=dict(base_plan_file=plan_receipt['path'], base_plan_sha256=plan_receipt['sha256'],
             evaluation_file=str(evaluation_file), evaluation_sha256=evaluation_sha,
             training=dict(source_cache_dir=str(CACHE), device='cpu', cpu_threads=1)),
         stress=dict(enabled=False))
+    config = dict(defaults=['r1_restore', '_self_'], mode='preflight', output_dir=str(root / 'r1-restore-run'),
+        base_plan_file=plan_receipt['path'], base_plan_sha256=plan_receipt['sha256'],
+        catalog_file=str(inputs / 'catalog.json'), catalog_root=str(REPO),
+        evaluation_file=str(evaluation_file), evaluation_sha256=evaluation_sha,
+        training=dict(source_cache_dir=str(CACHE)))
     config_dir = root / 'config'
     config_dir.mkdir()
-    config_file = config_dir / 'r1-response.yaml'
-    config_file.write_text('# Fresh R1 response-architecture training; the lost small-model stress checkpoint is unavailable.\n' +
+    config_file = config_dir / 'r1-restore.yaml'
+    config_file.write_text('# Staged R1 reconstruction from plain R1; native pools are rebuilt for each parent.\n' +
                           OmegaConf.to_yaml(OmegaConf.create(config)))
-    teacher_config = {**config, 'defaults': ['vacation_training', '_self_'],
-                      'output_dir': str(root / 'teacher35m-run')}
     teacher_file = config_dir / 'teacher35m.yaml'
     teacher_file.write_text('# Separate clean 35M teacher, with audio caching and fresh initialization.\n' +
                            OmegaConf.to_yaml(OmegaConf.create(teacher_config)))
     audio_manifest = json.loads(Path(audio['manifest_file']).read_text())
     quarantine = [a for a in audio_manifest['assets'] if set(a['known_directory_splits']) != {'train'}]
-    receipt = dict(format='vacation/rebuilt-inputs-v1',
+    receipt = dict(format='vacation/rebuilt-inputs-v2',
         source_revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip(),
         driver_sha256=file_digest(Path(__file__)), historical_plan_recovered=False,
         plan=plan_receipt, sampling=asdict(SamplingConfig()), excluded_sources=excluded,

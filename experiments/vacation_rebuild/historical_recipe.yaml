@@ -82,6 +82,7 @@ quality_requirements:
   - inspect local response deficits, source-star strata and every material regression
   - compare source training and each native correction; do not infer quality from exposure count
 execution_limit:
-  - the ordinary vacation queue cannot execute this multi-architecture native-recovery recipe
+  - the r1_restore worker reconstructs this staged path with newly pinned inputs and trajectories
+  - the ordinary vacation queue is separate from that worker
   - its r1-response preset provides fresh source pretraining and monitoring only
   - rebuild and pin parent checkpoints, cumulative plans and adequate native pools before each continuation

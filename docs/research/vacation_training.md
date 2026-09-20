@@ -20,6 +20,9 @@ recover a trained checkpoint or reproduce the earlier staged native-preference
 corrections. Restoring the earlier performance also requires rebuilding those
 TRAIN trajectory pools, routing/release/response continuation and quality checks.
 The 35M teacher remains the separate clean architecture above.
+Use the [staged R1 reconstruction](r1_staged_restoration.md) and
+`scripts/r1-restore.sh` when the objective is to follow the earlier module and
+native-correction order. The all-module preset is not a substitute for that path.
 
 Completion means producing assets and measurements. It does not establish
 arrangement quality, select a working candidate or authorize distillation.

@@ -21,16 +21,17 @@ selected source stars are recomputed at rate 1 with the pinned local calculator.
 
 There are two independent configurations:
 
-- `config/r1-response.yaml`: the 3.084M response architecture with all three
-  residuals, CPU1, fresh source training through 6.75M exposures, a four-hour
-  training limit and no audio stage. This is a starting point for rebuilding
-  the candidate, not the original native-recovery recipe or its quality result.
+- `config/r1-restore.yaml`: plain R1 followed by observed seed, landmark memory,
+  head routing, release routing and response learning. The separate restoration
+  worker rebuilds native TRAIN pools before their respective correction stages.
+  It uses CPU1, a four-hour cumulative training budget and a 12-hour queue budget.
 - `config/teacher35m.yaml`: the separate clean 35M teacher, CPU1, audio caching,
   1M/5M/10M/20M/30M readouts and the documented 16h audio/44h training budgets.
 
-Each configuration has its own output directory. Both disable independent
+Each configuration has its own output directory. The 35M queue disables independent
 fixed-model stress because the previously selected small checkpoint is absent.
-The training stage still performs fixed native VAL generation at every milestone.
+The teacher performs fixed native VAL generation at its milestones; restoration
+performs those readouts after each of its six stages.
 Do not run both configurations concurrently on the same host.
 
 The rebuilt fixed monitor uses eight TRAIN and eight VAL song groups, covering
@@ -41,13 +42,14 @@ stratum, not a semantic judgment. Historical use of these VAL groups is not
 excluded, so this is not independent confirmation. No TEST payload is opened.
 
 ```sh
-./scripts/vacation-training.sh --config-dir /absolute/fresh/asset-root/config \
-  --config-name r1-response mode=preflight
-./scripts/vacation-training.sh --config-dir /absolute/fresh/asset-root/config \
-  --config-name r1-response mode=run
+./scripts/r1-restore.sh --config-dir /absolute/fresh/asset-root/config \
+  --config-name r1-restore mode=preflight
+./scripts/r1-restore.sh --config-dir /absolute/fresh/asset-root/config \
+  --config-name r1-restore mode=run
 ```
 
-Use `--config-name teacher35m` for the separate teacher. A successful preflight
+Use `scripts/vacation-training.sh --config-name teacher35m` with the same config
+directory for the separate teacher. A successful preflight
 freezes configuration and source but does not create a training ledger or start
 the queue's wall clock. After training begins, pause with the selected output
 directory's `PAUSE` file, remove it to continue, and use `mode=resume`.
@@ -62,5 +64,7 @@ before being described as restored performance.
 [historical_recipe.yaml](historical_recipe.yaml) preserves the known six-stage
 path to the 6.75M-exposure candidate, including frozen-parameter scopes, native
 pool sizes and the final KL anchor. It is a reconstruction reference, not an
-executable queue configuration. The current queue cannot automatically rebuild
-the lost native pools or execute that multi-architecture curriculum.
+executable queue configuration. Use the separate
+[r1_restore worker](../../docs/research/r1_staged_restoration.md) to rebuild
+native pools and follow that module-addition curriculum. The ordinary vacation
+queue remains responsible for the independent 35M teacher.
