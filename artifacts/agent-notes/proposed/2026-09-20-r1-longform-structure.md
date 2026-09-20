@@ -566,3 +566,31 @@ pass and no below-10ms event may appear. Fail fast on lost coordination, new
 sustained fixed cycles or resource/accounting violations. Difficulty calibration
 remains secondary. Positive results justify focused fresh-development verification;
 negative or ambiguous results remain REFINE. No automatic adoption follows.
+
+
+### Routing implementation and real-data preflight freeze
+
+Clean intervention: `8cf31e8d177fab28060ce92be4f5e92f8f8585f3`.
+The module, explicit routing-only trainable scope, fork/identity handling,
+packaged configuration and conditional-preservation documentation implement
+the proposed Card without changing inference support or temperature. Six new
+routing tests cover CPU/MPS initial equivalence, nonzero-score conditional and
+R-only preservation, mirror symmetry, frozen gradients/weights, native/dense
+agreement, raw-state recovery, inherited Adam equality, real runner consumption
+and exact resumed updates. Routing/memory/seed selection passes23 tests.
+
+The broader fork/train/native-export/smoke/package selection initially has63
+passes,22 package subtests and one legacy-fixture failure: the extended tiny
+model helper used a nondefault dormant routing width in its old-format snapshot.
+The helper now keeps the historical default while routing-enabled cases remain
+small. Earlier legacy digest fixtures also explicitly exclude the new fields
+when constructing the historical schema; their exact hash assertions remain.
+Final affected seed/native-export/smoke checks pass36 tests. Counts overlap;
+no behavior failure is hidden or skipped. Diff checks pass.
+
+`routing-recovery-20260920-v1/preflight-freeze.json` pins the clean source,
+preflight driver,6M checkpoint and unchanged native pool/6.25M plan before
+real-data execution. The180-second preflight checks128 exact initial native
+draws and logits, then applies one real source/native optimizer update and
+verifies every inherited weight and Adam value unchanged, nonzero new-module
+gradients, conditional-family preservation and exact R-only logits.
