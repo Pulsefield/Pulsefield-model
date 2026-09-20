@@ -1469,3 +1469,15 @@ No overwrite, reselection after outputs, scientific resume or new training.
 Owner: artifacts/bounded-typed-continuation/row-response-confirmation-20260920-v1/
 in the row-response worktree. Reuse the already verified census and diagnostics;
 do not rerun prior completed experiments or expand into an ablation suite.
+
+### Response confirmation selection frozen
+
+The closure excludes96 catalog groups and20 represented original allocation
+groups. Eight selected SHA prefixes are cd01617a7069,ab4821c3311d,fdc62883731c,
+cc8909dc21e8,7599d9d85832,fe204b7e1e6d,337a325b98bf,0faf257019bc. Source stars
+are2.978/2.135/3.218/3.774/4.485/4.704/5.033/5.299; suffixes193–415s.
+The four intended independent-LN sources have153/493/605/22 start witnesses.
+Condition selection SHA31f0ecc28191080661e00f61800b7ac6803e3875e9f931903e1ae3215f795a3b.
+The evaluation freeze pins exact checkpoint, conditions, generation and review
+scripts before the sixteen complete native runs at seeds31/47. Source-only
+selection is unchanged after inspecting these metadata. Quality remains unreviewed.
