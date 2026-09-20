@@ -261,7 +261,8 @@ def batch_predictions(model, batch: PreparedBatch):
     return hands, model.decision_log_probs(hands, batch.states)
 
 
-def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None):
+def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, recompute=True, diagnostics=None,
+                     source_kl_weight=0.):
     """Sum every task factor, normalized by actual supervised source onsets.
 
     Returned head/endpoint sums describe local training factor costs. They are
@@ -278,6 +279,18 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
     endpoint_nll = (model.endpoint_log_probs(hands, batch.states, batch.labels, batch.endpoints, batch.views,
                                            candidate_budget=candidate_budget, recompute=recompute, ledger=diagnostics).sum().neg()
                     if model.pointer is not None else head_nll.new_zeros(()))
+    source_kl = head_nll.new_zeros(())
+    if source_kl_weight:
+        if model.row_consequence is None or any(p.requires_grad for name, p in model.named_parameters()
+                                               if not name.startswith('row_consequence.')):
+            raise ContractError('Source KL requires the inherited policy to be frozen')
+        with torch.no_grad():
+            reference = model.decision_log_probs(hands.detach(), batch.states, include_consequence=False)
+        legal = torch.isfinite(reference)
+        difference = reference.masked_fill(~legal, 0.) - probabilities.masked_fill(~legal, 0.)
+        source_kl = (reference.exp() * difference).sum()
+        if diagnostics is not None:
+            diagnostics['source_kl_sum'] = float(source_kl.detach().cpu())
     if diagnostics is not None:
         with torch.no_grad():
             observed = torch.tensor(batch.labels, device=like.device)
@@ -316,4 +329,4 @@ def batch_likelihood(model, batch: PreparedBatch, *, candidate_budget=8192, reco
             diagnostics.setdefault('endpoint_decisions', 0)
             diagnostics.setdefault('scored_order_factors', 0)
             diagnostics.setdefault('candidate_pairs', 0)
-    return (head_nll + endpoint_nll) / batch.source_onsets, torch.stack((head_nll, endpoint_nll))
+    return (head_nll + endpoint_nll + source_kl_weight * source_kl) / batch.source_onsets, torch.stack((head_nll, endpoint_nll))

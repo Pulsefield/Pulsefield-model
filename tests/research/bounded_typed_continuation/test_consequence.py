@@ -109,7 +109,7 @@ def dense_energy(module, hands, local, timing):
 
 
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
-@pytest.mark.parametrize('mode', ['actions', 'frontier'])
+@pytest.mark.parametrize('mode', ['actions', 'frontier', 'frontier2'])
 def test_factorized_energy_matches_dense_values_input_and_all_parameter_gradients(device, mode):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
@@ -137,7 +137,7 @@ def test_factorized_energy_matches_dense_values_input_and_all_parameter_gradient
         torch.testing.assert_close(a.grad, b.grad, atol=tolerance, rtol=tolerance)
 
 
-@pytest.mark.parametrize('mode', ['actions', 'frontier'])
+@pytest.mark.parametrize('mode', ['actions', 'frontier', 'frontier2'])
 def test_nonzero_residual_keeps_mirror_equivariance_and_exact_support(mode):
     torch.manual_seed(17)
     model = BoundedModel(ModelConfig(Arm.R1, hidden=12, levels=2, coupling_rank=3, row_consequence=mode)).double()

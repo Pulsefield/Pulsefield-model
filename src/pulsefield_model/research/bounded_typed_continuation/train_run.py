@@ -40,6 +40,8 @@ def training_identity(config):
     result = deepcopy({key: value for key, value in config.items() if key not in EXECUTION_FIELDS})
     if result.get('trainable', 'all') == 'all':
         result.pop('trainable', None)
+    if not result.get('source_kl_weight', 0.):
+        result.pop('source_kl_weight', None)
     if result['model'].get('head_routing', 'none') == 'none':
         for field in ('head_routing', 'routing_hidden'):
             result['model'].pop(field, None)
@@ -55,7 +57,7 @@ def training_identity(config):
     return result
 
 
-def measure(model, intervals, *, candidate_budget, backward, denominator, check):
+def measure(model, intervals, *, candidate_budget, backward, denominator, check, source_kl_weight=0.):
     """Accumulate one microbatch's summed loss over the effective batch onsets."""
     started = time.monotonic()
     batch = prepare_batch(intervals, model.config.arm, model.temporal.config.receptive_tokens,
@@ -63,7 +65,7 @@ def measure(model, intervals, *, candidate_budget, backward, denominator, check)
     prepared = time.monotonic()
     diagnostics = {}
     loss, factors = batch_likelihood(model, batch, candidate_budget=candidate_budget,
-                                     recompute=backward, diagnostics=diagnostics)
+                                     recompute=backward, diagnostics=diagnostics, source_kl_weight=source_kl_weight)
     device = next(model.parameters()).device.type
     synchronize(device)
     forwarded = time.monotonic()
@@ -158,22 +160,35 @@ def read_fork(config, plan):
             for field in ('recovery_pool', 'recovery_sha256'):
                 old_identity.pop(field)
                 new_identity.pop(field)
+    added_response = (old_identity['model'].get('row_consequence', 'none') == 'none' and
+                      new_identity['model'].get('row_consequence') == 'frontier2')
+    if added_response:
+        if added_routing or added_release or new_identity.pop('trainable', None) != 'consequence':
+            raise ContractError('A response fork must add only the frozen-base consequence residual')
+        old_identity.pop('trainable', None)
+        new_identity.pop('source_kl_weight', None)
+        if old_identity.get('recovery_pool') and new_identity.get('recovery_pool'):
+            for field in ('recovery_pool', 'recovery_sha256'):
+                old_identity.pop(field)
+                new_identity.pop(field)
     fields = ('endpoint_availability', 'row_consequence', 'seed_context', 'long_memory')
     old_modes = [old_identity['model'].pop(field, 'none') for field in fields]
     new_modes = [new_identity['model'].pop(field, 'none') for field in fields]
+    if added_response and old_modes[:1] + old_modes[2:] != new_modes[:1] + new_modes[2:]:
+        raise ContractError('A response fork must preserve every other residual mode')
     added_memory = old_modes[-1] == 'none' and new_modes[-1] == 'landmarks'
     if added_memory:
         for field in ('memory_hidden', 'memory_stride'):
             new_identity['model'].pop(field)
     old_identity.pop('plan_sha256')
     new_identity.pop('plan_sha256')
-    # Objective forks keep the entire architecture; residual extensions append
-    # parameters while retaining the existing order and optimizer states.
+    # Retain inherited parameter order and optimizer states across extensions.
     preserved = ((added_memory and not added_recovery and old_modes[:-1] == new_modes[:-1]) or
-                 ((added_recovery or added_routing or added_release) and not added_memory and old_modes == new_modes))
-    if (((added_recovery or added_routing or added_release) and old_modes != new_modes) or
+                 ((added_recovery or added_routing or added_release) and not added_memory and old_modes == new_modes) or
+                 (added_response and old_modes[:1] + old_modes[2:] == new_modes[:1] + new_modes[2:]))
+    if (((added_recovery or added_routing or added_release) and not added_response and old_modes != new_modes) or
             (any(mode != 'none' for mode in old_modes) and not preserved) or old_identity != new_identity):
-        raise ContractError('Fork scientific configuration may only add optional residuals, frozen-base routing, release routing or native recovery and extend its plan')
+        raise ContractError('Fork scientific configuration may only add optional residuals, frozen-base recovery and extend its plan')
     base_keys = set(old_plan) - {'sampling', 'draws'}
     if ({key: old_plan[key] for key in base_keys} != {key: plan.get(key) for key in base_keys} or
             set(plan) != set(old_plan) or
@@ -194,22 +209,27 @@ def read_fork(config, plan):
     if added_release:
         parent.update(release_routing=config['model']['release_routing'], trainable=config['trainable'],
                       recovery_pool_sha256=config['recovery_sha256'])
+    if added_response:
+        parent.update(trainable=config['trainable'], source_kl_weight=config['source_kl_weight'],
+                      recovery_pool_sha256=config['recovery_sha256'])
     return payload, charged, parent
 
 
 def restore_fork(model, optimizer, payload):
-    """Copy existing parameters and Adam state; appended residual moments start empty."""
+    """Copy inherited weights and Adam state by name; residual moments start empty."""
     settings = dict(payload['config']['model'])
     settings['arm'] = Arm(settings['arm'])
     previous = BoundedModel(ModelConfig(**settings))
     previous.load_state_dict(payload['model'])
     old_names = [name for name, _ in previous.named_parameters()]
     new_names = [name for name, _ in model.named_parameters()]
-    added = new_names[len(old_names):]
+    inherited = set(old_names)
+    added = [name for name in new_names if name not in inherited]
     prefixes = ('pointer.availability_residual.', 'row_consequence.', 'seed_residual.', 'long_memory.',
                 'route_residual.', 'release_residual.')
-    if new_names[:len(old_names)] != old_names or any(not name.startswith(prefixes) for name in added):
-        raise ContractError('Fork model must preserve parameter order and append only optional residuals')
+    if ([name for name in new_names if name in inherited] != old_names or
+            any(not name.startswith(prefixes) for name in added)):
+        raise ContractError('Fork model must retain inherited parameter order and add only optional residuals')
     missing, unexpected = model.load_state_dict(payload['model'], strict=False)
     if set(missing) != set(added) or unexpected:
         raise ContractError('Fork model weights do not match its declared residual extension')
@@ -218,9 +238,10 @@ def restore_fork(model, optimizer, payload):
     if len(state['param_groups']) != 1 or len(current_groups) != 1:
         raise ContractError('Fork migration requires the single corpus AdamW parameter group')
     old_ids, new_ids = state['param_groups'][0]['params'], current_groups[0]['params']
-    if len(old_ids) != len(old_names) or not set(state['state']).issubset(old_ids):
+    if len(old_ids) != len(old_names) or len(new_ids) != len(new_names) or not set(state['state']).issubset(old_ids):
         raise ContractError('Fork optimizer state does not match its parent parameters')
-    translation = dict(zip(old_ids, new_ids))
+    identifiers = dict(zip(new_names, new_ids))
+    translation = {key: identifiers[name] for key, name in zip(old_ids, old_names)}
     state['state'] = {translation[key]: value for key, value in state['state'].items()}
     state['param_groups'][0]['params'] = new_ids
     optimizer.load_state_dict(state)
@@ -232,9 +253,11 @@ def configure_trainable(model, scope):
         raise ContractError('Routing-only updates require the head-routing residual')
     if scope == 'release' and model.release_residual is None:
         raise ContractError('Release-only updates require the release-routing residual')
-    if scope not in ('all', 'routing', 'release'):
+    if scope == 'consequence' and model.row_consequence is None:
+        raise ContractError('Consequence-only updates require the row residual')
+    if scope not in ('all', 'routing', 'release', 'consequence'):
         raise ContractError('Unknown trainable parameter scope')
-    prefix = {'routing': 'route_residual.', 'release': 'release_residual.'}.get(scope)
+    prefix = {'routing': 'route_residual.', 'release': 'release_residual.', 'consequence': 'row_consequence.'}.get(scope)
     for name, parameter in model.named_parameters():
         parameter.requires_grad_(scope == 'all' or name.startswith(prefix))
 
@@ -340,7 +363,7 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
                 for first in range(0, len(draws), config.microbatch_size):
                     intervals = [cache.interval(draw) for draw in draws[first:first + config.microbatch_size]]
                     measured = measure(model, intervals, candidate_budget=config.candidate_budget,
-                                       backward=True, denominator=actual, check=check)
+                                       backward=True, denominator=actual, check=check, source_kl_weight=config.source_kl_weight)
                     add_metrics(record, measured)
                     spans.extend(measured['context_spans_ms'])
                     del intervals

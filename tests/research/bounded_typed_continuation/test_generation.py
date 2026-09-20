@@ -47,7 +47,7 @@ def setup(arm, device='cpu', availability='none', consequence='none', seed_conte
 
 
 @pytest.mark.parametrize('arm,availability,consequence', [(arm, 'none', 'none') for arm in Arm] +
-                         [(Arm.O1, 'commitment', 'none'), (Arm.R1, 'none', 'actions'), (Arm.R1, 'none', 'frontier')])
+                         [(Arm.O1, 'commitment', 'none'), (Arm.R1, 'none', 'actions'), (Arm.R1, 'none', 'frontier'), (Arm.R1, 'none', 'frontier2')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
 def test_native_rollout_preserves_task_support_and_round_trips_osu(arm, availability, consequence, device, tmp_path):
     if device == 'mps' and not torch.backends.mps.is_available():
@@ -87,7 +87,7 @@ def test_native_rollout_preserves_task_support_and_round_trips_osu(arm, availabi
 
 
 @pytest.mark.parametrize('arm,availability,consequence', [(arm, 'none', 'none') for arm in Arm] +
-                         [(Arm.O1, 'commitment', 'none'), (Arm.R1, 'none', 'actions'), (Arm.R1, 'none', 'frontier')])
+                         [(Arm.O1, 'commitment', 'none'), (Arm.R1, 'none', 'actions'), (Arm.R1, 'none', 'frontier'), (Arm.R1, 'none', 'frontier2')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
 def test_owned_raw_checkpoint_rebuild_preserves_rng_actions_and_plans(arm, availability, consequence, device, tmp_path):
     if device == 'mps' and not torch.backends.mps.is_available():
@@ -227,7 +227,7 @@ def test_production_receptive_range_recovers_with_old_seed_holds_outside_raw_his
         assert rollout.step(generator).row == restored.step(random).row
 
 
-@pytest.mark.parametrize('arm,consequence', [(arm, 'none') for arm in Arm] + [(Arm.R1, 'frontier')])
+@pytest.mark.parametrize('arm,consequence', [(arm, 'none') for arm in Arm] + [(Arm.R1, 'frontier'), (Arm.R1, 'frontier2')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
 def test_native_teacher_forcing_matches_training_features_states_and_probabilities(arm, consequence, device, monkeypatch):
     if device == 'mps' and not torch.backends.mps.is_available():

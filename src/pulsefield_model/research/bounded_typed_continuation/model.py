@@ -53,9 +53,9 @@ class ModelConfig:
         if (self.endpoint_availability not in ('none', 'zero', 'commitment') or
                 self.arm != Arm.O1 and self.endpoint_availability != 'none'):
             raise ContractError('Endpoint availability must be none, zero or commitment, and is O1-only')
-        if (self.row_consequence not in ('none', 'actions', 'frontier') or
+        if (self.row_consequence not in ('none', 'actions', 'frontier', 'frontier2') or
                 self.arm != Arm.R1 and self.row_consequence != 'none'):
-            raise ContractError('Row consequence must be none, actions or frontier, and is R1-only')
+            raise ContractError('Row consequence must be none, actions, frontier or frontier2, and is R1-only')
         if (self.seed_context not in ('none', 'zero', 'observed') or
                 self.arm != Arm.R1 and self.seed_context != 'none'):
             raise ContractError('Seed context must be none, zero or observed, and is R1-only')
@@ -285,7 +285,7 @@ class BoundedModel(nn.Module):
             raise ContractError('A model without long memory cannot consume landmark queries')
         return hands
 
-    def decision_log_probs(self, hands: Tensor, states: Sequence[Schedule]):
+    def decision_log_probs(self, hands: Tensor, states: Sequence[Schedule], *, include_consequence=True):
         if hands.shape != (len(states), 2, self.config.hidden) or not states or any(s.arm != self.config.arm for s in states):
             raise ContractError('Decision queries must match the model task and encoded hands')
         supports = [s.head_support() for s in states] if self.config.arm == Arm.O1 else row_supports(states)
@@ -293,7 +293,7 @@ class BoundedModel(nn.Module):
         if not bool(mask.any(-1).all()):
             raise ContractError('Decision query has no feasible action; O1 non-onsets execute deterministically')
         scores = self.joint(hands)
-        if self.row_consequence is not None:
+        if self.row_consequence is not None and include_consequence:
             scores = scores + self.row_consequence(hands, states)
         if self.route_residual is not None:
             onsets = torch.tensor([s.timing.onsets[s.index] for s in states], device=hands.device)

@@ -17,6 +17,7 @@ from .data import PreparedBatch, batch_predictions
 from .features import TimingView, content_features, query_features
 from .generation import RawEvent, seed_events
 from .support import row_supports
+from .response import response_preference
 
 
 def alternative_mask(state, core_mask, blocking_mask):
@@ -37,14 +38,19 @@ def alternative_mask(state, core_mask, blocking_mask):
     return good
 
 
-def complement_loss(log_probs, alternatives):
-    """Negative log total legal alternative mass, stable even near full collapse."""
+def complement_loss(log_probs, alternatives, family=None):
+    """Negative log alternative mass, optionally conditional on a row family."""
     mask = torch.as_tensor(alternatives, dtype=torch.bool, device=log_probs.device)
     legal = torch.isfinite(log_probs)
+    conditional = family is not None
+    family = legal if family is None else torch.as_tensor(family, dtype=torch.bool, device=log_probs.device)
     if (log_probs.ndim != 2 or mask.shape != log_probs.shape or
-            not bool((legal & mask).any(-1).all()) or not bool((legal & ~mask).any(-1).all())):
+            family.shape != log_probs.shape or bool((legal & mask & ~family).any()) or
+            not bool((legal & family & mask).any(-1).all()) or not bool((legal & family & ~mask).any(-1).all())):
         raise ContractError('Recovery requires both alternative and negative legal actions at every query')
-    return -log_probs.masked_fill(~mask, -torch.inf).logsumexp(-1).mean()
+    numerator = log_probs.masked_fill(~mask, -torch.inf).logsumexp(-1)
+    return ((log_probs.masked_fill(~family, -torch.inf).logsumexp(-1) - numerator).mean()
+            if conditional else -numerator.mean())
 
 
 @dataclass
@@ -53,6 +59,7 @@ class NativeQuery:
     history: tuple[RawEvent, ...]
     seed: tuple[RawEvent, ...]
     alternatives: np.ndarray
+    family: np.ndarray | None = None
 
     def prepare(self, receptive_tokens, *, full_history):
         """Project true committed history; the current placeholder is never read."""
@@ -92,11 +99,22 @@ def trajectory_queries(value, expected_condition):
     for actions in value['actions']:
         marker = markers.pop(state.index, None)
         if marker is not None:
-            good = alternative_mask(state, marker['core_mask'], marker['blocking_mask'])
+            family = None
+            if marker.get('kind') == 'response':
+                if marker['action'] != actions:
+                    raise ContractError('Response preference differs from its native sampled action')
+                preference = response_preference(state, actions, marker['threshold_ms'])
+                if preference is None:
+                    raise ContractError('Response query has no strictly improved alternative')
+                good, family, _ = preference
+            elif marker.get('kind') in (None, 'core'):
+                good = alternative_mask(state, marker['core_mask'], marker['blocking_mask'])
+            else:
+                raise ContractError('Unknown native recovery preference kind')
             legal = np.asarray(row_supports([state])[0], dtype=bool)
             if not (good & legal).any() or not (~good & legal).any():
                 raise ContractError('Recovery query lacks a legal alternative or negative continuation')
-            result.append(NativeQuery(state, tuple(history), seed, good))
+            result.append(NativeQuery(state, tuple(history), seed, good, family))
         before = state
         state, row = state.advance(tuple(actions))
         if row is not None:
@@ -153,7 +171,8 @@ class RecoveryPool:
         for query in self.select(update, count, seed):
             batch = query.prepare(model.temporal.config.receptive_tokens, full_history=model.long_memory is not None)
             _, log_probs = batch_predictions(model, batch)
-            loss = complement_loss(log_probs, query.alternatives[None])
+            loss = complement_loss(log_probs, query.alternatives[None],
+                None if query.family is None else query.family[None])
             if not bool(torch.isfinite(loss)):
                 raise ContractError('Recovery objective became nonfinite')
             (loss * (weight / count)).backward()

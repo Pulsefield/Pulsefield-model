@@ -14,6 +14,7 @@ fork_sha256: ''
 fork_source_revision: ''
 fork_plan_file: ''
 trainable: all
+source_kl_weight: 0.0
 recovery_pool: ''
 recovery_sha256: ''
 recovery_weight: 0.25

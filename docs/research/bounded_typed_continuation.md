@@ -95,12 +95,28 @@ legality and query counts. Empty R candidates remain in the replay schedule.
 No source suffix lane/type or endpoint enters predictor features. Original seed
 and complete generated prefix are re-encoded under the current weights.
 
-Each pool query specifies a repeated core of lanes and optional blocking held
+Core-recovery queries specify a repeated core of lanes and optional blocking held
 lanes. At H, alternatives omit at least one core lane or release a specified
 blocking lane; at R, alternatives release a blocking lane. Both alternative
 and negative families must contain legal actions. The objective is negative log
 probability mass of all legal alternatives, computed with logsumexp. It does
 not select a unique correct action or change native sampling support.
+
+Response queries instead compare the sampled row with legal alternatives using
+[`response.py`](../../src/pulsefield_model/research/bounded_typed_continuation/response.py).
+The cost counts heads with a same-lane head or release gap below a declared
+threshold, over the current row and the next two supplied H. Future actions use
+an optimistic minimum: one TAP per H and earliest possible unknown-LN releases;
+original seed endpoints remain fixed. This is a machine preference, not an
+equal-style future or a calibrated difficulty score.
+
+Preferred alternatives first minimize changes in head count, then LN-start
+count, then cost and lane-action Hamming distance, retaining ties. Their loss
+is conditional on the union of sampled and preferred composition families.
+Moving probability outside that union does not directly improve the loss.
+The loader recomputes these sets from the exact native state and verifies the
+recorded sampled action. Source contrast used during pool admission never enters
+the predictor. Thresholds affect training preferences only, not feasibility.
 
 `recovery_weight` (default 0.25) multiplies the mean loss over
 `recovery_queries` (default 2) per optimizer update. Normal source-onset CE
@@ -434,9 +450,10 @@ its earlier parameter identity and bounded-history behavior.
 
 ### R1 candidate action consequences
 
-`model.row_consequence` selects `none`, `actions` or `frontier`; the latter two
-are R1-only. Both append a width-32 residual energy for each complete candidate
-row, with 26,912 parameters at hidden 128. A zero output layer preserves the
+`model.row_consequence` selects `none`, `actions`, `frontier` or `frontier2`;
+enabled modes are R1-only. Each adds a width-32 residual energy for each complete
+candidate row. `actions` and `frontier` have 26,912 parameters at hidden 128.
+A zero output layer preserves the
 existing conditional distribution when the original weights are copied.
 `actions` supplies candidate-action one-hots. `frontier` additionally supplies
 the exact post-action occupied flag and seven per-lane time bases:
@@ -450,6 +467,8 @@ the exact post-action occupied flag and seven per-lane time bases:
 
 The shared timing block contains next-R and next-H gaps and the next-R onset
 role. Missing or inapplicable clocks use the existing unavailable encoding.
+`frontier2` appends the gap to the second strictly future H to this timing block,
+retaining the existing lane fields and earlier timing positions.
 All timestamp differences are computed in float64 before float32 conversion.
 The future views describe the candidate's immediate state; intervening actions
 remain unknown. A possible release is not a committed endpoint. These features
@@ -464,6 +483,15 @@ mirror equivariance. This equals the dense concatenated-feature affine while
 avoiding its large candidate-feature tensor. The residual joins the common
 decision scorer before the unchanged exact support mask, so teacher likelihood,
 native sampling and raw-history recovery consume the same energy.
+
+`trainable=consequence` freezes all inherited parameters and trains only this
+residual. Optional `source_kl_weight` adds KL from the frozen parent distribution
+to the candidate on the same source states. The parent distribution bypasses
+only the row residual, retaining inherited seed, memory, head and release
+scorers. Source CE and KL use the source-onset denominator; reported likelihood
+factors remain pure CE, with KL recorded separately. The default zero weight
+preserves earlier training identities. Nonzero KL requires consequence-only
+training.
 
 The optional readout supports matched comparisons against continued `none`
 learning and the equally sized `actions` branch. Equal parameter count does not
@@ -957,11 +985,16 @@ the entire architecture unchanged and adds its pinned training pool. A head-rout
 fork instead appends its scorer and selects routing-only training, optionally
 adding the recovery objective in the same transition. Parameter
 order and inherited Adam state remain checked.
+Release and `frontier2` response forks freeze the inherited policy and may
+replace the pinned recovery pool while retaining its scalar settings. A response
+fork may add source KL, but must preserve every other residual mode. Adam state
+is mapped by parameter name so a row residual inserted before existing optional
+modules cannot shift their optimizer identities.
 Ordinary resume retains exact source/config identity.
 
 Fork initialization copies all existing weights, AdamW moments/steps and RNG,
 retains cumulative exposure/coverage/metrics, and charges the parent's entire
-measured compute time. Only residual parameters may be appended; their optimizer
+measured compute time. Only residual parameters may be added; their optimizer
 state starts empty. Subsequent segments use ordinary resume with the fork fields
 cleared. Each result links its immediate parent ledger, retaining the source and
 checkpoint transition without relabeling the parent checkpoint. The runner's

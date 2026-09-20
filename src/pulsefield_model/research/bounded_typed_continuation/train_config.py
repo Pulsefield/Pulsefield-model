@@ -20,6 +20,7 @@ class TrainConfig:
     fork_source_revision: str = ''
     fork_plan_file: str = ''
     trainable: str = 'all'
+    source_kl_weight: float = 0.
     recovery_pool: str = ''
     recovery_sha256: str = ''
     recovery_weight: float = .25
@@ -45,10 +46,14 @@ class TrainConfig:
     resources: SmokeResources = field(default_factory=SmokeResources)
 
     def validate(self):
-        if (self.trainable not in ('all', 'routing', 'release') or
+        if (self.trainable not in ('all', 'routing', 'release', 'consequence') or
                 self.trainable == 'routing' and self.model.head_routing != 'residual' or
-                self.trainable == 'release' and self.model.release_routing != 'residual'):
-            raise ContractError('Trainable scope must be all, routing or release with its corresponding residual enabled')
+                self.trainable == 'release' and self.model.release_routing != 'residual' or
+                self.trainable == 'consequence' and self.model.row_consequence == 'none'):
+            raise ContractError('Trainable scope requires all parameters or its corresponding residual enabled')
+        if (isinstance(self.source_kl_weight, bool) or not math.isfinite(self.source_kl_weight) or
+                self.source_kl_weight < 0 or self.source_kl_weight and self.trainable != 'consequence'):
+            raise ContractError('Source KL requires a nonnegative finite weight and frozen-base consequence training')
         if bool(self.recovery_pool) != bool(self.recovery_sha256):
             raise ContractError('Native recovery needs both pool path and SHA-256')
         if self.recovery_pool:

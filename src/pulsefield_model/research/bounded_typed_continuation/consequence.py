@@ -33,12 +33,12 @@ def consequence_features(states: Sequence[Schedule], mode: str):
     Illegal hypothetical lane actions are harmless: the owner masks whole rows
     using the unchanged Schedule support after scoring.
     """
-    if mode not in ('actions', 'frontier') or not states or any(s.arm != Arm.R1 or s.finished for s in states):
-        raise ContractError('Row consequences require active R1 states and actions or frontier mode')
+    if mode not in ('actions', 'frontier', 'frontier2') or not states or any(s.arm != Arm.R1 or s.finished for s in states):
+        raise ContractError('Row consequences require active R1 states and a known consequence mode')
     count = len(states)
     local = np.zeros((count, 4, 4, LANE_DIM), dtype=np.float32)
     local[..., :4] = np.eye(4, dtype=np.float32)
-    timing = np.zeros((count, TIMING_DIM), dtype=np.float32)
+    timing = np.zeros((count, TIMING_DIM + (TIME_DIM if mode == 'frontier2' else 0)), dtype=np.float32)
     if mode == 'actions':
         return local, timing
 
@@ -46,12 +46,14 @@ def consequence_features(states: Sequence[Schedule], mode: str):
     starts = np.array([s.replay.open_ln_start_ms for s in states], dtype=np.float64)[..., None]
     attacks = np.array([s.replay.last_lane_attack_ms for s in states], dtype=np.float64)[..., None]
     releases = np.array([s.replay.last_lane_release_ms for s in states], dtype=np.float64)[..., None]
-    following, onsets, roles, known = [], [], [], []
+    following, onsets, second_onsets, roles, known = [], [], [], [], []
     for state in states:
         values, index = state.timing.times_ms, state.index
         next_h = state._next_onset(index)
+        second_h = state._next_onset(next_h) if next_h is not None else None
         following.append(values[index + 1] if index + 1 < len(values) else np.nan)
         onsets.append(values[next_h] if next_h is not None else np.nan)
+        second_onsets.append(values[second_h] if second_h is not None else np.nan)
         roles.append(float(index + 1 < len(values) and state.timing.onsets[index + 1]))
         known.append([np.nan if end is None else values[end] for end in state.known_ends])
     next_r = np.array(following, dtype=np.float64)[:, None, None]
@@ -77,7 +79,9 @@ def consequence_features(states: Sequence[Schedule], mode: str):
     local[..., 5:] = time_features(clocks).reshape(count, 4, 4, 7 * TIME_DIM)
     timing[:, :TIME_DIM] = time_features((next_r - now)[:, 0, 0])
     timing[:, TIME_DIM:2 * TIME_DIM] = time_features((next_h - now)[:, 0, 0])
-    timing[:, -1] = roles
+    timing[:, TIMING_DIM - 1] = roles
+    if mode == 'frontier2':
+        timing[:, TIMING_DIM:] = time_features(np.array(second_onsets) - now[:, 0, 0])
     return local, timing
 
 
@@ -90,11 +94,11 @@ class RowConsequence(nn.Module):
     """
     def __init__(self, hidden: int, mode: str):
         super().__init__()
-        if mode not in ('actions', 'frontier'):
+        if mode not in ('actions', 'frontier', 'frontier2'):
             raise ContractError('Unknown row-consequence mode')
         self.mode = mode
         self.lanes = nn.ModuleList(nn.Linear(LANE_DIM, WIDTH, bias=False) for _ in range(4))
-        self.timing = nn.Linear(TIMING_DIM, WIDTH)
+        self.timing = nn.Linear(TIMING_DIM + (TIME_DIM if mode == 'frontier2' else 0), WIDTH)
         self.context = nn.Linear(hidden, WIDTH, bias=False)
         self.output = nn.Linear(WIDTH, 1, bias=False)
         nn.init.zeros_(self.output.weight)
