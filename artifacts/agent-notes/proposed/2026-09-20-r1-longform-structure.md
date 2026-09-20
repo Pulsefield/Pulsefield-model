@@ -420,3 +420,32 @@ Beatmap Lens human gold images03f7e3 (LN prominent),2af746 (Stream prominent wit
 LN/TAP) andb8e955 (Stream absent with repeated changing chords) were refreshed.
 Their style judgments distinguish organization from counts; the last example
 is not a judgment that repeated chords are universally unplayable.
+
+
+### Native recovery training complete; fixed generation begins
+
+The single6.25M candidate completes250,000 new source onsets in333 updates,
+with666 native preference queries, in729.789842 seconds. Final update is8269;
+coverage is4,022,343 unique source onsets across10,176 charts and3,169 groups.
+Peak sampled RSS is1,772,355,584 bytes, footprint1,105,135,872 bytes, swap growth
+zero. Complete plan/coverage replay, journal boundary and query accounting agree;
+all model weights are finite. Mean recovery loss across the first/last32 updates
+is0.328905/0.004369 on the sampled training pool, which is not generated-quality
+evidence or an independent generalization measurement.
+
+Checkpoint `recovery-6250k/checkpoint.pt` SHA:
+`fee32588f4e353e04b33d6299494dc023a4902e9e848e357c8058c18d89f2592`.
+Training receipt SHA:
+`8736e8ba8a409b69296741bf9e1f15abf8f3e7cc070026c98f125ca6c9559507`.
+Audit driver SHA:
+`dbb094874b7354c0b7ec086f30c43d1242f1cda90f794db35c74d3c6b5c8fbc4`.
+`evaluation-freeze.json` pins the finished training receipt, audit, final model
+and predeclared driver before all16 complete generations. It retains the same
+source/seed pairs, mechanics checks, two existing model references and1800-second
+bound. No decision is made from the training-loss decline.
+
+The approved slow-Jack calibration was also rendered and viewed with its full
+9400–16300ms context, preserving the human-positive400ms recurrence and its
+entry/exit. Gold manifest SHA:
+`25add75e70e59fddd7fe0d51651705daff18c617f780d868d1e1cefced4e8b50`.
+It is a TRAIN calibration example, not independent model validation.
