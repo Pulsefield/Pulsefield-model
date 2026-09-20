@@ -115,8 +115,22 @@ The negative preferences are machine heuristics, not human semantic annotations.
 They require a separate pool-generation procedure and quality evaluation.
 Repeated attacks and long anchors can be intentional: avoiding all repetition,
 maximizing diversity or reducing LN quantity is not the training-quality goal.
-Native recovery has no demonstrated long-form benefit until generated outputs
-pass focused playability review.
+A full-parameter 250k-onset continuation with 80 native queries from eight TRAIN
+groups improves unforced repetition on 16 fixed development generations: maximum
+consecutive required head rows containing one lane falls from 152 to 11, and
+below-40ms diagnostic events from 69 to 3. No below-10ms event appears. These
+counts do not establish playability. In two inspected LN contexts, required
+onsets with at least two held lanes fall from 35 and 19 to zero; independent
+release rows fall from 22 to zero and from 36 to 3. Canonical Beatmap Lens
+inspection confirms substantial loss of overlapping LN/TAP organization.
+
+The candidate fails the structural-retention guard despite removing the earlier
+quadruple-repeat and three-held-lane witnesses. A bounded outer-column Trill is
+not automatically a failure, and reduced LN quantity is not by itself a quality
+judgment. The concern is the lost press/hold/release relationship in the inspected
+passages. Additional ordinary CE fitting is bundled with recovery training, so
+the comparison does not isolate their causal contributions. The full-parameter
+candidate is not a validated replacement for the earlier model.
 
 ## Exact state and bounded learned context
 
