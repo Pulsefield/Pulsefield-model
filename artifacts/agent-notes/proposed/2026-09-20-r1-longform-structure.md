@@ -1041,3 +1041,16 @@ The execution freeze pins typed configuration, plan, preflight and training,
 audit and32-chart evaluation drivers before the declared single continuation.
 The audit separates new recovery queries from the inherited head-routing query
 counter; recovery losses from different pools are not treated as one quality metric.
+
+### Release continuation completed; complete-chart comparison frozen
+
+The declared250k-onset continuation reaches6.5M in148.164666seconds, ending at
+update8603. Final checkpoint SHA:
+`0a9c87afa43caa9d3647fe3315d79b3a048cc71261571c599c85cf49361dd1ec`.
+Coverage reaches4,121,620 unique source onsets,10,257 charts and3,169 groups.
+The final audit verifies every inherited model and Adam tensor remains exact,
+finite weights, exact exposure/coverage accounting and the durable training log.
+Its native-query counts separate the new segment from inherited routing training.
+The checkpoint and completed training/audit receipts now bind the predeclared
+32-case native generation driver in `evaluation-freeze.json`. Quality remains
+unreviewed pending complete outputs and matched Lens inspection.
