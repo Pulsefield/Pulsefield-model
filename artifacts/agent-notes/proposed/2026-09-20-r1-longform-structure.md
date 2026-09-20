@@ -227,3 +227,32 @@ the1,800-second/2GiB-output bounds. A final execution freeze adds the completed
 training receipt and checkpoint SHA before generation. Head-word entropy,
 concentration, repeated motifs and LN amount locate structural inspection; they
 are not optimization targets, calibrated style scores or acceptance by themselves.
+
+
+## Training complete; generation freeze
+
+The one candidate reaches6M with1,000,000 new onset exposures and1,317 updates
+(final update7,936) in1,877.209920 seconds. Full-prefix work totals3,463,182
+physical rows over those updates. Complete plan replay exactly reproduces
+3,915,051 unique onsets across10,061 charts and3,169 groups. Weights are finite;
+the memory output projection norm is0.447032, rather than its initial zero.
+Maximum sampled RSS is2,534,981,632 bytes and footprint1,919,322,824 bytes,
+with zero swap growth. This is one candidate with bundled extra fitting and
+architecture; there is no new control-training arm or causal ablation claim.
+
+Final checkpoint at `memory-6000k/checkpoint.pt` SHA:
+`b44c9c83df84f2d9acd039edf64c1fc40377d2fc9ae0d25e9997ef548ae8876f`.
+Training receipt SHA:
+`67c7c6f58dac87bfb82f5da0bf3a7413ca55c2e974d44bd3de799ebf0d0764a9`.
+Coverage/finiteness/resource audit SHA:
+`b66b5c39c5a5269db721d4dfbe48a3297d72835b9a40b549cb9e424827904db5`;
+its driver SHA is
+`03b730b717a855f58b158819049b81bc040cd62b30d7fddd1cb61f46f7962280`.
+
+The fixed16-output generation now binds that completed checkpoint through
+`evaluation-freeze.json` SHA
+`37c4ba01d991a471496ec0b905fb050100339cea51f41f57b32bea037ce10860`.
+Run the same Python3.10/mps-extra command with `evaluate.py`. Driver, cohort,
+seeds and limits match the frozen procedure. Long-form structure, native
+repetition and LN/TAP organization remain the quality decision; stars remain
+secondary diagnostics. No generation-quality conclusion is yet established.
