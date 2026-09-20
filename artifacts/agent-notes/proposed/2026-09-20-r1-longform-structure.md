@@ -1643,3 +1643,34 @@ and add pytest for its focused owner tests, with the clean source path explicitl
 set. All objective, data, seeds, bounds and decision gates remain revision1.
 The cache's frozen logits separate this runtime from model prediction, so no
 Python/PyTorch migration is part of the scientific comparison. No run has started.
+
+### Conditional calibration implementation is recoverable; no fitted candidate yet
+
+Implementation is clean6d0837bd654f9b8db94fde3b0c7ec90f566a7e96 on the isolated
+codex/r1-response-calibration branch, based ondb0a9b8. It adds exact response
+features, composition-conditional normalization, a two-variable convex fitting
+API and an explicit model-only inference bundle. Old dormant model/training
+identities remain unchanged; raw snapshots normalize serialized coefficient lists
+to the immutable tuple configuration. Ordinary training rejects enabled calibration.
+No inherited checkpoint was overwritten, no actual TRAIN cache was prepared,
+and no coefficient fit or new quality generation has started.
+
+Selected Python3.10/mps checks pass113 tests plus22 subtests across calibration,
+native generation, durable generation, response, training, fork and packaging.
+The pure-array fitting owner passes separately on Python3.11/SciPy1.17.1.
+After adding H-state marginal coverage and smoke-entry rejection, the targeted
+calibration/smoke owners pass8 tests. Hydra job inspection projects the dormant
+field and the complete baseline-to-intervention diff passes whitespace checking.
+No CUDA or full legacy suite was run. Initial failures exposed tuple/list raw
+restore normalization, an Arm-enum synthetic serialization fixture, and a synthetic
+fit family lacking any zero-cost action; each is corrected without weakening the
+asserted contracts. A trailing blank line was removed before finalizing the local
+commit. These are engineering checks, not the scientific preflight or quality gate.
+
+The user requested a stage assessment and vacation-time workload suggestions
+before another long run. Stage assessment is Note2026-09-20-r1-stage-quality-assessment,
+first committedcaf664d. It distinguishes the established long-form/LN gains,
+remaining2–6star uncertainty and module attribution from the still-unrun calibration.
+The active goal remains incomplete. Next execution work must still prepare and pin
+TRAIN data, run the zero-coefficient real-data equivalence preflight, fit once and
+complete the fixed64-output comparison under calibration Card revision2.
