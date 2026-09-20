@@ -884,3 +884,65 @@ would leave that branch unsupported and favor broader structural planning/qualit
 assessment over increasingly narrow hold-duration rules. No training or model
 readiness is authorized by the result alone; the user goal provides separate
 execution authority for an explicitly recorded subsequent intervention.
+
+### Transition probe result and bounded pool extension
+
+The32 transition-selected TRAIN charts finish in520.027087seconds. There are19
+selected states, all from one group, sourcece0f1f7310f9 (Aqua Regia / Crystalline).
+Thus the pool is still insufficient for training under the unchanged4-group
+criterion. Manifest SHA:
+`397f9f76bc15a2c435e3bf7052ac40de5488a952742de8796272510510c1c52c`.
+The full20–41s source/candidate Lens montages show two long-held allocations:
+three occupied lanes leave a single attack lane, with especially concentrated
+re-attacks after31s. Releases restore varied flow near37s. These examples occur
+earlier than the source's maximum-ratio timing witness at186253ms; selection is
+an enrichment proxy, not proof of transition causality. The observation supports
+a real failure family but does not establish broad prevalence.
+
+The six existing gold examples were reprojected from six unchanged canonical
+TRAIN/VAL source documents. Their scopes, labels, High confidence and original
+comments match the earlier refresh exactly. Current projection SHA:
+`647bfd027aa7a780ff09cc25fcc56be25d3f7032b9ce3d5e628aaa042f0111ad`.
+No human record, label or confidence changed.
+
+Transition-pool Card revision2 keeps the selection and query rules, checkpoint,
+seed17 and all resource limits except wall time unchanged. It expands the fixed
+ordered cohort from its first32 to all176 eligible groups, then stops after a
+complete chart as soon as the aggregate pool has16 queries across4 groups, or
+at3600seconds. Reuse the32 completed trajectories by exact byte copy into a fresh
+owner; do not regenerate them. Remaining sources are sampled only if needed,
+in the same prospective ratio/count/SHA order. This is bounded collection of
+rare native recovery data, not an unbiased incidence estimate. No criterion is
+relaxed and no validation example becomes training data. Fresh owner:
+`artifacts/bounded-typed-continuation/release-transition-expanded-20260920-v1/`.
+The preparation asserts its first32 entries equal the earlier fixed selection.
+The driver freezes the full ordered selection and its own digest before execution.
+
+## Release-mask implementation scope
+
+The user goal independently authorizes implementing a bounded candidate while
+native data collection proceeds. Use the isolated `Pulsefield-model-release-recovery`
+worktree, branch `codex/r1-release-recovery`, at clean baseline
+`c1cd14c81d2058299144f4e41ec574853e5e0280`. The collector stays in the unchanged
+longform worktree. Training remains conditional on an adequate inspected pool
+and a separately frozen procedure; no training is authorized by this scope record.
+
+Add an optional R1 release-mask residual of width512. It gives one common score
+shift to actions sharing the four-lane close mask and averages mirrored hand
+orders. A zero final layer preserves initial predictions. With the inherited
+policy frozen, conditional head routing and TAP/LN choices within a release
+mask remain unchanged for a fixed state. Queries with no held lane receive
+exactly zero correction. It changes neither support nor temperature and imposes
+no duration or repetition rule. Preserve all inherited model tensors, Adam
+moments, source-plan prefix, counters and RNG in an explicit release-only fork.
+The fork may replace only the pinned recovery-pool identity while scalar recovery
+settings remain unchanged. Ordinary resume remains exact and configuration-bound.
+
+Implement typed/Hydra fields, parameter/digest compatibility, fork/trainable scope,
+and focused CPU/MPS checks of exact initial predictions, conditional preservation,
+no-hold identity, mirror symmetry, native/dense/recovery agreement and inherited
+weight/Adam preservation. Use existing joint scoring, raw-state recovery and
+pool owners. Record actual parameter count and real-data preflight before training.
+This structural restriction addresses the failed full-policy LN-retention result,
+but it cannot guarantee unchanged whole trajectories; complete-chart quality
+and independent LN/TAP guards remain mandatory.
