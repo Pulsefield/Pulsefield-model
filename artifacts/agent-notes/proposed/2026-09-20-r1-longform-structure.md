@@ -1172,3 +1172,42 @@ resource failure. No generation, optimizer update, label change or TEST read.
 The result will distinguish local scoring from earlier occupancy/type/closure
 decisions; it will not make star rating a V3 demand definition or silently add
 source suffix statistics to the inference condition.
+
+### State/action result and two-onset response probe
+
+The104-chart read-only replay completes in13.227914s. Independent physical-row
+recounts match every10/20/30/40ms partition and published40ms component. Readout
+SHA `62e028525b07027d3ecc0832e19118804f4df28710a2131132f3c6e7ec3607d1`.
+On the paired32 cases, routing->release under40ms heads310->366 decompose as:
+heads in states with no recovered lane122->177; additional chosen-cardinality
+minimum18->33; excess beyond the same-cardinality minimum170->156. Thus the
+increase is predominantly in state-constrained events, not an increase in free
+lane-choice excess. This is a trajectory comparison, not attribution to a unique
+neural cause. Release outputs have159 under30ms heads (70 in forced states) and
+45 under20ms (25 forced). The16 unseen confirmations have76 under40ms heads,
+46 forced; one under30ms, forced; zero under20ms. All10ms counts are zero.
+Across24 source references there are19 under40ms heads and zero under30ms.
+
+Probe the decision immediately before these remaining events before selecting
+another learner. A new parameter-independent helper computes the minimum short
+head count at the current candidate plus the next two required H under hypothetical
+legal futures. Unknown holds may close at their earliest future candidate;
+known original-seed ends remain fixed. One future TAP per H and earliest unknown
+release suffice for this optimistic minimum: extra heads/new holds cannot improve
+it. This is a response bound, not equal-style planning or a calibrated demand scale.
+Seven synthetic schedules at20/30/40ms (21 comparisons) match exhaustive legal
+future enumeration, including future LN starts, multiple heads, partial/delayed
+releases and seed commitments. Preflight takes0.581099s; helper SHA
+`b3e10b43d2fc941e5188e210f94c4cc64562543d651d9ea8b5a7a161855abd2f`.
+
+Freeze a read-only probe on the48 completed release outputs, at under30ms event
+positions and candidates from their preceding two H. Compare the sampled action's
+bound with minima over all legal actions, release-only changes at fixed current
+head/kind masks, equal head count, equal head/LN counts and fixed head mask.
+This distinguishes earlier closing decisions from head/type/cardinality choices.
+Use30ms to inspect the sharper residual events, not to declare37–38ms LN figures
+safe or bad. No VAL example becomes a training preference. Freeze binds both
+readouts, code and preflight; output owner is
+`artifacts/bounded-typed-continuation/row-response-probe-20260920-v1/`.
+CPU1,600s, fresh outputs, no generation/optimizer/label change or TEST read.
+Results are exploratory and do not select an architecture by themselves.
