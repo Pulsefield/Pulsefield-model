@@ -1096,3 +1096,47 @@ Current High human LN/Stream records and the frozen slow-Jack example were used;
 the slow-Jack example has unrecorded confidence, not High. No human record changes
 or semantic-label promotion occurred. Use release6.5M as the working candidate
 for further verification, retaining routing6.25M and all earlier evidence.
+
+## Experiment Card: r1-release-unseen-confirmation-v1
+
+Revision1, proposed, acceptance none. Confirm the fixed release6.5M candidate on
+unused VAL musical groups before another model change. This is an exploratory
+generalization check, not training or a final independent TEST evaluation.
+
+Baseline and execution source is clean docs-only descendant
+`dfdbc75776cf6e2ded0c2f65f62aa7f8fed94c74`; candidate checkpoint remains
+`0a9c87afa43caa9d3647fe3315d79b3a048cc71261571c599c85cf49361dd1ec`.
+Use existing source-only census48ba7f52dd0d, excluding the original48 groups,
+the28-group screen, the recent8 groups and the six consulted canonical gold
+sources' groups. Close exclusions across catalog and original allocation IDs:
+88 catalog and18 represented original groups are excluded. No TEST payload.
+
+Seed20260921 selects two distinct groups in each source band2–3/3–4/4–5/5–6,
+suffix duration>=180s: one with at least16 independent-LN-start witnesses and
+one ordinary long chart, sampled uniformly by group then chart. The witness is
+selection metadata, not a semantic label. Exact source and condition identities
+are frozen in SHA
+`087121241840944676dca12a3b22eb5bca63c5f304753be13ef3e507f24ffeb4`.
+Selected SHA prefixes are ef4f8522961c,819b6796594b,2e817c1fb39d,2b93d4068d4c,
+4e20e7aad3a8,1a290721dfe8,35b11030b1e2,c8d03a3e7626. Suffixes last189–351s.
+
+Generate all16 complete charts at seeds17/23, CPU1, native temperature1, with
+the supplied complete seeds and original R/H. No new training or support changes.
+Fixed early/middle/late8s scopes are selected before output. Inspect them and
+source-selected independent-LN cores, plus worst held/repeated/cycle and short-gap
+contexts, using the frozen Foundation and current gold. Absence of a counter
+threshold violation does not establish quality. Require legal complete mechanics
+and exact export/reparse; a new below10ms diagnostic must receive an exact witness
+and prevents an unchecked pass. Sustained allocation/diversity collapse or loss
+of meaningful LN/TAP relations prevents readiness. Difficulty and short-gap burden
+remain explicit limitations even if long-form confirmation is positive.
+
+Bounds:1800s total,600s per generation, RSS/footprint6GiB, swap growth128MiB,
+fresh owner2GiB. Stop on mechanics, nonfinite, identity or resource failure.
+No overwrite, source reselection after viewing outputs, or scientific resume.
+Owner: `artifacts/bounded-typed-continuation/release-confirmation-20260920-v1/`
+in the release worktree. `evaluation-freeze.json` pins selection, preparation,
+driver, checkpoint and source before running `evaluate.py` with offline Python3.10
+and the mps dependency extra. A positive result supports continued use of this
+working candidate while addressing the remaining full-goal requirements; it does
+not change Note lifecycle or establish final2–6star quality.
