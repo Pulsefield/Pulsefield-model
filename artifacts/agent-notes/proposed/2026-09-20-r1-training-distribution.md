@@ -83,3 +83,29 @@ remain unchanged.
 ## Result
 
 Pending source/object preflight and complete TRAIN census.
+
+
+## Execution freeze
+
+The first eight lexicographic source SHAs and four largest-row sources give
+12 distinct preflight charts. Original object multisets, admitted cache bytes,
+seed rules and onset counts agree for all12. Synthetic checks cover strict20/40
+boundaries, seed history in suffix clocks, exact exposure windows and star-band
+endpoints. The preflight completed in14.583925 seconds, with maximum sampled
+RSS434,110,464 bytes, footprint352,961,688 bytes and zero swap growth.
+
+The clean product remains `342fa15294670d9e790d94c7c604f2c525cc3057`.
+Under the declared output owner, the frozen driver `census.py` SHA is
+`d2486a81a93c08ab94808db32079affbffca291ea750ef3c0218d2543dd556c0`;
+`preflight-v1/receipt.json` SHA is
+`99f19d5f40c945d54c4bca8ec12f94ac739c2ab94d98a6ba5fe1c88afeedb83b`;
+`freeze.json` SHA is
+`ede0a5257f825a65ad255f799e4f4a401baf229afb15f72af239932c2de27017`.
+The full census runs with `uv run --offline --python 3.10 --extra mps python
+artifacts/bounded-typed-continuation/training-distribution-20260920-v1/census.py`.
+The128MiB output limit includes preflight and full-census files. Failed output
+is retained; a rerun needs a fresh declared destination. No population aggregate
+was computed before this freeze. The freeze-writing command succeeded; its
+subsequent console-only resource summary failed on a startup journal entry
+without a footprint field and was corrected without changing the freeze bytes.
+Acceptance remains none; execution follows the active goal's separate authority.
