@@ -22,8 +22,9 @@ from pulsefield_model.research.scoped_style_modeling.dataset import ContractErro
 from .test_generation import setup
 
 
-def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context='none', long_memory='none', head_routing='none'):
-    model, timing, seed, _ = setup(arm, device, availability, seed_context=seed_context, long_memory=long_memory, head_routing=head_routing)
+def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context='none', long_memory='none', head_routing='none', release_routing='none'):
+    model, timing, seed, _ = setup(arm, device, availability, seed_context=seed_context, long_memory=long_memory,
+                                  head_routing=head_routing, release_routing=release_routing)
     checkpoint = tmp_path / 'trained.pt'
     torch.save(dict(format='bounded-typed/corpus-training-v1', source_revision='a' * 40,
                     config=dict(model=json.loads(json.dumps(asdict(model.config)))),
@@ -41,18 +42,19 @@ def inputs(tmp_path, arm=Arm.R1, device='cpu', availability='none', seed_context
     return model, condition, config
 
 
-@pytest.mark.parametrize('arm,availability,seed_context,long_memory,head_routing',
-    [(a, 'none', 'none', 'none', 'none') for a in Arm] +
-    [(Arm.O1, 'commitment', 'none', 'none', 'none'), (Arm.R1, 'none', 'zero', 'none', 'none'),
-     (Arm.R1, 'none', 'observed', 'none', 'none'), (Arm.R1, 'none', 'observed', 'landmarks', 'none'),
-     (Arm.R1, 'none', 'observed', 'landmarks', 'residual')])
+@pytest.mark.parametrize('arm,availability,seed_context,long_memory,head_routing,release_routing',
+    [(a, 'none', 'none', 'none', 'none', 'none') for a in Arm] +
+    [(Arm.O1, 'commitment', 'none', 'none', 'none', 'none'), (Arm.R1, 'none', 'zero', 'none', 'none', 'none'),
+     (Arm.R1, 'none', 'observed', 'none', 'none', 'none'), (Arm.R1, 'none', 'observed', 'landmarks', 'none', 'none'),
+     (Arm.R1, 'none', 'observed', 'landmarks', 'residual', 'none'),
+     (Arm.R1, 'none', 'observed', 'landmarks', 'residual', 'residual')])
 @pytest.mark.parametrize('device', ['cpu', 'mps'])
 def test_packaged_run_matches_native_and_exact_resume_without_modifying_parent(tmp_path, monkeypatch, arm, availability,
-                                                                              seed_context, long_memory, head_routing, device):
+                                                                              seed_context, long_memory, head_routing, release_routing, device):
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip('MPS unavailable')
     monkeypatch.setattr(generate_run, 'source_revision', lambda: 'b' * 40)
-    model, condition, config = inputs(tmp_path, arm, device, availability, seed_context, long_memory, head_routing)
+    model, condition, config = inputs(tmp_path, arm, device, availability, seed_context, long_memory, head_routing, release_routing)
     before_threads = torch.get_num_threads()
     torch.set_num_threads(config.cpu_threads)
     try:

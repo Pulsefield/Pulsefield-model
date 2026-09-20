@@ -69,6 +69,9 @@ def model_digest(model):
     if config['head_routing'] == 'none':
         for field in ('head_routing', 'routing_hidden'):
             config.pop(field)
+    if config['release_routing'] == 'none':
+        for field in ('release_routing', 'release_hidden'):
+            config.pop(field)
     digest = hashlib.sha256(json.dumps(config, sort_keys=True).encode())
     for name, tensor in model.state_dict().items():
         digest.update(json.dumps((name, str(tensor.dtype), tuple(tensor.shape))).encode())
@@ -315,6 +318,8 @@ class Rollout:
         config.setdefault('memory_stride', 64)
         config.setdefault('head_routing', 'none')
         config.setdefault('routing_hidden', 512)
+        config.setdefault('release_routing', 'none')
+        config.setdefault('release_hidden', 512)
         if (snapshot['format'] != 'bounded-typed/rollout-v1' or config != asdict(model.config) or
                 snapshot['parameter_sha256'] != model_digest(model) or snapshot['timing_sha256'] != timing_digest(timing)):
             raise ContractError('Rollout checkpoint differs from its model parameters, configuration or timing condition')

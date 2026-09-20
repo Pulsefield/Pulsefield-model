@@ -49,6 +49,8 @@ model:
   memory_stride: 64
   head_routing: none
   routing_hidden: 512
+  release_routing: none
+  release_hidden: 512
 resources:
   driver_limit_bytes: 6442450944
   rss_limit_bytes: 6442450944

@@ -188,7 +188,8 @@ def test_seed_snapshot_validation_and_legacy_default_identity():
     plain, timing, _, original = setup(Arm.R1)
     legacy = original.snapshot(rng)
     old_config = asdict(plain.config)
-    for field in ('seed_context', 'long_memory', 'memory_hidden', 'memory_stride', 'head_routing', 'routing_hidden'):
+    for field in ('seed_context', 'long_memory', 'memory_hidden', 'memory_stride', 'head_routing', 'routing_hidden',
+                  'release_routing', 'release_hidden'):
         legacy['model_config'].pop(field)
         old_config.pop(field)
     digest = hashlib.sha256(json.dumps(old_config, sort_keys=True).encode())

@@ -218,6 +218,31 @@ The fresh readout SHA-256 is
 its scoped agent review is `14f2507beca22a75060009812b5e0c49e6290de50b22b98ca6e22221c2a7c531`.
 Generated files are local evidence and may be absent in a fresh clone.
 
+### Frozen-base release routing
+
+`model.release_routing=residual` adds an optional R1 release-mask scorer with
+independent `model.release_hidden` width, default 512. A shared MLP scores the
+16 binary sets of closing lanes; averaging direct and mirrored hand orders
+preserves mirror equivariance. Its last projection starts at zero. The default
+128-wide backbone gains 139,776 parameters, bringing the seed/memory/head-routing
+model to 3,056,784 parameters. Native support and temperature remain unchanged.
+
+Actions with the same close mask receive the same score correction. With the
+inherited policy frozen, this preserves `P(action | close_mask, state)` for a
+fixed committed prefix, including conditional head routing and TAP/LN kinds.
+It can change release choices at both H and R candidates. Queries with no held
+lane receive exactly zero correction. These properties do not guarantee
+unchanged later LN organization after a different release has been sampled.
+
+`trainable=release` updates only the new scorer and keeps all inherited model
+tensors and Adam states unchanged. An explicit fork can append this module to a
+completed parent and replace its pinned recovery-pool path and digest. Existing
+scalar recovery settings, optimizer settings and source-plan prefix must remain
+unchanged. Ordinary resume requires the same model, training scope and pool.
+Defaults preserve earlier checkpoint identities. The module is an experimental
+candidate; its native quality and retention of independent LN/TAP relationships
+require complete-chart evaluation after training.
+
 ## Exact state and bounded learned context
 
 Exact state retains real LN starts, current occupancy, last attack/release clocks,

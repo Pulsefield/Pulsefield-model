@@ -22,7 +22,7 @@ from .contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule
 from .features import (AVAILABILITY_DIM, CANDIDATE_DIM, CONTENT_DIM, FACTOR_DIM, QUERY_DIM,
                        EndpointAvailability, TimingView, endpoint_availability, factor_features)
 from .support import row_supports
-from .routing import HeadRouting
+from .routing import HeadRouting, ReleaseRouting
 from .temporal import FiniteTemporal, TemporalConfig, pointwise
 
 
@@ -41,6 +41,8 @@ class ModelConfig:
     memory_stride: int = 64
     head_routing: str = 'none'
     routing_hidden: int = 512
+    release_routing: str = 'none'
+    release_hidden: int = 512
 
     def __post_init__(self):
         if not isinstance(self.arm, Arm):
@@ -63,6 +65,10 @@ class ModelConfig:
             raise ContractError('Head routing must be none or residual, and is R1-only')
         if type(self.routing_hidden) is not int or self.routing_hidden <= 0:
             raise ContractError('Head-routing width must be a positive integer')
+        if self.release_routing not in ('none', 'residual') or self.arm != Arm.R1 and self.release_routing != 'none':
+            raise ContractError('Release routing must be none or residual, and is R1-only')
+        if type(self.release_hidden) is not int or self.release_hidden <= 0:
+            raise ContractError('Release-routing width must be a positive integer')
         if any(type(n) is not int or n <= 0 for n in (self.memory_hidden, self.memory_stride)):
             raise ContractError('Long-memory width and onset stride must be positive integers')
 
@@ -236,6 +242,8 @@ class BoundedModel(nn.Module):
                             if config.long_memory != 'none' else None)
         self.route_residual = (HeadRouting(config.hidden, config.routing_hidden)
                                if config.head_routing != 'none' else None)
+        self.release_residual = (ReleaseRouting(config.hidden, config.release_hidden)
+                                 if config.release_routing != 'none' else None)
 
     @property
     def choices(self):
@@ -290,6 +298,9 @@ class BoundedModel(nn.Module):
         if self.route_residual is not None:
             onsets = torch.tensor([s.timing.onsets[s.index] for s in states], device=hands.device)
             scores = scores + self.route_residual(hands, onsets)
+        if self.release_residual is not None:
+            occupied = torch.tensor([any(s.replay.occupancy) for s in states], device=hands.device)
+            scores = scores + self.release_residual(hands, occupied)
         return scores.masked_fill(~mask, -torch.inf).log_softmax(-1)
 
     def endpoint_log_probs(self, hands: Tensor, states: Sequence[Schedule], heads, endpoints,

@@ -45,8 +45,10 @@ class TrainConfig:
     resources: SmokeResources = field(default_factory=SmokeResources)
 
     def validate(self):
-        if self.trainable not in ('all', 'routing') or self.trainable == 'routing' and self.model.head_routing != 'residual':
-            raise ContractError('Trainable scope must be all or routing with an enabled head-routing residual')
+        if (self.trainable not in ('all', 'routing', 'release') or
+                self.trainable == 'routing' and self.model.head_routing != 'residual' or
+                self.trainable == 'release' and self.model.release_routing != 'residual'):
+            raise ContractError('Trainable scope must be all, routing or release with its corresponding residual enabled')
         if bool(self.recovery_pool) != bool(self.recovery_sha256):
             raise ContractError('Native recovery needs both pool path and SHA-256')
         if self.recovery_pool:

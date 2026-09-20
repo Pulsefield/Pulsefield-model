@@ -43,6 +43,9 @@ def training_identity(config):
     if result['model'].get('head_routing', 'none') == 'none':
         for field in ('head_routing', 'routing_hidden'):
             result['model'].pop(field, None)
+    if result['model'].get('release_routing', 'none') == 'none':
+        for field in ('release_routing', 'release_hidden'):
+            result['model'].pop(field, None)
     if not result.get('recovery_pool'):
         for field in RECOVERY_FIELDS:
             result.pop(field, None)
@@ -141,6 +144,20 @@ def read_fork(config, plan):
             raise ContractError('A head-routing fork must freeze the entire inherited policy')
         for field in ('head_routing', 'routing_hidden'):
             new_identity['model'].pop(field)
+    added_release = (old_identity['model'].get('release_routing', 'none') == 'none' and
+                     new_identity['model'].get('release_routing') == 'residual')
+    if added_release:
+        if added_routing or new_identity.pop('trainable', None) != 'release':
+            raise ContractError('A release-routing fork must freeze the inherited policy and add only release routing')
+        old_identity.pop('trainable', None)
+        for field in ('release_routing', 'release_hidden'):
+            new_identity['model'].pop(field)
+        # A head-routing parent already has a pinned native pool. Release-only
+        # forks may replace that data identity, retaining all scalar settings.
+        if old_identity.get('recovery_pool') and new_identity.get('recovery_pool'):
+            for field in ('recovery_pool', 'recovery_sha256'):
+                old_identity.pop(field)
+                new_identity.pop(field)
     fields = ('endpoint_availability', 'row_consequence', 'seed_context', 'long_memory')
     old_modes = [old_identity['model'].pop(field, 'none') for field in fields]
     new_modes = [new_identity['model'].pop(field, 'none') for field in fields]
@@ -153,10 +170,10 @@ def read_fork(config, plan):
     # Objective forks keep the entire architecture; residual extensions append
     # parameters while retaining the existing order and optimizer states.
     preserved = ((added_memory and not added_recovery and old_modes[:-1] == new_modes[:-1]) or
-                 ((added_recovery or added_routing) and not added_memory and old_modes == new_modes))
-    if (((added_recovery or added_routing) and old_modes != new_modes) or
+                 ((added_recovery or added_routing or added_release) and not added_memory and old_modes == new_modes))
+    if (((added_recovery or added_routing or added_release) and old_modes != new_modes) or
             (any(mode != 'none' for mode in old_modes) and not preserved) or old_identity != new_identity):
-        raise ContractError('Fork scientific configuration may only add optional residuals, frozen-base routing or native recovery and extend its plan')
+        raise ContractError('Fork scientific configuration may only add optional residuals, frozen-base routing, release routing or native recovery and extend its plan')
     base_keys = set(old_plan) - {'sampling', 'draws'}
     if ({key: old_plan[key] for key in base_keys} != {key: plan.get(key) for key in base_keys} or
             set(plan) != set(old_plan) or
@@ -174,6 +191,9 @@ def read_fork(config, plan):
         parent.update(recovery_pool_sha256=config['recovery_sha256'])
     if added_routing:
         parent.update(head_routing=config['model']['head_routing'], trainable=config['trainable'])
+    if added_release:
+        parent.update(release_routing=config['model']['release_routing'], trainable=config['trainable'],
+                      recovery_pool_sha256=config['recovery_sha256'])
     return payload, charged, parent
 
 
@@ -186,7 +206,8 @@ def restore_fork(model, optimizer, payload):
     old_names = [name for name, _ in previous.named_parameters()]
     new_names = [name for name, _ in model.named_parameters()]
     added = new_names[len(old_names):]
-    prefixes = ('pointer.availability_residual.', 'row_consequence.', 'seed_residual.', 'long_memory.', 'route_residual.')
+    prefixes = ('pointer.availability_residual.', 'row_consequence.', 'seed_residual.', 'long_memory.',
+                'route_residual.', 'release_residual.')
     if new_names[:len(old_names)] != old_names or any(not name.startswith(prefixes) for name in added):
         raise ContractError('Fork model must preserve parameter order and append only optional residuals')
     missing, unexpected = model.load_state_dict(payload['model'], strict=False)
@@ -209,10 +230,13 @@ def configure_trainable(model, scope):
     """Keep frozen parameters in Adam for exact inherited-state preservation."""
     if scope == 'routing' and model.route_residual is None:
         raise ContractError('Routing-only updates require the head-routing residual')
-    if scope not in ('all', 'routing'):
+    if scope == 'release' and model.release_residual is None:
+        raise ContractError('Release-only updates require the release-routing residual')
+    if scope not in ('all', 'routing', 'release'):
         raise ContractError('Unknown trainable parameter scope')
+    prefix = {'routing': 'route_residual.', 'release': 'release_residual.'}.get(scope)
     for name, parameter in model.named_parameters():
-        parameter.requires_grad_(scope == 'all' or name.startswith('route_residual.'))
+        parameter.requires_grad_(scope == 'all' or name.startswith(prefix))
 
 
 def run_training(config: TrainConfig, *, resolved_yaml=''):
