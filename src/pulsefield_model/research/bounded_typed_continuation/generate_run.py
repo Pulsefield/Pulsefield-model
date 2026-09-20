@@ -29,6 +29,7 @@ from .generate_config import GenerateConfig
 from .generation import RawEvent, Rollout
 from .memory import footprint_bytes
 from .model import BoundedModel, ModelConfig
+from .profiles import validate_model_profile
 from .smoke_run import save_json, source_revision
 from .verification import verify_complete
 
@@ -49,9 +50,7 @@ def _model(config):
     settings = dict(payload['config']['model'])
     settings['arm'] = Arm(settings['arm'])
     model_config = ModelConfig(**settings)
-    if (model_config.hidden > 128 or model_config.levels > 8 or model_config.expansion > 4 or
-            model_config.coupling_rank > 16):
-        raise ContractError('Checkpoint model exceeds the bounded generation envelope')
+    validate_model_profile(model_config, config.execution_profile)
     model = BoundedModel(model_config)
     model.load_state_dict(payload['model'], strict=True)
     if any(not bool(torch.isfinite(p).all()) for p in model.parameters()):
@@ -191,13 +190,15 @@ def _complete_output(output, condition, config, header):
 
 
 @torch.no_grad()
-def run_generation(config: GenerateConfig, *, resolved_yaml=''):
+def run_generation(config: GenerateConfig, *, resolved_yaml='', stop_requested=lambda: None):
     """Generate or resume into a fresh directory from digest-pinned inputs.
 
     Return a completed report only after independent verification and exact
     osu! reparse. A cursor/time pause returns a durable checkpoint without an
     osu! export. Failures propagate and leave the last complete checkpoint;
     recovery copies verified journal prefixes without modifying their parent.
+    stop_requested is polled before each candidate; a nonempty reason pauses
+    with the same durable state/RNG contract as a requested cursor.
     The source checkout must be clean and committed. CPU thread settings are
     restored on return or failure; exact recovery requires the same execution
     environment as the parent run.
@@ -217,6 +218,8 @@ def run_generation(config: GenerateConfig, *, resolved_yaml=''):
             raise ContractError('Presentation source changed while reading its header')
     header_sha = None if header is None else hashlib.sha256(header).hexdigest()
     identity = {key: getattr(config, key) for key in IDENTITY_FIELDS}
+    if config.execution_profile != 'small':
+        identity['execution_profile'] = config.execution_profile
     output = Path(config.output_dir).resolve()
     if output.exists():
         raise ContractError('Generation needs a fresh output_dir, including when resuming')
@@ -276,6 +279,8 @@ def run_generation(config: GenerateConfig, *, resolved_yaml=''):
             checkpoint()
             reason = None
             while not rollout.state.finished:
+                if reason := stop_requested():
+                    break
                 if rollout.state.index == config.stop_after_candidate:
                     reason = 'requested_cursor'
                     break

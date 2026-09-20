@@ -6,10 +6,12 @@ from ..scoped_style_modeling.dataset import ContractError
 from .contract import Arm
 from .model import ModelConfig
 from .smoke_config import SmokeResources
+from .profiles import validate_model_profile, validate_profile_resources
 
 
 @dataclass
 class TrainConfig:
+    execution_profile: str = 'small'
     plan_file: str = ''
     plan_sha256: str = ''
     source_cache_dir: str = ''
@@ -46,6 +48,11 @@ class TrainConfig:
     resources: SmokeResources = field(default_factory=SmokeResources)
 
     def validate(self):
+        validate_model_profile(self.model, self.execution_profile)
+        validate_profile_resources(self.execution_profile, self.resources)
+        teacher = self.execution_profile == 'teacher35m'
+        if teacher and (self.microbatch_size != 1 or self.batch_size > 4 or self.trainable != 'all'):
+            raise ContractError('teacher35m requires microbatch 1, batch at most 4 and ordinary full-model training')
         if (self.trainable not in ('all', 'routing', 'release', 'consequence') or
                 self.trainable == 'routing' and self.model.head_routing != 'residual' or
                 self.trainable == 'release' and self.model.release_routing != 'residual' or
@@ -91,10 +98,10 @@ class TrainConfig:
             if isinstance(value, bool) or not math.isfinite(value) or value < 0 or (name != 'weight_decay' and value == 0):
                 raise ContractError(f'{name} must be finite and positive, or nonnegative for weight decay')
         if (self.microbatch_size > min(self.batch_size, 2) or self.batch_size > 8 or
-                self.model.hidden > 128 or self.model.levels > 8 or self.model.expansion > 4 or
+                self.model.hidden > (512 if teacher else 128) or self.model.levels > 8 or self.model.expansion > 4 or
                 self.model.coupling_rank > 16 or self.candidate_budget > 32768 or
                 self.cache_max_sources > 128 or self.cache_max_bytes > 512 * 1024 ** 2 or
-                self.footprint_limit_bytes > 8 * 1024 ** 3):
+                self.footprint_limit_bytes > (12 if teacher else 8) * 1024 ** 3):
             raise ContractError('Corpus training exceeds its bounded model, batch, candidate or cache envelope')
         if self.plan_sha256 and (len(self.plan_sha256) != 64 or any(c not in '0123456789abcdef' for c in self.plan_sha256)):
             raise ContractError('plan_sha256 must be a lowercase SHA-256 digest')

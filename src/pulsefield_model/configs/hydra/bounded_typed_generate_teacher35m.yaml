@@ -1,0 +1,14 @@
+defaults:
+  - bounded_typed_generate
+  - _self_
+
+execution_profile: teacher35m
+footprint_limit_bytes: 12884901888
+resources:
+  driver_limit_bytes: 8589934592
+  rss_limit_bytes: 12884901888
+  min_available_bytes: 4294967296
+  max_swap_growth_bytes: 536870912
+  checkpoint_max_bytes: 1073741824
+  disk_reserve_bytes: 107374182400
+  output_max_bytes: 2147483648

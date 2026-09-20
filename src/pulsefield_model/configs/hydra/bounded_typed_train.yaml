@@ -4,6 +4,7 @@ defaults:
   - override hydra/job_logging: disabled
   - override hydra/hydra_logging: disabled
 
+execution_profile: small
 plan_file: ''
 plan_sha256: ''
 source_cache_dir: ''

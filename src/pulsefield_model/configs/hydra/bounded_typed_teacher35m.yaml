@@ -1,0 +1,28 @@
+# Shared training settings for the measured clean R1 teacher.
+execution_profile: teacher35m
+device: cpu
+cpu_threads: 1
+batch_size: 4
+microbatch_size: 1
+model_seed: 20260925
+max_seconds: 158400.0
+footprint_limit_bytes: 12884901888
+model:
+  arm: R1
+  hidden: 512
+  levels: 8
+  expansion: 4
+  coupling_rank: 16
+  seed_context: observed
+  long_memory: landmarks
+  memory_hidden: 256
+  memory_stride: 64
+resources:
+  driver_limit_bytes: 8589934592
+  rss_limit_bytes: 12884901888
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 4294967296
+  max_swap_growth_bytes: 536870912
+  checkpoint_max_bytes: 1073741824
+  disk_reserve_bytes: 107374182400
+  output_max_bytes: 2147483648

@@ -128,7 +128,7 @@ def create_plan(*, catalog_path, catalog_sha256, split_manifest, split_sha256,
 
 
 def read_plan(path, expected_sha256):
-    if not expected_sha256 or file_digest(Path(path), 32 * 1024 ** 2) != expected_sha256:
+    if not expected_sha256 or file_digest(Path(path), 128 * 1024 ** 2) != expected_sha256:
         raise ContractError('Corpus plan differs from its pinned bytes')
     plan = json.loads(Path(path).read_text())
     if plan['format'] != PLAN_FORMAT:

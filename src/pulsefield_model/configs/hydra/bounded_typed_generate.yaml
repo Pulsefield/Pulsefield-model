@@ -4,6 +4,7 @@ defaults:
   - override hydra/job_logging: disabled
   - override hydra/hydra_logging: disabled
 
+execution_profile: small
 checkpoint_file: ''
 checkpoint_sha256: ''
 condition_file: ''

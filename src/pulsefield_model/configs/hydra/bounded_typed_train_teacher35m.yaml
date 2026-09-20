@@ -1,0 +1,6 @@
+defaults:
+  - bounded_typed_train
+  - bounded_typed_teacher35m
+  - _self_
+
+output_dir: artifacts/bounded-typed-continuation/teacher35m

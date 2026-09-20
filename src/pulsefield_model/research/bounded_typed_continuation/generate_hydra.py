@@ -31,9 +31,9 @@ def project_config(config):
     return result
 
 
-def compose_config(overrides=None):
+def compose_config(overrides=None, *, config_name='bounded_typed_generate'):
     with initialize_config_module(version_base='1.3', config_module='pulsefield_model.configs.hydra'):
-        return project_config(compose(config_name='bounded_typed_generate', overrides=overrides or []))
+        return project_config(compose(config_name=config_name, overrides=overrides or []))
 
 
 @main(version_base='1.3', config_path='../../configs/hydra', config_name='bounded_typed_generate')

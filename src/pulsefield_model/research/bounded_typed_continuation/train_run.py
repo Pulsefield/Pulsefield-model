@@ -38,6 +38,8 @@ EXECUTION_FIELDS = {'output_dir', 'resume_from', 'stop_after_checkpoint', 'plan_
 
 def training_identity(config):
     result = deepcopy({key: value for key, value in config.items() if key not in EXECUTION_FIELDS})
+    if result.get('execution_profile', 'small') == 'small':
+        result.pop('execution_profile', None)
     if result.get('trainable', 'all') == 'all':
         result.pop('trainable', None)
     if not result.get('source_kl_weight', 0.):
@@ -262,7 +264,13 @@ def configure_trainable(model, scope):
         parameter.requires_grad_(scope == 'all' or name.startswith(prefix))
 
 
-def run_training(config: TrainConfig, *, resolved_yaml=''):
+def run_training(config: TrainConfig, *, resolved_yaml='', stop_requested=lambda: None):
+    """Train a fresh segment, resuming only finalized durable parent state.
+
+    Poll stop_requested before each update. A nonempty reason checkpoints the
+    current complete optimizer boundary and returns status='paused'; no partial
+    gradient accumulation is saved or resumed.
+    """
     config.validate()
     if any(not getattr(config, key) for key in ('plan_file', 'plan_sha256', 'source_cache_dir')):
         raise ContractError('Corpus training requires a pinned shared plan and admitted source cache')
@@ -293,7 +301,7 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
                         max_bytes=config.cache_max_bytes)
     recovery = None
     durable_exposure, durable_update, checkpoint_sha = exposure, update, None
-    status, failure, result = 'completed', None, None
+    status, failure, result, pause_reason = 'completed', None, None, None
     with (output / 'resources.jsonl').open('w') as resource_log, (output / 'training.jsonl').open('wb') as journal:
         try:
             guard = ResourceGuard(config.device, config.resources, resource_log)
@@ -344,6 +352,10 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
 
             checkpoint()
             while cursor < len(plan['draws']):
+                if pause_reason := stop_requested():
+                    status = 'paused'
+                    checkpoint()
+                    break
                 if exposure == config.stop_after_checkpoint:
                     status = 'paused'
                     break
@@ -406,6 +418,6 @@ def run_training(config: TrainConfig, *, resolved_yaml=''):
                           checkpoint_sha256=checkpoint_sha, coverage=coverage.metrics(), metrics=total,
                           segment_seconds=time.monotonic() - started,
                           compute_seconds=prior_seconds + time.monotonic() - started,
-                          parent=parent, failure=failure, cache=cache.metrics())
+                          parent=parent, failure=failure, pause_reason=pause_reason, cache=cache.metrics())
             save_json(output / 'result.json', result)
     return result

@@ -4,6 +4,7 @@ import math
 
 from ..scoped_style_modeling.dataset import ContractError
 from .smoke_config import SmokeResources
+from .profiles import validate_profile_resources
 
 
 def checked_digest(value, name):
@@ -30,6 +31,7 @@ class PrepareConditionConfig:
 
 @dataclass
 class GenerateConfig:
+    execution_profile: str = 'small'
     checkpoint_file: str = ''
     checkpoint_sha256: str = ''
     condition_file: str = ''
@@ -51,6 +53,7 @@ class GenerateConfig:
     resources: SmokeResources = field(default_factory=SmokeResources)
 
     def validate(self):
+        validate_profile_resources(self.execution_profile, self.resources)
         for name in ('checkpoint_sha256', 'condition_sha256', 'presentation_sha256', 'resume_sha256'):
             checked_digest(getattr(self, name), name)
         if bool(self.resume_from) != bool(self.resume_sha256):
@@ -63,7 +66,7 @@ class GenerateConfig:
             if type(getattr(self, name)) is not int or getattr(self, name) <= 0:
                 raise ContractError(f'{name} must be a positive integer')
         if (self.candidate_budget > 32768 or self.checkpoint_every_candidates > 8192 or
-                self.footprint_limit_bytes > 8 * 1024 ** 3):
+                self.footprint_limit_bytes > (12 if self.execution_profile == 'teacher35m' else 8) * 1024 ** 3):
             raise ContractError('Generation exceeds its candidate, checkpoint or memory envelope')
         if type(self.seed) is not int or not 0 <= self.seed < 2 ** 63:
             raise ContractError('seed must be a nonnegative integer below 2**63')
