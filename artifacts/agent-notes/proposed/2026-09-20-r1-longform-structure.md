@@ -449,3 +449,120 @@ The approved slow-Jack calibration was also rendered and viewed with its full
 entry/exit. Gold manifest SHA:
 `25add75e70e59fddd7fe0d51651705daff18c617f780d868d1e1cefced4e8b50`.
 It is a TRAIN calibration example, not independent model validation.
+
+
+## Native-recovery result: REFINE; retention guard failed
+
+All16 fixed outputs finish in281.510863 seconds, with legal mechanics, successful
+export/reparse and zero below-10ms events. Pooled below-40ms diagnostic counts
+are152 at5M,69 for6M memory and3 for6.25M recovery. The maximum number of
+consecutive required H rows containing a fixed lane changes77 ->152 ->11.
+The two historic failed regions no longer contain the quadruple wall or the
+three-held-lane lock:19/seed17 distributes150 of152 attacks as singles across
+all four lanes, plus two chords;23/seed23 distributes all79 as singles after its
+preceding held lane releases. These are real improvements in those witnesses.
+
+The LN retention guard nevertheless fails. On source09/seed17 at
+97684.5–105684.5ms, the6M/candidate counts are79/5 LN heads,35/0 H rows with
+at least two held lanes, and22/0 independent release rows (including R-only
+rows). On source21/seed17 at220097–228097ms, corresponding counts are73/36,
+19/0 and36/3. Full canonical source/candidate montages show the first becoming
+TAP flow with isolated short LNs, and the second retaining short-LN/TAP sequences
+while greatly weakening overlapping independent control. This is not a judgment
+from LF alone. The refreshed human LN/Stream gold distinguishes these relations
+from merely having green notes. The sources are references, not human labels
+for generated outputs.
+
+A further exact head-word period1–16 locator finds bounded outer-column Trills:
+64 attacks over4.922 seconds on27/seed17 and47 over5.250 seconds on19/seed23.
+Their source/candidate contexts were viewed in full. These are simpler than the
+source, but Trill repetition is not automatically poor playability. They remain
+important diversity checks, especially since a same-lane-run count misses them.
+The fixed historic candidate montages, two LN source/candidate comparisons and
+two cycle source/candidate comparisons were reviewed. Rendered LN15/LN27 and
+remaining longest-lane witnesses are unreviewed; acceptance review stops at the
+clear retention failure under the user's reduced-overhead priority.
+
+Readout SHA: `9df7ac1609f16c6c2c4353db736fff40f35ea476398d635ebed547ea8b3b9097`.
+Semantic review plus exact LN action recount SHA:
+`e9f8d53eb436f9083dde7de9dd8cc0bdc2fb94a3dfd8ab69bd7c381380866be2`.
+Historic/LN/cycle render manifest SHAs:
+`635b6039d0609554bbdf67186f083071af3420fbd6a7228cefd472cd242d3139`,
+`237a0f50c6af507b4c50d6e520767d391e9f847957b32f0a521c1da7ba474248`,
+`a478ba54a666e927a6eae1536162e42350d1e9c0ab9c86d5d73131f11ae24c06`.
+No new human annotation is created. Full-parameter recovery is not adopted.
+Ordinary CE fitting and the new objective are bundled; their separate causal
+contributions to simplification are not established. Product conclusions are
+published in clean docs-only descendant
+`004c98da74de45f80c8ae18626f939b8f339b37a`.
+
+## Experiment Card: r1-routing-recovery-v1
+
+Revision1, proposed, acceptance none; active next Card. The user's goal separately
+authorizes implementation/runs and modular scaling. Preserve the failed full-
+parameter candidate and return to the6M parent for this one targeted correction.
+No run or code for this Card exists yet.
+
+**Mechanism and branch.** Restrict the native-recovery update to a new nonlinear
+head-mask residual while freezing the entire inherited policy. For head-mask
+G and full legal action A, use score(A)=base_score(A)+route_score(G(A)). The
+constant shift within each head-mask family preserves the base conditional
+P(A | G,state), including TAP/LN typing and simultaneous release choices.
+At R-only candidates add exactly zero, retaining the original release policy
+for the same state. This is a structural preservation constraint rather than
+a smaller loss weight. It cannot guarantee identical future LN structure after
+routing changes the sampled states; native quality must still be checked.
+
+The closest learning analogue remains unlikelihood training; the new component
+is ordinary conditional-family reweighting, not a novelty claim. Full-policy
+recovery removed self-repetition but lost LN organization. A restricted learned
+routing module is therefore the next direct candidate. A future section planner
+remains an alternative if restricted recovery merely moves collapse into fixed
+cycles or fails to retain LN coordination. Do not start a broad ablation suite.
+
+**Baseline and module.** Implement from clean `004c98da74de45f80c8ae18626f939b8f339b37a`,
+a docs-only descendant of the executed fe69830 source. Use the unchanged6M
+checkpoint `b44c9c83df84f2d9acd039edf64c1fc40377d2fc9ae0d25e9997ef548ae8876f`,
+training source ed1b9b9, and its complete6M plan. Add an optional R1-only head
+routing module, default none. A512-wide MLP reads the pair of inherited hand
+vectors and produces16 binary head-mask scores. Average its output with the
+mirrored output under swapped hands and reversed lane bits, preserving mirror
+equivariance. Zero-initialize the last projection for exact initial behavior.
+This adds roughly140k learned parameters; scale further only if this mechanism
+needs capacity. Keep all inherited weights frozen, including memory, seed,
+TAP/LN/action and release computation. Preserve their existing Adam state;
+only new route parameters receive gradients and optimizer updates.
+
+**Data/objective/procedure.** Reuse the exact80-query,8-group TRAIN pool SHA
+`f712c597eefb8269f61a540c3459aad284c247b0ce3e61d9d8cc6fd5af4abbc3`.
+Do not reharvest or train on VAL witnesses. Fork the same6M parent and append
+250k ordinary source onsets using the exact already-frozen6.25M plan
+`37aa23798a4184e3990daf791033a46dbf790bb1acfda29001a5b645555a565a`.
+Use the same CE plus mean0.25 complement objective, two native queries/update,
+seed954, CPU1, batch4/micro2, parent optimizer settings and ordinary corpus seed.
+The CE also updates only the new routing module. Preserve inherited RNG/counters;
+restore/fork identity explicitly admits the new module and trainable scope.
+Default checkpoints, no-module identity, Hydra projection and recovery remain
+compatible. All raw histories are re-encoded under the fixed inherited policy.
+
+**Checks and bounds.** Before training, verify exact initial logits/native draws;
+conditional action distributions within every legal head mask; exact R-only
+logits; nonzero route gradients with every inherited gradient absent; unchanged
+inherited weights/Adam values after real updates; mirror symmetry; native/dense
+agreement; and strict resume. Commit the intervention and pin driver/config/input
+digests. Preflight180 seconds, training1800 seconds, evaluation1800 seconds,
+RSS/footprint6GiB, swap growth128MiB, fresh owner2GiB. Output owner:
+`artifacts/bounded-typed-continuation/routing-recovery-20260920-v1/`
+in the longform-memory worktree. No silent overwrite or unmeasured resume.
+
+**Decision.** Generate the same16 complete development cases with seeds17/23.
+Compare against existing6M and full-parameter6.25M outputs, with no new control
+training. Require the historic unforced collapse improvement to survive, no
+new similarly concerning long-form degeneration, and retention of meaningful
+LN/TAP overlapping independent control in the fixed09/21 contexts. Reuse the
+Beatmap Lens foundation and refreshed human gold. Count/entropy/period and LF
+metrics locate review rather than certify playability. Mechanics/export must
+pass and no below-10ms event may appear. Fail fast on lost coordination, new
+sustained fixed cycles or resource/accounting violations. Difficulty calibration
+remains secondary. Positive results justify focused fresh-development verification;
+negative or ambiguous results remain REFINE. No automatic adoption follows.
