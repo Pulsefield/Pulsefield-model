@@ -1,0 +1,48 @@
+defaults:
+- oracle_time_generate_schema
+- _self_
+- override hydra/job_logging: disabled
+- override hydra/hydra_logging: disabled
+source_dir: artifacts/scoped-style-modeling/sources
+split_manifest: artifacts/scoped-style-modeling/prepare-v1/split-manifest.json
+split_sha256: ''
+source_sha256: ''
+catalog_path: ''
+catalog_sha256: ''
+split: validation
+weights: ''
+output_dir: artifacts/oracle-time-continuation/m3-generate
+cache_dir: artifacts/oracle-time-continuation/source-cache-v1
+device: cpu
+cpu_threads: 1
+seed: 17
+resume: false
+checkpoint_every_rows: 512
+decode:
+  temperature: 1.0
+  top_p: 1.0
+  beta: 0.0
+  mode: sample
+  version: legal-joint-tied-nucleus-v1
+cache:
+  max_sources: 16
+  max_bytes: 268435456
+  staging_rows: 4096
+  source_max_bytes: 67108864
+resources:
+  driver_limit_bytes: 4294967296
+  rss_limit_bytes: 6442450944
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 536870912
+  max_swap_growth_bytes: 1073741824
+  checkpoint_max_bytes: 134217728
+  disk_reserve_bytes: 536870912
+  output_max_bytes: 2147483648
+  check_every_rows: 128
+  release_mps_cache_at_boundaries: true
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

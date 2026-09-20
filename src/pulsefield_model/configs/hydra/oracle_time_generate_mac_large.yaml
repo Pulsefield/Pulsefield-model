@@ -1,0 +1,10 @@
+defaults:
+  - oracle_time_generate
+  - _self_
+
+checkpoint_every_rows: 1024
+resources:
+  driver_limit_bytes: 6442450944
+  rss_limit_bytes: 8589934592
+  min_available_bytes: 2147483648
+  checkpoint_max_bytes: 1073741824
