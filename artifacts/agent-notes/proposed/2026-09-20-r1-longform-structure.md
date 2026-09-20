@@ -13,7 +13,9 @@ Related: 2026-09-20-r1-training-distribution; 2026-09-20-r1-persistent-seed; 202
 
 The human owner prioritizes sustained long-form structure, specifically avoiding
 pattern-diversity collapse, and defers cross-difficulty stability. Minimize
-ablation branches and broad review overhead. The active goal authorizes direct
+ablation branches and broad review overhead. Playability has priority over speed
+and parameter count; scale the backbone or add modules when the evidence calls
+for it, subject to measured Mac resource feasibility. The active goal authorizes direct
 architecture changes, bounded training and local commits; no Note acceptance,
 remote push, semantic-label promotion or final-quality claim is implied.
 
@@ -27,7 +29,7 @@ limit and history dependence, not proof that finite memory is their only cause.
 
 ## Experiment Card: r1-longform-memory-v1
 
-Revision 1, proposed, acceptance none. One candidate is compared with existing
+Revision 2, proposed, acceptance none. One candidate is compared with existing
 5M outputs. There is no new zero arm or requested-star experiment.
 
 **Question and mechanism.** Give the local predictor a learned record of earlier
@@ -60,7 +62,7 @@ required onsets on the28-group development cohort; these are diagnostics,
 not long-form quality certificates.
 
 **Implementation.** Add optional `long_memory=landmarks`, default none, with
-memory width64 and stride64 required onsets. A shared-hand causal GRU encodes
+memory width256 and stride64 required onsets. A shared-hand causal GRU encodes
 raw permitted row features from the true beginning. Store its outputs at stride
 boundaries. Readout attends only to landmarks strictly preceding the current
 query, then adds a zero-initialized residual to existing hand vectors. Preserve
@@ -124,3 +126,7 @@ computation is needed.
 
 Pending implementation and resource preflight. The global star/LN-request
 proposal was an uncommitted draft and has no run, code or checkpoint to retain.
+
+Revision2 increases the memory width before implementation and records the human
+priority of quality over parameter/speed optimization. No run or implementation
+used revision1. The inherited local width is a starting point, not a quality cap.
