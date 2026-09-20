@@ -157,8 +157,66 @@ source CE and recovery complement loss both train the new scorer. Ordinary
 resume requires the same trainable scope and configuration.
 
 This is a conditional preservation guarantee, not a guarantee of identical LN
-trajectories: changed head masks change future states. The module's generated
-long-form quality and LN/TAP retention require separate native evaluation.
+trajectories: changed head masks change future states. On 16 complete development
+generations, a 250k-onset routing-only continuation reduces the maximum consecutive
+required head rows containing a fixed lane from 152 to 22. Below-40ms diagnostic
+events remain essentially unchanged, 69 versus 68. In one inspected LN passage,
+overlapping holds and independent releases remain close to the frozen parent;
+another becomes mostly TAP at one seed and retains brief LN passages at another.
+Historic quadruple-repeat collapse improves, but these mixed results do not
+establish playable long-form generation.
+
+#### Fresh long-chart validation
+
+The same checkpoint was evaluated on eight previously unused validation song
+groups, with two sources in each 2–3, 3–4, 4–5 and 5–6 star band and two generation
+seeds per source. Selection used source-only metadata, required at least 180
+seconds after the seed, and included one independent-LN-rich source per band.
+All 76 prior development groups were excluded, with exclusions checked across
+both catalog and original annotation-allocation group identities. Source suffixes
+span 187–302 seconds. This is a development screen, not a final test set or a
+requested-difficulty experiment.
+
+All 16 native temperature-one generations complete and pass independent mechanics
+and exact export/reparse in 185 seconds on one CPU thread of the M5 Air. No
+below-10ms same-lane attack/release-to-attack diagnostic appears. Below-40ms events
+total 242, concentrated in the two highest source bands; the source references
+total 26 when counted once per generation seed. A 5.86-star source produces
+6.84- and 7.21-star outputs. Counts and star ratings describe execution burden;
+they do not supply semantic playability labels.
+
+Canonical Beatmap Lens inspection identifies a remaining held-state failure.
+On the 2.20-star TAP source, one generated continuation holds three fixed lanes
+while all 26 required attack rows from 154651 to 163818 ms use lane 1. The holds
+begin at 147985, 149318 and 153318 ms and persist through an increase in onset
+density around 160318 ms. Slow Jack organization can be intentional; the concern
+here is a static allocation persisting into the denser passage without developing
+the press/hold/release relationship. The source uses changing columns. Existing
+human slow-Jack and LN examples calibrate the distinction, but do not label the
+generated chart.
+
+Recomputing those native states with the original external schedule gives 15
+legal complete actions per query, all with the same head mask. The head-routing
+residual therefore cannot change their conditional release probabilities. The
+chance of releasing any held lane starts at 0.814 but falls to 0.022–0.042 during
+161651–163651 ms. Lanes 0 and 3 finally release at 163818 ms. This directly
+identifies a limitation of head-mask reweighting; it does not establish a general
+LN-duration cap or imply that three simultaneous holds are undesirable.
+
+Four source-selected LN contexts retain short-LN flow, varying lengths and some
+staggered independent releases, with clearer mixed LN/TAP organization in the
+4.02-star case. The dense 5.86-star case becomes substantially more LN-heavy.
+The held-state failure prevents readiness; phase and seed contexts not inspected
+after that failure remain unreviewed. No human annotation was created or changed.
+
+These results use product `8cf31e8d177fab28060ce92be4f5e92f8f8585f3` and routing
+checkpoint SHA-256 `dff1727bcb634666992dc4c836ee507c02f31917b1a32f2f1f1d5329eaf5f080`.
+Local evidence owners are `routing-recovery-20260920-v1/` and
+`routing-fresh-20260920-v1/` under `artifacts/bounded-typed-continuation/`.
+The fresh readout SHA-256 is
+`fae14c90363c793ed7895e9d2edd159a862afa878722829eb365ea3c1d1d2350`;
+its scoped agent review is `14f2507beca22a75060009812b5e0c49e6290de50b22b98ca6e22221c2a7c531`.
+Generated files are local evidence and may be absent in a fresh clone.
 
 ## Exact state and bounded learned context
 
