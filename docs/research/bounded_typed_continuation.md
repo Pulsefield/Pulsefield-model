@@ -29,8 +29,10 @@ LN organization. A matched continuation to 4.5M tests candidate action-consequen
 features but does not meet its native-generation improvement criterion. A matched
 continuation to 5M adds persistent original-seed conditioning: it modestly reduces
 type-proportion error but misses its declared improvement threshold and retains
-local execution concerns. Long-form quality, difficulty consistency and the
-complete range of LN/tap expression remain unresolved.
+local execution concerns. Frozen-base head, release and row-response corrections
+through 6.75M subsequently improve the inspected long-form behavior and sharp
+rearticulation burden while retaining independent LN/TAP organization. Difficulty
+consistency and the complete range of generated playability remain unresolved.
 
 ## Conditions and prediction tasks
 
@@ -328,6 +330,85 @@ and scoped review is
 `2b7be2eb28d855f558e16cc676476f13ad4839662d91de326352273a22fa0bf6`.
 These local assets may be absent in a fresh clone. The portable generation
 command below reads the saved architecture directly from the checkpoint.
+
+### Native response recovery result (6.75M)
+
+A frozen-base `frontier2` row residual reduces sharp rearticulation in a paired
+48-output development comparison while retaining the inspected long-form and
+independent LN/TAP organization. It adds 27,648 parameters to release6.5M, for
+3,084,432 total. The inherited policy and its Adam state remain unchanged.
+Inference still uses native temperature 1 and the original feasibility support.
+
+The training pool contains 92 machine preferences from nine of 32 source-selected
+TRAIN groups. Admission requires a strictly better current-plus-two-H response
+bound and no below-30ms head in the corresponding source interval. Of the 92
+queries, 81 retain both sampled head and LN-start counts; two are R-only queries.
+All nine contributing source/generated contexts were inspected. The preferences
+are separate from human annotations and do not expose source future actions to
+the predictor. A single 250,000-onset continuation uses source CE, a unit-weight
+source KL anchor and two native queries per update at weight 0.25. It finishes
+328 updates in 235 seconds on CPU1, with sampled peak RSS 1.38 GB and no swap
+growth. Initial native predictions and draws match the parent exactly.
+
+The comparison covers 24 VAL musical groups at seeds 17 and 23, including the
+16 outputs of the release candidate's unused-group confirmation. All 48 complete
+outputs pass mechanics and exact osu! export/reparse over 120,416 required suffix
+onsets. Generation takes 461 seconds on CPU1, with sampled peak RSS 613 MB,
+footprint 912 MB and no swap growth. The independent physical-row recount agrees
+with the exact-state replay at every reported threshold.
+
+| Diagnostic | Release6.5M | Response6.75M |
+| --- | ---: | ---: |
+| Heads below 20ms since same-lane head or release | 45 | 13 |
+| Heads below 30ms | 160 | 70 |
+| Heads below 40ms | 442 | 178 |
+| Below-30ms heads in states with no recovered lane | 71 | 13 |
+| Below-30ms excess beyond the same-cardinality minimum | 77 | 52 |
+| Longest unchanged three-hold allocation, in H | 4 | 2 |
+| Longest consecutive fixed-lane attack run, in H | 14 | 18 |
+
+No paired chart increases its below-20ms or below-30ms count. Five increase at
+40ms; their inspected events have 30–38ms gaps within varied local organization.
+They remain execution-cost concerns rather than evidence of a sustained allocation
+collapse. No below-10ms head occurs. These thresholds are diagnostic, not universal
+playability boundaries. Total generated heads increase from 166,272 to 177,531;
+the improvement does not come from removing required onsets or reducing all
+attack activity.
+
+Fifty candidate contexts and eleven matched parent contexts were inspected with
+the frozen Lens Foundation and current human LN/Stream contrasts. The 17.50-minute
+continuation retains changing organization at early, middle and late scopes,
+including both seeds around 882–890 seconds; the 14.20-minute continuation does
+so around 713–721 seconds. The largest 18-H lane run lasts 2.357 seconds within
+moving chord-Jack figures. Head-mask cycles of 76 H over 5.357 seconds and 71 H
+over 5.468 seconds form bounded traversals and left/right-pair alternation with
+distinct entry and exit. Repetition counts alone do not classify them as collapse.
+
+Luster's independent close-row counts change from 37/37 to 34/30 in the two
+220097–228097ms retention scopes. Gloomy Flash's counts change from 28/47 to
+23/16 at 52881–60881ms. The actual views retain staggered starts and releases,
+varied hold lengths and TAP participation; they also show reduced concurrent
+hold pressure and more TAP activity in Gloomy Flash. Four source-selected LN
+cores in the confirmation cohort retain independent organization. LN count alone
+would not establish this retention.
+
+The working development candidate is response6.75M; overall disposition remains
+REFINE. Generated stars span 2.142–6.128. The 5.863-star source's two outputs change
+from 6.649/6.717 to 6.011/5.758, but a 5.089-star source rises from 5.463 to 6.128
+at seed 17, and a 3.143-star source gives 4.235/4.384. Source-star matching is not
+itself playability, but these shifts limit confidence in difficulty consistency.
+This is unblinded development evidence, not a player trial, an inspection of every
+second, or final independent acceptance. The bundle of model and objective changes
+does not isolate the contribution of each component.
+
+Training and evaluation source:
+`9da67258d76c8359964d81aafa33ed177c2de6fd`. Checkpoint SHA-256:
+`195f1b0109696302addc1aa62bf896ca399d2a1656c15ba4fe27b4a47c8171ce`.
+Local outputs belong to `row-response-recovery-20260920-v1/` under
+`artifacts/bounded-typed-continuation/`. Complete comparison SHA-256:
+`9d364a3a994f9928c43e8d9d5156742bc180407e46c365c27698487f1c401586`;
+scoped semantic review:
+`781e908bbe028a309c4d0d4e519b3f7aa629bfac97d34baab8d1f1de43c304c5`.
 
 ## Exact state and bounded learned context
 
