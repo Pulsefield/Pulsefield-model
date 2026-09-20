@@ -1,0 +1,87 @@
+# Reference for reconstruction, not an executable vacation queue configuration.
+# Exact historical weights, draw files and native pools are unavailable.
+format: r1-historical-recovery-recipe-v1
+target:
+  name: response-6750k
+  parameters: 3084432
+  onset_exposures: 6750000
+  checkpoint_sha256: 195f1b0109696302addc1aa62bf896ca399d2a1656c15ba4fe27b4a47c8171ce
+  architecture_preset: bounded_typed_train_r1_response
+  restored_weights: false
+  restored_quality: false
+shared_training:
+  device: cpu
+  cpu_threads: 1
+  model_seed: 172
+  sampler_seed: 471
+  batch_size: 4
+  microbatch_size: 2
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  horizons: [128, 256]
+  seed_probability: 0.125
+stages:
+  - id: source-base
+    target_onsets: 4500000
+    trainable: all
+    model_changes:
+      arm: R1
+      hidden: 128
+      levels: 8
+      seed_context: none
+      long_memory: none
+      head_routing: none
+      release_routing: none
+      row_consequence: none
+  - id: persistent-seed
+    target_onsets: 5000000
+    trainable: all
+    model_changes: {seed_context: observed}
+    inheritance: model, named Adam moments, RNG and unchanged source-draw prefix
+  - id: long-memory
+    target_onsets: 6000000
+    trainable: all
+    model_changes: {long_memory: landmarks, memory_hidden: 256, memory_stride: 64}
+    inheritance: model, named Adam moments, RNG and unchanged source-draw prefix
+  - id: head-routing
+    target_onsets: 6250000
+    trainable: routing
+    model_changes: {head_routing: residual, routing_hidden: 512}
+    recovery_weight: 0.25
+    recovery_queries: 2
+    recovery_seed: 954
+    historical_pool: {queries: 80, groups: 8}
+    requires: native TRAIN repetition pool harvested from memory-6000k
+    guard: preserve conditional complete actions within each head mask and inherited weights
+  - id: release-routing
+    target_onsets: 6500000
+    trainable: release
+    model_changes: {release_routing: residual, release_hidden: 512}
+    recovery_weight: 0.25
+    recovery_queries: 2
+    recovery_seed: 954
+    historical_pool: {queries: 72, groups: 4}
+    requires: native TRAIN held-state pool harvested from routing-6250k
+    guard: preserve conditional complete actions within each release mask and inherited weights
+  - id: row-response
+    target_onsets: 6750000
+    trainable: consequence
+    model_changes: {row_consequence: frontier2}
+    source_kl_weight: 1.0
+    recovery_weight: 0.25
+    recovery_queries: 2
+    recovery_seed: 954
+    historical_pool: {queries: 92, groups: 9}
+    requires: native TRAIN response pool harvested from release-6500k
+    guard: preserve all inherited weights; recompute composition-conditional response preferences
+quality_requirements:
+  - exact native mechanics and osu export/reparse
+  - long-form generation without persistent occupancy or repeated-allocation collapse
+  - independent LN relationships and LN/TAP organization under Lens and gold review
+  - inspect local response deficits, source-star strata and every material regression
+  - compare source training and each native correction; do not infer quality from exposure count
+execution_limit:
+  - the ordinary vacation queue cannot execute this multi-architecture native-recovery recipe
+  - its r1-response preset provides fresh source pretraining and monitoring only
+  - rebuild and pin parent checkpoints, cumulative plans and adequate native pools before each continuation

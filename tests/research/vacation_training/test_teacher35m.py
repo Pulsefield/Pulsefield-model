@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import torch
+import pytest
 
 from pulsefield_model.research.bounded_typed_continuation import train_run, generate_run
 from pulsefield_model.research.bounded_typed_continuation.generate_config import GenerateConfig
@@ -14,12 +15,13 @@ from bounded_typed_continuation.test_train import compare_states
 from .test_queue import configuration
 
 
-def test_teacher35m_ordinary_cpu_training_resume_and_native_generation(tmp_path, monkeypatch):
+@pytest.mark.parametrize('preset,profile_name', [('teacher35m', 'teacher35m'), ('r1_response', 'small')])
+def test_declared_profile_cpu_training_resume_and_native_generation(tmp_path, monkeypatch, preset, profile_name):
     for module in (train_run, generate_run):
         monkeypatch.setattr(module, 'source_revision', lambda: 'e' * 40)
     queue = configuration(tmp_path)
     small = queue.teacher.training
-    profile = compose_config(config_name='bounded_typed_train_teacher35m')
+    profile = compose_config(config_name='bounded_typed_train_' + preset)
     cfg = replace(profile, plan_file=small.plan_file, plan_sha256=small.plan_sha256,
         source_cache_dir=small.source_cache_dir, output_dir=str(tmp_path / 'whole'), report_every=100,
         resources=replace(profile.resources, min_available_bytes=1024**2, disk_reserve_bytes=1024**2))
@@ -38,7 +40,7 @@ def test_teacher35m_ordinary_cpu_training_resume_and_native_generation(tmp_path,
     del a, b
     gc.collect()
     case = json.loads(Path(queue.teacher.evaluation_file).read_text())['native_cases'][0]
-    settings = GenerateConfig(execution_profile='teacher35m', checkpoint_file=str(tmp_path / 'second/checkpoint.pt'),
+    settings = GenerateConfig(execution_profile=profile_name, checkpoint_file=str(tmp_path / 'second/checkpoint.pt'),
         checkpoint_sha256=resumed['checkpoint_sha256'], condition_file=case['condition_file'],
         condition_sha256=case['condition_sha256'], output_dir=str(tmp_path / 'generated'), resources=cfg.resources)
     generated = generate_run.run_generation(settings)

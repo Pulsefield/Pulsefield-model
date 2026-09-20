@@ -1,0 +1,14 @@
+defaults:
+  - vacation_training
+  - bounded_typed_r1_response@teacher.training
+  - _self_
+
+output_dir: artifacts/vacation-r1-response
+audio:
+  enabled: false
+teacher:
+  # Source-pretraining readouts; these do not reproduce the historical native-recovery stages.
+  milestones: [250000, 1000000, 2000000, 4000000, 5000000, 6000000, 6750000]
+  max_seconds: 14400.0
+stress:
+  enabled: false

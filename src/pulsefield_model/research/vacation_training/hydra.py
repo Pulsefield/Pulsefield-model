@@ -39,9 +39,9 @@ def project_config(config):
     return value
 
 
-def compose_config(overrides=None):
+def compose_config(overrides=None, *, config_name='vacation_training'):
     with initialize_config_module(version_base='1.3', config_module='pulsefield_model.configs.hydra'):
-        return project_config(compose(config_name='vacation_training', overrides=overrides or []))
+        return project_config(compose(config_name=config_name, overrides=overrides or []))
 
 
 @main(version_base='1.3', config_path='../../configs/hydra', config_name='vacation_training')

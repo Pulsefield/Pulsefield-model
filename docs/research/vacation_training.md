@@ -6,6 +6,21 @@ teacher has 35,178,768 parameters: width 512, eight local levels, observed seed
 conditioning and 256-wide landmark memory. No recovery or routing residual is
 enabled. The existing small-model entrypoints retain their execution envelope.
 
+The separate `vacation_training_r1_response` preset uses the recorded response
+candidate's 3,084,432-parameter architecture: width 128, eight local levels,
+observed seed, 256-wide landmark memory, 512-wide head and release routing,
+and `frontier2` row consequences. It uses CPU1 and model seed 172, with source
+training readouts through 6.75M onsets and a four-hour training budget. Audio
+caching and independent fixed-model stress are disabled; native VAL readouts
+remain enabled within the training stage. Standalone training uses
+`bounded_typed_train_r1_response`; generation uses the ordinary small profile.
+
+This preset rebuilds an architecture from random initialization. It does not
+recover a trained checkpoint or reproduce the earlier staged native-preference
+corrections. Restoring the earlier performance also requires rebuilding those
+TRAIN trajectory pools, routing/release/response continuation and quality checks.
+The 35M teacher remains the separate clean architecture above.
+
 Completion means producing assets and measurements. It does not establish
 arrangement quality, select a working candidate or authorize distillation.
 Frozen music-encoder features and audio/chart alignment training require a
@@ -136,6 +151,13 @@ A deliberately excluded stage can use `enabled: false`. For teacher-sized stress
 weights, also use `execution_profile: teacher35m` and the resource settings in
 `bounded_typed_generate_teacher35m`, including its 1 GiB checkpoint cap. The
 default stress profile supports the small working candidate.
+
+To prepare fresh inputs from the surviving pinned September catalog/cache, use
+the [input reconstruction driver](../../experiments/vacation_rebuild/README.md).
+It creates separate local R1 response and 35M teacher configurations, a rebuilt
+TRAIN plan, fixed evaluation conditions and a TRAIN audio inventory. Its unique
+asset directory must be outside the product worktree. Fixed monitoring cases
+are newly selected; they do not reconstruct the deleted historical cohorts.
 
 ```sh
 ./scripts/vacation-training.sh --config-dir "$PWD/artifacts/vacation-config" \
