@@ -358,3 +358,31 @@ split/digest rejection, default checkpoint compatibility, and runner consumption
 Commit source and freeze driver/config/inputs before each model-backed run.
 Use fresh output owner `artifacts/bounded-typed-continuation/native-recovery-20260920-v1/`
 in the longform-memory worktree. No implicit overwrite or unmeasured resume.
+
+
+### Native-recovery implementation and pool repair
+
+Clean implementation: `fe6983004b69189888f4901c6541bcb0ed0606f1`.
+The focused existing data/train/fork selection passes 41 tests; eight new
+recovery checks cover CPU/MPS dense/native predictions, skipped R candidates,
+current-placeholder noninterference, stable complement gradients, legal hold
+escape, pinned TRAIN admission, same-architecture fork/strict-resume equality,
+Hydra projection and real runner consumption. The final recovery/fork/package
+selection passes 18 tests and 22 package subtests; counts overlap. Diff checks
+pass. Only the declared objective/projection/configuration and documentation
+changed; native support, policy architecture and sampling remain unchanged.
+
+Pool generation v1 stops after 13 complete trajectories because its artifact
+script incorrectly required the last physical replay row itself to be terminal.
+The existing contract permits an unused final R candidate when all LNs are
+closed. Driver SHA:
+`8d4107c065f0f1faebb15e412fc8196e8eb85435f1bd84a077fe4f52ecce63fb`.
+Its partial outputs and failure receipt are retained. A conservative 440-second
+wall upper bound includes debugging delay. Fresh pool-v2 restarts the identical
+32 selections and seed43 policy, using schedule completion plus empty occupancy;
+its remaining limit is 1360 seconds, so total charged harvest remains within
+1800 seconds. This is a completion-assertion repair, not a changed preference
+threshold, cohort or policy. The implementation source is fe69830; the policy
+checkpoint and its training source remain the pinned 6M/ed1b9b9 parent. The new
+freeze pins the complete repaired driver before its first draw. No training
+will run unless the fixed minimum query/group gate passes.
