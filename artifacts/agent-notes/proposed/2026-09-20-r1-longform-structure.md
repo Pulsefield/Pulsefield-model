@@ -1211,3 +1211,90 @@ readouts, code and preflight; output owner is
 `artifacts/bounded-typed-continuation/row-response-probe-20260920-v1/`.
 CPU1,600s, fresh outputs, no generation/optimizer/label change or TEST read.
 Results are exploratory and do not select an architecture by themselves.
+
+### Unseen confirmation and response probe complete
+
+The16 fixed outputs complete in91.327785s; all mechanical and export/reparse
+checks pass. Readout SHA d3abdb77a108cbf40c6b3e6beec867389e5522ee3970b336d335b19c3d2fe41f.
+All32 main candidate contexts and two additional longest-cycle contexts were
+viewed, plus six source counterparts. The24 fixed early/middle/late scopes retain
+changing TAP/chord flow, independent LN releases, varied LN lengths and transitions
+between these organizations. The11-H/2.813s largest lane-run witness is a bounded
+short-LN figure. The longest repeated head words are24H/0.978s and23H/1.115s
+four-lane traversals with distinct entry/exit, not prolonged diversity collapse.
+The four source-selected LN contexts retain meaningful occupied-lane/start/release
+relations; their exact source patterns need not be copied. The scoped long-form
+confirmation is positive. Overall disposition remains REFINE: sharp local release
+burden and requested2–6star consistency are unresolved, including6.183/6.820 outputs
+from a5.873star source. No TEST or player trial was performed. Semantic review is
+saved in the confirmation owner; original unreviewed render manifests remain intact.
+
+The frozen response probe completes in0.351484s. Readout SHA
+7d16300ac5efaa6dea0e75b0e2b3b9f2cb4c7abaf2f9c3f689b70ff646a10343.
+Among552 inspected states near157 under30ms target H,154 sampled actions have a
+worse current-plus-two-H optimistic bound than a legal alternative. Release-only
+changes improve52; preserving head count improves132; preserving both head and
+LN-start counts improves128. Counts mean some improvement, not necessarily the
+unrestricted minimum. This motivates preserving musical composition while adapting
+whole-row decisions. It does not license training on these VAL trajectories.
+
+## Experiment Card: r1-native-response-recovery-v1
+
+Revision1, proposed, acceptance none. Exploratory work under the active user goal.
+Hypothesis: a small frozen-base row residual trained on native, minimally changed
+response alternatives can reduce sharp future recovery deficits while retaining
+the release6.5M long-form and LN/TAP behavior. This differs from the failed4.5M
+frontier feature-only experiment: native-prefix preferences supply the missing
+response objective, and inherited policy parameters stay frozen.
+
+The closest analogues are dataset aggregation on induced states (DAgger,
+arxiv.org/abs/1011.0686), alternative-action cost-to-go learning (LOLS,
+arxiv.org/abs/1502.02206), and unlikelihood (arxiv.org/abs/1908.04319).
+Here the preference is an optimistic two-H clock bound, not an expert oracle,
+a calibrated mania demand score, a copied method guarantee or a novelty claim.
+
+First harvest native TRAIN evidence from the fixed release6.5M checkpoint0a9c87af.
+Source-only seed20260922 chooses32 distinct TRAIN groups: eight in each4–5/5–6star
+band crossed with suffix LN fraction below/at-least0.1. Duration180–600s,
+1000–6000 suffix onsets; group then chart sampling, with no repeated group.
+Selection SHA073da8ff6404ab212f9520d612e3b926e8751ab435c8e0dbe91bd42fa55ec4de.
+The source pins and original seeds/R/H come from the6.5M plan14e1b05f.
+Generate complete native trajectories at seed17, temperature1, CPU1; inference
+support is unchanged. Inspect actual under30ms head positions and candidates from
+the preceding two H. Admit only strict response-cost improvements whose matching
+source current-through-two-H interval has zero under30ms heads. Source future
+actions are an admission contrast only, never a model feature or native state.
+
+Preferred rows first minimize head-count change from the sampled row, then LN-count
+change, then response cost and action Hamming distance, retaining all ties.
+The loss conditions on the union of actual and preferred composition families;
+probability shifted to another composition does not directly satisfy the loss.
+Maximum32 temporally spread queries/chart. Need at least64 queries from eight
+groups; otherwise stop before training and reassess the data mechanism. These
+preferences are machine-generated research data, separate from human annotations.
+Harvest freeze SHA75d6a981c2440fb00f218637138ee7d2f0c84bdc7a2ca8452ef4c90c396d4a08
+pins code, selection, plan and checkpoint before execution. Owner in the release
+worktree: artifacts/bounded-typed-continuation/row-response-native-20260920-v1/.
+Bounds1800s CPU1,6GiB RSS/footprint,128MiB swap growth,2GiB fresh output. Stop on
+identity, mechanics, nonfinite or resource failure. No overwrite or TEST reads.
+
+If the pool is adequate and inspected, implement one continuation: add a zero-output
+RowConsequence residual with next-two-H timing, freeze all inherited parameters,
+and preserve Adam moments by parameter name. Use the existing source CE plus a
+unit-weight KL anchor to the frozen parent on the same source states; native
+conditional preference weight0.25 and two queries/update retain existing settings.
+Extend the exact source draw prefix by250k onsets, final6.75M; do not change other
+optimizer/scalar settings or original seed/timing contract. Require exact initial
+native draws/logits, frozen inherited weights/Adam, CPU/MPS support/mirror and
+independent response enumeration checks before training. Freeze implementation,
+plan, typed config, preflight and run/evaluation drivers after preflight.
+
+Compare complete outputs on the same32 prior conditions plus16 confirmation
+conditions at the same two seeds. Check sharp10/20/30/40ms diagnostics and their
+state/cardinality decomposition, but use matched Lens/gold contexts to decide
+whether execution and organization improve. Any mechanics failure, new sustained
+collapse, loss of independent LN/TAP relations, or broader sharp-burden regression
+prevents adopting the continuation. Inspect all worst regressions and the LN
+retention contexts, including rhythmic37–38ms short LN; no universal Jack ban,
+LN-duration cap or hard gap constraint is introduced. A positive result still
+leaves requested-difficulty calibration and full-goal verification outstanding.
