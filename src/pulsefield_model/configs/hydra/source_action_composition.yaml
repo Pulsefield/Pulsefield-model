@@ -1,0 +1,62 @@
+defaults:
+  - source_action_composition_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+comparison: operator_order
+backbone_schedule: null
+output_dir: artifacts/source-action-composition/overnight
+prepared_dir: artifacts/scoped-style-modeling/prepare-v1
+dataset_dir: artifacts/scoped-style-modeling/dataset-b22a7a4
+index_path: artifacts/indexes/beatmap_index_4k.parquet
+dataset_root: dataset
+source_cache: artifacts/scoped-style-modeling/sources
+# Optional trusted run root containing seed-<seed>/<arm>-latest.pt; weights only.
+warm_start_dir: null
+device: mps
+seeds: [17, 29]
+train_group_limit: null
+source_cache_charts: 16
+max_source_rows: 256
+validation_groups: 64
+near_radius: 8
+blocks_per_update: 8
+max_updates: 20000
+min_updates: 1000
+learning_rate: 0.0003
+weight_decay: 0.0001
+gradient_cap: 1.0
+training_seconds_per_seed: 14400.0
+finalization_seconds_per_seed: 5400.0
+max_seconds: 39600.0
+max_driver_bytes: 8589934592
+max_rss_bytes: 12884901888
+max_output_bytes: 4294967296
+checkpoint_every: 500
+checkpoint_seconds: 300.0
+log_every: 25
+evaluation_batch_size: 4
+bootstrap_samples: 1000
+path_pairs: 24
+readout_steps: 600
+readout_batch_size: 4
+readout_learning_rate: 0.001
+structural_probe_ridge: 0.1
+cpu_threads: 1
+model:
+  lane_dim: 16
+  hand_hidden: 32
+  attention_heads: 4
+  feedforward_dim: 256
+  decoder_hidden: 64
+  action_dim: 16
+  interaction_dim: 16
+  dropout: 0.0
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

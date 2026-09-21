@@ -190,7 +190,7 @@ several strongly, express one weakly, or have no salient concept in the selected
 vocabulary. The vocabulary need not exhaust all chart organization.
 
 The initial section annotation vocabulary in @Pulsefield/beatmap-lens comprises
-Jack organization, Stream organization, Drill organization, Tech, and LN
+Jack organization, Stream organization, Trill organization, Tech, and LN
 coordination. These are experiment-specific, versioned concepts. Their local
 definitions and calibration examples accompany the dataset; the five names are
 not a universal taxonomy or the final set of generation controls.

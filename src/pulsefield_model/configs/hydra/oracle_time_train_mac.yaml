@@ -1,0 +1,30 @@
+defaults:
+  - oracle_time_train
+  - _self_
+
+# Capacity is concentrated in sequence composition. Row facts and local/relation
+# representations remain 128-wide; pairwise time bias has its own smaller MLP.
+output_dir: artifacts/oracle-time-continuation/mac20m-train
+cpu_threads: 4
+checkpoint_every_updates: 25
+model:
+  hidden: 128
+  heads: 8
+  temporal_layers: 6
+  temporal_expansion: 4
+  temporal_bias_hidden: 64
+  max_chunk: 64
+windows:
+  windows_per_chart: 4
+objective:
+  lambda_struct: 0.3
+training:
+  effective_batch_size: 8
+  microbatch_size: 1
+  chunk_rows: 64
+  learning_rate: 0.00003
+  parallel_frontiers: true
+  reuse_prefixes: true
+  warmup_updates: 20
+resources:
+  checkpoint_max_bytes: 536870912

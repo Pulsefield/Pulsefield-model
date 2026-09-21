@@ -1,0 +1,74 @@
+{
+  "format": "oracle-time-formulation/review-source-v1",
+  "source_policy": "Unmodified experiment Python sources; artifact-dependent drivers require the recorded local inputs.",
+  "files": [
+    {
+      "path": "linked-endpoint-head-v1/scripts/core.py",
+      "sha256": "3d6ef6e4bb6137b2fd009336ef6140a42d935ab6b12b0d79dbb0b130e70b4276"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/endpoint_feasibility.py",
+      "sha256": "437e3e3ba33ca43464e067f90cd5bcc87f3cf3516709ee5917e2aedc40164149"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/extract.py",
+      "sha256": "00688da5d6d0e2bbc4761e6ca69cc000d3cbabbcf4dd27f07ff9a19ae0965ce0"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/fit.py",
+      "sha256": "e54bcfbdc7dd6a1459e1151e3a7254f1af924603fbe1e51f8b43ab029e54ad9b"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/fit1600.py",
+      "sha256": "e0782dbdef16cf56d18187030e9409d59b8b3d3cfc39ce6e42946aff23b93d3c"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/fit1600_supervise.py",
+      "sha256": "3ed08633fe6957e4241d7d0f0cef1a4a103c89301d7654d4cb06d9a6e32ddae8"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/fit_resumed.py",
+      "sha256": "bc78040091767d4ba537b824a22a2ed75ffd61e1d343f86216dab52c52b0b202"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/resume_extract.py",
+      "sha256": "fcc090789804477822eacd418f789e39a74537b681e0bc5177765c0d1fb87943"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/resume_supervise.py",
+      "sha256": "75c313a790e2ad66a4f39dbccd88142a2152e14f50ed54db975c627e7c3c79f0"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/supervise.py",
+      "sha256": "ae460bde70899c2cdfdb3e7ed72d86ae65b101f557dc63bc56f17b121c1a67a7"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/test_core.py",
+      "sha256": "43c9ed8f746d5e29c09eaf8f7cda681ac1171c12d5f21df40b3a91103b18de28"
+    },
+    {
+      "path": "linked-endpoint-head-v1/scripts/test_endpoint_feasibility.py",
+      "sha256": "d8eb0c75c6766ffd2eab0059758e6844c245f5b5fd8fdce76d31912a5b75d8b2"
+    },
+    {
+      "path": "onset-endpoint-generation-v1/generate.py",
+      "sha256": "4fc1df355a725a0a5e4ee337aea820a34e5b16e904437bb1240124ecf431f8da"
+    },
+    {
+      "path": "onset-endpoint-generation-v1/schedule.py",
+      "sha256": "ed68d216752e33f9a61ef86a4be870ebc9024136e8e232b998979eaba160a0b8"
+    },
+    {
+      "path": "onset-endpoint-generation-v1/supervise.py",
+      "sha256": "df4428ea51fa966b42b58ff4eac7280e66481e63560b57c3fb28d9de199d9252"
+    },
+    {
+      "path": "onset-endpoint-generation-v1/test_schedule.py",
+      "sha256": "3045fa386b0ce9775207d99108fc056faacf6a8f1b925c6acd2e136b2a9b34a9"
+    },
+    {
+      "path": "timing-representation-audit-v1/audit.py",
+      "sha256": "cf6662ba4f2d37dc9c10bbac98e6fb6aded84c9a6e00f77dd68410a94dff1598"
+    }
+  ]
+}

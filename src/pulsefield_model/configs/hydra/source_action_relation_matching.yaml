@@ -1,0 +1,17 @@
+defaults:
+  - source_action_composition
+  - _self_
+
+comparison: relation_matching
+backbone_schedule: serial
+output_dir: artifacts/source-action-relation-matching/pilot-20260915-01
+seeds: [17]
+validation_groups: 32
+max_updates: 300
+min_updates: 300
+training_seconds_per_seed: 1800.0
+finalization_seconds_per_seed: 1200.0
+max_seconds: 3600.0
+bootstrap_samples: 500
+path_pairs: 12
+readout_steps: 100

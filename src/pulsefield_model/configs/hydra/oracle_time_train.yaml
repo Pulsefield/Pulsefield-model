@@ -1,0 +1,86 @@
+defaults:
+  - oracle_time_train_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+source_dir: artifacts/scoped-style-modeling/sources
+split_manifest: artifacts/scoped-style-modeling/prepare-v1/split-manifest.json
+# Pin the existing allocation and explicitly select train sources before running.
+split_sha256: ""
+source_sha256: []
+# A pinned, already admitted catalog enables the whole existing train allocation.
+catalog_path: ""
+catalog_sha256: ""
+# A fresh run may initialize model parameters from pinned weights; optimizer and draws start fresh.
+initial_weights: ""
+initial_weights_sha256: ""
+output_dir: artifacts/oracle-time-continuation/m3-train
+cache_dir: artifacts/oracle-time-continuation/source-cache-v1
+resume: false
+device: cpu
+model_seed: 17
+cpu_threads: 1
+updates: 1
+checkpoint_every_updates: 1
+model:
+  hidden: 128
+  heads: 4
+  temporal_layers: 2
+  temporal_expansion: 1
+  temporal_bias_hidden: null
+  time_lookahead_rows: 0
+  clock_readout_hidden: 0
+  recent: 512
+  coarse_group: 16
+  coarse_capacity: 64
+  attacks_per_lane: 12
+  releases_per_lane: 4
+  coupling_rank: 16
+  max_chunk: 128
+windows:
+  gap_sampling_probability: 0.0
+  gap_thresholds_ms: [2000, 8000, 32000]
+  gap_context_rows: 32
+  seed: 17
+  horizons_s: [1.0, 4.0, 16.0]
+  windows_per_chart: 1
+objective:
+  normalization_rows: 128.0
+  lambda_struct: 0.0
+training:
+  effective_batch_size: 2
+  microbatch_size: 2
+  chunk_rows: 128
+  learning_rate: 0.0001
+  timing_learning_rate: null
+  clock_readout_learning_rate: null
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  parallel_frontiers: true
+  reuse_prefixes: false
+  warmup_updates: 0
+
+cache:
+  max_sources: 16
+  max_bytes: 268435456
+  staging_rows: 4096
+  source_max_bytes: 67108864
+resources:
+  driver_limit_bytes: 4294967296
+  rss_limit_bytes: 6442450944
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 536870912
+  max_swap_growth_bytes: 1073741824
+  checkpoint_max_bytes: 134217728
+  disk_reserve_bytes: 536870912
+  output_max_bytes: 2147483648
+  check_every_rows: 128
+  release_mps_cache_at_boundaries: true
+
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

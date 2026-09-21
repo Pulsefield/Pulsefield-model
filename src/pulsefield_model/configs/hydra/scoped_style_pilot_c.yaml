@@ -1,0 +1,7 @@
+defaults:
+  - scoped_style_probe
+  - _self_
+
+stage: pilot
+output_dir: artifacts/scoped-style-modeling/pilot-c-v1
+arm_budget_seconds: 1800

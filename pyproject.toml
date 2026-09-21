@@ -10,6 +10,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 dependencies = [
     "numpy==1.26.4",
+    "psutil==7.2.2",
     "pandas==2.3.3",
     "PyYAML==6.0.3",
     "pyarrow==22.0.0",
