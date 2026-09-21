@@ -7,6 +7,8 @@
 - 本轮交付：在本机可持续训练、从真实前缀生成完整谱面的系统；给定时间骨架且不使用音频，但生成动作须开始呈现可玩的局部组织与合理的衔接。合法性、可恢复运行和预测损失分别验收，均不能代替生成质量。
 - 实现基础：`991d2f987f8a112220f5beb76bcf2d8a0903ade3` 已实现 M0 的 source/seed、exact replay 与 query/commit。继续扩展现有 `research/oracle_time_continuation` owners；旧 source-action 代码只按本文迁移范围复用，relation-matching 不作为新主干的前置或默认模块。
 
+本文的非空事件行、prefix replay 和缓存合同限定这一版 baseline，不是最终目标对时间骨架或架构的约束。其他条件任务及其证据见[时间骨架与学习任务的研究问题](oracle_time_expert_question.md)；改变这些条件时应明确新的预测任务，而不是把本文的实现要求当作不可改变的前提。
+
 ## 1. 本轮要解决的问题
 
 将原来的“可见前后文条件下的 masked action reconstruction”改为“给定时间骨架和已提交历史的 causal continuation”。当前行只能利用它之前已经给定或生成的 actions。生成一行后，这一行必须成为后续预测的真实历史，更新 occupation、动作时钟、局部 time-action 摘要、note relations 和 temporal memory。
@@ -108,7 +110,7 @@ State 分开维护：
 
 | 状态 | 内容与约束 |
 | --- | --- |
-| ExactReplayState | 四轨 occupancy、打开 LN 的开始时间、最近 attack/release 时钟、hand/lane clocks；完全由 committed history 决定 |
+| ExactReplayState | 四轨 occupancy、打开 LN 的开始时间、最近 attack/release 时钟、hand/lane clocks、累计行数与 note 数；完全由 committed history 决定 |
 | LocalState | 三层 causal convolution 的有限 buffers、时间和 validity；缓存属于对应的已提交行 |
 | RelationState | 有界 lane 索引、完整 row 节点与关系标签、最多四个活跃 LN head；精确 head 事实与 learned descriptor 分开保存 |
 | TemporalState | 有界 recent/coarse layer-input states、位置/时间与 provenance；训练重投影，推理另缓存 K/V；query 无第二套永久 bank |

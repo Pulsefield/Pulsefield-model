@@ -1,0 +1,34 @@
+# The 3.084M response-candidate architecture; this preset contains no learned weights.
+execution_profile: small
+device: cpu
+cpu_threads: 1
+batch_size: 4
+microbatch_size: 2
+model_seed: 172
+max_seconds: 14400.0
+footprint_limit_bytes: 6442450944
+model:
+  arm: R1
+  hidden: 128
+  levels: 8
+  expansion: 4
+  coupling_rank: 16
+  endpoint_availability: none
+  seed_context: observed
+  long_memory: landmarks
+  memory_hidden: 256
+  memory_stride: 64
+  head_routing: residual
+  routing_hidden: 512
+  release_routing: residual
+  release_hidden: 512
+  row_consequence: frontier2
+resources:
+  driver_limit_bytes: 6442450944
+  rss_limit_bytes: 6442450944
+  allocator_ceiling_bytes: 8589934592
+  min_available_bytes: 2147483648
+  max_swap_growth_bytes: 134217728
+  checkpoint_max_bytes: 134217728
+  disk_reserve_bytes: 107374182400
+  output_max_bytes: 2147483648

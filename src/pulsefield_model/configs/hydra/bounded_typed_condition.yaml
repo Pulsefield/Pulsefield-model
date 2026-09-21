@@ -1,0 +1,17 @@
+defaults:
+  - bounded_typed_condition_schema
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+source_file: ''
+source_sha256: ''
+output_file: ''
+arm: r1
+seed_notes: 30
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

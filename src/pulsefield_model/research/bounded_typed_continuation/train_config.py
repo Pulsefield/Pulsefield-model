@@ -1,0 +1,107 @@
+"""Typed corpus-training settings; sampling is owned by the pinned plan."""
+from dataclasses import dataclass, field
+import math
+
+from ..scoped_style_modeling.dataset import ContractError
+from .contract import Arm
+from .model import ModelConfig
+from .smoke_config import SmokeResources
+from .profiles import validate_model_profile, validate_profile_resources
+
+
+@dataclass
+class TrainConfig:
+    execution_profile: str = 'small'
+    plan_file: str = ''
+    plan_sha256: str = ''
+    source_cache_dir: str = ''
+    output_dir: str = 'artifacts/bounded-typed-continuation/corpus'
+    resume_from: str | None = None
+    fork_from: str | None = None
+    fork_sha256: str = ''
+    fork_source_revision: str = ''
+    fork_plan_file: str = ''
+    trainable: str = 'all'
+    source_kl_weight: float = 0.
+    recovery_pool: str = ''
+    recovery_sha256: str = ''
+    recovery_weight: float = .25
+    recovery_queries: int = 2
+    recovery_seed: int = 954
+    stop_after_checkpoint: int | None = None
+    device: str = 'cpu'
+    model_seed: int = 171
+    cpu_threads: int = 1
+    batch_size: int = 4
+    microbatch_size: int = 2
+    report_every: int = 32
+    candidate_budget: int = 8192
+    learning_rate: float = .0003
+    weight_decay: float = .01
+    max_grad_norm: float = 1.
+    warmup_onsets: int = 32768
+    max_seconds: float = 14400.
+    cache_max_sources: int = 64
+    cache_max_bytes: int = 256 * 1024 ** 2
+    footprint_limit_bytes: int = 6 * 1024 ** 3
+    model: ModelConfig = field(default_factory=lambda: ModelConfig(Arm.O1))
+    resources: SmokeResources = field(default_factory=SmokeResources)
+
+    def validate(self):
+        validate_model_profile(self.model, self.execution_profile)
+        validate_profile_resources(self.execution_profile, self.resources)
+        teacher = self.execution_profile == 'teacher35m'
+        if teacher and (self.microbatch_size != 1 or self.batch_size > 4 or self.trainable != 'all'):
+            raise ContractError('teacher35m requires microbatch 1, batch at most 4 and ordinary full-model training')
+        if (self.trainable not in ('all', 'routing', 'release', 'consequence') or
+                self.trainable == 'routing' and self.model.head_routing != 'residual' or
+                self.trainable == 'release' and self.model.release_routing != 'residual' or
+                self.trainable == 'consequence' and self.model.row_consequence == 'none'):
+            raise ContractError('Trainable scope requires all parameters or its corresponding residual enabled')
+        if (isinstance(self.source_kl_weight, bool) or not math.isfinite(self.source_kl_weight) or
+                self.source_kl_weight < 0 or self.source_kl_weight and self.trainable != 'consequence'):
+            raise ContractError('Source KL requires a nonnegative finite weight and frozen-base consequence training')
+        if bool(self.recovery_pool) != bool(self.recovery_sha256):
+            raise ContractError('Native recovery needs both pool path and SHA-256')
+        if self.recovery_pool:
+            if (self.model.arm != Arm.R1 or len(self.recovery_sha256) != 64 or
+                    any(c not in '0123456789abcdef' for c in self.recovery_sha256)):
+                raise ContractError('Native recovery requires R1 and a lowercase SHA-256')
+        elif (self.recovery_weight, self.recovery_queries, self.recovery_seed) != (.25, 2, 954):
+            raise ContractError('Native recovery settings require an enabled pool')
+        if (type(self.recovery_queries) is not int or not 1 <= self.recovery_queries <= 8 or
+                type(self.recovery_seed) is not int or not 0 <= self.recovery_seed < 2 ** 63 or
+                isinstance(self.recovery_weight, bool) or not math.isfinite(self.recovery_weight) or
+                not 0 < self.recovery_weight <= 1):
+            raise ContractError('Native recovery needs 1–8 queries, a nonnegative seed and weight in (0,1]')
+        fork_fields = (self.fork_from, self.fork_sha256, self.fork_source_revision, self.fork_plan_file)
+        if any(fork_fields) and (not all(fork_fields) or self.resume_from is not None):
+            raise ContractError('Fork initialization needs all four fork fields and cannot also resume')
+        if self.fork_from is not None:
+            for name, length in (('fork_sha256', 64), ('fork_source_revision', 40)):
+                value = getattr(self, name)
+                if len(value) != length or any(c not in '0123456789abcdef' for c in value):
+                    raise ContractError(f'{name} must be a full lowercase digest')
+        if self.device not in ('cpu', 'mps', 'cuda'):
+            raise ContractError('Training device must be cpu, mps or cuda')
+        for name in ('cpu_threads', 'batch_size', 'microbatch_size', 'report_every', 'candidate_budget',
+                     'cache_max_sources', 'cache_max_bytes', 'footprint_limit_bytes'):
+            if type(getattr(self, name)) is not int or getattr(self, name) <= 0:
+                raise ContractError(f'{name} must be a positive integer')
+        for name in ('model_seed', 'warmup_onsets'):
+            if type(getattr(self, name)) is not int or not 0 <= getattr(self, name) < 2 ** 63:
+                raise ContractError(f'{name} must be a nonnegative integer below 2**63')
+        if self.stop_after_checkpoint is not None and (type(self.stop_after_checkpoint) is not int or self.stop_after_checkpoint <= 0):
+            raise ContractError('stop_after_checkpoint must be null or a positive onset checkpoint')
+        for name in ('learning_rate', 'weight_decay', 'max_grad_norm', 'max_seconds'):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not math.isfinite(value) or value < 0 or (name != 'weight_decay' and value == 0):
+                raise ContractError(f'{name} must be finite and positive, or nonnegative for weight decay')
+        if (self.microbatch_size > min(self.batch_size, 2) or self.batch_size > 8 or
+                self.model.hidden > (512 if teacher else 128) or self.model.levels > 8 or self.model.expansion > 4 or
+                self.model.coupling_rank > 16 or self.candidate_budget > 32768 or
+                self.cache_max_sources > 128 or self.cache_max_bytes > 512 * 1024 ** 2 or
+                self.footprint_limit_bytes > (12 if teacher else 8) * 1024 ** 3):
+            raise ContractError('Corpus training exceeds its bounded model, batch, candidate or cache envelope')
+        if self.plan_sha256 and (len(self.plan_sha256) != 64 or any(c not in '0123456789abcdef' for c in self.plan_sha256)):
+            raise ContractError('plan_sha256 must be a lowercase SHA-256 digest')

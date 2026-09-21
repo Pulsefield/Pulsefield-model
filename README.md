@@ -18,6 +18,28 @@ supplied event times (M0–M3). M4 corpus training and generated-structure evalu
 are in progress, including a Mac profile with a larger temporal module; this
 research baseline does not define the V3 reference architecture.
 
+The [formulation research question](docs/research/oracle_time_expert_question.md)
+collects the current task definitions, contrasting experimental results and
+inspectable endpoint prototypes for an independent assessment of the next
+learning setup.
+
+The [bounded three-arm continuation baseline](docs/research/bounded_typed_continuation.md)
+defines matched typed-row/object tasks alongside the original row task. Exact
+execution, a finite encoder, complete probability heads and bounded training
+windows are implemented. Packaged commands support corpus training, preparation
+of standalone timing/seed conditions, and native generation with durable recovery
+and verified osu! export. Long-form quality, consistency across difficulty levels,
+and varied LN/tap organization remain under evaluation.
+
+The [vacation training queue](docs/research/vacation_training.md) provides serial
+audio caching, a 35M R1 teacher profile and fixed native stress runs, with frozen
+inputs, resumable segments and a macOS `caffeinate` launcher.
+
+The [staged R1 reconstruction](docs/research/r1_staged_restoration.md) rebuilds the
+small response candidate from plain R1, adding seed, memory and the three native
+correction modules in order. New trajectories and final quality require evaluation;
+it is separate from the 35M teacher queue.
+
 ## Legacy code boundary
 
 > **Do not use mapper v2/v2.1, the pre-V3 timing stack, Control V3, or the

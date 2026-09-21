@@ -1,0 +1,45 @@
+defaults:
+  - vacation_training_schema
+  - bounded_typed_teacher35m@teacher.training
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+mode: preflight
+output_dir: artifacts/vacation-training
+max_seconds: 259200.0
+max_bytes: 107374182400
+disk_reserve_bytes: 107374182400
+require_ac_power: true
+check_thermal: true
+audio:
+  enabled: true
+  manifest_file: ''
+  manifest_sha256: ''
+  max_seconds: 57600.0
+  max_bytes: 85899345920
+  chunk_frames: 6000
+teacher:
+  enabled: true
+  base_plan_file: ''
+  base_plan_sha256: ''
+  evaluation_file: ''
+  evaluation_sha256: ''
+  milestones: [1000000, 5000000, 10000000, 20000000, 30000000]
+  max_seconds: 158400.0
+  training:
+    source_cache_dir: ''
+stress:
+  enabled: true
+  manifest_file: ''
+  manifest_sha256: ''
+  max_seconds: 28800.0
+  generation:
+    checkpoint_file: ''
+    checkpoint_sha256: ''
+hydra:
+  run:
+    dir: .
+  job:
+    chdir: false
+  output_subdir: null

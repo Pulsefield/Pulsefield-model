@@ -1,0 +1,6 @@
+defaults:
+  - bounded_typed_train
+  - bounded_typed_r1_response
+  - _self_
+
+output_dir: artifacts/bounded-typed-continuation/r1-response-rebuild
