@@ -12,13 +12,13 @@ from unittest.mock import patch
 
 import torch
 
-from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
-from pulsefield_model.training import mapper_v2 as mapper_v2_training
-from pulsefield_model.training.hydra_config import (
+from ensomi_model.models.mapper.v2 import MapperV2Config, MapperV2Model
+from ensomi_model.training import mapper_v2 as mapper_v2_training
+from ensomi_model.training.hydra_config import (
     compose_training_experiment_config,
     training_experiment_config_to_legacy_dict,
 )
-from pulsefield_model.training.mapper_v2 import initialize_mapper_v2_from_mapper_checkpoint
+from ensomi_model.training.mapper_v2 import initialize_mapper_v2_from_mapper_checkpoint
 
 _STALE_ROOT = "train" + "/"
 

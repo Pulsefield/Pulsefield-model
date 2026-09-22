@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pulsefield_model.evals.mir_anchor_probe import (
+from ensomi_model.evals.mir_anchor_probe import (
     MIRProbeRunConfig,
     MIRProbeRunReport,
     PROBE_COALITIONS,
@@ -23,8 +23,8 @@ from pulsefield_model.evals.mir_anchor_probe import (
     prepare_mir_anchor_manifest,
     run_mir_anchor_probe,
 )
-from pulsefield_model.features.mir_backbone import MIRBackboneConfig, MIRProbeFeatures
-from pulsefield_model.osu_core.hitobjects import parse_mania_hit_objects
+from ensomi_model.features.mir_backbone import MIRBackboneConfig, MIRProbeFeatures
+from ensomi_model.osu_core.hitobjects import parse_mania_hit_objects
 
 
 @pytest.mark.parametrize(
@@ -43,7 +43,7 @@ def test_probe_runtime_rejects_invalid_memory_bound(field: str, value: object) -
 
 
 def test_encoder_capacity_uses_a_bounded_power_of_two_bucket_set() -> None:
-    from pulsefield_model.evals.mir_anchor_model import MirAnchorProbeConfig
+    from ensomi_model.evals.mir_anchor_model import MirAnchorProbeConfig
 
     run_config = MIRProbeRunConfig(
         encoder_chunk_frames=128,
@@ -445,7 +445,7 @@ def test_mask_erosion_requires_the_complete_encoder_receptive_field() -> None:
 
 
 def test_probe_loading_rejects_nonfinite_durable_features(tmp_path: Path) -> None:
-    from pulsefield_model.evals.mir_anchor_model import MirAnchorProbeConfig
+    from ensomi_model.evals.mir_anchor_model import MirAnchorProbeConfig
 
     audio_path = tmp_path / "audio.ogg"
     feature_dir = tmp_path / "features"
@@ -477,7 +477,7 @@ def test_probe_loading_rejects_nonfinite_durable_features(tmp_path: Path) -> Non
 
 
 def test_probe_loading_skips_songs_over_the_encoder_memory_bound(tmp_path: Path) -> None:
-    from pulsefield_model.evals.mir_anchor_model import MirAnchorProbeConfig
+    from ensomi_model.evals.mir_anchor_model import MirAnchorProbeConfig
 
     feature_dir = tmp_path / "features"
     feature_dir.mkdir()
@@ -531,8 +531,8 @@ def test_probe_stage_builds_exact_supports_trains_all_coalitions_and_reports_met
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     torch = pytest.importorskip("torch")
-    from pulsefield_model.evals import mir_anchor_probe as probe_module
-    from pulsefield_model.evals.mir_anchor_model import MirAnchorProbeConfig
+    from ensomi_model.evals import mir_anchor_probe as probe_module
+    from ensomi_model.evals.mir_anchor_model import MirAnchorProbeConfig
 
     feature_dir = tmp_path / "features"
     feature_dir.mkdir()
@@ -605,7 +605,7 @@ def test_probe_stage_builds_exact_supports_trains_all_coalitions_and_reports_met
     )
     assert np.array_equal(loaded[0].episode_indices, other_model_seed[0].episode_indices)
 
-    from pulsefield_model.evals.mir_anchor_model import MirAnchorProbe
+    from ensomi_model.evals.mir_anchor_model import MirAnchorProbe
 
     torch.manual_seed(run_config.seed)
     unbatched_model = MirAnchorProbe(model_config)

@@ -3,11 +3,11 @@ from dataclasses import asdict, fields, replace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef, digest
-from pulsefield_model.research.scoped_style_modeling.replay import parse_source, prepare_chart
-from pulsefield_model.research.source_action_modeling.actions import SourceActionSchemaError, parse_source as parse_action_source
-from pulsefield_model.research.source_action_modeling.observation import EventBlock, observe, observe_complete, visible_states
-from pulsefield_model.research.source_action_modeling.tensors import collate, observation_relations, row_token
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef, digest
+from ensomi_model.research.scoped_style_modeling.replay import parse_source, prepare_chart
+from ensomi_model.research.source_action_modeling.actions import SourceActionSchemaError, parse_source as parse_action_source
+from ensomi_model.research.source_action_modeling.observation import EventBlock, observe, observe_complete, visible_states
+from ensomi_model.research.source_action_modeling.tensors import collate, observation_relations, row_token
 from .conftest import example, fixture_chart
 
 
@@ -91,7 +91,7 @@ def test_close_features_do_not_create_attack_intervals_or_recurrences():
     chart = prepare_chart((NoteRef(1, 0, "long", 0, 100), NoteRef(2, 0, "normal", 200, 200)),
                           Interval(0, 300), Interval(0, 300))
     obs = observe_complete(chart, entering_occupancy=(False,) * 4)
-    from pulsefield_model.research.source_action_modeling.tensors import observation_features
+    from ensomi_model.research.source_action_modeling.tensors import observation_features
     lanes, _, _ = observation_features(obs)
     indices = {r.time_ms: i for i, r in enumerate(obs.rows) if r.phase == "source"}
     assert lanes[indices[100], 0, 0, :3].tolist() == [0, 0, 1]

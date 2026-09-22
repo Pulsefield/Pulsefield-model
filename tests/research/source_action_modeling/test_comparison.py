@@ -4,16 +4,16 @@ from dataclasses import fields, replace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef
-from pulsefield_model.research.scoped_style_modeling.replay import prepare_chart
-from pulsefield_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
-from pulsefield_model.research.source_action_modeling.comparison import evaluate_structure, paired_batches, structural_report, train_paired_step
-from pulsefield_model.research.source_action_modeling.diagnostics import capture_response, finish_response
-from pulsefield_model.research.source_action_modeling.model import ModelConfig, initialize_comparison
-from pulsefield_model.research.source_action_modeling.observation import EventBlock, ViewPolicy, observe, paired_views, visible_states
-from pulsefield_model.research.source_action_modeling.sampling import PairedBlockSampler, TrainingContext, VIEWS
-from pulsefield_model.research.source_action_modeling.semantic_probe import initialize_readout
-from pulsefield_model.research.source_action_modeling.tensors import collate, observation_relations
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef
+from ensomi_model.research.scoped_style_modeling.replay import prepare_chart
+from ensomi_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
+from ensomi_model.research.source_action_modeling.comparison import evaluate_structure, paired_batches, structural_report, train_paired_step
+from ensomi_model.research.source_action_modeling.diagnostics import capture_response, finish_response
+from ensomi_model.research.source_action_modeling.model import ModelConfig, initialize_comparison
+from ensomi_model.research.source_action_modeling.observation import EventBlock, ViewPolicy, observe, paired_views, visible_states
+from ensomi_model.research.source_action_modeling.sampling import PairedBlockSampler, TrainingContext, VIEWS
+from ensomi_model.research.source_action_modeling.semantic_probe import initialize_readout
+from ensomi_model.research.source_action_modeling.tensors import collate, observation_relations
 from .conftest import example, fixture_chart
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])

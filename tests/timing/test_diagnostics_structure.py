@@ -1,7 +1,7 @@
 from dataclasses import asdict
 
-from pulsefield_model.timing.diagnostics import compare_timing_grid_structure, compare_timing_grids
-from pulsefield_model.timing.schema import FittedTimingGrid, TimingSegment
+from ensomi_model.timing.diagnostics import compare_timing_grid_structure, compare_timing_grids
+from ensomi_model.timing.schema import FittedTimingGrid, TimingSegment
 
 
 def _grid(*segments: tuple[float, float]) -> FittedTimingGrid:

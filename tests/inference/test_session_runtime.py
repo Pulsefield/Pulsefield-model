@@ -7,9 +7,9 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 
-from pulsefield_model.inference.session_runtime import SessionRuntime, SessionRuntimeConfig
-from pulsefield_model.timing.grid_fitting.types import TimingFitDiagnostics, TimingFitResult
-from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
+from ensomi_model.inference.session_runtime import SessionRuntime, SessionRuntimeConfig
+from ensomi_model.timing.grid_fitting.types import TimingFitDiagnostics, TimingFitResult
+from ensomi_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
 
 
 class SessionRuntimeTests(unittest.TestCase):

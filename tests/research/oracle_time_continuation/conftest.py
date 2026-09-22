@@ -1,7 +1,7 @@
 import pytest
 
-from pulsefield_model.research.oracle_time_continuation.data import admit_source
-from pulsefield_model.research.scoped_style_modeling.dataset import digest
+from ensomi_model.research.oracle_time_continuation.data import admit_source
+from ensomi_model.research.scoped_style_modeling.dataset import digest
 
 
 def source_bytes(objects):

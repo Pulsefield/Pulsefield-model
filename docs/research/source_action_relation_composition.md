@@ -1,9 +1,9 @@
 # Source-action relation composition and semantic reuse
 
-The [packaged experiment](../../src/pulsefield_model/configs/hydra/source_action_composition.yaml)
+The [packaged experiment](../../src/ensomi_model/configs/hydra/source_action_composition.yaml)
 compares two orders of the same local and relation operators. It evaluates action
 prediction, frozen human assessment and controlled structural readouts. The
-[runner](../../src/pulsefield_model/research/source_action_modeling/experiment.py)
+[runner](../../src/ensomi_model/research/source_action_modeling/experiment.py)
 executes every stage on the local corpus within explicit resource bounds.
 
 ## What information paths can establish
@@ -78,7 +78,7 @@ alternative explanations to semantic factorization.
 
 ## Population and training
 
-The [source catalog](../../src/pulsefield_model/research/source_action_modeling/full_corpus.py)
+The [source catalog](../../src/ensomi_model/research/source_action_modeling/full_corpus.py)
 includes every eligible training song group and every distinct, valid beatmap
 within it. `train_group_limit: null` applies no training-group cap. Both novel
 index groups and annotation-connected training groups participate. Original
@@ -222,7 +222,7 @@ Use a fresh output path; an existing directory is rejected rather than reused:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.source_action_modeling.experiment_hydra \
+  ensomi_model.research.source_action_modeling.experiment_hydra \
   output_dir=artifacts/source-action-composition/overnight-01
 ```
 
@@ -256,7 +256,7 @@ training population:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.source_action_modeling.experiment_hydra \
+  ensomi_model.research.source_action_modeling.experiment_hydra \
   'seeds=[17]' validation_groups=4 \
   max_updates=6 min_updates=1 readout_steps=3 bootstrap_samples=20 path_pairs=3 \
   training_seconds_per_seed=300 finalization_seconds_per_seed=900 max_seconds=1800 \

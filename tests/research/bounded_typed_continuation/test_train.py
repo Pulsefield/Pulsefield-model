@@ -6,14 +6,14 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation import train_run
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm
-from pulsefield_model.research.bounded_typed_continuation.corpus import SamplingConfig, create_plan
-from pulsefield_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
-from pulsefield_model.research.bounded_typed_continuation.evaluation import suffix_likelihood
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.bounded_typed_continuation.train_hydra import compose_config
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation import train_run
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.corpus import SamplingConfig, create_plan
+from ensomi_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
+from ensomi_model.research.bounded_typed_continuation.evaluation import suffix_likelihood
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.bounded_typed_continuation.train_hydra import compose_config
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_corpus import inputs
 from .test_data import mixed_chart
 
@@ -40,7 +40,7 @@ def test_hydra_packaged_projection_and_rejected_unknown_or_unused_fields():
     for overrides in (['model.seed_context=observed'], ['model.arm=R1', 'model.seed_context=unknown']):
         with pytest.raises((ContractError, ValueError)):
             compose_config(overrides)
-    assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_train.yaml').is_file()
+    assert files('ensomi_model.configs.hydra').joinpath('bounded_typed_train.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.check_every_rows=1'],
                       ['candidate_budget=0'], ['learning_rate=0'], ['microbatch_size=3'], ['cache_max_sources=129'],
                       ['footprint_limit_bytes=0'], ['model.arm=R1', 'model.endpoint_availability=zero'],

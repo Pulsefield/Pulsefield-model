@@ -11,12 +11,12 @@ if importlib.util.find_spec("torch") is None:
 import torch
 from torch.nn import functional as F
 
-import pulsefield_model.evals.mir_anchor_model as mir_anchor_model_module
-from pulsefield_model.evals.mir_anchor_model import ALL_FEATURE_GROUPS
-from pulsefield_model.evals.mir_anchor_model import MirAnchorProbe
-from pulsefield_model.evals.mir_anchor_model import MirAnchorProbeConfig
-from pulsefield_model.evals.mir_anchor_model import interpolate_encoded_sequence
-from pulsefield_model.evals.mir_anchor_model import triangular_support_choice_nll
+import ensomi_model.evals.mir_anchor_model as mir_anchor_model_module
+from ensomi_model.evals.mir_anchor_model import ALL_FEATURE_GROUPS
+from ensomi_model.evals.mir_anchor_model import MirAnchorProbe
+from ensomi_model.evals.mir_anchor_model import MirAnchorProbeConfig
+from ensomi_model.evals.mir_anchor_model import interpolate_encoded_sequence
+from ensomi_model.evals.mir_anchor_model import triangular_support_choice_nll
 
 
 def _tiny_probe(*, dropout: float = 0.0) -> MirAnchorProbe:

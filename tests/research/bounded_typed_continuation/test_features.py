@@ -2,15 +2,15 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
-from pulsefield_model.research.bounded_typed_continuation.features import (
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
+from ensomi_model.research.bounded_typed_continuation.features import (
     AVAILABILITY_DIM, CONTENT_DIM, QUERY_DIM, TIMING_DIM, EndpointAvailability,
     TimingView, content_features, endpoint_availability, factor_features,
     query_features, time_features, transition_features,
 )
-from pulsefield_model.research.oracle_time_continuation.features import TIME_DIM, clock_features
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.oracle_time_continuation.features import TIME_DIM, clock_features
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 
 
 def test_time_basis_preserves_missing_zero_and_large_clock_differences():

@@ -5,15 +5,15 @@ import pytest
 import torch
 from torch.nn import functional as F
 
-from pulsefield_model.research.bounded_typed_continuation.consequence import (
+from ensomi_model.research.bounded_typed_continuation.consequence import (
     LANE_DIM, TIMING_DIM, RowConsequence, consequence_features,
 )
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, ROW_ACTIONS, Schedule, Timing
-from pulsefield_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
-from pulsefield_model.research.bounded_typed_continuation.features import RELATIVE_LANES, TIME_DIM, time_features
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, ROW_ACTIONS, Schedule, Timing
+from ensomi_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
+from ensomi_model.research.bounded_typed_continuation.features import RELATIVE_LANES, TIME_DIM, time_features
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_data import chart, mixed_chart
 
 

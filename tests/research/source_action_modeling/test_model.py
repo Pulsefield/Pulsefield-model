@@ -4,9 +4,9 @@ import math
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
-from pulsefield_model.research.source_action_modeling.model import ModelConfig, initialize_model
-from pulsefield_model.research.source_action_modeling.tensors import ROW_CLASSES, collate, row_token
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.source_action_modeling.model import ModelConfig, initialize_model
+from ensomi_model.research.source_action_modeling.tensors import ROW_CLASSES, collate, row_token
 from .conftest import example
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])
@@ -106,8 +106,8 @@ def test_prefix_legality_uses_v3_four_action_transitions():
 
 def test_v3_row_tokens_round_trip_and_sampled_actions_replay_legally():
     from itertools import product
-    from pulsefield_model.research.source_action_modeling.actions import LANE_ACTIONS
-    from pulsefield_model.research.source_action_modeling.observation import advance_occupancy
+    from ensomi_model.research.source_action_modeling.actions import LANE_ACTIONS
+    from ensomi_model.research.source_action_modeling.observation import advance_occupancy
     decoder = initialize_model().decoder
     assert LANE_ACTIONS == (0, 1, 2, 3) and ROW_CLASSES == 256
     for actions in product(LANE_ACTIONS, repeat=4):

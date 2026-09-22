@@ -6,19 +6,19 @@ import json
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation import generate_run
-from pulsefield_model.research.bounded_typed_continuation.condition import (
+from ensomi_model.research.bounded_typed_continuation import generate_run
+from ensomi_model.research.bounded_typed_continuation.condition import (
     GenerationCondition, condition_from_source, write_source_condition,
 )
-from pulsefield_model.research.bounded_typed_continuation.condition_hydra import compose_config as prepare_config
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, Timing
-from pulsefield_model.research.bounded_typed_continuation.generate_config import GenerateConfig
-from pulsefield_model.research.bounded_typed_continuation.generate_hydra import compose_config
-from pulsefield_model.research.bounded_typed_continuation.generation import Rollout
-from pulsefield_model.research.bounded_typed_continuation.smoke_config import SmokeResources
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.oracle_time_continuation.storage import file_digest
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation.condition_hydra import compose_config as prepare_config
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, Timing
+from ensomi_model.research.bounded_typed_continuation.generate_config import GenerateConfig
+from ensomi_model.research.bounded_typed_continuation.generate_hydra import compose_config
+from ensomi_model.research.bounded_typed_continuation.generation import Rollout
+from ensomi_model.research.bounded_typed_continuation.smoke_config import SmokeResources
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.oracle_time_continuation.storage import file_digest
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_generation import setup
 
 
@@ -101,7 +101,7 @@ def test_hydra_projection_packaging_and_rejected_fields():
     assert config.stop_after_candidate == 25 and config.checkpoint_every_candidates == 17 and config.max_seconds == 5
     assert prepare_config(['arm=o1', 'seed_notes=41']).seed_notes == 41
     for name in ('bounded_typed_generate.yaml', 'bounded_typed_condition.yaml'):
-        assert files('pulsefield_model.configs.hydra').joinpath(name).is_file()
+        assert files('ensomi_model.configs.hydra').joinpath(name).is_file()
     for overrides in (['+unused=1'], ['+resources.check_every_rows=1'], ['resume_from=parent.pt'],
                       ['presentation_source=map.osu'], ['candidate_budget=0'], ['candidate_budget=32769'],
                       ['cpu_threads=0'], ['stop_after_candidate=0'], ['seed=-1'], ['max_seconds=0'],

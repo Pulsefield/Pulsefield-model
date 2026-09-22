@@ -3,18 +3,18 @@ import unittest
 
 import numpy as np
 
-from pulsefield_model.osu_core.timing import RedTimingPoint
-from pulsefield_model.timing.rendering.dense_timing_v1 import (
+from ensomi_model.osu_core.timing import RedTimingPoint
+from ensomi_model.timing.rendering.dense_timing_v1 import (
     TIMING_TRACK_CHANNELS,
     TimingTrackConfig,
     render_timing_track_20ms_v1,
 )
-from pulsefield_model.timing.rendering.dense_timing_v2 import (
+from ensomi_model.timing.rendering.dense_timing_v2 import (
     DENSE_TIMING_V2_CHANNELS,
     DenseTimingV2Config,
     render_dense_timing_v2,
 )
-from pulsefield_model.timing.schema import FittedTimingGrid, TimingSegment
+from ensomi_model.timing.schema import FittedTimingGrid, TimingSegment
 
 
 class DenseTimingRendererTests(unittest.TestCase):

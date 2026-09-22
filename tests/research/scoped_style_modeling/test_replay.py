@@ -3,10 +3,10 @@ import gzip
 
 import pytest
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef, canonical_json, digest
-from pulsefield_model.research.scoped_style_modeling.prepare import _chart_payload, load_chart
-from pulsefield_model.research.scoped_style_modeling.relations import prepare_relations
-from pulsefield_model.research.scoped_style_modeling.replay import (
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef, canonical_json, digest
+from ensomi_model.research.scoped_style_modeling.prepare import _chart_payload, load_chart
+from ensomi_model.research.scoped_style_modeling.relations import prepare_relations
+from ensomi_model.research.scoped_style_modeling.replay import (
     evidence_masks, hand_mask, mirror_objects, parse_source, prepare_chart, selected_objects, time_feature,
 )
 

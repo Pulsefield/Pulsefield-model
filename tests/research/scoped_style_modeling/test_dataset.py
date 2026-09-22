@@ -8,13 +8,13 @@ import pytest
 from omegaconf.errors import ConfigKeyError
 from hydra.errors import ConfigCompositionException
 
-from pulsefield_model.research.scoped_style_modeling.dataset import (
+from ensomi_model.research.scoped_style_modeling.dataset import (
     FOUNDATION, ContractError, adapt_records, digest, fetch_verified, freeze_manifest, load_snapshot, split_manifest,
 )
-from pulsefield_model.research.scoped_style_modeling.prepare import PrepareConfig
-from pulsefield_model.research.scoped_style_modeling.prepare_hydra import compose_config
-from pulsefield_model.research.scoped_style_modeling.recovery import recover_sources
-from pulsefield_model.research.scoped_style_modeling.replay import ChartInputs, LaneFacts, Row
+from ensomi_model.research.scoped_style_modeling.prepare import PrepareConfig
+from ensomi_model.research.scoped_style_modeling.prepare_hydra import compose_config
+from ensomi_model.research.scoped_style_modeling.recovery import recover_sources
+from ensomi_model.research.scoped_style_modeling.replay import ChartInputs, LaneFacts, Row
 
 
 def source(n, **kwargs):
@@ -152,7 +152,7 @@ def test_dataset_manifest_must_match_pin_before_parquet_decode(tmp_path):
 
 
 def test_download_checks_identity_before_persisting(tmp_path, monkeypatch):
-    from pulsefield_model.research.scoped_style_modeling import dataset
+    from ensomi_model.research.scoped_style_modeling import dataset
     path = tmp_path/'source.osu'
     monkeypatch.setattr(dataset, 'urlopen', lambda *args, **kwargs: BytesIO(b'new revision'))
     with pytest.raises(ContractError, match="SHA-256"):
@@ -184,11 +184,11 @@ import runpy
 import sys
 class BlockRuntime(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname == "torch" or fullname.startswith(("pulsefield_model.models", "pulsefield_model.training", "pulsefield_model.osu_core")):
+        if fullname == "torch" or fullname.startswith(("ensomi_model.models", "ensomi_model.training", "ensomi_model.osu_core")):
             raise AssertionError("Research data preparation imported a model/legacy runtime: " + fullname)
 sys.meta_path.insert(0, BlockRuntime())
 sys.argv = ["prepare_hydra", "--help"]
-runpy.run_module("pulsefield_model.research.scoped_style_modeling.prepare_hydra", run_name="__main__")
+runpy.run_module("ensomi_model.research.scoped_style_modeling.prepare_hydra", run_name="__main__")
 '''
     result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr

@@ -4,15 +4,15 @@ from dataclasses import replace
 
 import numpy as np
 
-from pulsefield_model.features.mir_backbone import MIRBackboneConfig
-from pulsefield_model.features.mir_backbone import build_mir_backbone_from_log_mel
-from pulsefield_model.features.mir_backbone import classical_plp
-from pulsefield_model.features.mir_backbone import complex_fourier_tempogram
-from pulsefield_model.features.mir_backbone import compute_log_mel_5ms
-from pulsefield_model.features.mir_backbone import interpolate_frame_centers
-from pulsefield_model.features.mir_backbone import mel_center_frequencies_hz
-from pulsefield_model.features.mir_backbone import mir_probe_features
-from pulsefield_model.features.mir_backbone import spectral_flux_novelty
+from ensomi_model.features.mir_backbone import MIRBackboneConfig
+from ensomi_model.features.mir_backbone import build_mir_backbone_from_log_mel
+from ensomi_model.features.mir_backbone import classical_plp
+from ensomi_model.features.mir_backbone import complex_fourier_tempogram
+from ensomi_model.features.mir_backbone import compute_log_mel_5ms
+from ensomi_model.features.mir_backbone import interpolate_frame_centers
+from ensomi_model.features.mir_backbone import mel_center_frequencies_hz
+from ensomi_model.features.mir_backbone import mir_probe_features
+from ensomi_model.features.mir_backbone import spectral_flux_novelty
 
 
 class MIRBackboneConfigTests(unittest.TestCase):

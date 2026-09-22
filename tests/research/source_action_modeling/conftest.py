@@ -4,9 +4,9 @@ import random
 
 import numpy as np
 
-from pulsefield_model.research.scoped_style_modeling.dataset import Interval, NoteRef
-from pulsefield_model.research.scoped_style_modeling.replay import mirror_objects, prepare_chart
-from pulsefield_model.research.source_action_modeling.observation import EventBlock, declared_entering_occupancy, observe
+from ensomi_model.research.scoped_style_modeling.dataset import Interval, NoteRef
+from ensomi_model.research.scoped_style_modeling.replay import mirror_objects, prepare_chart
+from ensomi_model.research.source_action_modeling.observation import EventBlock, declared_entering_occupancy, observe
 
 
 @pytest.fixture(autouse=True)

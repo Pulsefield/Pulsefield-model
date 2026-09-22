@@ -1,11 +1,11 @@
 # Scoped style model and paired training
 
-`pulsefield_model.research.scoped_style_modeling` implements the encoder,
+`ensomi_model.research.scoped_style_modeling` implements the encoder,
 assessment readout, teacher-forced evidence selector, and paired trainer for
 [Evidence-supervised scoped style modeling](scoped_style_witness_generation.md).
 The frozen study retains SHA-256
 `197ae4c5de62d4f7207200c6892562650a47e3dbc0ea80640ac86776e7ea9bdd`.
-These are research components, not a Pulsefield V3 reference architecture.
+These are research components, not a Ensomi V3 reference architecture.
 
 ## Inputs and model
 
@@ -53,14 +53,14 @@ batch. Missing evidence does not change the assessment denominator.
 Run from the repository root with a fresh output directory:
 
 ```bash
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.train_hydra \
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.train_hydra \
   output_dir=artifacts/scoped-style-modeling/paired-17-new
 ```
 
 Use `--extra cuda device=cuda` on NVIDIA Linux. `device=cpu` is available for
 bounded correctness checks while retaining the platform's explicit Torch extra.
 The packaged preset is `configs/hydra/scoped_style_train.yaml` under
-`src/pulsefield_model/`; `TrainConfig` and `ModelConfig` own accepted fields.
+`src/ensomi_model/`; `TrainConfig` and `ModelConfig` own accepted fields.
 `--help` works without importing Torch. Unknown fields, including nested model
 fields added with Hydra's `+` syntax, fail projection.
 
@@ -103,7 +103,7 @@ loss, optimizer, sampling, split, and assessment checkpoint rules are unchanged.
 Run from the repository root with a fresh output directory:
 
 ```bash
-caffeinate -i uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.train_hydra \
+caffeinate -i uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.train_hydra \
   --config-name scoped_style_overnight \
   output_dir=artifacts/scoped-style-modeling/overnight-new
 ```

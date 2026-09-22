@@ -51,10 +51,10 @@ Several qualifications determine whether the direction is useful:
 | Require orthogonality between streams | Defer. Orthogonal vectors can encode identical information, and shared lane, timing, and occupation facts may be necessary for several computations. |
 | Prioritize directional Jacobian diagnostics | Retain, using actual parameter updates and paired output changes. This measures a local update effect; it does not identify the responsible training examples by itself. |
 
-The [current encoder](../../src/pulsefield_model/research/scoped_style_modeling/model.py)
+The [current encoder](../../src/ensomi_model/research/scoped_style_modeling/model.py)
 retains two hand vectors at each event position. Lane and row features pass
 through a shared hand BiGRU and relation attention before the assessor reads
-them. The [multiscale extension](../../src/pulsefield_model/research/scoped_style_modeling/probe_model.py)
+them. The [multiscale extension](../../src/ensomi_model/research/scoped_style_modeling/probe_model.py)
 composes those already contextualized states. It supplies no direct assessment
 path from the earlier lane/row representation. Its added local head also reads
 the ordered section summary, so improved loss could reflect added readout
@@ -163,9 +163,9 @@ assessment does not invoke the reconstruction decoder.
 ### Locality includes the provenance of features
 
 A pre-BiGRU path is not automatically a strictly local path. The existing
-[lane facts](../../src/pulsefield_model/research/scoped_style_modeling/replay.py)
+[lane facts](../../src/ensomi_model/research/scoped_style_modeling/replay.py)
 include next-attack intervals and LN ages, remaining times, and endpoints;
-[relations](../../src/pulsefield_model/research/scoped_style_modeling/relations.py)
+[relations](../../src/ensomi_model/research/scoped_style_modeling/relations.py)
 can connect distant events. Their support may extend beyond a convolution's
 nominal event window. Local pace statistics can have the same issue.
 
@@ -332,7 +332,7 @@ and LN replay. [MAE](https://arxiv.org/abs/2111.06377) motivates separating a
 visible-input encoder from a reconstruction decoder;
 [I-JEPA](https://arxiv.org/abs/2301.08243) motivates attention to target scale and
 context selection, but predicts representations rather than an action
-likelihood. None establishes the effectiveness of this objective for Pulsefield.
+likelihood. None establishes the effectiveness of this objective for Ensomi.
 
 ## Evidence of structure and semantic reuse
 
@@ -431,7 +431,7 @@ updates. Validation is not used to choose gradient routes. A small response may
 reflect the readout, saturation, cancellation, or step scale, rather than absent
 information. A large linearization residual limits module-level interpretation.
 
-The [probe checkpoint writer](../../src/pulsefield_model/research/scoped_style_modeling/probes.py)
+The [probe checkpoint writer](../../src/ensomi_model/research/scoped_style_modeling/probes.py)
 stores weights and update metadata without optimizer moments. Old checkpoints
 cannot reconstruct the historical next AdamW step by themselves. Capture actual
 before/after weights during a new diagnostic run; preserve optimizer, RNG,
@@ -488,7 +488,7 @@ does not establish either reusable structure or generalization.
 Within the inspected literature, this is provisionally an adaptation and
 combination of masked sequence prediction, retained representations, and
 operator-based computation. A new general learning principle or an effective
-Pulsefield architecture has not been established. The immediate research
+Ensomi architecture has not been established. The immediate research
 recommendation is to refine this direction into one bounded comparison with
 the observation contract and decision criteria fixed.
 

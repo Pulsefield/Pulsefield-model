@@ -2,9 +2,9 @@ from itertools import product
 
 import pytest
 
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule, Timing
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, HEAD_ACTIONS, ROW_ACTIONS, Schedule, Timing
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 
 
 def test_original_pressure_and_typed_skip_are_distinct_tasks():

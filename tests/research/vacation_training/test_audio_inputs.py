@@ -1,10 +1,10 @@
 from dataclasses import asdict
 import json
 
-from pulsefield_model.research.bounded_typed_continuation.corpus import PLAN_FORMAT, SamplingConfig, draw_plan
-from pulsefield_model.research.oracle_time_continuation.storage import SourceStore, file_digest
-from pulsefield_model.research.vacation_training.audio_inputs import prepare_audio_inputs
-from pulsefield_model.research.vacation_training.control import publish_json
+from ensomi_model.research.bounded_typed_continuation.corpus import PLAN_FORMAT, SamplingConfig, draw_plan
+from ensomi_model.research.oracle_time_continuation.storage import SourceStore, file_digest
+from ensomi_model.research.vacation_training.audio_inputs import prepare_audio_inputs
+from ensomi_model.research.vacation_training.control import publish_json
 
 
 def test_train_inventory_deduplicates_audio_and_only_reads_train_payloads(tmp_path):

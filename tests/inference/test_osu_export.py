@@ -1,14 +1,14 @@
 import unittest
 
-from pulsefield_model.events.canonical import CanonicalTimepoint
-from pulsefield_model.events.canonical import LaneAction as CanonicalLaneAction
-from pulsefield_model.inference.osu_export import (
+from ensomi_model.events.canonical import CanonicalTimepoint
+from ensomi_model.events.canonical import LaneAction as CanonicalLaneAction
+from ensomi_model.inference.osu_export import (
     OsuExportMetadata,
     decode_mapper_tokens_to_timepoints,
     format_osu_export,
 )
-from pulsefield_model.models.mapper.shared.vocab import LaneAction as MapperLaneAction
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.shared.vocab import LaneAction as MapperLaneAction
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
 
 
 def _mapper_actions(*actions: MapperLaneAction) -> tuple[MapperLaneAction, ...]:

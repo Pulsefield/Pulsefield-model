@@ -1,9 +1,9 @@
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.local import LocalEncoder, LocalState
-from pulsefield_model.research.oracle_time_continuation.relation import RelationEncoder, RelationState
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.local import LocalEncoder, LocalState
+from ensomi_model.research.oracle_time_continuation.relation import RelationEncoder, RelationState
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
 
 
 def test_local_kernel_uses_time_and_ordered_endpoint_actions_on_each_edge():

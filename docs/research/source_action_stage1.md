@@ -14,7 +14,7 @@ records the contract checks and bounded real-input observations.
 
 ## Information access
 
-[`observe()`](../../src/pulsefield_model/research/source_action_modeling/observation.py)
+[`observe()`](../../src/ensomi_model/research/source_action_modeling/observation.py)
 constructs an immutable `PartialObservation` before any feature or relation
 extraction. Complete `PreparedChart` objects remain unchanged for source identity
 and target extraction. The partial type contains no source objects, source hashes,
@@ -53,7 +53,7 @@ complete-chart checkpoints.
 
 ## Reference predictor and loss
 
-[`ReferenceEncoder`](../../src/pulsefield_model/research/source_action_modeling/model.py)
+[`ReferenceEncoder`](../../src/ensomi_model/research/source_action_modeling/model.py)
 uses a shared lane projection, a shared-hand bidirectional GRU and the existing
 relation-attention computation with the new input dimensions. It returns
 `[batch, row, hand, output_dim]`; padded rows are zero. An alternative encoder
@@ -112,7 +112,7 @@ The default model has 58,516 encoder parameters and 25,153 decoder parameters,
 
 ## Sampling, diagnostics and restoration
 
-[`BlockSampler`](../../src/pulsefield_model/research/source_action_modeling/sampling.py)
+[`BlockSampler`](../../src/ensomi_model/research/source_action_modeling/sampling.py)
 samples uniformly over represented groups, then contexts in that group, then
 feasible scales from `{4, 16, 64}`, then valid starting event indices. Sampling
 uses replacement and never reads action values or labels to choose a block.
@@ -122,7 +122,7 @@ the policy identifier, population identity, RNG state and draw position. Each
 draw records its exact group/context/scale/start probability. The sampler
 distribution and equal-block training weights have separate meanings.
 
-[`diagnostics.py`](../../src/pulsefield_model/research/source_action_modeling/diagnostics.py)
+[`diagnostics.py`](../../src/ensomi_model/research/source_action_modeling/diagnostics.py)
 captures the negative equal-block mean row NLL and its gradient before an actual
 optimizer step. It then measures parameter displacement, the resulting response
 change, and the gradient-displacement dot product, separately for the disjoint
@@ -131,7 +131,7 @@ change and the linearization residual is reported. Inputs, targets and
 non-parameter state must match; both evaluations disable dropout. These terms
 do not attribute an update to individual training examples or latent slots.
 
-[`checkpoint.py`](../../src/pulsefield_model/research/source_action_modeling/checkpoint.py)
+[`checkpoint.py`](../../src/ensomi_model/research/source_action_modeling/checkpoint.py)
 creates new snapshot files exclusively. Snapshots retain model parameters and
 buffers, optimizer state, optional scheduler state, Python/NumPy/PyTorch RNGs,
 the active accelerator RNG, training mode, sampling position and update count.
@@ -149,7 +149,7 @@ original in-memory moments and observed accelerator gradients.
 
 ## Bounded local check
 
-[`run_smoke()`](../../src/pulsefield_model/research/source_action_modeling/smoke.py)
+[`run_smoke()`](../../src/ensomi_model/research/source_action_modeling/smoke.py)
 is a Python API for software verification. It is not a research-training CLI.
 It requires existing local assets from annotation dataset revision
 `b22a7a443783e05fee4db4b1d22b8e573ad448ae` and split SHA-256
@@ -180,7 +180,7 @@ Run from the repository root on Apple Silicon:
 uv run --offline --extra mps --group dev python - <<'PY'
 from datetime import datetime, timezone
 from pathlib import Path
-from pulsefield_model.research.source_action_modeling.smoke import run_smoke
+from ensomi_model.research.source_action_modeling.smoke import run_smoke
 
 run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
 root = Path('artifacts/scoped-style-modeling')

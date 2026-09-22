@@ -24,7 +24,7 @@ Useful discovery sources include:
 - `InternScience/ResearchClawBench` for checklist-based evaluation;
 - `SakanaAI/AI-Scientist` as an example of broad automated research loops.
 
-Treat each project as an analogy, not authority for Pulsefield architecture.
+Treat each project as an analogy, not authority for Ensomi architecture.
 
 ## Branch quality
 

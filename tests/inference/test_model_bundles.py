@@ -6,8 +6,8 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from types import SimpleNamespace
 
-from pulsefield_model.inference.mapper_protocol import resolve_mapper_profile
-from pulsefield_model.inference.model_bundles import (
+from ensomi_model.inference.mapper_protocol import resolve_mapper_profile
+from ensomi_model.inference.model_bundles import (
     DEFAULT_MAPPER_MODEL_ID,
     DEFAULT_TIMING_MOCK_MODEL_ID,
     MapperV21SparseBundle,
@@ -15,11 +15,11 @@ from pulsefield_model.inference.model_bundles import (
     MapperV2TupleBundle,
     MapperV2TupleStreamWithCache,
 )
-from pulsefield_model.inference.routed_backend import RoutedInferenceBackend
-from pulsefield_model.inference.stream_with_cache import DecoderWindow, HitObjectToken
-from pulsefield_model.inference.ws_endpoint import InferenceEndpoint, WsEndpointConfig
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2_1 import MapperV21Vocab
+from ensomi_model.inference.routed_backend import RoutedInferenceBackend
+from ensomi_model.inference.stream_with_cache import DecoderWindow, HitObjectToken
+from ensomi_model.inference.ws_endpoint import InferenceEndpoint, WsEndpointConfig
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.v2_1 import MapperV21Vocab
 
 
 class ModelBundleLifecycleTests(unittest.IsolatedAsyncioTestCase):

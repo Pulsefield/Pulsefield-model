@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm
-from pulsefield_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
-from pulsefield_model.research.bounded_typed_continuation.features import query_features
-from pulsefield_model.research.bounded_typed_continuation.generation import Rollout, model_digest
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
+from ensomi_model.research.bounded_typed_continuation.features import query_features
+from ensomi_model.research.bounded_typed_continuation.generation import Rollout, model_digest
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_data import chart
 
 
@@ -146,7 +146,7 @@ def test_long_memory_cannot_silently_fall_back_to_a_local_training_crop():
 
 
 def test_full_prefix_memory_microbatch_gradients_match_padded_batch():
-    from pulsefield_model.research.bounded_typed_continuation.train_run import measure
+    from ensomi_model.research.bounded_typed_continuation.train_run import measure
     model=memory_model().double()
     source=chart([(1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1)]*15)
     intervals=[SourceInterval(source,8,3),SourceInterval(source,40,5)]

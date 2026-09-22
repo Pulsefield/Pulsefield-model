@@ -3,13 +3,13 @@ from dataclasses import replace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import Interval, NoteRef
-from pulsefield_model.research.scoped_style_modeling.replay import prepare_chart
-from pulsefield_model.research.source_action_modeling.model import initialize_comparison
-from pulsefield_model.research.source_action_modeling.observation import observe_complete
-from pulsefield_model.research.source_action_modeling.representation import LEVELS, LOCAL_RADII, RepresentationBank, support_report
-from pulsefield_model.research.source_action_modeling.semantic_probe import initialize_readout
-from pulsefield_model.research.source_action_modeling.tensors import collate, collate_observations
+from ensomi_model.research.scoped_style_modeling.dataset import Interval, NoteRef
+from ensomi_model.research.scoped_style_modeling.replay import prepare_chart
+from ensomi_model.research.source_action_modeling.model import initialize_comparison
+from ensomi_model.research.source_action_modeling.observation import observe_complete
+from ensomi_model.research.source_action_modeling.representation import LEVELS, LOCAL_RADII, RepresentationBank, support_report
+from ensomi_model.research.source_action_modeling.semantic_probe import initialize_readout
+from ensomi_model.research.source_action_modeling.tensors import collate, collate_observations
 from .conftest import example, fixture_chart
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])

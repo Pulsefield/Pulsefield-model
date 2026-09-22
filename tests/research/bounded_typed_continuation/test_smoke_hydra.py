@@ -7,13 +7,13 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm
-from pulsefield_model.research.bounded_typed_continuation.data import SourceChart
-from pulsefield_model.research.bounded_typed_continuation.smoke_hydra import compose_config
-from pulsefield_model.research.bounded_typed_continuation import smoke_run
-from pulsefield_model.research.oracle_time_continuation.data import SourceIdentity
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE, SOURCE_FORMAT, file_digest
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, canonical_json
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.data import SourceChart
+from ensomi_model.research.bounded_typed_continuation.smoke_hydra import compose_config
+from ensomi_model.research.bounded_typed_continuation import smoke_run
+from ensomi_model.research.oracle_time_continuation.data import SourceIdentity
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE, SOURCE_FORMAT, file_digest
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, canonical_json
 
 
 def test_packaged_composition_arm_selection_and_complete_projection():
@@ -28,7 +28,7 @@ def test_packaged_composition_arm_selection_and_complete_projection():
     assert config.model.row_consequence == 'actions'
     assert config.model.seed_context == 'observed'
     assert (config.model.long_memory, config.model.memory_hidden, config.model.memory_stride) == ('landmarks', 64, 16)
-    assert files('pulsefield_model.configs.hydra').joinpath('bounded_typed_smoke.yaml').is_file()
+    assert files('ensomi_model.configs.hydra').joinpath('bounded_typed_smoke.yaml').is_file()
     for overrides in (['+unused=1'], ['+model.unused=1'], ['+resources.unused=1'], ['learning_rate=0'],
                       ['candidate_budget=0'], ['model.levels=9'], ['batch_size=5']):
         with pytest.raises((ContractError, ValueError)):

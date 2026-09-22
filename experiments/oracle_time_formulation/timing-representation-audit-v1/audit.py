@@ -11,9 +11,9 @@ import numpy as np
 ROOT = Path('artifacts/oracle-time-continuation/m3-20260917')
 sys.path.insert(0, str(ROOT / 'clock-readout-v1'))
 from common import RUNTIME_SHA, save, verify_runtime
-from pulsefield_model.research.oracle_time_continuation.corpus import admit_entry, catalog_entries, read_split
-from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE, SourceStore, file_digest
+from ensomi_model.research.oracle_time_continuation.corpus import admit_entry, catalog_entries, read_split
+from ensomi_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE, SourceStore, file_digest
 
 OUT = Path(__file__).parent / 'results'
 RANK_EDGES = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]

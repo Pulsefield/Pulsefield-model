@@ -5,22 +5,22 @@ from pathlib import Path
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.decoding import DecodeSamplingPolicy, policy_probabilities, sample_row
-from pulsefield_model.research.oracle_time_continuation.export import verify_rows
-from pulsefield_model.research.oracle_time_continuation.generation import Rollout
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, JointRowDistribution, WEIGHTS_FORMAT
-from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceLimit, atomic_checkpoint, validate_envelope
-from pulsefield_model.research.oracle_time_continuation.storage import SourceCacheConfig, SourceStore
-from pulsefield_model.research.oracle_time_continuation.train_hydra import compose_config
-from pulsefield_model.research.oracle_time_continuation.train_run import run_training
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, digest
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.decoding import DecodeSamplingPolicy, policy_probabilities, sample_row
+from ensomi_model.research.oracle_time_continuation.export import verify_rows
+from ensomi_model.research.oracle_time_continuation.generation import Rollout
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone, JointRowDistribution, WEIGHTS_FORMAT
+from ensomi_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceLimit, atomic_checkpoint, validate_envelope
+from ensomi_model.research.oracle_time_continuation.storage import SourceCacheConfig, SourceStore
+from ensomi_model.research.oracle_time_continuation.train_hydra import compose_config
+from ensomi_model.research.oracle_time_continuation.train_run import run_training
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, digest
 from .conftest import admit, source_bytes
 from .test_train_hydra import write_inputs
 
 
 def test_playback_header_preserves_timing_but_replaces_difficulty_identity(tmp_path):
-    from pulsefield_model.research.oracle_time_continuation.export import presentation_header
+    from ensomi_model.research.oracle_time_continuation.export import presentation_header
     path = tmp_path / 'source.osu'
     path.write_text('osu file format v14\n[General]\nAudioFilename: song.mp3\nMode:3\n'
                     '[Metadata]\nTitle:Example\nVersion:Hard\nBeatmapID:42\nBeatmapSetID:77\n'
@@ -42,7 +42,7 @@ def model(**kwargs):
 
 
 def test_export_database_cap_stops_insertion_and_keeps_previous_publication(tmp_path, monkeypatch):
-    from pulsefield_model.research.oracle_time_continuation import export
+    from ensomi_model.research.oracle_time_continuation import export
     import sqlite3
 
     rows, destination = tmp_path / 'rows.jsonl', tmp_path / 'generated.osu'
@@ -67,7 +67,7 @@ def test_export_database_cap_stops_insertion_and_keeps_previous_publication(tmp_
 
 
 def test_export_header_budget_is_checked_before_writing_any_oversized_output(tmp_path):
-    from pulsefield_model.research.oracle_time_continuation.export import export_osu
+    from ensomi_model.research.oracle_time_continuation.export import export_osu
 
     rows, destination = tmp_path / 'rows.jsonl', tmp_path / 'generated.osu'
     rows.write_text(json.dumps(dict(event_id=0, time_ms=0, actions=[1, 0, 0, 0])) + '\n')
@@ -79,7 +79,7 @@ def test_export_header_budget_is_checked_before_writing_any_oversized_output(tmp
 
 
 def test_export_streams_start_order_without_an_additional_disk_sort(tmp_path, monkeypatch):
-    from pulsefield_model.research.oracle_time_continuation import export
+    from ensomi_model.research.oracle_time_continuation import export
     import sqlite3
 
     rows, destination = tmp_path / 'rows.jsonl', tmp_path / 'generated.osu'
@@ -103,7 +103,7 @@ def test_export_streams_start_order_without_an_additional_disk_sort(tmp_path, mo
 
 def test_resource_journal_limits_apply_before_the_complete_record(tmp_path, monkeypatch):
     from types import SimpleNamespace
-    from pulsefield_model.research.oracle_time_continuation import runtime
+    from ensomi_model.research.oracle_time_continuation import runtime
 
     path = tmp_path / 'resources.jsonl'
     path.write_text('previous\n')
@@ -121,8 +121,8 @@ def test_resource_journal_limits_apply_before_the_complete_record(tmp_path, monk
 @pytest.mark.skipif(not torch.backends.mps.is_available(), reason='MPS unavailable')
 def test_mps_checkpoint_reowns_online_carry_without_retained_attention_banks(tmp_path):
     import gc
-    from pulsefield_model.research.oracle_time_continuation.checkpoint import pack_state
-    from pulsefield_model.research.oracle_time_continuation.runtime import tensor_bytes
+    from ensomi_model.research.oracle_time_continuation.checkpoint import pack_state
+    from ensomi_model.research.oracle_time_continuation.runtime import tensor_bytes
 
     gc.collect()
     torch.mps.synchronize()
@@ -259,7 +259,7 @@ from dataclasses import replace
 from pathlib import Path
 import os, signal, sys
 import torch
-from pulsefield_model.research.oracle_time_continuation import runtime
+from ensomi_model.research.oracle_time_continuation import runtime
 write = runtime.LimitedWriter.write
 def interrupt(self, data):
     count = write(self, data)
@@ -285,7 +285,7 @@ runtime.atomic_checkpoint(Path(sys.argv[1]), {'value': torch.ones(40000)},
 
 
 def test_publication_lock_does_not_remove_an_active_writer_staging(tmp_path):
-    from pulsefield_model.research.oracle_time_continuation.publication import staging_directory
+    from ensomi_model.research.oracle_time_continuation.publication import staging_directory
 
     path = tmp_path / 'checkpoint.pt'
     with staging_directory(path) as first:
@@ -325,7 +325,7 @@ def test_rollout_seed_only_resume_output_alignment_and_osu_roundtrip(tmp_path, d
     assert report == expected
     assert (tmp_path / 'resumed/rows.jsonl').read_bytes() == (tmp_path / 'reference/rows.jsonl').read_bytes()
     output = (tmp_path / 'resumed/generated.osu').read_bytes()
-    from pulsefield_model.research.oracle_time_continuation.data import admit_source
+    from ensomi_model.research.oracle_time_continuation.data import admit_source
     recovered = admit_source(output, digest(output), group_id='generated', split='validation')
     rows = [json.loads(line) for line in (tmp_path / 'resumed/rows.jsonl').read_text().splitlines()]
     assert [r.actions for r in recovered.targets] == [tuple(r['actions']) for r in rows]
@@ -370,8 +370,8 @@ def test_training_resume_replays_draws_optimizer_and_weights(tmp_path, gap_proba
 
 
 def test_pinned_weight_initialization_starts_fresh_and_resume_owns_the_parameters(tmp_path, monkeypatch):
-    from pulsefield_model.research.oracle_time_continuation import train_run
-    from pulsefield_model.research.oracle_time_continuation.storage import file_digest
+    from ensomi_model.research.oracle_time_continuation import train_run
+    from ensomi_model.research.oracle_time_continuation.storage import file_digest
 
     sha, path, manifest = write_inputs(tmp_path)
     cfg = compose_config([f'source_dir={tmp_path / "sources"}', f'split_manifest={path}',
@@ -417,7 +417,7 @@ def test_pinned_weight_initialization_starts_fresh_and_resume_owns_the_parameter
 
 
 def test_periodic_training_checkpoint_replays_completed_unsaved_updates_and_warmup(tmp_path, monkeypatch):
-    from pulsefield_model.research.oracle_time_continuation import train_run
+    from ensomi_model.research.oracle_time_continuation import train_run
 
     sha, path, manifest = write_inputs(tmp_path)
     cfg = compose_config([f'source_dir={tmp_path / "sources"}', f'split_manifest={path}',
@@ -468,7 +468,7 @@ def test_reject_unvalidated_model_envelope():
 
 
 def test_training_rejects_insufficient_adamw_checkpoint_budget_before_first_update(tmp_path, monkeypatch):
-    from pulsefield_model.research.oracle_time_continuation import train_run
+    from ensomi_model.research.oracle_time_continuation import train_run
 
     sha, path, manifest = write_inputs(tmp_path)
     cfg = compose_config([f'source_dir={tmp_path / "sources"}', f'split_manifest={path}',
@@ -484,7 +484,7 @@ def test_training_rejects_insufficient_adamw_checkpoint_budget_before_first_upda
 
 
 def test_disk_stream_admission_matches_canonical_unsorted_crlf_source_and_rejects_conflicts(tmp_path):
-    from pulsefield_model.research.oracle_time_continuation.data import admit_source
+    from ensomi_model.research.oracle_time_continuation.data import admit_source
     objects = [(i % 4, i * 100, i * 100 + (50 if i % 3 == 0 else 0)) for i in range(60)]
     data = b'\xef\xbb\xbf' + source_bytes(list(reversed(objects))).replace(b'\n', b'\r\n')
     path = tmp_path / 'unsorted.osu'
@@ -502,8 +502,8 @@ def test_disk_stream_admission_matches_canonical_unsorted_crlf_source_and_reject
 
 
 def test_generation_hydra_and_full_cli_runner_consumption(tmp_path):
-    from pulsefield_model.research.oracle_time_continuation.generate_hydra import compose_config as generate_config
-    from pulsefield_model.research.oracle_time_continuation.generate_run import run_generation
+    from ensomi_model.research.oracle_time_continuation.generate_hydra import compose_config as generate_config
+    from ensomi_model.research.oracle_time_continuation.generate_run import run_generation
     large = generate_config(config_name='oracle_time_generate_mac_large')
     assert large.resources.checkpoint_max_bytes == 1024**3
     assert large.resources.driver_limit_bytes == 6 * 1024**3
@@ -533,10 +533,10 @@ def test_generation_hydra_and_full_cli_runner_consumption(tmp_path):
 
 
 def test_evaluation_scores_same_rows_as_reference_without_gradients(chord_source):
-    from pulsefield_model.research.oracle_time_continuation.evaluation import evaluate_windows
-    from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
-    from pulsefield_model.research.oracle_time_continuation.windows import WindowSampler
-    from pulsefield_model.research.oracle_time_continuation.model import row_index
+    from ensomi_model.research.oracle_time_continuation.evaluation import evaluate_windows
+    from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine
+    from ensomi_model.research.oracle_time_continuation.windows import WindowSampler
+    from ensomi_model.research.oracle_time_continuation.model import row_index
     window = WindowSampler((chord_source,)).window(chord_source.identity.source_sha256,
                                                  chord_source.minimum_seed().seed_row_count, 2)
     network = model()
@@ -553,7 +553,7 @@ def test_evaluation_scores_same_rows_as_reference_without_gradients(chord_source
 
 
 def test_time_encoding_preserves_missing_zero_order_and_controls_long_duration_scale():
-    from pulsefield_model.research.oracle_time_continuation.features import clock_features
+    from ensomi_model.research.oracle_time_continuation.features import clock_features
     values = clock_features([None, 0., 1., 1000., 100_000., 4_000_000., 1e9], torch.zeros(1))
     assert torch.isfinite(values).all()
     assert values[0].abs().sum() == 0 and values[1, -1] == 1
@@ -582,7 +582,7 @@ def test_bad_state_recovery_never_truncates_valid_output_tail(tmp_path):
 
 
 def test_guard_failure_preserves_durable_update_and_restarts_same_draw(tmp_path, monkeypatch):
-    from pulsefield_model.research.oracle_time_continuation import train_run
+    from ensomi_model.research.oracle_time_continuation import train_run
     sha, path, manifest = write_inputs(tmp_path)
     cfg = compose_config([f'source_dir={tmp_path / "sources"}', f'split_manifest={path}',
                           f'split_sha256={manifest["sha256"]}', f'source_sha256=[{sha}]',

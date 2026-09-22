@@ -7,11 +7,11 @@ if importlib.util.find_spec("torch") is None:
 
 import torch
 
-from pulsefield_model.data.control_demo_global_windows import (
+from ensomi_model.data.control_demo_global_windows import (
     CONTROL_DEMO_TARGET_FEATURE_NAMES,
     collate_control_demo_global_windows,
 )
-from pulsefield_model.features.control_v3_targets import CONFIDENCE_FEATURE_NAMES, MODEL_FEATURE_NAMES
+from ensomi_model.features.control_v3_targets import CONFIDENCE_FEATURE_NAMES, MODEL_FEATURE_NAMES
 
 
 class ControlDemoGlobalWindowTests(unittest.TestCase):

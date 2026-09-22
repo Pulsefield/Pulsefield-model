@@ -19,7 +19,7 @@ reconstruction experiment, not a complete V3 generation pipeline.
 
 ## Exact continuation and weight initialization
 
-[`checkpoint.py`](../../src/pulsefield_model/research/source_action_modeling/checkpoint.py)
+[`checkpoint.py`](../../src/ensomi_model/research/source_action_modeling/checkpoint.py)
 saves schema 4 with input contract `source-action-visibility-v3-four-actions`.
 `load_snapshot` restores a matching four-action model, optimizer, scheduler,
 sampler, RNG and optional semantic readout. It rejects six-action snapshots
@@ -85,7 +85,7 @@ Only the declared seeds are required. For seed 17, run from the repository root:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.source_action_modeling.experiment_hydra \
+  ensomi_model.research.source_action_modeling.experiment_hydra \
   'seeds=[17]' \
   warm_start_dir=/absolute/path/to/previous-run \
   output_dir=artifacts/source-action-composition/four-action-warm-start
@@ -120,9 +120,9 @@ loading, initialize the matching architecture and call the helper directly:
 
 ```python
 from pathlib import Path
-from pulsefield_model.research.source_action_modeling.checkpoint import warm_start_snapshot
-from pulsefield_model.research.source_action_modeling.composition import initialize_composition
-from pulsefield_model.research.source_action_modeling.experiment_hydra import compose_config
+from ensomi_model.research.source_action_modeling.checkpoint import warm_start_snapshot
+from ensomi_model.research.source_action_modeling.composition import initialize_composition
+from ensomi_model.research.source_action_modeling.experiment_hydra import compose_config
 
 config = compose_config()
 model = initialize_composition(config.model, seed=17)["interleaved"].to("mps")

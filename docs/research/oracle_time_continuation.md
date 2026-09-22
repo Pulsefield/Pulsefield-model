@@ -1,7 +1,7 @@
 # Oracle-time continuation: causal data, backbone and sequence training
 
 The `research/oracle_time_continuation` package implements M0–M3 of the
-[continuation plan](Pulsefield_oracle_time_causal_continuation_plan.md#9-里程碑与依赖):
+[continuation plan](Ensomi_oracle_time_causal_continuation_plan.md#9-里程碑与依赖):
 verified source rows, a time skeleton, the 30-note seed, exact pre/post-row state,
 complete-chart terminal legality, and a trainable causal backbone with bounded
 local, relation and temporal memory, window sampling and sequence training.
@@ -23,7 +23,7 @@ strict raw `.osu` parser supplies byte verification and four-action admission.
 | `PredictionInput` | Current time, terminal flag, immutable committed replay facts, and up to 16 unlabeled future time offsets |
 | `ExactReplayState` | First/last committed row, row/note counts, four open LN start times, lane attack/release clocks and completion status |
 
-[`admit_source()`](../../src/pulsefield_model/research/oracle_time_continuation/data.py)
+[`admit_source()`](../../src/ensomi_model/research/oracle_time_continuation/data.py)
 requires the expected source digest and the caller's existing song-group
 assignment. It preserves those identities and does not assign new splits.
 Every simultaneous action is merged into one complete row. Release-only rows
@@ -59,7 +59,7 @@ open LNs. They cannot begin before the minimum seed or leave an empty target.
 
 ## Query, commit and time
 
-[`ContinuationState.query()`](../../src/pulsefield_model/research/oracle_time_continuation/engine.py)
+[`ContinuationState.query()`](../../src/ensomi_model/research/oracle_time_continuation/engine.py)
 returns the pre-row prediction input without consuming a target or changing
 state. Repeated calls return equal inputs. A teacher-forcing caller must score
 this input before reading and committing the corresponding true row; a decode
@@ -143,7 +143,7 @@ output recovery belong to the later runtime stages.
 
 ## Learned backbone and state ownership
 
-[`CausalBackbone`](../../src/pulsefield_model/research/oracle_time_continuation/model.py)
+[`CausalBackbone`](../../src/ensomi_model/research/oracle_time_continuation/model.py)
 uses shared hand operators in canonical outer/inner coordinates. Each hand's
 features preserve both ordered roles and the other hand's ordered facts. The
 model receives only `PredictionInput` and learned history. The scheduler's
@@ -209,8 +209,8 @@ configuration validation alone does not establish a hardware resource envelope.
 The default model uses FP32.
 
 ```python
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, row_index
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone, row_index
 
 model = CausalBackbone()
 engine = ContinuationEngine(model)
@@ -280,7 +280,7 @@ full-model long-run memory or generation quality.
 
 ## Training-window population
 
-[`WindowSampler`](../../src/pulsefield_model/research/oracle_time_continuation/windows.py)
+[`WindowSampler`](../../src/ensomi_model/research/oracle_time_continuation/windows.py)
 uses `WindowSamplingPolicy`, independently of any future decode policy. It
 first filters sources by the existing split and complete-seed eligibility,
 then draws uniformly by song group, eligible chart, feasible context stratum,
@@ -332,7 +332,7 @@ individual draws before sorting, not position-specific order statistics.
 
 ## Sequence objective and updates
 
-[`sequence_cost()`](../../src/pulsefield_model/research/oracle_time_continuation/objective.py)
+[`sequence_cost()`](../../src/ensomi_model/research/oracle_time_continuation/objective.py)
 scores valid joint rows using the sum of their negative log probabilities,
 divided by `effective_batch_size * normalization_rows`. The reference scale
 defaults to 128 and remains fixed for an entire run; it is never a window,
@@ -349,7 +349,7 @@ unweighted code length, weighted loss and weighted logit-gradient L2 norm.
 The latter is computed analytically with respect to pre-softmax row logits,
 not model parameters; it does not measure learned long-range organization.
 
-[`SequenceTrainer`](../../src/pulsefield_model/research/oracle_time_continuation/training.py)
+[`SequenceTrainer`](../../src/ensomi_model/research/oracle_time_continuation/training.py)
 accepts exactly `effective_batch_size` train windows per update. Each microbatch
 replays prefixes from true BOS with the current model, under `no_grad` and
 without a prediction head or query stream. `reuse_prefixes=true` permits at most
@@ -372,10 +372,10 @@ one-based k; zero disables warmup. Recovery restores the completed-update count
 and therefore the same subsequent learning-rate sequence.
 
 ```python
-from pulsefield_model.research.oracle_time_continuation.objective import ObjectiveConfig
-from pulsefield_model.research.oracle_time_continuation.training import SequenceTrainer
-from pulsefield_model.research.oracle_time_continuation.training_config import TrainingConfig
-from pulsefield_model.research.oracle_time_continuation.windows import WindowSampler
+from ensomi_model.research.oracle_time_continuation.objective import ObjectiveConfig
+from ensomi_model.research.oracle_time_continuation.training import SequenceTrainer
+from ensomi_model.research.oracle_time_continuation.training_config import TrainingConfig
+from ensomi_model.research.oracle_time_continuation.windows import WindowSampler
 
 sampler = WindowSampler(sources)  # admitted sources with existing group/split identities
 trainer = SequenceTrainer(model, TrainingConfig(), ObjectiveConfig(lambda_struct=0.3))
@@ -385,14 +385,14 @@ report = trainer.update(sampler.draw_batch(trainer.config.effective_batch_size))
 ## Local training entrypoint
 
 The packaged preset
-[`oracle_time_train.yaml`](../../src/pulsefield_model/configs/hydra/oracle_time_train.yaml)
+[`oracle_time_train.yaml`](../../src/ensomi_model/configs/hydra/oracle_time_train.yaml)
 is the process configuration owner. The Hydra boundary rejects unknown fields
 and projects typed model, sampling, objective and training settings into the
 runner. Inspect defaults with:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.oracle_time_continuation.train_hydra --cfg job
+  ensomi_model.research.oracle_time_continuation.train_hydra --cfg job
 ```
 
 Training requires the pinned existing split-manifest digest and either an
@@ -405,7 +405,7 @@ choose a fresh output directory:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.oracle_time_continuation.train_hydra \
+  ensomi_model.research.oracle_time_continuation.train_hydra \
   split_sha256=15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a \
   'source_sha256=[000662977cf314075da22600d2fbabbf140edc15791a5fc5dc473f2f64a58923,0123b75a850ebf24136fffe0f975679aa4da8dc46db42e66799a1f494bafaf6e]' \
   output_dir=artifacts/oracle-time-continuation/m2-example \
@@ -438,7 +438,7 @@ and records their provenance; optimizer, RNGs and exposure counts start fresh.
 An exact resume instead owns its parameters and does not reload that source file.
 
 The 20M capacity preset
-[`oracle_time_train_mac.yaml`](../../src/pulsefield_model/configs/hydra/oracle_time_train_mac.yaml)
+[`oracle_time_train_mac.yaml`](../../src/ensomi_model/configs/hydra/oracle_time_train_mac.yaml)
 has 19,976,776 parameters: temporal width 512, six layers, eight attention heads,
 64-wide time bias, local/relation width 128, Q=64 and microbatch 1. It uses four
 CPU threads, effective batch 8, cohorts of four windows, same-update prefix reuse
@@ -470,7 +470,7 @@ For the existing catalog, a fresh run can use:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.oracle_time_continuation.train_hydra \
+  ensomi_model.research.oracle_time_continuation.train_hydra \
   --config-name oracle_time_train_mac \
   split_sha256=15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a \
   catalog_path=artifacts/oracle-time-review/20260915-adfb1ee/catalog.json \
@@ -502,7 +502,7 @@ resource cases. No test source is opened by this runner.
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.oracle_time_continuation.generate_hydra \
+  ensomi_model.research.oracle_time_continuation.generate_hydra \
   split_sha256=15175f45e91cf7299a9a30166731bf38ee7361399b346fb692cf68e76de5992a \
   source_sha256=02322a4a739eeb6d2d39dd59a1d667b019bdc23693d0c926ed75fe99d0412191 \
   weights=artifacts/oracle-time-continuation/m3-train/weights.pt \
@@ -641,7 +641,7 @@ and gradient disposal on failure. Entry tests cover typed configuration,
 unknown-key rejection, split provenance, runtime consumption, deterministic
 CPU updates, package resources and the runtime's Hydra import boundary.
 
-[`verify_source()`](../../src/pulsefield_model/research/oracle_time_continuation/verification.py)
+[`verify_source()`](../../src/ensomi_model/research/oracle_time_continuation/verification.py)
 checks every pre/post-state against an independent source-side oracle. The oracle
 uses bisection over raw attack/release times and LN intervals, including exact
 endpoint equality. It also compares selected full-prefix constructions with
@@ -654,8 +654,8 @@ For a locally available source from the existing pinned split:
 uv run --offline --group dev python - <<'PY'
 import json
 from pathlib import Path
-from pulsefield_model.research.oracle_time_continuation.verification import verify_source
-from pulsefield_model.research.scoped_style_modeling.dataset import canonical_json, digest
+from ensomi_model.research.oracle_time_continuation.verification import verify_source
+from ensomi_model.research.scoped_style_modeling.dataset import canonical_json, digest
 
 root = Path('artifacts/scoped-style-modeling')
 split = json.loads((root / 'prepare-v1/split-manifest.json').read_text())

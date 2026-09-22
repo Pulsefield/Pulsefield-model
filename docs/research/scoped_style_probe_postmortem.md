@@ -15,7 +15,7 @@ training exposure but has only one positive in the primary validation view.
 These observations narrow the next diagnostics; they do not establish a single
 root cause or justify rejecting the temporal and multiscale directions.
 
-This report concerns the scoped style research classifier, not a Pulsefield V3
+This report concerns the scoped style research classifier, not a Ensomi V3
 reference architecture. The [original seed 17 report](scoped_style_seed17_results_and_next_questions.md)
 describes the earlier evidence-supervision experiment; the
 [probe guide](scoped_style_probes.md) owns executable commands and model details.
@@ -432,11 +432,11 @@ between checkpoint-selection NLL and exported NLL are below $10^{-7}$ and do
 not affect the reported four-decimal comparisons.
 
 The owning implementations are the
-[target policy and sampler](../../src/pulsefield_model/research/scoped_style_modeling/probe_data.py),
-[model comparisons](../../src/pulsefield_model/research/scoped_style_modeling/probe_model.py),
-[runner and time accounting](../../src/pulsefield_model/research/scoped_style_modeling/probes.py),
-[assessment metrics](../../src/pulsefield_model/research/scoped_style_modeling/metrics.py),
-and [ranking and matched-input reports](../../src/pulsefield_model/research/scoped_style_modeling/probe_metrics.py).
+[target policy and sampler](../../src/ensomi_model/research/scoped_style_modeling/probe_data.py),
+[model comparisons](../../src/ensomi_model/research/scoped_style_modeling/probe_model.py),
+[runner and time accounting](../../src/ensomi_model/research/scoped_style_modeling/probes.py),
+[assessment metrics](../../src/ensomi_model/research/scoped_style_modeling/metrics.py),
+and [ranking and matched-input reports](../../src/ensomi_model/research/scoped_style_modeling/probe_metrics.py).
 The [probe tests](../../tests/research/scoped_style_modeling/test_probes.py)
 cover common initialization, target isolation, sampled-loss multiplicity,
 padding/mirror behavior, cache identities, metric ties, and the bounded runner.

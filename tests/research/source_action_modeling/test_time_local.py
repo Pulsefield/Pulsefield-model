@@ -4,20 +4,20 @@ from dataclasses import fields, replace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef
-from pulsefield_model.research.scoped_style_modeling.replay import prepare_chart
-from pulsefield_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
-from pulsefield_model.research.source_action_modeling.comparison import evaluate_structure
-from pulsefield_model.research.source_action_modeling.local_representation import (
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef
+from ensomi_model.research.scoped_style_modeling.replay import prepare_chart
+from ensomi_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
+from ensomi_model.research.source_action_modeling.comparison import evaluate_structure
+from ensomi_model.research.source_action_modeling.local_representation import (
     ConditionedLocalBlock, LocalRepresentationConfig, local_support_report, source_packet)
-from pulsefield_model.research.source_action_modeling.model import ModelConfig, initialize_comparison
-from pulsefield_model.research.source_action_modeling.observation import ObservedRow, observe_complete, paired_views
-from pulsefield_model.research.source_action_modeling.representation_experiments import (
+from ensomi_model.research.source_action_modeling.model import ModelConfig, initialize_comparison
+from ensomi_model.research.source_action_modeling.observation import ObservedRow, observe_complete, paired_views
+from ensomi_model.research.source_action_modeling.representation_experiments import (
     initialize_representation_comparison, representation_arms, train_representation_step)
-from pulsefield_model.research.source_action_modeling.sampling import PairedBlockSampler, TrainingContext
-from pulsefield_model.research.source_action_modeling.semantic_probe import initialize_readout
-from pulsefield_model.research.source_action_modeling.tensors import collate, collate_observations
-from pulsefield_model.research.source_action_modeling.time_basis import event_geometry, time_basis, time_basis_dim
+from ensomi_model.research.source_action_modeling.sampling import PairedBlockSampler, TrainingContext
+from ensomi_model.research.source_action_modeling.semantic_probe import initialize_readout
+from ensomi_model.research.source_action_modeling.tensors import collate, collate_observations
+from ensomi_model.research.source_action_modeling.time_basis import event_geometry, time_basis, time_basis_dim
 from .conftest import example, fixture_chart
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])

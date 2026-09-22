@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pulsefield_model.osu_core.hitobjects import ManiaHitObject, ManiaHitObjectKind, parse_mania_hit_objects
-from pulsefield_model.osu_core.metadata import parse_osu_metadata
+from ensomi_model.osu_core.hitobjects import ManiaHitObject, ManiaHitObjectKind, parse_mania_hit_objects
+from ensomi_model.osu_core.metadata import parse_osu_metadata
 
 
 def _write_osu(path: Path, hitobject_lines: list[str]) -> None:

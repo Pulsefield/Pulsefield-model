@@ -8,7 +8,7 @@ if importlib.util.find_spec("torch") is None:
 
 import torch
 
-from pulsefield_model.models.mapper.v2_1 import (
+from ensomi_model.models.mapper.v2_1 import (
     MapperTimepoint,
     MapperV21Config,
     MapperV21Model,
@@ -18,7 +18,7 @@ from pulsefield_model.models.mapper.v2_1 import (
     encode_mapper_window,
     ln_carry_state_tensors,
 )
-from pulsefield_model.models.mapper.v2_1.vocab import LaneAction
+from ensomi_model.models.mapper.v2_1.vocab import LaneAction
 
 
 def _actions(*actions: LaneAction) -> tuple[LaneAction, ...]:
@@ -144,7 +144,7 @@ class MapperV21ModelTests(unittest.TestCase):
             masked = model(batch)
             unmasked = model({**batch, "apply_grammar_mask": False})
             with patch(
-                "pulsefield_model.models.mapper.v2_1.model.build_grammar_mask",
+                "ensomi_model.models.mapper.v2_1.model.build_grammar_mask",
                 side_effect=AssertionError("build_grammar_mask should be skipped"),
             ):
                 skipped = model({**batch, "apply_grammar_mask": False})

@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from pulsefield_model.inference.stream_with_cache import DecoderWindow, StreamWithCache, StreamWithCacheConfig
-from pulsefield_model.inference.mapper_protocol import (
+from ensomi_model.inference.stream_with_cache import DecoderWindow, StreamWithCache, StreamWithCacheConfig
+from ensomi_model.inference.mapper_protocol import (
     DEFAULT_MAPPER_PROFILE_SPEC,
     MAPPER_PROFILE_SPECS,
     MapperProtocolContract,
@@ -17,10 +17,10 @@ from pulsefield_model.inference.mapper_protocol import (
     normalize_mapper_profile_name,
     resolve_mapper_profile,
 )
-from pulsefield_model.inference.protocol_adapter import PulsefieldProtocolAdapter
-from pulsefield_model.inference.service_models import HitObjectTokenEvent
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2_1 import MapperV21Vocab
+from ensomi_model.inference.protocol_adapter import EnsomiProtocolAdapter
+from ensomi_model.inference.service_models import HitObjectTokenEvent
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.v2_1 import MapperV21Vocab
 
 
 def test_mapper_profile_specs_are_the_metadata_source_of_truth() -> None:
@@ -121,7 +121,7 @@ def test_stream_with_cache_uses_sparse_profile_translator_for_generated_windows(
 
 
 def test_protocol_adapter_uses_configured_mapper_contract_for_stream_begin() -> None:
-    adapter = PulsefieldProtocolAdapter(
+    adapter = EnsomiProtocolAdapter(
         mapper_contract=MapperProtocolContract(token_contract_version=7),
     )
 

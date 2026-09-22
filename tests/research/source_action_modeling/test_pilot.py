@@ -3,15 +3,15 @@ from dataclasses import replace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, NoteRef
-from pulsefield_model.research.scoped_style_modeling.replay import SourceChart
-from pulsefield_model.research.source_action_modeling.local_corpus import grouping, source_windows
-from pulsefield_model.research.source_action_modeling.pilot import fixed_validation, _fine_contributions, export_allocation
-from pulsefield_model.research.source_action_modeling.observation import ViewPolicy
-from pulsefield_model.research.source_action_modeling.model import initialize_comparison
-from pulsefield_model.research.source_action_modeling.diagnostics import capture_response, finish_response
-from pulsefield_model.research.source_action_modeling.semantic_probe import SemanticCorpus, fit_readout
-from pulsefield_model.research.source_action_modeling.tensors import collate
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, NoteRef
+from ensomi_model.research.scoped_style_modeling.replay import SourceChart
+from ensomi_model.research.source_action_modeling.local_corpus import grouping, source_windows
+from ensomi_model.research.source_action_modeling.pilot import fixed_validation, _fine_contributions, export_allocation
+from ensomi_model.research.source_action_modeling.observation import ViewPolicy
+from ensomi_model.research.source_action_modeling.model import initialize_comparison
+from ensomi_model.research.source_action_modeling.diagnostics import capture_response, finish_response
+from ensomi_model.research.source_action_modeling.semantic_probe import SemanticCorpus, fit_readout
+from ensomi_model.research.source_action_modeling.tensors import collate
 from .conftest import example
 from .test_semantic_probe import corpus_fixture
 
@@ -76,7 +76,7 @@ def test_probe_progress_can_stop_at_an_update_and_restores_encoder_mode():
 def test_parquet_allocation_preserves_window_identity_and_file_hashes(tmp_path):
     import json
     import pyarrow.parquet as pq
-    from pulsefield_model.research.scoped_style_modeling.dataset import digest
+    from ensomi_model.research.scoped_style_modeling.dataset import digest
     item = {"input_id": "input", "group_id": "group", "source_sha256": "source", "chart_key": "chart",
             "chart_sha256": "chart-bytes", "scope": {"start_ms": 10., "end_ms": 100.},
             "context": {"start_ms": 0., "end_ms": 120.}, "event_count": 8}

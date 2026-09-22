@@ -5,7 +5,7 @@ import math
 import numpy as np
 import pytest
 
-from pulsefield_model.evals.mir_anchor_data import (
+from ensomi_model.evals.mir_anchor_data import (
     build_anchor_episodes,
     build_candidate_chart_features,
     build_episode_histories,
@@ -15,7 +15,7 @@ from pulsefield_model.evals.mir_anchor_data import (
     triangular_support_choice_nll,
     triangular_support_weights,
 )
-from pulsefield_model.osu_core.hitobjects import ManiaHitObject, ManiaHitObjectKind
+from ensomi_model.osu_core.hitobjects import ManiaHitObject, ManiaHitObjectKind
 
 
 def test_collapse_hit_objects_uses_exact_onsets_and_preserves_chords() -> None:

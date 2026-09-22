@@ -18,15 +18,15 @@ import numpy as np
 import pyarrow.parquet as pq
 from omegaconf import OmegaConf
 
-from pulsefield_model.osu_core.difficulty import compute_mania_star_rating_20241007, parse_osu_file
-from pulsefield_model.research.bounded_typed_continuation.condition import write_source_condition
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm
-from pulsefield_model.research.bounded_typed_continuation.corpus import SamplingConfig, create_plan, read_plan
-from pulsefield_model.research.oracle_time_continuation.corpus import catalog_entries, read_split
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE, file_digest
-from pulsefield_model.research.vacation_training.audio_inputs import prepare_audio_inputs
-from pulsefield_model.research.vacation_training.control import publish_json
-from pulsefield_model.research.vacation_training.teacher import validate_evaluation
+from ensomi_model.osu_core.difficulty import compute_mania_star_rating_20241007, parse_osu_file
+from ensomi_model.research.bounded_typed_continuation.condition import write_source_condition
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.corpus import SamplingConfig, create_plan, read_plan
+from ensomi_model.research.oracle_time_continuation.corpus import catalog_entries, read_split
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE, file_digest
+from ensomi_model.research.vacation_training.audio_inputs import prepare_audio_inputs
+from ensomi_model.research.vacation_training.control import publish_json
+from ensomi_model.research.vacation_training.teacher import validate_evaluation
 
 REPO = Path(__file__).resolve().parents[2]
 CATALOG = REPO / 'artifacts/oracle-time-review/20260915-adfb1ee/catalog.json'
@@ -143,7 +143,7 @@ def main(root):
     publish_json(inputs / 'evaluation-selection.json', dict(seed=SELECTION_SEED, selected=selected,
         index_file=str(INDEX), index_sha256=file_digest(INDEX), candidate_proxy='index difficulty within band +/-0.5',
         rating='mania 20241007, native 4K, rate 1, original source object order',
-        calculator_sha256=file_digest(REPO / 'src/pulsefield_model/osu_core/difficulty.py'),
+        calculator_sha256=file_digest(REPO / 'src/ensomi_model/osu_core/difficulty.py'),
         scope='Fixed monitoring; historical validation reuse is not excluded; LN amount is not a semantic judgment'))
     audio = prepare_audio_inputs(plan_file=plan_receipt['path'], plan_sha256=plan_receipt['sha256'],
         catalog_file=inputs / 'catalog.json', catalog_sha256=CATALOG_SHA, catalog_root=REPO,

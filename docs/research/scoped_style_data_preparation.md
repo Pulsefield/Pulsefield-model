@@ -1,6 +1,6 @@
 # Scoped style data preparation
 
-The isolated package `pulsefield_model.research.scoped_style_modeling` implements
+The isolated package `ensomi_model.research.scoped_style_modeling` implements
 the dataset adapter, source recovery/replay, relation preparation, and fixed
 source-group split for [Evidence-supervised scoped style modeling](scoped_style_witness_generation.md).
 The [model and paired trainer](scoped_style_training.md) consume these artifacts.
@@ -13,13 +13,13 @@ Run from the repository root with a fresh output directory. Data preparation
 uses CPU dependencies and does not import Torch or the legacy model stack.
 
 ```bash
-uv run python -m pulsefield_model.research.scoped_style_modeling.prepare_hydra \
+uv run python -m ensomi_model.research.scoped_style_modeling.prepare_hydra \
   download=true \
   output_dir=artifacts/scoped-style-modeling/prepare-new
 ```
 
 The packaged Hydra preset is
-`src/pulsefield_model/configs/hydra/scoped_style_prepare.yaml`; the accepted
+`src/ensomi_model/configs/hydra/scoped_style_prepare.yaml`; the accepted
 configuration is `PrepareConfig` in the research package. `--help` lists paths,
 network access, recovery concurrency, and request timeout. `download=false`
 checks the existing cache without network requests. Unknown configuration keys
@@ -62,7 +62,7 @@ Load a chart with its cohort hash:
 
 ```python
 from pathlib import Path
-from pulsefield_model.research.scoped_style_modeling.prepare import load_chart
+from ensomi_model.research.scoped_style_modeling.prepare import load_chart
 
 chart, edges = load_chart(
     Path(output_dir) / "contexts" / f"{cell['chart_key']}.json.gz",

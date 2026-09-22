@@ -1,6 +1,6 @@
 # Query-conditioned relation matching
 
-The [candidate](../../src/pulsefield_model/research/source_action_modeling/relation_matching.py)
+The [candidate](../../src/ensomi_model/research/source_action_modeling/relation_matching.py)
 compares two RelationAttention score rules at one fixed backbone schedule. It
 tests whether query-dependent relation preference improves held-out source-action
 prediction. It uses the four-action schema and the existing
@@ -137,7 +137,7 @@ and CPU baseline recovery are checked exactly.
 
 ## Bounded exploratory pilot
 
-The [packaged preset](../../src/pulsefield_model/configs/hydra/source_action_relation_matching.yaml)
+The [packaged preset](../../src/ensomi_model/configs/hydra/source_action_relation_matching.yaml)
 fixes one seed, 17, and 300 paired updates from fresh initialization. Both arms
 receive each of the same eight sampled blocks per update in all three views:
 2,400 block draws and 7,200 block/view exposures per arm. The full eligible
@@ -175,7 +175,7 @@ Run once into a fresh destination:
 
 ```sh
 uv run --offline --extra mps python -m \
-  pulsefield_model.research.source_action_modeling.experiment_hydra \
+  ensomi_model.research.source_action_modeling.experiment_hydra \
   --config-name source_action_relation_matching
 ```
 

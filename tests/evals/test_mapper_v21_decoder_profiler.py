@@ -10,7 +10,7 @@ import pytest
 if importlib.util.find_spec("torch") is None:
     pytest.skip("mapper v2.1 decoder profiler tests require torch", allow_module_level=True)
 
-from pulsefield_model.evals.mapper_v21_decoder_profiler import (
+from ensomi_model.evals.mapper_v21_decoder_profiler import (
     ProfileRunConfig,
     run_constraint_sampling_split,
     run_decode_policy_sweep,

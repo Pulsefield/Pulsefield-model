@@ -4,8 +4,8 @@ import math
 
 import pytest
 
-from pulsefield_model.research.oracle_time_continuation.windows import WindowSampler, WindowSamplingPolicy
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.oracle_time_continuation.windows import WindowSampler, WindowSamplingPolicy
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .conftest import admit
 
 

@@ -8,9 +8,9 @@ import sys
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation import train_run
-from pulsefield_model.research.oracle_time_continuation.train_hydra import compose_config
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, canonical_json, digest
+from ensomi_model.research.oracle_time_continuation import train_run
+from ensomi_model.research.oracle_time_continuation.train_hydra import compose_config
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, canonical_json, digest
 from .conftest import source_bytes
 
 
@@ -28,7 +28,7 @@ def write_inputs(tmp_path):
 
 
 def test_packaged_defaults_typed_overrides_and_unknown_key_rejection():
-    assert files("pulsefield_model.configs.hydra").joinpath("oracle_time_train.yaml").is_file()
+    assert files("ensomi_model.configs.hydra").joinpath("oracle_time_train.yaml").is_file()
     config = compose_config()
     assert config.training.chunk_rows == config.model.max_chunk == 128
     assert config.windows.horizons_s == (1., 4., 16.)
@@ -171,7 +171,7 @@ def test_split_digest_and_heldout_assignment_are_checked_before_source_payloads(
 
 
 def test_cli_inspection_and_legacy_flags_and_runtime_import_boundary():
-    entry = [sys.executable, "-m", "pulsefield_model.research.oracle_time_continuation.train_hydra"]
+    entry = [sys.executable, "-m", "ensomi_model.research.oracle_time_continuation.train_hydra"]
     inspection = subprocess.run(entry + ["--cfg", "job"], capture_output=True, text=True, check=True)
     assert "normalization_rows: 128.0" in inspection.stdout
     for arguments in (["--learning-rate", "0.1"], ["--config-name"]):
@@ -179,10 +179,10 @@ def test_cli_inspection_and_legacy_flags_and_runtime_import_boundary():
         assert result.returncode != 0 and "error" in result.stderr
     code = """
 import sys
-from pulsefield_model.research.oracle_time_continuation.training import SequenceTrainer
+from ensomi_model.research.oracle_time_continuation.training import SequenceTrainer
 assert 'hydra' not in sys.modules
 assert 'omegaconf' not in sys.modules
-assert not any(name.startswith(('pulsefield_model.models', 'pulsefield_model.training', 'pulsefield_model.inference'))
+assert not any(name.startswith(('ensomi_model.models', 'ensomi_model.training', 'ensomi_model.inference'))
                for name in sys.modules)
 """
     subprocess.run([sys.executable, "-c", code], check=True)

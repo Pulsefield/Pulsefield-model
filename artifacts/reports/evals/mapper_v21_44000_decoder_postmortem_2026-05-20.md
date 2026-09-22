@@ -37,10 +37,10 @@ Runtime detected the mapper checkpoint as v2.1 and loaded `MapperV21Model` with 
 
 The experiments depended on a new sparse v2.1 rollout path:
 
-- `src/pulsefield_model/inference/mapper_v2_1_rollout.py`
-- `src/pulsefield_model/evals/mapper_v21_decoder_profiler.py`
-- `src/pulsefield_model/evals/mapper_render_reamber.py`
-- `src/pulsefield_model/inference/model_runtime.py`
+- `src/ensomi_model/inference/mapper_v2_1_rollout.py`
+- `src/ensomi_model/evals/mapper_v21_decoder_profiler.py`
+- `src/ensomi_model/evals/mapper_render_reamber.py`
+- `src/ensomi_model/inference/model_runtime.py`
 
 The current rollout path is true v2.1 sparse-token generation/export, but it is not incremental decode. Each autoregressive token step still rebuilds and forwards a full prefix.
 

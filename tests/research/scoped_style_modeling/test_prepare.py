@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from pulsefield_model.research.scoped_style_modeling import prepare
-from pulsefield_model.research.scoped_style_modeling.dataset import FOUNDATION, digest
-from pulsefield_model.research.scoped_style_modeling.prepare import PrepareConfig, load_chart, run_preparation
+from ensomi_model.research.scoped_style_modeling import prepare
+from ensomi_model.research.scoped_style_modeling.dataset import FOUNDATION, digest
+from ensomi_model.research.scoped_style_modeling.prepare import PrepareConfig, load_chart, run_preparation
 
 
 def synthetic_snapshot(tmp_path, monkeypatch):

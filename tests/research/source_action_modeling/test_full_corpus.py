@@ -5,14 +5,14 @@ import pyarrow.parquet as pq
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, digest
-from pulsefield_model.research.scoped_style_modeling.replay import parse_source
-from pulsefield_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
-from pulsefield_model.research.source_action_modeling.comparison import train_paired_step
-from pulsefield_model.research.source_action_modeling.composition import ORDERS, initialize_composition
-from pulsefield_model.research.source_action_modeling.full_corpus import (FullCorpusSampler, SourceCatalog,
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, digest
+from ensomi_model.research.scoped_style_modeling.replay import parse_source
+from ensomi_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
+from ensomi_model.research.source_action_modeling.comparison import train_paired_step
+from ensomi_model.research.source_action_modeling.composition import ORDERS, initialize_composition
+from ensomi_model.research.source_action_modeling.full_corpus import (FullCorpusSampler, SourceCatalog,
     SAMPLING_POLICY, build_catalog, validation_contexts)
-from pulsefield_model.research.source_action_modeling.observation import EventBlock, declared_entering_occupancy, observe
+from ensomi_model.research.source_action_modeling.observation import EventBlock, declared_entering_occupancy, observe
 
 
 def source_bytes(title, beatmap, set_id, *, count=80, gap=100, hold=False):

@@ -4,13 +4,13 @@ import math
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
-from pulsefield_model.research.source_action_modeling.consistency import (
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.source_action_modeling.consistency import (
     PrefixPathPair, evaluate_path_consistency, joint_distribution_metrics, prefix_path_pair,
 )
-from pulsefield_model.research.source_action_modeling.model import initialize_comparison, initialize_model
-from pulsefield_model.research.source_action_modeling.observation import ViewPolicy, advance_occupancy, paired_views, visible_states
-from pulsefield_model.research.source_action_modeling.tensors import collate
+from ensomi_model.research.source_action_modeling.model import initialize_comparison, initialize_model
+from ensomi_model.research.source_action_modeling.observation import ViewPolicy, advance_occupancy, paired_views, visible_states
+from ensomi_model.research.source_action_modeling.tensors import collate
 from .conftest import example
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])

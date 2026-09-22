@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ensomi Find Simplifications"
+  short_description: "Find evidence-backed deletions and folds."
+  default_prompt: "Use $ensomi-find-simplifications to survey this Ensomi scope and return a few well-proven simplification candidates."

@@ -5,13 +5,13 @@ import json
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation import train_run
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm
-from pulsefield_model.research.bounded_typed_continuation.corpus import SamplingConfig, draw_plan
-from pulsefield_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
-from pulsefield_model.research.bounded_typed_continuation.evaluation import suffix_likelihood
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation import train_run
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.corpus import SamplingConfig, draw_plan
+from ensomi_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
+from ensomi_model.research.bounded_typed_continuation.evaluation import suffix_likelihood
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_data import mixed_chart
 from .test_train import compare_states, config_fixture
 

@@ -4,14 +4,14 @@ import json
 import pytest
 import torch
 
-from pulsefield_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
-from pulsefield_model.research.source_action_modeling.composition import initialize_composition, ORDERS
-from pulsefield_model.research.source_action_modeling.comparison import train_paired_step
-from pulsefield_model.research.source_action_modeling.experiment_hydra import compose_config
-from pulsefield_model.research.source_action_modeling.representation_experiments import initialize_representation_comparison, representation_arms
-from pulsefield_model.research.source_action_modeling.sampling import TrainingContext, PairedBlockSampler
-from pulsefield_model.research.source_action_modeling.structural_probe import structural_cases, evaluate_structural_reuse
-from pulsefield_model.research.source_action_modeling.tensors import collate
+from ensomi_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
+from ensomi_model.research.source_action_modeling.composition import initialize_composition, ORDERS
+from ensomi_model.research.source_action_modeling.comparison import train_paired_step
+from ensomi_model.research.source_action_modeling.experiment_hydra import compose_config
+from ensomi_model.research.source_action_modeling.representation_experiments import initialize_representation_comparison, representation_arms
+from ensomi_model.research.source_action_modeling.sampling import TrainingContext, PairedBlockSampler
+from ensomi_model.research.source_action_modeling.structural_probe import structural_cases, evaluate_structural_reuse
+from ensomi_model.research.source_action_modeling.tensors import collate
 from .conftest import example, fixture_chart
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else [])
@@ -77,7 +77,7 @@ def test_paired_order_snapshots_continue_exactly(tmp_path):
 
 
 def test_packaged_config_projects_and_rejects_ineffective_or_unknown_fields():
-    assert files("pulsefield_model.configs.hydra").joinpath("source_action_composition.yaml").is_file()
+    assert files("ensomi_model.configs.hydra").joinpath("source_action_composition.yaml").is_file()
     config = compose_config()
     assert config.seeds == [17, 29] and config.model.decoder_hidden == 64
     assert config.max_seconds == 39600 and config.model.hand_hidden == 32
@@ -115,7 +115,7 @@ def test_factorial_holdout_preserves_histograms_and_does_not_invent_semantics():
 
 @pytest.mark.parametrize("failure", [FileNotFoundError, KeyboardInterrupt])
 def test_runner_records_failure_and_rejects_output_collision(tmp_path, monkeypatch, failure):
-    from pulsefield_model.research.source_action_modeling import experiment
+    from ensomi_model.research.source_action_modeling import experiment
     config = compose_config(["device=cpu", f"output_dir={tmp_path / 'run'}"])
     def missing_population(*args, **kwargs):
         raise failure("Population interrupted")

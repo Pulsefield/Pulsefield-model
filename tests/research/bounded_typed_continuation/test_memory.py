@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from pulsefield_model.research.bounded_typed_continuation import memory
+from ensomi_model.research.bounded_typed_continuation import memory
 
 
 @pytest.mark.skipif(platform.system() != 'Darwin', reason='Darwin task-info ABI')

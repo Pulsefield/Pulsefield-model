@@ -14,7 +14,7 @@ parameters remain a capacity confound in any empirical comparison.
 
 ## Time coordinates
 
-[`time_basis.py`](../../src/pulsefield_model/research/source_action_modeling/time_basis.py)
+[`time_basis.py`](../../src/ensomi_model/research/source_action_modeling/time_basis.py)
 uses the supplied source-event skeleton, including hidden and release-only
 events. Synthetic boundaries do not define an event gap. It retains physical
 seconds and a compressed scalar coordinate:
@@ -63,7 +63,7 @@ are not assumed to supply musical phase when their input is elapsed time.
 
 ## Source packet and state conditions
 
-[`local_representation.py`](../../src/pulsefield_model/research/source_action_modeling/local_representation.py)
+[`local_representation.py`](../../src/ensomi_model/research/source_action_modeling/local_representation.py)
 forms a `SourcePacket` with distinct components:
 
 | Component | Contents | Dependency |
@@ -147,7 +147,7 @@ remains governed by the existing graph and full-context mixer.
 
 ## Controlled comparisons
 
-[`representation_experiments.py`](../../src/pulsefield_model/research/source_action_modeling/representation_experiments.py)
+[`representation_experiments.py`](../../src/ensomi_model/research/source_action_modeling/representation_experiments.py)
 provides independent configuration switches and named controls. These names are
 experiment configurations, not a new definition of the earlier implementation
 stages.
@@ -205,7 +205,7 @@ four-arm computation square if the coordinate change warrants further study:
 
 ```python
 import torch
-from pulsefield_model.research.source_action_modeling.representation_experiments import (
+from ensomi_model.research.source_action_modeling.representation_experiments import (
     initialize_representation_comparison, representation_arms, train_representation_step,
 )
 

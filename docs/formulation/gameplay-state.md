@@ -1,6 +1,6 @@
 # Gameplay demand, continuation responses, and style
 
-Pulsefield describes gameplay demand through the responses that a chart history
+Ensomi describes gameplay demand through the responses that a chart history
 creates for possible future actions. The gameplay frontier collects those
 responses. A demand state $d$ is a proposed representation of that object.
 
@@ -189,7 +189,7 @@ over a declared scope. Concepts can overlap and correlate. A section may express
 several strongly, express one weakly, or have no salient concept in the selected
 vocabulary. The vocabulary need not exhaust all chart organization.
 
-The initial section annotation vocabulary in @Pulsefield/beatmap-lens comprises
+The initial section annotation vocabulary in @ensomi-labs/beatmap-lens comprises
 Jack organization, Stream organization, Trill organization, Tech, and LN
 coordination. These are experiment-specific, versioned concepts. Their local
 definitions and calibration examples accompany the dataset; the five names are
@@ -245,7 +245,7 @@ interval. Its judgment concerns the complete arrangement in that interval.
 Selected witness notes explain the judgment; they are neither exhaustive
 note-level labels nor a replacement for the surrounding chart.
 
-@Pulsefield/beatmap-lens uses source milliseconds and half-open scopes
+@ensomi-labs/beatmap-lens uses source milliseconds and half-open scopes
 $[a,b)$. Its review context can extend beyond the scope. Claims may overlap,
 and different concepts may have different boundaries. Successive local
 patterns do not automatically establish that both characterize an entire

@@ -7,17 +7,17 @@ import sys
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.config import TrainConfig
-from pulsefield_model.research.scoped_style_modeling.corpus import PreparedCorpus, sampled_epoch
-from pulsefield_model.research.scoped_style_modeling.dataset import (
+from ensomi_model.research.scoped_style_modeling.config import TrainConfig
+from ensomi_model.research.scoped_style_modeling.corpus import PreparedCorpus, sampled_epoch
+from ensomi_model.research.scoped_style_modeling.dataset import (
     ASSESSMENTS, CONCEPTS, REVISION, MANIFEST_SHA256, METHOD, SPECIFICATION_SHA256, ContractError, canonical_json, digest,
 )
-from pulsefield_model.research.scoped_style_modeling.metrics import assessment_report, record_metrics
-from pulsefield_model.research.scoped_style_modeling.model import initialize_model
-from pulsefield_model.research.scoped_style_modeling.prepare import _chart_payload
-from pulsefield_model.research.scoped_style_modeling.replay import selected_objects
-from pulsefield_model.research.scoped_style_modeling.train import run_training, write_json
-from pulsefield_model.research.scoped_style_modeling.train_hydra import compose_config
+from ensomi_model.research.scoped_style_modeling.metrics import assessment_report, record_metrics
+from ensomi_model.research.scoped_style_modeling.model import initialize_model
+from ensomi_model.research.scoped_style_modeling.prepare import _chart_payload
+from ensomi_model.research.scoped_style_modeling.replay import selected_objects
+from ensomi_model.research.scoped_style_modeling.train import run_training, write_json
+from ensomi_model.research.scoped_style_modeling.train_hydra import compose_config
 from test_model import fixture
 
 
@@ -156,7 +156,7 @@ def test_wall_clock_stops_both_at_same_update(tmp_path):
 
 
 def test_checkpoint_and_early_stop_use_assessment_not_evidence(tmp_path, monkeypatch):
-    from pulsefield_model.research.scoped_style_modeling import train
+    from ensomi_model.research.scoped_style_modeling import train
     root = corpus_fixture(tmp_path)
     original = train.evaluate
     calls = {}
@@ -191,7 +191,7 @@ def test_hydra_projection_rejects_unknowns_and_invalid_values():
 
 def test_packaged_training_config_available():
     from importlib.resources import files
-    preset = files("pulsefield_model.configs.hydra").joinpath("scoped_style_train.yaml")
+    preset = files("ensomi_model.configs.hydra").joinpath("scoped_style_train.yaml")
     assert "scoped_style_train_schema" in preset.read_text()
 
 
@@ -208,7 +208,7 @@ def test_overnight_preset_preserves_paired_protocol():
 
 @pytest.mark.parametrize("device", ["mps", "cuda"])
 def test_memory_snapshot_device_counters_do_not_clear_cache(device, monkeypatch):
-    from pulsefield_model.research.scoped_style_modeling import train
+    from ensomi_model.research.scoped_style_modeling import train
     synchronized = []
     monkeypatch.setattr(train, "synchronize", lambda name: synchronized.append(name))
     backend = getattr(torch, device)
@@ -229,10 +229,10 @@ def test_training_help_has_no_torch_or_legacy_import():
 import sys
 class Block:
     def find_spec(self, fullname, *args):
-        if fullname == 'torch' or fullname.startswith(('pulsefield_model.training', 'pulsefield_model.inference')):
+        if fullname == 'torch' or fullname.startswith(('ensomi_model.training', 'ensomi_model.inference')):
             raise RuntimeError(fullname)
 sys.meta_path.insert(0, Block())
-from pulsefield_model.research.scoped_style_modeling.train_hydra import cli
+from ensomi_model.research.scoped_style_modeling.train_hydra import cli
 sys.argv = ['train_hydra', '--help']
 cli()
 '''

@@ -7,10 +7,10 @@ from pathlib import Path
 import torch
 import pytest
 
-from pulsefield_model.research.bounded_typed_continuation import train_run, generate_run
-from pulsefield_model.research.bounded_typed_continuation.generate_config import GenerateConfig
-from pulsefield_model.research.bounded_typed_continuation.train_hydra import compose_config
-from pulsefield_model.research.oracle_time_continuation.storage import file_digest
+from ensomi_model.research.bounded_typed_continuation import train_run, generate_run
+from ensomi_model.research.bounded_typed_continuation.generate_config import GenerateConfig
+from ensomi_model.research.bounded_typed_continuation.train_hydra import compose_config
+from ensomi_model.research.oracle_time_continuation.storage import file_digest
 from bounded_typed_continuation.test_train import compare_states
 from .test_queue import configuration
 

@@ -6,14 +6,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pulsefield_model.events.canonical import LaneAction
-from pulsefield_model.timing.mock_osu_export import (
+from ensomi_model.events.canonical import LaneAction
+from ensomi_model.timing.mock_osu_export import (
     build_mock_beat_grid_timepoints,
     create_timing_mock_beatmap,
     main,
     timing_grid_from_report,
 )
-from pulsefield_model.timing.schema import FittedTimingGrid, TimingSegment
+from ensomi_model.timing.schema import FittedTimingGrid, TimingSegment
 
 
 def _timing_report() -> dict[str, object]:
@@ -80,7 +80,7 @@ class TimingMockOsuExportTests(unittest.TestCase):
             output_dir = root / "mock-output"
 
             with mock.patch(
-                "pulsefield_model.timing.mock_osu_export.fit_audio_file",
+                "ensomi_model.timing.mock_osu_export.fit_audio_file",
                 return_value=_timing_report(),
             ):
                 result = create_timing_mock_beatmap(audio_path, output_dir=output_dir)
@@ -118,7 +118,7 @@ class TimingMockOsuExportTests(unittest.TestCase):
             stdout = io.StringIO()
 
             with mock.patch(
-                "pulsefield_model.timing.mock_osu_export.fit_audio_file",
+                "ensomi_model.timing.mock_osu_export.fit_audio_file",
                 return_value=_timing_report(),
             ):
                 with contextlib.redirect_stdout(stdout):

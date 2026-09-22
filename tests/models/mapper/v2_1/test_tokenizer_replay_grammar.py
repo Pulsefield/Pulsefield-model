@@ -7,15 +7,15 @@ if importlib.util.find_spec("torch") is None:
 
 import torch
 
-from pulsefield_model.models.mapper.v2_1.grammar import build_grammar_mask
-from pulsefield_model.models.mapper.v2_1.replay import (
+from ensomi_model.models.mapper.v2_1.grammar import build_grammar_mask
+from ensomi_model.models.mapper.v2_1.replay import (
     ln_carry_state_from_open_starts,
     ln_carry_state_tensors,
     replay_terminal_state,
     replay_tokens,
 )
-from pulsefield_model.models.mapper.v2_1.tokenizer import MapperTimepoint, encode_mapper_window
-from pulsefield_model.models.mapper.v2_1.vocab import LaneAction, MapperV21Vocab
+from ensomi_model.models.mapper.v2_1.tokenizer import MapperTimepoint, encode_mapper_window
+from ensomi_model.models.mapper.v2_1.vocab import LaneAction, MapperV21Vocab
 
 
 def _actions(*actions: LaneAction) -> tuple[LaneAction, ...]:

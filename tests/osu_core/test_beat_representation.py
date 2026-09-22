@@ -2,12 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pulsefield_model.osu_core.beat_representation import (
+from ensomi_model.osu_core.beat_representation import (
     BeatEventKind,
     beatmap_to_beat_representation,
     parse_mania_beat_events,
 )
-from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_NONE
+from ensomi_model.timing.canonicalization import TIMING_CANONICALIZATION_NONE
 
 
 def _write_osu(

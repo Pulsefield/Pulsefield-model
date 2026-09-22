@@ -1,2 +1,0 @@
-"""Pulsefield model package."""
-

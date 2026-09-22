@@ -17,22 +17,22 @@ A failed or completed directory must be retained under its existing name or
 replaced by an explicitly different output path on the next invocation.
 
 ```sh
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.probe_hydra stage=audit
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.probe_hydra stage=audit
 
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.probe_hydra stage=prepare
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.probe_hydra stage=prepare
 
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.probe_hydra stage=cache
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.probe_hydra stage=cache
 
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.probe_hydra --config-name=scoped_style_probe_b
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.probe_hydra --config-name=scoped_style_probe_b
 
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.probe_hydra --config-name=scoped_style_pilot_c
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.probe_hydra --config-name=scoped_style_pilot_c
 ```
 
 The canonical packaged presets are `scoped_style_probe`, `scoped_style_probe_b`,
 and `scoped_style_pilot_c`. Inspect one without loading Torch or running a probe:
 
 ```sh
-uv run --extra mps python -m pulsefield_model.research.scoped_style_modeling.probe_hydra --config-name=scoped_style_pilot_c --cfg job
+uv run --extra mps python -m ensomi_model.research.scoped_style_modeling.probe_hydra --config-name=scoped_style_pilot_c --cfg job
 ```
 
 | Stage | Default output | Inputs |

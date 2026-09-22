@@ -3,7 +3,7 @@
 ## Scope and authority
 
 This page records the observed structure of osu!mania community tags relevant
-to Pulsefield's style formulation. It covers `style/*`, `skillset/*`,
+to Ensomi's style formulation. It covers `style/*`, `skillset/*`,
 `streams/*`, and `tech/*`, together with `expression/*` and `gimmick/*` where
 they expose semantic or evidence boundaries not visible in the first four
 namespaces. It is a research record, not a style-enum or annotation-schema
@@ -15,7 +15,7 @@ The local frequency evidence uses the same osu!mania 4K snapshot and selection
 rules as the
 [4K style tag reference](osu_mania_4k_style_tag_reference.md). The formulation
 comparison below uses
-[revision `01633b5`](https://github.com/Pulsefield/Pulsefield-model/blob/01633b5969c58ea495197c0d8519629092879f1b/docs/formulation/gameplay-state.md).
+[revision `01633b5`](https://github.com/ensomi-labs/ensomi-model/blob/01633b5969c58ea495197c0d8519629092879f1b/docs/formulation/gameplay-state.md).
 Current annotation and community-evidence contracts are defined in
 [`gameplay-state.md`](../formulation/gameplay-state.md#style-observations).
 
@@ -379,5 +379,5 @@ it.
 - [osu! Wiki: osu!mania jack patterns](https://osu.ppy.sh/wiki/en/Beatmap/Pattern/osu%21mania/Jack)
 - [osu! Wiki: osu!mania hold-note patterns](https://osu.ppy.sh/wiki/en/Beatmap/Pattern/osu%21mania/Hold_note)
 - [Local 4K style tag reference](osu_mania_4k_style_tag_reference.md)
-- [Pulsefield V3 gameplay-state formulation](../formulation/gameplay-state.md)
-- [Pulsefield V3 notation](../formulation/notation.md)
+- [Ensomi V3 gameplay-state formulation](../formulation/gameplay-state.md)
+- [Ensomi V3 notation](../formulation/notation.md)

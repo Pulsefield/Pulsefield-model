@@ -9,14 +9,14 @@ from pathlib import Path
 
 import torch
 
-from pulsefield_model.data.control_windows import ControlWindowRecord, normalize_difficulty
-from pulsefield_model.data.mapper_tuple_windows import (
+from ensomi_model.data.control_windows import ControlWindowRecord, normalize_difficulty
+from ensomi_model.data.mapper_tuple_windows import (
     MapperTupleWindowDataset,
     collate_mapper_tuple_windows,
     control_teacher_cache_path,
     save_control_teacher_cache_entry,
 )
-from pulsefield_model.features.control_v3_targets import MODEL_FEATURE_NAMES
+from ensomi_model.features.control_v3_targets import MODEL_FEATURE_NAMES
 
 
 class MapperV2DataWindowTests(unittest.TestCase):

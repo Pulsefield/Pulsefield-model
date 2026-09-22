@@ -3,7 +3,7 @@
 ## Scope and authority
 
 This page records a local dataset snapshot and public visual references for
-osu!mania 4K `style/*` user tags. It is a research aid, not a Pulsefield V3
+osu!mania 4K `style/*` user tags. It is a research aid, not a Ensomi V3
 style-enum specification. The canonical distinction between section style and
 map-level community evidence remains in
 [`gameplay-state.md`](../formulation/gameplay-state.md#community-observations).

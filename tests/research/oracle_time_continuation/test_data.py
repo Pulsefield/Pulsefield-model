@@ -5,10 +5,10 @@ import sys
 
 import pytest
 
-from pulsefield_model.research.oracle_time_continuation.data import admit_source
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationState, prefill
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow, TimeSkeleton
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, digest
+from ensomi_model.research.oracle_time_continuation.data import admit_source
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationState, prefill
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow, TimeSkeleton
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, digest
 from .conftest import admit, source_bytes
 
 
@@ -159,12 +159,12 @@ def test_raw_identity_and_mode_are_verified():
 def test_package_import_does_not_load_legacy_or_model_feature_paths():
     script = """
 import sys
-from pulsefield_model.research.oracle_time_continuation import data, engine
+from ensomi_model.research.oracle_time_continuation import data, engine
 for module in sys.modules:
-    assert not module.startswith(('torch', 'pulsefield_model.models', 'pulsefield_model.timing',
-                                  'pulsefield_model.inference', 'pulsefield_model.training')), module
-    assert module not in ('pulsefield_model.research.source_action_modeling.observation',
-                          'pulsefield_model.research.source_action_modeling.tensors',
-                          'pulsefield_model.research.source_action_modeling.local_representation')
+    assert not module.startswith(('torch', 'ensomi_model.models', 'ensomi_model.timing',
+                                  'ensomi_model.inference', 'ensomi_model.training')), module
+    assert module not in ('ensomi_model.research.source_action_modeling.observation',
+                          'ensomi_model.research.source_action_modeling.tensors',
+                          'ensomi_model.research.source_action_modeling.local_representation')
 """
     subprocess.run([sys.executable, "-c", script], check=True)

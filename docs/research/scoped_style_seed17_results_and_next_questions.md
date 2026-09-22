@@ -7,7 +7,7 @@ The [probe implementation and run guide](scoped_style_probes.md) supplies A/B/C
 commands. The [experiment postmortem](scoped_style_probe_postmortem.md) records
 the completed seed 17 probes; the architecture direction and proposed comparisons
 below describe their motivation, not confirmed benefits. The probes concern the
-scoped style classifier, not a Pulsefield V3 reference architecture.
+scoped style classifier, not a Ensomi V3 reference architecture.
 The [frozen study](scoped_style_witness_generation.md) and
 [training implementation guide](scoped_style_training.md) describe the seed 17
 contract; the human-inclusive training policy below is a deliberate new contract.
@@ -62,7 +62,7 @@ validation outputs; it adds no model forward passes, training, test evaluation,
 or relation ablation. The preset names seeds 17, 29, and 43, but conclusions here
 are restricted to seed 17.
 
-Metrics follow [the metric implementation](../../src/pulsefield_model/research/scoped_style_modeling/metrics.py):
+Metrics follow [the metric implementation](../../src/ensomi_model/research/scoped_style_modeling/metrics.py):
 
 - Three-class NLL averages cells within each concept/group, then groups within
   each concept, then the five concepts. Lower is better.
@@ -191,8 +191,8 @@ or the causal importance of selected notes.
 
 ## Structures available to the model, and the missing temporal coordinates
 
-The [replay](../../src/pulsefield_model/research/scoped_style_modeling/replay.py)
-and [tensor construction](../../src/pulsefield_model/research/scoped_style_modeling/tensors.py)
+The [replay](../../src/ensomi_model/research/scoped_style_modeling/replay.py)
+and [tensor construction](../../src/ensomi_model/research/scoped_style_modeling/tensors.py)
 retain exact source action ordering, complete attack groups, LN head/tail
 identity, occupancy before and after actions, and lane-relative timing facts.
 The graph supplies the following relationships:
@@ -208,7 +208,7 @@ These are deterministic input relations, not learned connectivity discovered
 by this analysis. No attention attribution or relationship intervention has
 established which ones drive the saved predictions.
 
-The [encoder and assessor](../../src/pulsefield_model/research/scoped_style_modeling/model.py)
+The [encoder and assessor](../../src/ensomi_model/research/scoped_style_modeling/model.py)
 already contain temporal sequence models. A shared bidirectional GRU processes
 each hand across the complete review context before one relation-attention
 block. At each section event, an MLP processes both hand orders and averages
@@ -230,15 +230,15 @@ The annotation method exposes richer temporal observations. Its initial brief
 includes active timing and timing changes; articulation inspection provides
 LN duration in milliseconds and beats, interior attack rows, release position
 relative to attacks, and other continuing holds. The inspected files match the
-frozen harness inventory. See the pinned [brief construction](https://github.com/Pulsefield/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/annotation/section_evidence.py),
-[inspection implementation](https://github.com/Pulsefield/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/harness/harness_inspection.py),
-and [method inventory](https://github.com/Pulsefield/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/annotation/methods/astra-1000-20260912/harness.json).
+frozen harness inventory. See the pinned [brief construction](https://github.com/ensomi-labs/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/annotation/section_evidence.py),
+[inspection implementation](https://github.com/ensomi-labs/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/harness/harness_inspection.py),
+and [method inventory](https://github.com/ensomi-labs/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/annotation/methods/astra-1000-20260912/harness.json).
 This establishes an information difference between labeler tooling and model
 input. It does not establish how often agents used each view or whether that
 difference caused the observed errors.
 
-The frozen [Foundation](https://github.com/Pulsefield/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/foundations/15fa68913bdb2bf395a189df7ab433f6d5b126fc35c46c1dbc8e607ce2182e97.json)
-and [method skill](https://github.com/Pulsefield/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/annotation/methods/astra-1000-20260912/skill/SKILL.md)
+The frozen [Foundation](https://github.com/ensomi-labs/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/foundations/15fa68913bdb2bf395a189df7ab433f6d5b126fc35c46c1dbc8e607ce2182e97.json)
+and [method skill](https://github.com/ensomi-labs/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/annotation/methods/astra-1000-20260912/skill/SKILL.md)
 require distinctions that should guide the next diagnostics:
 
 - Jack requires repeated-column organization in complete attack groups. A
@@ -349,7 +349,7 @@ The next training cohort uses the following target policy:
   High in its ancestry. Confidence is per concept, independent of salience,
   and never becomes a model input or a prominence target.
 
-The confidence semantics are owned by the pinned [human-confidence contract](https://github.com/Pulsefield/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/docs/annotation/human-confidence.md).
+The confidence semantics are owned by the pinned [human-confidence contract](https://github.com/ensomi-labs/beatmap-lens/blob/ee71da102a604df4d3673fd19b66263c3f739625/docs/annotation/human-confidence.md).
 The existing prepared records preserve `human_confidence` in `provenance_json`;
 no confidence inference from rationale, origin, or model scores is needed.
 

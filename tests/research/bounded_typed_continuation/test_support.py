@@ -5,16 +5,16 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation import model as model_module
-from pulsefield_model.research.bounded_typed_continuation import generation as generation_module
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, ROW_ACTIONS, Schedule, Timing
-from pulsefield_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
-from pulsefield_model.research.bounded_typed_continuation.generation import Rollout
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.bounded_typed_continuation.support import row_supports
-from pulsefield_model.research.oracle_time_continuation.replay import ExactReplayState, commit
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation import model as model_module
+from ensomi_model.research.bounded_typed_continuation import generation as generation_module
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, ROW_ACTIONS, Schedule, Timing
+from ensomi_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
+from ensomi_model.research.bounded_typed_continuation.generation import Rollout
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.bounded_typed_continuation.support import row_supports
+from ensomi_model.research.oracle_time_continuation.replay import ExactReplayState, commit
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_data import mixed_chart
 from .test_generation import setup
 

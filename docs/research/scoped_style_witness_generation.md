@@ -5,7 +5,7 @@ on existing 4K charts, using agent-selected evidence notes as weak auxiliary
 supervision. It defines the observations, source-action representation, shared
 encoder and task branches, discriminating comparisons, and implementation handoff.
 The model has no reported training results. Its architecture and numerical
-defaults are research choices, not Pulsefield V3 requirements.
+defaults are research choices, not Ensomi V3 requirements.
 
 The [generation contract](../formulation/notation.md) owns legal timed rows and
 committed history. The [gameplay formulation](../formulation/gameplay-state.md)
@@ -97,7 +97,7 @@ following distinctions come from the dataset's frozen Foundation:
 These distinctions guide representation and evaluation. They do not turn
 computed features into semantic labels. A recurrence edge is not a Jack detector;
 a gap is not automatically a reset; simultaneous holds are not automatically LN
-coordination. The [Foundation](https://github.com/Pulsefield/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/foundations/15fa68913bdb2bf395a189df7ab433f6d5b126fc35c46c1dbc8e607ce2182e97.json)
+coordination. The [Foundation](https://github.com/ensomi-labs/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/foundations/15fa68913bdb2bf395a189df7ab433f6d5b126fc35c46c1dbc8e607ce2182e97.json)
 and its scoped calibration judgments retain authority over these meanings.
 
 Supporting and prominent are ordered positive judgments of expression strength,
@@ -130,7 +130,7 @@ duplicate negative cell. The machine table has 4,403 distinct cells. Treat rows
 from one source and overlapping scopes as correlated observations.
 
 All machine negative judgments also carry nonempty witnesses. The frozen
-[labeler role](https://github.com/Pulsefield/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/methods/astra-1000-20260912/labeler.md)
+[labeler role](https://github.com/ensomi-labs/beatmap-lens/blob/647009ab60ed69d98190712a6ab025807cca07b8/annotation/methods/astra-1000-20260912/labeler.md)
 requests simultaneous judgment and selection, including for absent assessments.
 Those objects can supervise evidence selection conditioned on absent; they do
 not become evidence for the concept's presence.
@@ -1005,7 +1005,7 @@ supported by the held-out assessments and inspected real cases.
 ## 12. Implementation handoff and bounded execution
 
 Implement this study in an isolated research package, for example
-`src/pulsefield_model/research/scoped_style_modeling/`, with nearby focused tests.
+`src/ensomi_model/research/scoped_style_modeling/`, with nearby focused tests.
 These paths name proposed ownership; no implementation is implied. Do not build
 the model on legacy mapper/tokenizer/training behavior. Follow repository config
 guidance where applicable without treating retained mapper presets as V3 designs.
@@ -1153,7 +1153,7 @@ to an owning Agent Note under the repository research workflow. This document
 provides the self-contained model and evaluation specification; it does not
 assert card acceptance, completed implementation, or authorization for a run.
 
-## 13. Connection to Pulsefield responses
+## 13. Connection to Ensomi responses
 
 The useful transfer is from verified arrangement distinctions to mapper-facing
 questions about legal continuations. Examples include whether a continuation

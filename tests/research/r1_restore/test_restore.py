@@ -7,16 +7,16 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation import train_run, generate_run
-from pulsefield_model.research.bounded_typed_continuation.corpus import read_plan
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel
-from pulsefield_model.research.r1_restore import run
-from pulsefield_model.research.r1_restore.config import RestoreConfig, STAGES, stage_training
-from pulsefield_model.research.r1_restore.harvest import collect_pool, condition_for, preference_markers
-from pulsefield_model.research.r1_restore.hydra import compose_config
-from pulsefield_model.research.r1_restore.preparation import transition_witness, select_sources
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
-from pulsefield_model.research.vacation_training.control import Control, publish_json
+from ensomi_model.research.bounded_typed_continuation import train_run, generate_run
+from ensomi_model.research.bounded_typed_continuation.corpus import read_plan
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel
+from ensomi_model.research.r1_restore import run
+from ensomi_model.research.r1_restore.config import RestoreConfig, STAGES, stage_training
+from ensomi_model.research.r1_restore.harvest import collect_pool, condition_for, preference_markers
+from ensomi_model.research.r1_restore.hydra import compose_config
+from ensomi_model.research.r1_restore.preparation import transition_witness, select_sources
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.vacation_training.control import Control, publish_json
 from bounded_typed_continuation.test_data import chart
 from bounded_typed_continuation.test_recovery import pool_fixture
 from vacation_training.test_queue import configuration

@@ -1,9 +1,9 @@
 import pytest
 import torch
 
-from pulsefield_model.models.mapper.shared import MapperBatch, MapperFragmentState, MapperTokenContract
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2_1.vocab import MapperV21Vocab
+from ensomi_model.models.mapper.shared import MapperBatch, MapperFragmentState, MapperTokenContract
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.v2_1.vocab import MapperV21Vocab
 
 
 def test_tuple_contract_parses_minimal_batch_and_normalizes_tensors() -> None:

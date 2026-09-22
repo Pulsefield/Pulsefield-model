@@ -9,26 +9,26 @@ from unittest import mock
 
 import numpy as np
 
-from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
-from pulsefield_model.timing.canonicalization import canonicalize_timing_grid
-from pulsefield_model.timing.grid_fitting import TimingFitDiagnostics, TimingFitResult
-from pulsefield_model.timing.providers import beatthis
-from pulsefield_model.timing.providers.beatthis import (
+from ensomi_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
+from ensomi_model.timing.canonicalization import canonicalize_timing_grid
+from ensomi_model.timing.grid_fitting import TimingFitDiagnostics, TimingFitResult
+from ensomi_model.timing.providers import beatthis
+from ensomi_model.timing.providers.beatthis import (
     BEATTHIS_FRAME_RATE_HZ,
     DEFAULT_BEATTHIS_CHECKPOINT,
     DEFAULT_BEATTHIS_DEVICE,
     BeatThisTimingProvider,
     audio_shift_samples_for_ms,
 )
-from pulsefield_model.timing.providers.oracle import OracleDenseTimingCacheConfig
-from pulsefield_model.timing.providers.oracle import OracleTimingConfig
-from pulsefield_model.timing.providers.oracle import load_or_create_oracle_dense_timing_v2_cache
-from pulsefield_model.timing.providers.oracle import oracle_dense_timing_v2_cache_path
-from pulsefield_model.timing.providers.oracle import oracle_timing_grid_from_beatmap
-from pulsefield_model.timing.providers.oracle import render_oracle_dense_timing_v2
-from pulsefield_model.timing.ramp_detection import detect_timing_ramp
-from pulsefield_model.timing.schema import FrameTimingPrediction
-from pulsefield_model.timing.schema import FittedTimingGrid, TimingSegment
+from ensomi_model.timing.providers.oracle import OracleDenseTimingCacheConfig
+from ensomi_model.timing.providers.oracle import OracleTimingConfig
+from ensomi_model.timing.providers.oracle import load_or_create_oracle_dense_timing_v2_cache
+from ensomi_model.timing.providers.oracle import oracle_dense_timing_v2_cache_path
+from ensomi_model.timing.providers.oracle import oracle_timing_grid_from_beatmap
+from ensomi_model.timing.providers.oracle import render_oracle_dense_timing_v2
+from ensomi_model.timing.ramp_detection import detect_timing_ramp
+from ensomi_model.timing.schema import FrameTimingPrediction
+from ensomi_model.timing.schema import FittedTimingGrid, TimingSegment
 
 
 class _FakeAudio2Frames:
@@ -258,7 +258,7 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertNotEqual(raw_path, canonical_path)
 
     def test_fit_audio_main_can_emit_json(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeBeatThisTimingProvider):
@@ -275,7 +275,7 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertFalse(report["ramp"]["is_ramp"])
 
     def test_fit_audio_main_can_emit_super_timing_shift_runs(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeShiftBeatThisTimingProvider):
@@ -298,7 +298,7 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(first_shifted_run["segments"][0]["offset_ms"], 115.0)
 
     def test_fit_audio_main_can_canonicalize_timing(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeFastBeatThisTimingProvider):
@@ -322,7 +322,7 @@ class TimingProviderCliTests(unittest.TestCase):
         self.assertEqual(report["segments"][0]["bpm"], 120.0)
 
     def test_timing_report_uses_pre_canonical_ramp_detection(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         raw_grid = FittedTimingGrid(
             tuple(

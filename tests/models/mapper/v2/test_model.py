@@ -9,12 +9,12 @@ if importlib.util.find_spec("torch") is None:
 
 import torch
 
-from pulsefield_model.data.mapper_tuple_windows import collate_mapper_tuple_windows
-from pulsefield_model.models.mapper.shared.replay import ln_carry_state_tensors
-from pulsefield_model.models.mapper.shared.tokenizer import encode_mapper_window
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
-from pulsefield_model.training.mapper_common import MapperTuplePhaseBLossConfig, compute_phase_b_loss
+from ensomi_model.data.mapper_tuple_windows import collate_mapper_tuple_windows
+from ensomi_model.models.mapper.shared.replay import ln_carry_state_tensors
+from ensomi_model.models.mapper.shared.tokenizer import encode_mapper_window
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.v2 import MapperV2Config, MapperV2Model
+from ensomi_model.training.mapper_common import MapperTuplePhaseBLossConfig, compute_phase_b_loss
 
 
 class MapperV2ModelTests(unittest.TestCase):
@@ -271,7 +271,7 @@ class MapperV2ModelTests(unittest.TestCase):
             lambda_adapter_reg=0.13,
             lambda_density=0.17,
         )
-        with patch("pulsefield_model.training.mapper_common.MapperTupleModelLoss", FakeCanonicalLoss):
+        with patch("ensomi_model.training.mapper_common.MapperTupleModelLoss", FakeCanonicalLoss):
             loss_output = compute_phase_b_loss(
                 output,
                 target_fragment_tokens=batch["target_fragment_tokens"],

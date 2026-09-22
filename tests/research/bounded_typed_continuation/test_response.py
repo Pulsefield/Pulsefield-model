@@ -6,19 +6,19 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation import train_run
-from pulsefield_model.research.bounded_typed_continuation.consequence import TIMING_DIM, consequence_features
-from pulsefield_model.research.bounded_typed_continuation.condition import GenerationCondition
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, ROW_ACTIONS, Schedule, Timing
-from pulsefield_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
-from pulsefield_model.research.bounded_typed_continuation.features import time_features
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.bounded_typed_continuation.recovery import complement_loss, trajectory_queries
-from pulsefield_model.research.bounded_typed_continuation.response import response_costs, response_preference
-from pulsefield_model.research.bounded_typed_continuation.support import row_supports
-from pulsefield_model.research.bounded_typed_continuation.train_hydra import compose_config
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation import train_run
+from ensomi_model.research.bounded_typed_continuation.consequence import TIMING_DIM, consequence_features
+from ensomi_model.research.bounded_typed_continuation.condition import GenerationCondition
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, ROW_ACTIONS, Schedule, Timing
+from ensomi_model.research.bounded_typed_continuation.data import SourceInterval, batch_likelihood, prepare_batch
+from ensomi_model.research.bounded_typed_continuation.features import time_features
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.bounded_typed_continuation.recovery import complement_loss, trajectory_queries
+from ensomi_model.research.bounded_typed_continuation.response import response_costs, response_preference
+from ensomi_model.research.bounded_typed_continuation.support import row_supports
+from ensomi_model.research.bounded_typed_continuation.train_hydra import compose_config
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_data import mixed_chart
 from .test_fork import write_extension
 from .test_recovery import pool_fixture

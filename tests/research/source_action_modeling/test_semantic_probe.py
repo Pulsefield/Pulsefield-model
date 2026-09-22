@@ -6,17 +6,17 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ASSESSMENTS, CONCEPTS, REVISION, ContractError
-from pulsefield_model.research.scoped_style_modeling.probe_data import input_identity
-from pulsefield_model.research.source_action_modeling.comparison import pretraining_contexts
-from pulsefield_model.research.source_action_modeling.diagnostics import capture_semantic_response, finish_semantic_response
-from pulsefield_model.research.source_action_modeling.model import initialize_comparison
-from pulsefield_model.research.source_action_modeling.representation_experiments import (
+from ensomi_model.research.scoped_style_modeling.dataset import ASSESSMENTS, CONCEPTS, REVISION, ContractError
+from ensomi_model.research.scoped_style_modeling.probe_data import input_identity
+from ensomi_model.research.source_action_modeling.comparison import pretraining_contexts
+from ensomi_model.research.source_action_modeling.diagnostics import capture_semantic_response, finish_semantic_response
+from ensomi_model.research.source_action_modeling.model import initialize_comparison
+from ensomi_model.research.source_action_modeling.representation_experiments import (
     initialize_representation_comparison, representation_arms)
-from pulsefield_model.research.source_action_modeling.sampling import SPLIT_SHA256
-from pulsefield_model.research.source_action_modeling.semantic_probe import (SemanticCorpus, evaluate_readout, fit_matched_probes,
+from ensomi_model.research.source_action_modeling.sampling import SPLIT_SHA256
+from ensomi_model.research.source_action_modeling.semantic_probe import (SemanticCorpus, evaluate_readout, fit_matched_probes,
                                                                            fit_readout, human_targets, initialize_readout)
-from pulsefield_model.research.source_action_modeling.tensors import collate
+from ensomi_model.research.source_action_modeling.tensors import collate
 from .conftest import example, fixture_chart
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])

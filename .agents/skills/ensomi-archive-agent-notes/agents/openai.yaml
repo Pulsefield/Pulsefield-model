@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ensomi Agent Notes"
+  short_description: "Manage Git-tracked notes off product branches."
+  default_prompt: "Use $ensomi-archive-agent-notes to manage this Ensomi Agent Note in the canonical agent-notes worktree without adding it to a product branch."

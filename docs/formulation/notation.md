@@ -1,6 +1,6 @@
 # Chart and generation contract
 
-Pulsefield generates a 4-key chart from complete source audio. This page defines
+Ensomi generates a 4-key chart from complete source audio. This page defines
 its row language, legal continuations, and committed-prefix semantics.
 [Gameplay state](gameplay-state.md) defines the target gameplay response,
 frontier, style observations, and their use in generation.

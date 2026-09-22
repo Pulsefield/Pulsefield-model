@@ -5,15 +5,15 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.config import ModelConfig as AttentionConfig
-from pulsefield_model.research.scoped_style_modeling.model import RelationAttention
-from pulsefield_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
-from pulsefield_model.research.source_action_modeling.comparison import train_paired_step
-from pulsefield_model.research.source_action_modeling.composition import initialize_composition
-from pulsefield_model.research.source_action_modeling.experiment_hydra import compose_config
-from pulsefield_model.research.source_action_modeling.relation_matching import initialize_relation_matching
-from pulsefield_model.research.source_action_modeling.sampling import PairedBlockSampler, TrainingContext
-from pulsefield_model.research.source_action_modeling.tensors import collate
+from ensomi_model.research.scoped_style_modeling.config import ModelConfig as AttentionConfig
+from ensomi_model.research.scoped_style_modeling.model import RelationAttention
+from ensomi_model.research.source_action_modeling.checkpoint import load_snapshot, save_snapshot
+from ensomi_model.research.source_action_modeling.comparison import train_paired_step
+from ensomi_model.research.source_action_modeling.composition import initialize_composition
+from ensomi_model.research.source_action_modeling.experiment_hydra import compose_config
+from ensomi_model.research.source_action_modeling.relation_matching import initialize_relation_matching
+from ensomi_model.research.source_action_modeling.sampling import PairedBlockSampler, TrainingContext
+from ensomi_model.research.source_action_modeling.tensors import collate
 from .conftest import example, fixture_chart
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else [])
@@ -164,7 +164,7 @@ def test_paired_matching_snapshot_continues_same_draws_and_updates(tmp_path):
 
 def test_packaged_matching_config_is_bounded_and_reaches_initializer():
     name = "source_action_relation_matching"
-    assert files("pulsefield_model.configs.hydra").joinpath(name + ".yaml").is_file()
+    assert files("ensomi_model.configs.hydra").joinpath(name + ".yaml").is_file()
     config = compose_config(config_name=name)
     assert config.comparison == "relation_matching" and config.backbone_schedule == "serial"
     assert config.seeds == [17] and config.min_updates == config.max_updates == 300
@@ -182,7 +182,7 @@ def test_packaged_matching_config_is_bounded_and_reaches_initializer():
 
 def test_runner_consumes_comparison_schedule_and_records_common_initialization(tmp_path, monkeypatch):
     import json
-    from pulsefield_model.research.source_action_modeling import experiment
+    from ensomi_model.research.source_action_modeling import experiment
     config = compose_config(["device=cpu", "backbone_schedule=interleaved", f"output_dir={tmp_path / 'run'}"],
                             config_name="source_action_relation_matching")
     monkeypatch.setattr(experiment, "load_population", lambda *a, **kw: (None, None, None, {"counts": {}}))

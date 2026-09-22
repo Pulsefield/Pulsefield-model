@@ -52,8 +52,8 @@ def mapper_v21_decoder_model_state(request: pytest.FixtureRequest) -> dict[str, 
         pytest.skip("mapper v2.1 decoder evals require torch")
     import torch
 
-    from pulsefield_model.evals.mapper_v21_decoder_profiler import tiny_mapper_v21_config
-    from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21Model, MapperV21Vocab
+    from ensomi_model.evals.mapper_v21_decoder_profiler import tiny_mapper_v21_config
+    from ensomi_model.models.mapper.v2_1 import MapperV21Config, MapperV21Model, MapperV21Vocab
 
     torch.manual_seed(20260520)
     vocab = MapperV21Vocab()
@@ -76,7 +76,7 @@ def mapper_v21_decoder_model_state(request: pytest.FixtureRequest) -> dict[str, 
 
 @pytest.fixture()
 def mapper_v21_decoder_model(mapper_v21_decoder_model_state: dict[str, Any]) -> Any:
-    from pulsefield_model.models.mapper.v2_1 import MapperV21Model
+    from ensomi_model.models.mapper.v2_1 import MapperV21Model
 
     model = MapperV21Model(
         mapper_v21_decoder_model_state["config"],

@@ -1,6 +1,6 @@
 import pytest
 
-from pulsefield_model.inference.service_models import (
+from ensomi_model.inference.service_models import (
     AudioCommand,
     EndOfStreamEvent,
     ErrorEvent,

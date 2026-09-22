@@ -14,11 +14,11 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from pulsefield_model.models.control import ControlDemoGlobalEncoderConfig
-from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
-from pulsefield_model.training.common import ResumableRandomBatchSampler, _infinite_loader
-from pulsefield_model.training import mapper_v2_1 as mapper_v2_1_training
-from pulsefield_model.training.mapper_runner import (
+from ensomi_model.models.control import ControlDemoGlobalEncoderConfig
+from ensomi_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
+from ensomi_model.training.common import ResumableRandomBatchSampler, _infinite_loader
+from ensomi_model.training import mapper_v2_1 as mapper_v2_1_training
+from ensomi_model.training.mapper_runner import (
     MapperTrainingConfigContext,
     MapperTrainingResumeContext,
     MapperTrainingSpec,

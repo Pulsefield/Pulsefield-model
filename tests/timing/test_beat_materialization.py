@@ -7,14 +7,14 @@ from unittest import mock
 
 import numpy as np
 
-from pulsefield_model.timing.beat_materialization import (
+from ensomi_model.timing.beat_materialization import (
     BeatMaterializationConfig,
     RampBeatGridHint,
     fit_ramp_beat_grid,
     materialize_beats,
     ramp_beat_grid_report,
 )
-from pulsefield_model.timing.schema import FrameTimingPrediction
+from ensomi_model.timing.schema import FrameTimingPrediction
 
 
 def _ramp_beat_times(
@@ -194,7 +194,7 @@ class BeatMaterializationTests(unittest.TestCase):
             BeatMaterializationConfig(min_hint_ramp_duration_s=0.0)
 
     def test_fit_audio_flag_rejects_no_hint_by_default(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeRampBeatProvider):
@@ -208,7 +208,7 @@ class BeatMaterializationTests(unittest.TestCase):
         self.assertEqual(report["ramp_beat_grid"]["reasons"], ["no_hint_fitting_disabled"])
 
     def test_fit_audio_allow_no_hint_flag_includes_ramp_beat_grid_report(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeRampBeatProvider):
@@ -223,7 +223,7 @@ class BeatMaterializationTests(unittest.TestCase):
         self.assertTrue(report["ramp_beat_grid"]["accepted"])
 
     def test_fit_audio_flag_accepts_trusted_ramp_hint(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeRampBeatProvider):
@@ -253,7 +253,7 @@ class BeatMaterializationTests(unittest.TestCase):
         self.assertGreater(candidate["probability_score"], 0.4)
 
     def test_fit_audio_rejects_partial_trusted_ramp_hint(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         with self.assertRaises(ValueError):
             fit_audio.main(
@@ -267,7 +267,7 @@ class BeatMaterializationTests(unittest.TestCase):
             )
 
     def test_fit_audio_default_report_excludes_ramp_beat_grid(self) -> None:
-        from pulsefield_model.timing import fit_audio
+        from ensomi_model.timing import fit_audio
 
         stdout = io.StringIO()
         with mock.patch.object(fit_audio, "BeatThisTimingProvider", _FakeRampBeatProvider):

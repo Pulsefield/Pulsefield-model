@@ -7,7 +7,7 @@ use of specific context, and semantic reuse are separate evidence requirements.
 No single loss establishes all three.
 
 This document owns the probability, weighting and diagnostic meanings used by
-[`source_action_modeling`](../../src/pulsefield_model/research/source_action_modeling/).
+[`source_action_modeling`](../../src/ensomi_model/research/source_action_modeling/).
 The [foundation](source_action_stage1.md) owns source observation and legality;
 the [composition guide](source_action_stage2.md) owns the representation bank.
 The [V3 formulation](../formulation/README.md) retains authority over generation
@@ -62,7 +62,7 @@ V3 generation contract.
 
 ## Joint hand output family
 
-[`JointDecoder`](../../src/pulsefield_model/research/source_action_modeling/model.py)
+[`JointDecoder`](../../src/ensomi_model/research/source_action_modeling/model.py)
 scores 16 candidates per hand with shared unary terms and a bilinear potential.
 Let $e_a$ be a shared projected action embedding, and $q_L,q_R$ the hand queries
 formed from both encoded contexts, both recurrent states and permitted
@@ -93,7 +93,7 @@ not establish a learned Trill mechanism or improved encoder representation.
 
 ### Why context-dependent signed coupling is required
 
-The [affine-concatenation decoder at `790add7`](https://github.com/Pulsefield/Pulsefield-model/blob/790add7b07ecf08e1b277797a39ce28e9683a5b8/src/pulsefield_model/research/source_action_modeling/model.py)
+The [affine-concatenation decoder at `790add7`](https://github.com/ensomi-labs/ensomi-model/blob/790add7b07ecf08e1b277797a39ce28e9683a5b8/src/ensomi_model/research/source_action_modeling/model.py)
 formed each interaction vector with one linear map over context and candidate
 embedding. Consequently, its vectors could be written as
 
@@ -183,7 +183,7 @@ decision. Averaging dilutes it in long blocks; teacher forcing gives later
 positions progressively more true prefix. These are objective choices, not
 numerical errors to remove through normalization.
 
-[`BlockSampler`](../../src/pulsefield_model/research/source_action_modeling/sampling.py)
+[`BlockSampler`](../../src/ensomi_model/research/source_action_modeling/sampling.py)
 defines the baseline distribution $q_0$: uniform represented group $g$, uniform
 context $c$ within that group, uniform feasible row count $s\in\{4,16,64\}$,
 then uniform event start $u$. With $N_c$ source events and feasible set $F_c$,
@@ -282,7 +282,7 @@ a small contribution stores no useful information.
 
 ## Fixed-information prefix routing
 
-[`prefix_path_pair`](../../src/pulsefield_model/research/source_action_modeling/consistency.py)
+[`prefix_path_pair`](../../src/ensomi_model/research/source_action_modeling/consistency.py)
 splits an already selected hidden block into nonempty prefix $K$ and suffix $J$.
 Choose the split index independently of hidden action values. Compare
 
@@ -361,7 +361,7 @@ The encoder-observation route may be outside the trained mask distribution;
 a discrepancy motivates examining routing, exposure and approximation together.
 
 ```python
-from pulsefield_model.research.source_action_modeling.consistency import (
+from ensomi_model.research.source_action_modeling.consistency import (
     evaluate_path_consistency, prefix_path_pair,
 )
 

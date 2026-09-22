@@ -3,11 +3,11 @@ from itertools import product
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.model import row_index
-from pulsefield_model.research.oracle_time_continuation.objective import ObjectiveConfig, sequence_cost
-from pulsefield_model.research.oracle_time_continuation.replay import ExactReplayState, commit, legal_rows
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.oracle_time_continuation.model import row_index
+from ensomi_model.research.oracle_time_continuation.objective import ObjectiveConfig, sequence_cost
+from ensomi_model.research.oracle_time_continuation.replay import ExactReplayState, commit, legal_rows
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 
 
 def structural_values(actions, before):

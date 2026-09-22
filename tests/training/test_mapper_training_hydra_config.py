@@ -9,14 +9,14 @@ pytest.importorskip("torch")
 from omegaconf import OmegaConf
 from omegaconf.errors import ConfigAttributeError, ConfigKeyError
 
-from pulsefield_model.training.hydra_config import (
+from ensomi_model.training.hydra_config import (
     TrainingExperimentConfig,
     compose_training_experiment_config,
     default_hydra_config_dir,
     training_experiment_config_to_legacy_dict,
     validate_training_experiment_config,
 )
-from pulsefield_model.training.mapper_training_hydra import _call_kwargs
+from ensomi_model.training.mapper_training_hydra import _call_kwargs
 
 
 @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ def test_mapper_training_hydra_dry_run_does_not_write_cwd_log(tmp_path: Path) ->
         [
             sys.executable,
             "-m",
-            "pulsefield_model.training.mapper_training_hydra",
+            "ensomi_model.training.mapper_training_hydra",
             "--dry-run",
             "training/mapper=v2_1_sparse_d384_l4_phase_b",
             f"output.output_dir={tmp_path / 'out'}",
@@ -179,14 +179,14 @@ def test_mapper_training_hydra_dry_run_does_not_write_cwd_log(tmp_path: Path) ->
 @pytest.mark.parametrize(
     ("module", "args", "expected"),
     (
-        ("pulsefield_model.training.mapper_v2", ("--hydra-help",), "Hydra ("),
-        ("pulsefield_model.training.mapper_v2", ("--help",), "training/mapper"),
-        ("pulsefield_model.training.mapper_v2", ("--cfg", "job"), "stage2_mapper_v2_phase_b_global_d384_l4_b2"),
-        ("pulsefield_model.training.mapper_v2", ("-c", "job"), "stage2_mapper_v2_phase_b_global_d384_l4_b2"),
-        ("pulsefield_model.training.mapper_v2_1", ("--hydra-help",), "Hydra ("),
-        ("pulsefield_model.training.mapper_v2_1", ("--help",), "training/mapper"),
+        ("ensomi_model.training.mapper_v2", ("--hydra-help",), "Hydra ("),
+        ("ensomi_model.training.mapper_v2", ("--help",), "training/mapper"),
+        ("ensomi_model.training.mapper_v2", ("--cfg", "job"), "stage2_mapper_v2_phase_b_global_d384_l4_b2"),
+        ("ensomi_model.training.mapper_v2", ("-c", "job"), "stage2_mapper_v2_phase_b_global_d384_l4_b2"),
+        ("ensomi_model.training.mapper_v2_1", ("--hydra-help",), "Hydra ("),
+        ("ensomi_model.training.mapper_v2_1", ("--help",), "training/mapper"),
         (
-            "pulsefield_model.training.mapper_v2_1",
+            "ensomi_model.training.mapper_v2_1",
             ("--cfg", "job"),
             "stage2_mapper_v2_1_phase_b_sparse_global_d384_l4_b2",
         ),
@@ -238,7 +238,7 @@ def test_mapper_alias_rejects_missing_hydra_flag_values_before_preset_append(
         [
             sys.executable,
             "-m",
-            "pulsefield_model.training.mapper_v2",
+            "ensomi_model.training.mapper_v2",
             *args,
         ],
         cwd=tmp_path,
@@ -284,7 +284,7 @@ def test_mapper_v2_alias_rejects_deprecated_legacy_training_flags(
         [
             sys.executable,
             "-m",
-            "pulsefield_model.training.mapper_v2",
+            "ensomi_model.training.mapper_v2",
             *args,
         ],
         check=False,
@@ -305,7 +305,7 @@ def test_mapper_alias_rejects_mapper_group_override_without_traceback() -> None:
         [
             sys.executable,
             "-m",
-            "pulsefield_model.training.mapper_v2",
+            "ensomi_model.training.mapper_v2",
             "training/mapper=v2_1_sparse_d384_l4_phase_b",
             "--dry-run",
         ],
@@ -317,16 +317,16 @@ def test_mapper_alias_rejects_mapper_group_override_without_traceback() -> None:
 
     assert result.returncode == 2
     assert "mapper preset aliases are fixed to training/mapper=v2_tuple_d384_l4_phase_b" in result.stderr
-    assert "pulsefield_model.training.mapper_training_hydra" in result.stderr
+    assert "ensomi_model.training.mapper_training_hydra" in result.stderr
     assert "Traceback" not in result.stderr
 
 
 def test_mapper_training_hydra_imports_stay_out_of_legacy_training_modules() -> None:
     restricted_paths = (
-        "src/pulsefield_model/training/mapper_v2.py",
-        "src/pulsefield_model/training/mapper_v2_1.py",
-        "src/pulsefield_model/training/mapper_runner.py",
-        "src/pulsefield_model/training/mapper_common.py",
+        "src/ensomi_model/training/mapper_v2.py",
+        "src/ensomi_model/training/mapper_v2_1.py",
+        "src/ensomi_model/training/mapper_runner.py",
+        "src/ensomi_model/training/mapper_common.py",
     )
 
     for path in restricted_paths:

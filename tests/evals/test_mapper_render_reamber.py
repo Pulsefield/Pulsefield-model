@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from pulsefield_model.evals import mapper_render_reamber as render_reamber
+from ensomi_model.evals import mapper_render_reamber as render_reamber
 
 
 def _write_osu(path: Path, hitobject_lines: list[str]) -> None:
@@ -20,7 +20,7 @@ def _write_osu(path: Path, hitobject_lines: list[str]) -> None:
                 "",
                 "[Metadata]",
                 "Title:Render Test",
-                "Artist:Pulsefield",
+                "Artist:Ensomi",
                 "Creator:tests",
                 "Version:Generated",
                 "",

@@ -2,19 +2,19 @@ from types import SimpleNamespace
 
 import torch
 
-from pulsefield_model.models.mapper.shared import loss as shared_loss
-from pulsefield_model.models.mapper.shared.batch import MapperTokenContract
-from pulsefield_model.models.mapper.shared.loss import (
+from ensomi_model.models.mapper.shared import loss as shared_loss
+from ensomi_model.models.mapper.shared.batch import MapperTokenContract
+from ensomi_model.models.mapper.shared.loss import (
     MapperLossTokenSpec,
     MapperTupleLossConfig,
     MapperTupleModelLoss,
     adapter_bias_regularization,
 )
-from pulsefield_model.models.mapper.shared.tokenizer import MAPPER_DENSITY_FRAMES as TUPLE_DENSITY_FRAMES
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2_1.loss import MapperV21LossConfig, MapperV21LossOutput, MapperV21ModelLoss
-from pulsefield_model.models.mapper.v2_1.tokenizer import MAPPER_DENSITY_FRAMES as V21_DENSITY_FRAMES
-from pulsefield_model.models.mapper.v2_1.vocab import LaneAction, MapperV21Vocab
+from ensomi_model.models.mapper.shared.tokenizer import MAPPER_DENSITY_FRAMES as TUPLE_DENSITY_FRAMES
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.v2_1.loss import MapperV21LossConfig, MapperV21LossOutput, MapperV21ModelLoss
+from ensomi_model.models.mapper.v2_1.tokenizer import MAPPER_DENSITY_FRAMES as V21_DENSITY_FRAMES
+from ensomi_model.models.mapper.v2_1.vocab import LaneAction, MapperV21Vocab
 
 
 def test_tuple_loss_accepts_token_only_batch_without_fragment_mask() -> None:
@@ -80,7 +80,7 @@ def test_v21_loss_wrapper_uses_shared_loss_implementation(monkeypatch) -> None:
 
 
 def test_v21_loss_module_exports_only_v21_loss_types() -> None:
-    from pulsefield_model.models.mapper.v2_1 import loss as v21_loss
+    from ensomi_model.models.mapper.v2_1 import loss as v21_loss
 
     assert set(v21_loss.__all__) == {"MapperV21LossConfig", "MapperV21LossOutput", "MapperV21ModelLoss"}
     assert not hasattr(v21_loss, "adapter_bias_regularization")

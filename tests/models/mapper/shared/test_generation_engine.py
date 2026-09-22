@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import torch
 
-from pulsefield_model.models.mapper.shared.generation import grammar_constrained_window_generation
-from pulsefield_model.models.mapper.shared.generation_engine import (
+from ensomi_model.models.mapper.shared.generation import grammar_constrained_window_generation
+from ensomi_model.models.mapper.shared.generation_engine import (
     IncrementalPrefixDecoder,
     apply_top_p,
     apply_time_shift_penalty,
@@ -13,8 +13,8 @@ from pulsefield_model.models.mapper.shared.generation_engine import (
     select_next_token,
     time_shift_penalty_tensors,
 )
-from pulsefield_model.models.mapper.shared.replay import empty_ln_carry_state
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.shared.replay import empty_ln_carry_state
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
 
 
 TUPLE_LEGACY_DEFAULT_DETERMINISTIC_FIXTURE = {

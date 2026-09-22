@@ -3,7 +3,7 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from pulsefield_model.osu_core.timing import (
+from ensomi_model.osu_core.timing import (
     InvalidRedTimingError,
     MissingRedTimingError,
     RedTimingPoint,

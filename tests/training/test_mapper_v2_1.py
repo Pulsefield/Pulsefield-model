@@ -13,12 +13,12 @@ from unittest.mock import patch
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from pulsefield_model.models.control import ControlDemoGlobalEncoderConfig
-from pulsefield_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
-from pulsefield_model.training import common as training_common
-from pulsefield_model.training import mapper_v2_1 as mapper_v2_1_training
-from pulsefield_model.training.common import ResumableRandomBatchSampler, _infinite_loader
-from pulsefield_model.training.hydra_config import (
+from ensomi_model.models.control import ControlDemoGlobalEncoderConfig
+from ensomi_model.models.mapper.v2_1 import MapperV21Config, MapperV21LossConfig
+from ensomi_model.training import common as training_common
+from ensomi_model.training import mapper_v2_1 as mapper_v2_1_training
+from ensomi_model.training.common import ResumableRandomBatchSampler, _infinite_loader
+from ensomi_model.training.hydra_config import (
     compose_training_experiment_config,
     training_experiment_config_to_legacy_dict,
 )

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ensomi Pre-Push Checks"
+  short_description: "Select focused evidence before a push."
+  default_prompt: "Use $ensomi-pre-push-checks to inspect this outgoing Ensomi diff and run the smallest credible pre-push evidence."

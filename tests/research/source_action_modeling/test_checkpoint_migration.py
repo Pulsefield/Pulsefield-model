@@ -3,14 +3,14 @@ from copy import deepcopy
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
-from pulsefield_model.research.source_action_modeling.checkpoint import (
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.source_action_modeling.checkpoint import (
     load_snapshot, save_snapshot, warm_start_snapshot)
-from pulsefield_model.research.source_action_modeling.composition import initialize_composition
-from pulsefield_model.research.source_action_modeling.experiment_hydra import compose_config
-from pulsefield_model.research.source_action_modeling.model import initialize_model, initialize_comparison
-from pulsefield_model.research.source_action_modeling.sampling import BlockSampler, TrainingContext
-from pulsefield_model.research.source_action_modeling.tensors import collate
+from ensomi_model.research.source_action_modeling.composition import initialize_composition
+from ensomi_model.research.source_action_modeling.experiment_hydra import compose_config
+from ensomi_model.research.source_action_modeling.model import initialize_model, initialize_comparison
+from ensomi_model.research.source_action_modeling.sampling import BlockSampler, TrainingContext
+from ensomi_model.research.source_action_modeling.tensors import collate
 from .conftest import example, fixture_chart
 
 
@@ -105,7 +105,7 @@ def test_incompatible_migration_fails_before_any_parameter_or_rng_mutation(tmp_p
 
 
 def test_runner_consumes_warm_start_before_evaluation_and_training(tmp_path, monkeypatch):
-    from pulsefield_model.research.source_action_modeling import experiment
+    from ensomi_model.research.source_action_modeling import experiment
     config=compose_config(["device=cpu","seeds=[17]",f"output_dir={tmp_path/'new'}",f"warm_start_dir={tmp_path/'old'}"])
     directory=tmp_path/'old/seed-17'
     directory.mkdir(parents=True)

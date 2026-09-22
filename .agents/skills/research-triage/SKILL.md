@@ -1,9 +1,9 @@
 ---
 name: research-triage
-description: Guide Pulsefield ML research through analogue search, hypothesis branching, bounded experiment design, and evidence-based result evaluation. Use for open or diffuse research questions, novelty assessment, experiment selection, an accepted Experiment Card, or interpretation of experimental results. Route established implementation, routine debugging, causal analysis, and Agent Note lifecycle work to their owning workflows.
+description: Guide Ensomi ML research through analogue search, hypothesis branching, bounded experiment design, and evidence-based result evaluation. Use for open or diffuse research questions, novelty assessment, experiment selection, an accepted Experiment Card, or interpretation of experimental results. Route established implementation, routine debugging, causal analysis, and Agent Note lifecycle work to their owning workflows.
 ---
 
-# Pulsefield Research Triage
+# Ensomi Research Triage
 
 Turn an open research question into a grounded direction, a proposed discriminating experiment, or a defensible interpretation. Keep the human owner responsible for research direction, acceptance, execution authority, and adoption.
 
@@ -91,7 +91,7 @@ A run with no accepted Card or existing owner is exploratory: record it in a pro
 
 Persist every proposed or accepted card, executed run, direction-changing result, or cross-turn research task in one owning Agent Note. Exploration-only brainstorming may remain ephemeral unless the user asks to retain it. Store raw run outputs in their artifact owner and link stable identifiers from the note. If required note storage is unavailable, return the proposed content and report the persistence blocker; never write an ignored fallback, claim card acceptance, or issue a final `SUPPORTED` recommendation before the required record is committed.
 
-Use [`pulsf-archive-agent-notes`](../pulsf-archive-agent-notes/SKILL.md) for note storage and lifecycle on the separate `agent-notes` branch. Research recommendations never change note lifecycle by themselves. Publish reusable conclusions through the repository prose workflow.
+Use [`ensomi-archive-agent-notes`](../ensomi-archive-agent-notes/SKILL.md) for note storage and lifecycle on the separate `agent-notes` branch. Research recommendations never change note lifecycle by themselves. Publish reusable conclusions through the repository prose workflow.
 
 ## Output resources
 

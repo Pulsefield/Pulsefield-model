@@ -3,11 +3,11 @@ from dataclasses import replace
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef
-from pulsefield_model.research.scoped_style_modeling.model import ModelConfig, initialize_model, losses
-from pulsefield_model.research.scoped_style_modeling.relations import prepare_relations
-from pulsefield_model.research.scoped_style_modeling.replay import prepare_chart, mirror_objects, evidence_masks
-from pulsefield_model.research.scoped_style_modeling.tensors import Example, collate, exact_history
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, Interval, NoteRef
+from ensomi_model.research.scoped_style_modeling.model import ModelConfig, initialize_model, losses
+from ensomi_model.research.scoped_style_modeling.relations import prepare_relations
+from ensomi_model.research.scoped_style_modeling.replay import prepare_chart, mirror_objects, evidence_masks
+from ensomi_model.research.scoped_style_modeling.tensors import Example, collate, exact_history
 
 DEVICES = ["cpu"] + (["mps"] if torch.backends.mps.is_available() else []) + (["cuda"] if torch.cuda.is_available() else [])
 

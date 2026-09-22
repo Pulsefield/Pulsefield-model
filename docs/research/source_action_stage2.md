@@ -19,7 +19,7 @@ separate early-representation controls while retaining these baseline arms.
 
 ## Computation and support
 
-[`representation.py`](../../src/pulsefield_model/research/source_action_modeling/representation.py)
+[`representation.py`](../../src/ensomi_model/research/source_action_modeling/representation.py)
 owns the 64-wide representation bank. Each retained tensor has shape
 `[batch, timeline_row, hand, 64]`. Left-hand columns are `(0, 1)` and right-hand
 columns are `(3, 2)`, preserving outer/inner order under hand exchange.
@@ -63,7 +63,7 @@ contains no source-hash embedding or annotation label.
 
 ## Action and concept queries
 
-[`model.py`](../../src/pulsefield_model/research/source_action_modeling/model.py)
+[`model.py`](../../src/ensomi_model/research/source_action_modeling/model.py)
 connects the bank to action predictions. For each target, `ActionReader` forms a
 query from its `H` state and supplied row-time/position features. One shared-hand
 cross-attention block reads row/level states throughout the context, including
@@ -80,7 +80,7 @@ action, teacher-forced prefix or target value. The decoder scores each row befor
 reading that row's target. Loss averages row NLL within each block and then
 averages blocks, as in the [foundation](source_action_stage1.md#reference-predictor-and-loss).
 
-[`semantic_probe.py`](../../src/pulsefield_model/research/source_action_modeling/semantic_probe.py)
+[`semantic_probe.py`](../../src/ensomi_model/research/source_action_modeling/semantic_probe.py)
 provides a modest `ConceptReader`. It averages hands symmetrically at assessment,
 uses concept-and-duration attention over section source-event anchors and
 readable levels, and combines that summary with the mean anchor state, concept
@@ -121,7 +121,7 @@ alternative. Old style checkpoints are not these trained controls.
 
 ## Visibility, targets and paired views
 
-[`observation.py`](../../src/pulsefield_model/research/source_action_modeling/observation.py)
+[`observation.py`](../../src/ensomi_model/research/source_action_modeling/observation.py)
 separates target selection from visibility. Targets are a contiguous block of
 real source events and must be unavailable; other source rows may also be
 unavailable. A complete observation has no prediction queries. Features and
@@ -169,7 +169,7 @@ costs on the shared suffix, with no added training regularizer. See the
 
 ## Population and evaluation APIs
 
-[`comparison.py`](../../src/pulsefield_model/research/source_action_modeling/comparison.py)
+[`comparison.py`](../../src/ensomi_model/research/source_action_modeling/comparison.py)
 provides Python APIs without adding a training CLI or extending the Stage 1
 smoke runner. `pretraining_contexts` takes a verified `PreparedCorpus` and an
 explicit set of `input_identity` keys. It deduplicates concept records into exact
@@ -283,9 +283,9 @@ Parameter counts in the table are reproducible without local datasets:
 
 ```sh
 uv run --offline --extra mps --group dev python - <<'PY'
-from pulsefield_model.research.source_action_modeling.model import initialize_comparison
-from pulsefield_model.research.source_action_modeling.comparison import parameter_counts
-from pulsefield_model.research.source_action_modeling.semantic_probe import initialize_readout
+from ensomi_model.research.source_action_modeling.model import initialize_comparison
+from ensomi_model.research.source_action_modeling.comparison import parameter_counts
+from ensomi_model.research.source_action_modeling.semantic_probe import initialize_readout
 
 for name, model in initialize_comparison().items():
     counts = parameter_counts(model)

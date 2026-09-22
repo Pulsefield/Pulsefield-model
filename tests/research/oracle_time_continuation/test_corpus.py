@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from pulsefield_model.research.oracle_time_continuation.corpus import catalog_entries, read_split
-from pulsefield_model.research.oracle_time_continuation.data import admit_source
-from pulsefield_model.research.oracle_time_continuation.storage import file_digest
-from pulsefield_model.research.oracle_time_continuation.train_hydra import compose_config
-from pulsefield_model.research.oracle_time_continuation.train_run import load_training_sources, run_training
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.oracle_time_continuation.corpus import catalog_entries, read_split
+from ensomi_model.research.oracle_time_continuation.data import admit_source
+from ensomi_model.research.oracle_time_continuation.storage import file_digest
+from ensomi_model.research.oracle_time_continuation.train_hydra import compose_config
+from ensomi_model.research.oracle_time_continuation.train_run import load_training_sources, run_training
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .test_train_hydra import write_inputs
 
 

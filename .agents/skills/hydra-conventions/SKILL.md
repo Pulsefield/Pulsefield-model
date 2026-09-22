@@ -1,15 +1,15 @@
 ---
 name: hydra-conventions
-description: Apply Pulsefield's Hydra architecture when changing packaged configs, mapper training presets, inference profiles, config adapters, CLI entrypoints, or Hydra tests. Use for work that must preserve canonical package-local YAML, typed validation, complete runtime projection, runner-consumption checks, legacy CLI rejection, and import boundaries.
+description: Apply Ensomi's Hydra architecture when changing packaged configs, mapper training presets, inference profiles, config adapters, CLI entrypoints, or Hydra tests. Use for work that must preserve canonical package-local YAML, typed validation, complete runtime projection, runner-consumption checks, legacy CLI rejection, and import boundaries.
 ---
 
-# Pulsefield Hydra Conventions
+# Ensomi Hydra Conventions
 
 Use Hydra at the process configuration boundary. Select model bundles, training presets, and runtime parameters at startup, then pass typed dataclasses, paths, or plain dictionaries into the long-lived runtime.
 
 ## Sources of truth
 
-- Put YAML under `src/pulsefield_model/configs/` so configs are packaged resources.
+- Put YAML under `src/ensomi_model/configs/` so configs are packaged resources.
 - Use `configs/hydra/` for training experiments and `configs/inference/` for online inference.
 - Treat packaged training presets as canonical. Do not restore duplicate mapper YAML under repo-root `configs/training/` or add mapper-specific YAML loader APIs.
 - Keep inference mapper groups profile-only. Store checkpoint version, model family, vocab and grammar contracts, bundle ID, aliases, protocol contract, and default checkpoint in `MAPPER_PROFILE_SPECS`.

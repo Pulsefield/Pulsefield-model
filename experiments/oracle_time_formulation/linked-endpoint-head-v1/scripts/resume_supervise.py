@@ -10,7 +10,7 @@ import time
 import psutil
 
 from extract import OWNER, save
-from pulsefield_model.research.oracle_time_continuation.storage import file_digest
+from ensomi_model.research.oracle_time_continuation.storage import file_digest
 
 
 def main():

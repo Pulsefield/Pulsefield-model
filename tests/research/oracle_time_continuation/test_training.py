@@ -4,14 +4,14 @@ from dataclasses import replace
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, row_index
-from pulsefield_model.research.oracle_time_continuation.objective import MARGINAL_NAMES, ObjectiveConfig
-from pulsefield_model.research.oracle_time_continuation.training import SequenceTrainer
-from pulsefield_model.research.oracle_time_continuation.training_config import TrainingConfig
-from pulsefield_model.research.oracle_time_continuation.windows import WindowSampler
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone, row_index
+from ensomi_model.research.oracle_time_continuation.objective import MARGINAL_NAMES, ObjectiveConfig
+from ensomi_model.research.oracle_time_continuation.training import SequenceTrainer
+from ensomi_model.research.oracle_time_continuation.training_config import TrainingConfig
+from ensomi_model.research.oracle_time_continuation.windows import WindowSampler
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from .conftest import admit
 from .test_objective import structural_values
 from .test_windows import tap_source

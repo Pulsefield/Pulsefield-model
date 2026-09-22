@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
-from pulsefield_model.research.source_action_modeling.smoke import load_contexts, run_smoke, select_contexts
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.source_action_modeling.smoke import load_contexts, run_smoke, select_contexts
 
 
 def records():

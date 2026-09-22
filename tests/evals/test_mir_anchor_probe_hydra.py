@@ -9,11 +9,11 @@ import pytest
 from hydra.errors import ConfigCompositionException
 from omegaconf import OmegaConf
 
-from pulsefield_model.evals.mir_anchor_probe_hydra import MIRAnchorExperimentConfig
-from pulsefield_model.evals.mir_anchor_probe_hydra import compose_mir_anchor_probe_config
-from pulsefield_model.evals.mir_anchor_probe_hydra import mir_anchor_probe_config_from_hydra
-from pulsefield_model.evals.mir_anchor_probe_hydra import probe_run_config_from_sections
-from pulsefield_model.evals.mir_anchor_probe_hydra import run_mir_anchor_stage
+from ensomi_model.evals.mir_anchor_probe_hydra import MIRAnchorExperimentConfig
+from ensomi_model.evals.mir_anchor_probe_hydra import compose_mir_anchor_probe_config
+from ensomi_model.evals.mir_anchor_probe_hydra import mir_anchor_probe_config_from_hydra
+from ensomi_model.evals.mir_anchor_probe_hydra import probe_run_config_from_sections
+from ensomi_model.evals.mir_anchor_probe_hydra import run_mir_anchor_stage
 
 
 def test_default_config_composes_from_packaged_resource() -> None:
@@ -31,7 +31,7 @@ def test_default_config_composes_from_packaged_resource() -> None:
     assert config.probe.train_choice_sets_per_batch == 32
     assert config.probe.encoder_chunk_frames == 8_192
     assert config.probe.encoder_max_fast_frames == 147_456
-    assert resources.files("pulsefield_model.configs.hydra").joinpath("mir_anchor_probe.yaml").is_file()
+    assert resources.files("ensomi_model.configs.hydra").joinpath("mir_anchor_probe.yaml").is_file()
 
 
 def test_overrides_reach_the_typed_runtime_config() -> None:
@@ -88,7 +88,7 @@ def test_teacher_validation_runs_during_composition() -> None:
 
 
 def test_prepare_stage_projects_exact_split_counts(tmp_path: Path, monkeypatch) -> None:
-    from pulsefield_model.evals import mir_anchor_probe
+    from ensomi_model.evals import mir_anchor_probe
 
     calls = []
 
@@ -115,7 +115,7 @@ def test_prepare_stage_projects_exact_split_counts(tmp_path: Path, monkeypatch) 
 
 
 def test_hydra_and_direct_runtime_defaults_match() -> None:
-    from pulsefield_model.evals.mir_anchor_probe import MIRProbeRunConfig
+    from ensomi_model.evals.mir_anchor_probe import MIRProbeRunConfig
 
     hydra_config = compose_mir_anchor_probe_config()
     runtime = MIRProbeRunConfig()
@@ -126,7 +126,7 @@ def test_hydra_and_direct_runtime_defaults_match() -> None:
 
 
 def test_probe_stage_projects_every_run_field_and_separates_seeds(tmp_path: Path, monkeypatch) -> None:
-    from pulsefield_model.evals import mir_anchor_probe
+    from ensomi_model.evals import mir_anchor_probe
 
     calls = []
     aggregate_calls = []

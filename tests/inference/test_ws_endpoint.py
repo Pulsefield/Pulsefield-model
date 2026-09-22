@@ -9,9 +9,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import torch
-from pulsefield.protocol.v1 import envelope_pb2, inference_pb2
+from ensomi.protocol.v1 import envelope_pb2, inference_pb2
 
-from pulsefield_model.inference.stream_with_cache import (
+from ensomi_model.inference.stream_with_cache import (
     DecoderWindow,
     HitObjectToken,
     StreamWithCache,
@@ -21,11 +21,11 @@ from pulsefield_model.inference.stream_with_cache import (
     clamp_decoder_window_to_audio,
     decoder_windows_until_audio_end,
 )
-from pulsefield_model.inference.routed_backend import (
+from ensomi_model.inference.routed_backend import (
     RoutedInferenceBackend,
     TimingMockStreamBackend,
 )
-from pulsefield_model.inference.ws_endpoint import (
+from ensomi_model.inference.ws_endpoint import (
     InferenceEndpoint,
     InferenceError,
     ProtocolError,
@@ -47,8 +47,8 @@ from pulsefield_model.inference.ws_endpoint import (
     session_transition_target,
     ws_status_log_payload,
 )
-from pulsefield_model.inference.protocol_adapter import PulsefieldProtocolAdapter
-from pulsefield_model.inference.service_models import (
+from ensomi_model.inference.protocol_adapter import EnsomiProtocolAdapter
+from ensomi_model.inference.service_models import (
     AudioCommand,
     EndOfStreamEvent,
     HitObjectTokenEvent,
@@ -58,20 +58,20 @@ from pulsefield_model.inference.service_models import (
     StopCommand,
     event_to_endpoint_payload,
 )
-from pulsefield_model.inference.protobuf_transport import (
+from ensomi_model.inference.protobuf_transport import (
     MAPPER_TOKEN_CONTRACT_VERSION,
     envelope_to_command,
     outbound_payload_to_envelope,
 )
-from pulsefield_model.inference.ws_server import _handle_websocket_client
-from pulsefield_model.data.control_windows import normalize_difficulty
-from pulsefield_model.models.mapper.shared.generation import MapperGeneratedWindow, MapperGenerationStep
-from pulsefield_model.models.mapper.shared.replay import empty_ln_carry_state
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
+from ensomi_model.inference.ws_server import _handle_websocket_client
+from ensomi_model.data.control_windows import normalize_difficulty
+from ensomi_model.models.mapper.shared.generation import MapperGeneratedWindow, MapperGenerationStep
+from ensomi_model.models.mapper.shared.replay import empty_ln_carry_state
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.timing.canonicalization import TIMING_CANONICALIZATION_BPM_80_160
 
 
-MANIFEST_PATH = Path("src/pulsefield_model/inference/hitobject_token_manifest_v2.json")
+MANIFEST_PATH = Path("src/ensomi_model/inference/hitobject_token_manifest_v2.json")
 
 
 def _timing_report() -> dict[str, object]:
@@ -245,7 +245,7 @@ class WsEndpointProtocolTests(unittest.TestCase):
         self.assertEqual(roundtrip.hit_object_token.token_index, 3)
 
     def test_protocol_adapter_preserves_stream_begin_token_index_and_sequence_behavior(self) -> None:
-        adapter = PulsefieldProtocolAdapter()
+        adapter = EnsomiProtocolAdapter()
 
         envelopes = list(
             adapter.outbound_envelopes_for_event(
@@ -268,7 +268,7 @@ class WsEndpointProtocolTests(unittest.TestCase):
         self.assertEqual([envelope.sequence for envelope in envelopes], [1, 2, 3])
 
     def test_protocol_adapter_can_reset_stream_state_before_session_reuse(self) -> None:
-        adapter = PulsefieldProtocolAdapter()
+        adapter = EnsomiProtocolAdapter()
 
         first = list(
             adapter.outbound_envelopes_for_event(
@@ -295,7 +295,7 @@ class WsEndpointProtocolTests(unittest.TestCase):
         self.assertEqual([envelope.sequence for envelope in first + second], [1, 2, 3, 4])
 
     def test_protocol_adapter_surfaces_outbound_validation_as_protocol_error(self) -> None:
-        adapter = PulsefieldProtocolAdapter()
+        adapter = EnsomiProtocolAdapter()
 
         with self.assertRaisesRegex(ProtocolError, "token_contract_version must be positive"):
             list(
@@ -317,7 +317,7 @@ class WsEndpointProtocolTests(unittest.TestCase):
         self.assertGreaterEqual(first, 0.0)
         self.assertGreaterEqual(second, first)
 
-    def test_reference_clock_accepts_pulsefield_host_time(self) -> None:
+    def test_reference_clock_accepts_ensomi_host_time(self) -> None:
         clock = reference_clock_from_message(
             {
                 "session_id": "s1",

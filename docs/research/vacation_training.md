@@ -78,7 +78,7 @@ Create the audio inventory from an existing TRAIN plan and its catalog:
 
 ```sh
 uv run --offline --python 3.10 --extra mps python -m \
-  pulsefield_model.research.vacation_training.prepare_audio_hydra \
+  ensomi_model.research.vacation_training.prepare_audio_hydra \
   plan_file=/path/to/train-plan.json plan_sha256=REPLACE_WITH_SHA256 \
   catalog_file=/path/to/catalog.json catalog_sha256=REPLACE_WITH_SHA256 \
   catalog_root=/path/to/catalog-owning-checkout \

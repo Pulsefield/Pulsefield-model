@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.temporal import TemporalEncoder, TemporalState
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.temporal import TemporalEncoder, TemporalState
 
 
 @pytest.fixture(autouse=True)

@@ -1,11 +1,11 @@
-# 向外部研究者请教：Pulsefield 下一轮究竟应该学习什么？
+# 向外部研究者请教：Ensomi 下一轮究竟应该学习什么？
 
 证据截至 2026-09-18。本文可独立阅读；代码、汇总数据和两张谱面图随本文一起提交。
 不需要聊天记录、Agent Notes、训练目录或本地 checkpoint。这里报告的是探索性结果，
 尚未完成新的独立测试集验证，也未宣布模型达到可玩质量。
 
 GitHub 代码与本文位于
-[Pulsefield/Pulsefield-model 的 codex/oracle-time-formulation-review 分支](https://github.com/Pulsefield/Pulsefield-model/tree/codex/oracle-time-formulation-review)。
+[Ensomi/ensomi-model 的 codex/oracle-time-formulation-review 分支](https://github.com/ensomi-labs/ensomi-model/tree/codex/oracle-time-formulation-review)。
 请查看这个分支，`main` 不包含这组实现；下方相对链接从 GitHub 上的本文可直接打开。
 
 ## 最想知道答案的一个问题
@@ -25,7 +25,7 @@ GitHub 代码与本文位于
 
 ## 目标、自由度和实际限制
 
-Pulsefield V3 要生成 osu!mania 四列谱面的动作编排。当前阶段不输入音频：给出
+Ensomi V3 要生成 osu!mania 四列谱面的动作编排。当前阶段不输入音频：给出
 时间条件和至少 30 个 note head 的源谱开头，模型续写完整谱面。TAP 是一次按下；
 LN（long note）需要按下后持续占用该列，直到释放。相同时间可有多列动作。
 
@@ -329,9 +329,9 @@ Trill、LN coordination 的正例及负例。它们用来校准观察方法；�
 
 | 要检查的内容 | 入口 |
 | --- | --- |
-| 原任务、pre-row 因果边界与行支持集 | [schema.py](../../src/pulsefield_model/research/oracle_time_continuation/schema.py)、[engine.py](../../src/pulsefield_model/research/oracle_time_continuation/engine.py)、[model.py](../../src/pulsefield_model/research/oracle_time_continuation/model.py) |
-| clock readout 与时间信息 | [features.py](../../src/pulsefield_model/research/oracle_time_continuation/features.py) |
-| 完整 prefix、TBPTT、采样与 loss | [training.py](../../src/pulsefield_model/research/oracle_time_continuation/training.py)、[windows.py](../../src/pulsefield_model/research/oracle_time_continuation/windows.py)、[objective.py](../../src/pulsefield_model/research/oracle_time_continuation/objective.py) |
+| 原任务、pre-row 因果边界与行支持集 | [schema.py](../../src/ensomi_model/research/oracle_time_continuation/schema.py)、[engine.py](../../src/ensomi_model/research/oracle_time_continuation/engine.py)、[model.py](../../src/ensomi_model/research/oracle_time_continuation/model.py) |
+| clock readout 与时间信息 | [features.py](../../src/ensomi_model/research/oracle_time_continuation/features.py) |
+| 完整 prefix、TBPTT、采样与 loss | [training.py](../../src/ensomi_model/research/oracle_time_continuation/training.py)、[windows.py](../../src/ensomi_model/research/oracle_time_continuation/windows.py)、[objective.py](../../src/ensomi_model/research/oracle_time_continuation/objective.py) |
 | LN 对象编码、特征和端点 head | [core.py](../../experiments/oracle_time_formulation/linked-endpoint-head-v1/scripts/core.py) |
 | 端点抽样、冻结特征、400/1,600-step 拟合 | [extract.py](../../experiments/oracle_time_formulation/linked-endpoint-head-v1/scripts/extract.py)、[fit.py](../../experiments/oracle_time_formulation/linked-endpoint-head-v1/scripts/fit.py)、[fit1600.py](../../experiments/oracle_time_formulation/linked-endpoint-head-v1/scripts/fit1600.py) |
 | 新生成调度及真实信息边界 | [schedule.py](../../experiments/oracle_time_formulation/onset-endpoint-generation-v1/schedule.py)、[generate.py](../../experiments/oracle_time_formulation/onset-endpoint-generation-v1/generate.py) |

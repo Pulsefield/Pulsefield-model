@@ -8,18 +8,18 @@ a research baseline; generated playability must be evaluated independently of
 likelihood and mechanical correctness.
 
 The implementation provides exact execution contracts in
-[`contract.py`](../../src/pulsefield_model/research/bounded_typed_continuation/contract.py)
+[`contract.py`](../../src/ensomi_model/research/bounded_typed_continuation/contract.py)
 and a dense/cached finite content encoder in
-[`temporal.py`](../../src/pulsefield_model/research/bounded_typed_continuation/temporal.py).
-[`features.py`](../../src/pulsefield_model/research/bounded_typed_continuation/features.py)
+[`temporal.py`](../../src/ensomi_model/research/bounded_typed_continuation/temporal.py).
+[`features.py`](../../src/ensomi_model/research/bounded_typed_continuation/features.py)
 owns permitted exact-state and timing inputs;
-[`model.py`](../../src/pulsefield_model/research/bounded_typed_continuation/model.py)
+[`model.py`](../../src/ensomi_model/research/bounded_typed_continuation/model.py)
 implements joint decisions and dependent endpoint likelihoods and sampling.
-[`data.py`](../../src/pulsefield_model/research/bounded_typed_continuation/data.py)
+[`data.py`](../../src/ensomi_model/research/bounded_typed_continuation/data.py)
 projects source labels into bounded, batched teacher-forced training windows.
-[`generation.py`](../../src/pulsefield_model/research/bounded_typed_continuation/generation.py)
+[`generation.py`](../../src/ensomi_model/research/bounded_typed_continuation/generation.py)
 samples the native tasks and rebuilds bounded caches from raw checkpoints;
-[`verification.py`](../../src/pulsefield_model/research/bounded_typed_continuation/verification.py)
+[`verification.py`](../../src/ensomi_model/research/bounded_typed_continuation/verification.py)
 independently checks completed outputs against the external condition and plans.
 The packaged `bounded_typed_smoke` configuration provides a bounded learning-check
 runner. A 16-chart learning check and paired R1 corpus trajectories through four
@@ -69,7 +69,7 @@ available candidate. Support excludes any decision that leaves no possible
 way to make at least one lane free strictly before the next required onset.
 
 R0/R1 prediction computes the same mask for a batch of queries in
-[`support.py`](../../src/pulsefield_model/research/bounded_typed_continuation/support.py).
+[`support.py`](../../src/ensomi_model/research/bounded_typed_continuation/support.py).
 It evaluates lane legality, fixed seed ends, terminal closure, onset roles and
 future availability with Boolean arrays in the original candidate order.
 `Schedule.row_possible` remains the scalar commit validator and independent
@@ -105,7 +105,7 @@ probability mass of all legal alternatives, computed with logsumexp. It does
 not select a unique correct action or change native sampling support.
 
 Response queries instead compare the sampled row with legal alternatives using
-[`response.py`](../../src/pulsefield_model/research/bounded_typed_continuation/response.py).
+[`response.py`](../../src/ensomi_model/research/bounded_typed_continuation/response.py).
 The cost counts heads with a same-lane head or release gap below a declared
 threshold, over the current row and the next two supplied H. Future actions use
 an optimistic minimum: one TAP per H and earliest possible unknown-LN releases;
@@ -555,7 +555,7 @@ The future views describe the candidate's immediate state; intervening actions
 remain unknown. A possible release is not a committed endpoint. These features
 use only exact prefix facts, candidate actions and supplied R/H.
 
-[`consequence.py`](../../src/pulsefield_model/research/bounded_typed_continuation/consequence.py)
+[`consequence.py`](../../src/ensomi_model/research/bounded_typed_continuation/consequence.py)
 factorizes the first affine into four relative-lane projections, a timing
 projection and the encoded hand context. Sixteen lane/action descriptors are
 projected once and gathered for 256 complete candidates. GELU and a shared scalar
@@ -750,11 +750,11 @@ full lowercase SHA-256 values. Preparation prints the resulting condition digest
 Each preparation output file and generation output directory must be fresh.
 
 ```sh
-uv run --python 3.10 --extra mps python -m pulsefield_model.research.bounded_typed_continuation.condition_hydra \
+uv run --python 3.10 --extra mps python -m ensomi_model.research.bounded_typed_continuation.condition_hydra \
   source_file=/path/to/source.osu source_sha256=SOURCE_SHA256 \
   output_file=artifacts/bounded-typed-continuation/condition.json arm=r1 seed_notes=30
 
-uv run --python 3.10 --extra mps python -m pulsefield_model.research.bounded_typed_continuation.generate_hydra \
+uv run --python 3.10 --extra mps python -m ensomi_model.research.bounded_typed_continuation.generate_hydra \
   checkpoint_file=/path/to/checkpoint.pt checkpoint_sha256=CHECKPOINT_SHA256 \
   condition_file=artifacts/bounded-typed-continuation/condition.json condition_sha256=CONDITION_SHA256 \
   output_dir=artifacts/bounded-typed-continuation/generated-example device=cpu cpu_threads=1 seed=17
@@ -962,7 +962,7 @@ remain interpretable without those files. No annotation or human gold was change
 ### Learning-check execution and main comparison
 
 The learning-check entrypoint is
-`python -m pulsefield_model.research.bounded_typed_continuation.smoke_hydra`.
+`python -m ensomi_model.research.bounded_typed_continuation.smoke_hydra`.
 Use explicit `mps` dependencies on this Mac. Pin `interval_manifest`/`interval_sha256`,
 `catalog_path`/`catalog_sha256`, `split_manifest`/`split_sha256`, `source_cache_dir`
 and a fresh `output_dir` through Hydra overrides. Select `model.arm=R0`, `R1` or
@@ -1029,7 +1029,7 @@ does not impose those bands. Original-seed LN amount often differs from later
 phases, and raw human records cover 149 of the 11,563 eligible charts.
 
 The corpus entrypoint is
-`python -m pulsefield_model.research.bounded_typed_continuation.train_hydra`.
+`python -m ensomi_model.research.bounded_typed_continuation.train_hydra`.
 Supply `plan_file`, `plan_sha256`, `source_cache_dir` and a fresh `output_dir`.
 Packaged defaults use CPU execution with one thread, four intervals per optimizer update, microbatches of two,
 AdamW at 0.0003, weight decay 0.01, clipping at one and a linear warmup through

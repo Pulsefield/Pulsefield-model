@@ -1,6 +1,6 @@
-# Pulsefield V3 formulation
+# Ensomi V3 formulation
 
-Pulsefield's target is to generate musically coherent, legal 4K choreography
+Ensomi's target is to generate musically coherent, legal 4K choreography
 from complete audio and committed chart history. Style and gameplay-demand
 requests are optional controls. The materialized output is a sequence of complete timed
 rows; implementations may use different representations and generation methods.
@@ -29,7 +29,7 @@ target responses. This formulation does not provide a completed response
 specification, a calibrated demand scale, or an executable V3 model.
 
 The initial style dataset uses the scoped, ordinal judgments supplied by
-@Pulsefield/beatmap-lens. Presence, strength, unresolved judgments, and
+@ensomi-labs/beatmap-lens. Presence, strength, unresolved judgments, and
 unreviewed dimensions remain distinct. Those observations provide style
 supervision; they do not directly label numerical demand.
 

@@ -8,4 +8,4 @@ if [ "$(uname -s)" != Darwin ]; then
     exit 2
 fi
 exec /usr/bin/caffeinate -is uv run --offline --python 3.10 --extra mps python -m \
-    pulsefield_model.research.r1_restore.hydra "$@"
+    ensomi_model.research.r1_restore.hydra "$@"

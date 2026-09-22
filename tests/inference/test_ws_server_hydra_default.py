@@ -7,7 +7,7 @@ import pytest
 
 
 def test_serve_forever_default_endpoint_uses_explicit_hydra_profile(monkeypatch: pytest.MonkeyPatch) -> None:
-    from pulsefield_model.inference import ws_server
+    from ensomi_model.inference import ws_server
 
     class StopServing(Exception):
         pass

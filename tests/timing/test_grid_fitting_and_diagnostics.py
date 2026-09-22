@@ -2,23 +2,23 @@ import unittest
 
 import numpy as np
 
-import pulsefield_model.timing.grid_fitting.scoring as scoring_module
-from pulsefield_model.timing.grid_fitting.alias import (
+import ensomi_model.timing.grid_fitting.scoring as scoring_module
+from ensomi_model.timing.grid_fitting.alias import (
     _AliasOption,
     _alias_is_semantic_promotion,
     _alias_path_is_acceptable,
 )
-from pulsefield_model.timing.grid_fitting.change_detection import _detect_change_split_candidates
-from pulsefield_model.timing.grid_fitting.refinement import _refine_timing_segments
-from pulsefield_model.timing.diagnostics.compare_to_oracle import compare_timing_grids
-from pulsefield_model.timing.canonicalization import (
+from ensomi_model.timing.grid_fitting.change_detection import _detect_change_split_candidates
+from ensomi_model.timing.grid_fitting.refinement import _refine_timing_segments
+from ensomi_model.timing.diagnostics.compare_to_oracle import compare_timing_grids
+from ensomi_model.timing.canonicalization import (
     TIMING_CANONICALIZATION_BPM_80_160,
     canonical_bpm_80_160,
     canonicalize_timing_grid,
 )
-from pulsefield_model.timing.grid_fitting import GridFitter, GridFitterConfig
-from pulsefield_model.timing.grid_fitting.types import _SegmentFit
-from pulsefield_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
+from ensomi_model.timing.grid_fitting import GridFitter, GridFitterConfig
+from ensomi_model.timing.grid_fitting.types import _SegmentFit
+from ensomi_model.timing.schema import FittedTimingGrid, FrameTimingPrediction, TimingSegment
 
 
 def _pulse_probabilities(

@@ -5,11 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pulsefield_model.training.mapper_v2_1_control_cache_overnight import parse_args as parse_cache_args
-from pulsefield_model.training.mapper_v2_1_control_cache_overnight import run_supervisor as run_cache_supervisor
-from pulsefield_model.training.mapper_v2_1_overnight import parse_args as parse_mapper_args
-from pulsefield_model.training.mapper_v2_1_overnight import run_supervisor as run_mapper_supervisor
-from pulsefield_model.training.overnight import (
+from ensomi_model.training.mapper_v2_1_control_cache_overnight import parse_args as parse_cache_args
+from ensomi_model.training.mapper_v2_1_control_cache_overnight import run_supervisor as run_cache_supervisor
+from ensomi_model.training.mapper_v2_1_overnight import parse_args as parse_mapper_args
+from ensomi_model.training.mapper_v2_1_overnight import run_supervisor as run_mapper_supervisor
+from ensomi_model.training.overnight import (
     checkpoint_saved_after,
     existing_resume_checkpoint,
     hydra_override,
@@ -35,8 +35,8 @@ class OvernightWrapperTests(unittest.TestCase):
 
     def test_hydra_override_quotes_string_values(self) -> None:
         self.assertEqual(
-            hydra_override("output.output_dir", Path("/tmp/pulsefield,out=a")),
-            'output.output_dir="/tmp/pulsefield,out=a"',
+            hydra_override("output.output_dir", Path("/tmp/ensomi,out=a")),
+            'output.output_dir="/tmp/ensomi,out=a"',
         )
         self.assertEqual(hydra_override("output.resume_from", None), "output.resume_from=null")
         self.assertEqual(hydra_override("run.max_steps", 20), "run.max_steps=20")
@@ -96,7 +96,7 @@ class OvernightWrapperTests(unittest.TestCase):
                     "10",
                     "--dry-run",
                     "--uv-command",
-                    "python -m pulsefield_model.training.mapper_training_hydra",
+                    "python -m ensomi_model.training.mapper_training_hydra",
                     "output.resume_from=null",
                 ]
             )
@@ -106,7 +106,7 @@ class OvernightWrapperTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         output = stdout.getvalue()
-        self.assertIn("overnight_dry_run python -m pulsefield_model.training.mapper_training_hydra", output)
+        self.assertIn("overnight_dry_run python -m ensomi_model.training.mapper_training_hydra", output)
         self.assertIn("training/mapper=v2_1_sparse_d384_l4_phase_b", output)
         self.assertIn(f'output.output_dir="{output_dir.as_posix()}"', output)
         self.assertIn("run.max_steps=20", output)
@@ -122,7 +122,7 @@ class OvernightWrapperTests(unittest.TestCase):
                     output_dir.as_posix(),
                     "--dry-run",
                     "--uv-command",
-                    "python -m pulsefield_model.training.mapper_training_hydra",
+                    "python -m ensomi_model.training.mapper_training_hydra",
                 ]
             )
             self.assertEqual(args.max_runs, 16000)
@@ -132,7 +132,7 @@ class OvernightWrapperTests(unittest.TestCase):
                 exit_code = run_cache_supervisor(args, trainer_args)
         self.assertEqual(exit_code, 0)
         output = stdout.getvalue()
-        self.assertIn("overnight_cache_dry_run python -m pulsefield_model.training.mapper_training_hydra", output)
+        self.assertIn("overnight_cache_dry_run python -m ensomi_model.training.mapper_training_hydra", output)
         self.assertIn("training/mapper=v2_1_sparse_d384_l4_phase_b", output)
         self.assertIn(f'output.output_dir="{output_dir.as_posix()}"', output)
         self.assertIn("data.precompute_control_teacher_cache_only=true", output)

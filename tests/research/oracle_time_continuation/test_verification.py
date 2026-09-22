@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from pulsefield_model.research.oracle_time_continuation import verification
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationState
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError, digest
+from ensomi_model.research.oracle_time_continuation import verification
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationState
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError, digest
 from .conftest import source_bytes
 
 

@@ -8,11 +8,11 @@ from unittest.mock import patch
 
 import torch
 
-from pulsefield_model.inference import model_runtime as model_runtime_module
-from pulsefield_model.inference.model_runtime import ModelRuntimeConfig, load_model_runtime, release_torch_cache
-from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
-from pulsefield_model.models.mapper.shared.vocab import MapperTupleVocab
-from pulsefield_model.models.mapper.v2 import MapperV2Config, MapperV2Model
+from ensomi_model.inference import model_runtime as model_runtime_module
+from ensomi_model.inference.model_runtime import ModelRuntimeConfig, load_model_runtime, release_torch_cache
+from ensomi_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
+from ensomi_model.models.mapper.shared.vocab import MapperTupleVocab
+from ensomi_model.models.mapper.v2 import MapperV2Config, MapperV2Model
 
 
 class ModelRuntimeTests(unittest.TestCase):

@@ -6,18 +6,18 @@ import numpy as np
 import pytest
 import torch
 
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
-from pulsefield_model.research.bounded_typed_continuation.generation import RawEvent, Rollout
-from pulsefield_model.research.bounded_typed_continuation.data import SourceChart
-from pulsefield_model.research.bounded_typed_continuation.features import query_features
-from pulsefield_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
-from pulsefield_model.research.bounded_typed_continuation.verification import verify_complete
-from pulsefield_model.research.oracle_time_continuation.data import SourceIdentity, admit_source
-from pulsefield_model.research.oracle_time_continuation.export import export_osu
-from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation.contract import Arm, Schedule, Timing
+from ensomi_model.research.bounded_typed_continuation.generation import RawEvent, Rollout
+from ensomi_model.research.bounded_typed_continuation.data import SourceChart
+from ensomi_model.research.bounded_typed_continuation.features import query_features
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
+from ensomi_model.research.bounded_typed_continuation.verification import verify_complete
+from ensomi_model.research.oracle_time_continuation.data import SourceIdentity, admit_source
+from ensomi_model.research.oracle_time_continuation.export import export_osu
+from ensomi_model.research.oracle_time_continuation.runtime import ResourceConfig
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 
 
 def setup(arm, device='cpu', availability='none', consequence='none', seed_context='none', long_memory='none', head_routing='none', release_routing='none'):

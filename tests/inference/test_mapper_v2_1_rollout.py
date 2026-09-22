@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import torch
 
-from pulsefield_model.inference.mapper_v2_1_rollout import (
+from ensomi_model.inference.mapper_v2_1_rollout import (
     MapperV21FullRollout,
     MapperV21GenerationStep,
     _apply_time_shift_length_penalty_v2_1,
@@ -14,9 +14,9 @@ from pulsefield_model.inference.mapper_v2_1_rollout import (
     rollout_to_timepoints_v2_1,
     zero_control_batch_provider_v2_1,
 )
-from pulsefield_model.models.mapper.v2_1 import MapperV21Vocab, empty_ln_carry_state
-from pulsefield_model.models.mapper.v2_1.model import MapperV21Config, MapperV21Model
-from pulsefield_model.models.mapper.v2_1.replay import initial_replay_state
+from ensomi_model.models.mapper.v2_1 import MapperV21Vocab, empty_ln_carry_state
+from ensomi_model.models.mapper.v2_1.model import MapperV21Config, MapperV21Model
+from ensomi_model.models.mapper.v2_1.replay import initial_replay_state
 
 
 V21_LEGACY_DEFAULT_DETERMINISTIC_FIXTURE = {

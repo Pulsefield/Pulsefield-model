@@ -7,7 +7,7 @@ if importlib.util.find_spec("torch") is None:
 
 import torch
 
-from pulsefield_model.models.control.demo_global import (
+from ensomi_model.models.control.demo_global import (
     ControlDemoGlobalEncoder,
     ControlDemoGlobalEncoderConfig,
     _GlobalFiLM,

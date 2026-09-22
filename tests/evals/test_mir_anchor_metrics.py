@@ -3,10 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pulsefield_model.evals.mir_anchor_metrics import choice_metrics
-from pulsefield_model.evals.mir_anchor_metrics import exact_group_shapley
-from pulsefield_model.evals.mir_anchor_metrics import paired_cluster_bootstrap
-from pulsefield_model.evals.mir_anchor_metrics import paired_sign_flip_pvalue
+from ensomi_model.evals.mir_anchor_metrics import choice_metrics
+from ensomi_model.evals.mir_anchor_metrics import exact_group_shapley
+from ensomi_model.evals.mir_anchor_metrics import paired_cluster_bootstrap
+from ensomi_model.evals.mir_anchor_metrics import paired_sign_flip_pvalue
 
 
 def test_choice_metrics_use_case_column_zero() -> None:

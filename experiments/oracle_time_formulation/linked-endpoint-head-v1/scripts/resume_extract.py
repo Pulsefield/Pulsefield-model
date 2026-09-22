@@ -10,12 +10,12 @@ import numpy as np
 import torch
 
 from core import context_features, linked_rows, reconstruct, time_tensor
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.corpus import admit_entry, catalog_entries, read_split
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone
-from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE, SourceStore, file_digest
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.corpus import admit_entry, catalog_entries, read_split
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone
+from ensomi_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE, SourceStore, file_digest
 
 ROOT = Path('artifacts/oracle-time-continuation/m3-20260917')
 OWNER = ROOT / 'linked-endpoint-head-v1'
@@ -44,7 +44,7 @@ def main():
     assert file_digest(RUNTIME/'sha256.json') == '09469489b1d5b0d3f9e92890fa0ae6f58c3a9ecc2bf78cad977a865a3d16790e'
     for path, sha in json.loads((RUNTIME/'sha256.json').read_text()).items():
         assert file_digest(RUNTIME/path) == sha
-    from pulsefield_model.research.oracle_time_continuation import model as model_module
+    from ensomi_model.research.oracle_time_continuation import model as model_module
     assert Path(model_module.__file__).resolve().is_relative_to(RUNTIME.resolve())
     assert file_digest(WEIGHTS) == WEIGHTS_SHA
     assert file_digest(CATALOG) == 'e31b7e8f4daa044503ef2b8411bc41727ba371eec804c9462a4608be8112ad28'

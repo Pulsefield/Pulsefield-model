@@ -8,12 +8,12 @@ from pathlib import Path
 
 import torch
 
-from pulsefield_model.data.control_windows import ControlWindowRecord, normalize_difficulty
-from pulsefield_model.data.mapper_sparse_windows_v2_1 import MapperV21WindowDataset, collate_mapper_v2_1_windows
-from pulsefield_model.features.control_v3_targets import MODEL_FEATURE_NAMES
-from pulsefield_model.models.mapper.v2_1.replay import NO_EMITTED_LANE_INDEX, ln_carry_state_tensors
-from pulsefield_model.models.mapper.v2_1.tokenizer import MapperTimepoint, encode_mapper_window
-from pulsefield_model.models.mapper.v2_1.vocab import LaneAction, MapperV21Vocab
+from ensomi_model.data.control_windows import ControlWindowRecord, normalize_difficulty
+from ensomi_model.data.mapper_sparse_windows_v2_1 import MapperV21WindowDataset, collate_mapper_v2_1_windows
+from ensomi_model.features.control_v3_targets import MODEL_FEATURE_NAMES
+from ensomi_model.models.mapper.v2_1.replay import NO_EMITTED_LANE_INDEX, ln_carry_state_tensors
+from ensomi_model.models.mapper.v2_1.tokenizer import MapperTimepoint, encode_mapper_window
+from ensomi_model.models.mapper.v2_1.vocab import LaneAction, MapperV21Vocab
 
 
 def _actions(*actions: LaneAction) -> tuple[LaneAction, ...]:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ensomi Trim CoT Leakage"
+  short_description: "Remove authoring-session residue from prose."
+  default_prompt: "Use $ensomi-trim-cot-leakage to audit this Ensomi prose for unresolvable authoring-session residue and fix it without losing facts."

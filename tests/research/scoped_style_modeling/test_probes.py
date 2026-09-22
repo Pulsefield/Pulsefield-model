@@ -5,21 +5,21 @@ from pathlib import Path
 import pytest
 import torch
 
-from pulsefield_model.research.scoped_style_modeling.config import ModelConfig
-from pulsefield_model.research.scoped_style_modeling.dataset import CONCEPTS, ContractError, canonical_json, digest
-from pulsefield_model.research.scoped_style_modeling.model import initialize_model
-from pulsefield_model.research.scoped_style_modeling.probe_config import ProbeConfig
-from pulsefield_model.research.scoped_style_modeling.probe_data import (ProbeCorpus, TARGET_POLICY, TENSOR_VERSION,
+from ensomi_model.research.scoped_style_modeling.config import ModelConfig
+from ensomi_model.research.scoped_style_modeling.dataset import CONCEPTS, ContractError, canonical_json, digest
+from ensomi_model.research.scoped_style_modeling.model import initialize_model
+from ensomi_model.research.scoped_style_modeling.probe_config import ProbeConfig
+from ensomi_model.research.scoped_style_modeling.probe_data import (ProbeCorpus, TARGET_POLICY, TENSOR_VERSION,
     confidence, input_identity, select_targets, sampled_cells, support)
-from pulsefield_model.research.scoped_style_modeling.probe_model import initialize_probe
-from pulsefield_model.research.scoped_style_modeling.probe_hydra import compose_config
-from pulsefield_model.research.scoped_style_modeling.probe_metrics import (prediction_rows, weighted_ranking,
+from ensomi_model.research.scoped_style_modeling.probe_model import initialize_probe
+from ensomi_model.research.scoped_style_modeling.probe_hydra import compose_config
+from ensomi_model.research.scoped_style_modeling.probe_metrics import (prediction_rows, weighted_ranking,
     joint_readouts, localized_inventory, paired_changes)
-from pulsefield_model.research.scoped_style_modeling.probe_cache import build_cache, BackboneCache
-from pulsefield_model.research.scoped_style_modeling.probes import run_probe, prepare_batch, forward, feasible_updates
-from pulsefield_model.research.scoped_style_modeling.temporal import (parse_redlines, temporal_sidecars, TimeCoordinates)
-from pulsefield_model.research.scoped_style_modeling.tensors import collate
-from pulsefield_model.research.scoped_style_modeling.train import write_json
+from ensomi_model.research.scoped_style_modeling.probe_cache import build_cache, BackboneCache
+from ensomi_model.research.scoped_style_modeling.probes import run_probe, prepare_batch, forward, feasible_updates
+from ensomi_model.research.scoped_style_modeling.temporal import (parse_redlines, temporal_sidecars, TimeCoordinates)
+from ensomi_model.research.scoped_style_modeling.tensors import collate
+from ensomi_model.research.scoped_style_modeling.train import write_json
 from test_model import fixture, DEVICES
 from test_training import corpus_fixture
 
@@ -231,7 +231,7 @@ def test_disk_cache_exact_states_and_stale_rejection(tmp_path):
 
 @pytest.mark.parametrize('stage,names', [('readout', ['R0', 'R1']), ('pilot', ['C0', 'CT', 'CM', 'CTM'])])
 def test_comparison_end_to_end_final_selected_and_frozen_backbone(tmp_path, monkeypatch, stage, names):
-    from pulsefield_model.research.scoped_style_modeling import probe_metrics, probes
+    from ensomi_model.research.scoped_style_modeling import probe_metrics, probes
     monkeypatch.setattr(probe_metrics, 'plot_scores', lambda *args: None)
     monkeypatch.setattr(probes, 'plot_curves', lambda *args: None)
     config, corpus = probe_fixture(tmp_path)

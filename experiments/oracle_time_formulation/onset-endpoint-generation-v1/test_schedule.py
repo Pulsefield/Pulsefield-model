@@ -7,7 +7,7 @@ import numpy as np
 sys.path.insert(0,str(Path(__file__).parent.parent/'linked-endpoint-head-v1/scripts'))
 from core import linked_rows
 from schedule import Schedule
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE
 
 
 class ScheduleChecks(unittest.TestCase):

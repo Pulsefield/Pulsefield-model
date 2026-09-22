@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pulsefield_model.data.beatmap_index import (
+from ensomi_model.data.beatmap_index import (
     build_4k_index,
     build_4k_no_timing_anomaly_index,
     build_dense_timing_v2_local_bpm_norm_unique_index,

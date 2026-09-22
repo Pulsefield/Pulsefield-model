@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from core import EndpointHead, candidate_features, context_features, linked_rows, reconstruct, time_tensor
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE
 
 
 class RepresentationChecks(unittest.TestCase):

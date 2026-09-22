@@ -11,12 +11,12 @@ from types import SimpleNamespace
 import torch
 from torch.utils.data import Dataset
 
-from pulsefield_model.data.control_demo_global_windows import collate_control_demo_global_windows
-from pulsefield_model.features.control_v3_targets import CONFIDENCE_FEATURE_NAMES, MODEL_FEATURE_NAMES, VALUE_FEATURE_NAMES
-from pulsefield_model.models.control.encoder import ControlEncoder, ControlEncoderConfig
-from pulsefield_model.models.control import ControlDemoModelLoss
-from pulsefield_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
-from pulsefield_model.training.control_demo_global import (
+from ensomi_model.data.control_demo_global_windows import collate_control_demo_global_windows
+from ensomi_model.features.control_v3_targets import CONFIDENCE_FEATURE_NAMES, MODEL_FEATURE_NAMES, VALUE_FEATURE_NAMES
+from ensomi_model.models.control.encoder import ControlEncoder, ControlEncoderConfig
+from ensomi_model.models.control import ControlDemoModelLoss
+from ensomi_model.models.control import ControlDemoGlobalEncoder, ControlDemoGlobalEncoderConfig
+from ensomi_model.training.control_demo_global import (
     _GlobalAttentionBudgetBatchSampler,
     _build_control_demo_global_optimizer,
     _loss_for_raw_batch,

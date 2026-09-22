@@ -10,8 +10,8 @@ import torch
 
 from core import EndpointHead, collate
 from extract import OWNER, OUT as FEATURES, SEED, save
-from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
-from pulsefield_model.research.oracle_time_continuation.storage import file_digest
+from ensomi_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
+from ensomi_model.research.oracle_time_continuation.storage import file_digest
 
 FEATURES = OWNER/'features-rest'
 OUT = OWNER/'fit-u1600'

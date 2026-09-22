@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from pulsefield_model.inference.config import (
+from ensomi_model.inference.config import (
     InferenceServiceConfig,
     default_inference_service_config,
     inference_service_config_from_mapping,
     project_to_ws_endpoint_config,
 )
-from pulsefield_model.inference.defaults import (
+from ensomi_model.inference.defaults import (
     DEFAULT_CONTROL_CHECKPOINT_PATH,
     DEFAULT_HOST,
     DEFAULT_MAPPER_CHECKPOINT_PATH,
@@ -23,7 +23,7 @@ from pulsefield_model.inference.defaults import (
     DEFAULT_PORT,
     DEFAULT_RUNTIME_DEVICE,
 )
-from pulsefield_model.inference.mapper_protocol import resolve_mapper_profile
+from ensomi_model.inference.mapper_protocol import resolve_mapper_profile
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -84,7 +84,7 @@ def test_default_hydra_composition_exposes_reviewable_contract() -> None:
 
 
 def test_hydra_configs_are_package_resources() -> None:
-    package_root = resources.files("pulsefield_model")
+    package_root = resources.files("ensomi_model")
 
     assert package_root.joinpath("configs/inference/service.yaml").is_file()
     assert package_root.joinpath("configs/hydra/mapper_training.yaml").is_file()
@@ -120,21 +120,21 @@ def test_explicit_mapper_checkpoint_override_wins_over_profile_default() -> None
 
 @pytest.mark.parametrize("override", ("mapper.unexpected=true", "+mapper.unexpected=true"))
 def test_hydra_composition_rejects_unknown_nested_keys(override: str) -> None:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     with pytest.raises(Exception, match="unexpected|Could not override"):
         compose_inference_service_config([override])
 
 
 def test_hydra_composition_rejects_invalid_canonicalization() -> None:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     with pytest.raises(ValueError, match="canonicalization must be one of"):
         compose_inference_service_config(["runtime.canonicalization=bogus"])
 
 
 def test_hydra_composition_rejects_disabled_timing_mock_route() -> None:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     with pytest.raises(ValueError, match="timing_mock.enabled must be true"):
         compose_inference_service_config(["timing_mock.enabled=false"])
@@ -149,14 +149,14 @@ def test_hydra_composition_rejects_disabled_timing_mock_route() -> None:
     ),
 )
 def test_hydra_composition_rejects_blank_runtime_identity_fields(override: str) -> None:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     with pytest.raises(ValueError, match="must be a non-empty string"):
         compose_inference_service_config([override])
 
 
 def test_hydra_composition_rejects_auto_mapper_profile() -> None:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     with pytest.raises(ValueError, match="mapper.profile must be explicit"):
         compose_inference_service_config(["mapper.profile=auto"])
@@ -186,7 +186,7 @@ def test_hydra_composition_rejects_auto_mapper_profile() -> None:
     ),
 )
 def test_hydra_composition_rejects_invalid_numeric_boundaries(override: str, match: str) -> None:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     with pytest.raises(ValueError, match=match):
         compose_inference_service_config([override])
@@ -201,12 +201,12 @@ import sys
 
 BLOCKED_PREFIXES = (
     "torch",
-    "pulsefield_model.inference.model_bundles",
-    "pulsefield_model.inference.model_runtime",
-    "pulsefield_model.inference.session_runtime",
-    "pulsefield_model.inference.stream_with_cache",
-    "pulsefield_model.inference.ws_endpoint",
-    "pulsefield_model.inference.ws_server",
+    "ensomi_model.inference.model_bundles",
+    "ensomi_model.inference.model_runtime",
+    "ensomi_model.inference.session_runtime",
+    "ensomi_model.inference.stream_with_cache",
+    "ensomi_model.inference.ws_endpoint",
+    "ensomi_model.inference.ws_server",
 )
 
 
@@ -231,7 +231,7 @@ sys.meta_path.insert(0, ImportBlocker())
     )
 
     result = subprocess.run(
-        [sys.executable, "-m", "pulsefield_model.inference.hydra_entry", "--help"],
+        [sys.executable, "-m", "ensomi_model.inference.hydra_entry", "--help"],
         cwd=PROJECT_ROOT,
         env=env,
         stdout=subprocess.PIPE,
@@ -254,11 +254,11 @@ import sys
 
 BLOCKED_PREFIXES = (
     "torch",
-    "pulsefield_model.inference.model_bundles",
-    "pulsefield_model.inference.model_runtime",
-    "pulsefield_model.inference.session_runtime",
-    "pulsefield_model.inference.stream_with_cache",
-    "pulsefield_model.inference.ws_endpoint",
+    "ensomi_model.inference.model_bundles",
+    "ensomi_model.inference.model_runtime",
+    "ensomi_model.inference.session_runtime",
+    "ensomi_model.inference.stream_with_cache",
+    "ensomi_model.inference.ws_endpoint",
 )
 
 
@@ -283,7 +283,7 @@ sys.meta_path.insert(0, ImportBlocker())
     )
 
     result = subprocess.run(
-        [sys.executable, "-m", "pulsefield_model.inference.ws_server", "--help"],
+        [sys.executable, "-m", "ensomi_model.inference.ws_server", "--help"],
         cwd=PROJECT_ROOT,
         env=env,
         stdout=subprocess.PIPE,
@@ -299,14 +299,14 @@ sys.meta_path.insert(0, ImportBlocker())
 
 def test_hydra_imports_stay_out_of_runtime_modules() -> None:
     restricted_paths = [
-        PROJECT_ROOT / "src/pulsefield_model/inference/mapper_protocol.py",
-        PROJECT_ROOT / "src/pulsefield_model/inference/protocol_adapter.py",
-        PROJECT_ROOT / "src/pulsefield_model/inference/protobuf_transport.py",
-        PROJECT_ROOT / "src/pulsefield_model/inference/session_runtime.py",
-        PROJECT_ROOT / "src/pulsefield_model/inference/ws_endpoint.py",
-        PROJECT_ROOT / "src/pulsefield_model/inference/mapper_v2_tuple_rollout.py",
-        PROJECT_ROOT / "src/pulsefield_model/inference/mapper_v2_1_rollout.py",
-        *sorted((PROJECT_ROOT / "src/pulsefield_model/inference/model_bundles").glob("*.py")),
+        PROJECT_ROOT / "src/ensomi_model/inference/mapper_protocol.py",
+        PROJECT_ROOT / "src/ensomi_model/inference/protocol_adapter.py",
+        PROJECT_ROOT / "src/ensomi_model/inference/protobuf_transport.py",
+        PROJECT_ROOT / "src/ensomi_model/inference/session_runtime.py",
+        PROJECT_ROOT / "src/ensomi_model/inference/ws_endpoint.py",
+        PROJECT_ROOT / "src/ensomi_model/inference/mapper_v2_tuple_rollout.py",
+        PROJECT_ROOT / "src/ensomi_model/inference/mapper_v2_1_rollout.py",
+        *sorted((PROJECT_ROOT / "src/ensomi_model/inference/model_bundles").glob("*.py")),
     ]
 
     for path in restricted_paths:
@@ -317,6 +317,6 @@ def test_hydra_imports_stay_out_of_runtime_modules() -> None:
 
 
 def _compose(overrides: Sequence[str] = ()) -> InferenceServiceConfig:
-    from pulsefield_model.inference.hydra_entry import compose_inference_service_config
+    from ensomi_model.inference.hydra_entry import compose_inference_service_config
 
     return compose_inference_service_config(overrides)

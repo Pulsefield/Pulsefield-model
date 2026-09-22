@@ -1,10 +1,10 @@
 import unittest
 
-from pulsefield_model.timing.ramp_detection import (
+from ensomi_model.timing.ramp_detection import (
     TimingRampDetectionConfig,
     detect_timing_ramp,
 )
-from pulsefield_model.timing.schema import FittedTimingGrid, TimingSegment
+from ensomi_model.timing.schema import FittedTimingGrid, TimingSegment
 
 
 def _grid_from_bpms(

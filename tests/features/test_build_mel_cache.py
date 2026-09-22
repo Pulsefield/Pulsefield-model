@@ -6,14 +6,14 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-from pulsefield_model.features.build_mel_cache import (
+from ensomi_model.features.build_mel_cache import (
     MelCacheBuildConfig,
     MusicMelSection,
     build_mel_cache,
     compose_mel_cache_build_config,
 )
-from pulsefield_model.features.mel import music_log_mel_cache_path
-from pulsefield_model.features.mel_base import MUSIC_MEL_CACHE_CONFIG, MelCacheConfig
+from ensomi_model.features.mel import music_log_mel_cache_path
+from ensomi_model.features.mel_base import MUSIC_MEL_CACHE_CONFIG, MelCacheConfig
 
 
 class MelCacheBuildConfigTests(unittest.TestCase):

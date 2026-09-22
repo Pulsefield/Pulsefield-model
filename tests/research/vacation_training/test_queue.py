@@ -5,16 +5,16 @@ import shutil
 
 import pytest
 
-from pulsefield_model.research.bounded_typed_continuation import train_run, generate_run
-from pulsefield_model.research.bounded_typed_continuation.condition import GenerationCondition
-from pulsefield_model.research.bounded_typed_continuation.contract import Arm
-from pulsefield_model.research.bounded_typed_continuation.corpus import ChartCache, read_plan
-from pulsefield_model.research.vacation_training import run
-from pulsefield_model.research.vacation_training.config import VacationConfig, AudioConfig, TeacherConfig, StressConfig
-from pulsefield_model.research.bounded_typed_continuation.generate_config import GenerateConfig
-from pulsefield_model.research.vacation_training.control import Control, publish_json, run_lock
-from pulsefield_model.research.oracle_time_continuation.storage import file_digest
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.bounded_typed_continuation import train_run, generate_run
+from ensomi_model.research.bounded_typed_continuation.condition import GenerationCondition
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.corpus import ChartCache, read_plan
+from ensomi_model.research.vacation_training import run
+from ensomi_model.research.vacation_training.config import VacationConfig, AudioConfig, TeacherConfig, StressConfig
+from ensomi_model.research.bounded_typed_continuation.generate_config import GenerateConfig
+from ensomi_model.research.vacation_training.control import Control, publish_json, run_lock
+from ensomi_model.research.oracle_time_continuation.storage import file_digest
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from bounded_typed_continuation.test_train import config_fixture
 
 

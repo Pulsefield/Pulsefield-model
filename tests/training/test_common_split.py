@@ -8,9 +8,9 @@ from pathlib import Path
 
 from torch.utils.data import Dataset
 
-from pulsefield_model.data.control_windows import ControlWindowRecord
-from pulsefield_model.data.mapper_tuple_windows import MapperTupleWindowRecord
-from pulsefield_model.training.common import split_train_eval_dataset
+from ensomi_model.data.control_windows import ControlWindowRecord
+from ensomi_model.data.mapper_tuple_windows import MapperTupleWindowRecord
+from ensomi_model.training.common import split_train_eval_dataset
 
 
 class TrainEvalSplitTests(unittest.TestCase):

@@ -14,18 +14,18 @@ sys.path.insert(0,str(HEAD_OWNER/'scripts'))
 from core import EndpointHead, candidate_features, context_features, linked_rows
 from endpoint_feasibility import conditional_branch, requires_early_release
 from schedule import Schedule
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.corpus import admit_entry, catalog_entries, read_split
-from pulsefield_model.research.oracle_time_continuation.decoding import DecodeSamplingPolicy, sample_row
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine, PredictionInput
-from pulsefield_model.research.oracle_time_continuation.export import export_osu, presentation_header
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, JointRowDistribution, PreRowEncoding
-from pulsefield_model.research.oracle_time_continuation.quality import ChartMetrics, source_metrics
-from pulsefield_model.research.oracle_time_continuation.replay import commit
-from pulsefield_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow
-from pulsefield_model.research.oracle_time_continuation.storage import ROW_DTYPE, SourceStore, file_digest
-from pulsefield_model.research.scoped_style_modeling.replay import parse_source
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.corpus import admit_entry, catalog_entries, read_split
+from ensomi_model.research.oracle_time_continuation.decoding import DecodeSamplingPolicy, sample_row
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine, PredictionInput
+from ensomi_model.research.oracle_time_continuation.export import export_osu, presentation_header
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone, JointRowDistribution, PreRowEncoding
+from ensomi_model.research.oracle_time_continuation.quality import ChartMetrics, source_metrics
+from ensomi_model.research.oracle_time_continuation.replay import commit
+from ensomi_model.research.oracle_time_continuation.runtime import ResourceConfig, ResourceGuard
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
+from ensomi_model.research.oracle_time_continuation.storage import ROW_DTYPE, SourceStore, file_digest
+from ensomi_model.research.scoped_style_modeling.replay import parse_source
 
 WEIGHTS=ROOT/'clock-readout-v1/clock-u100/weights.pt'
 WEIGHTS_SHA='29a2a29e8dd901b72447f24884336adf78349264bd7d61846976d7e4f6856641'
@@ -44,7 +44,7 @@ def main():
     runtime=ROOT/'skeleton-time-runtime-v8'
     assert file_digest(runtime/'sha256.json')=='09469489b1d5b0d3f9e92890fa0ae6f58c3a9ecc2bf78cad977a865a3d16790e'
     for name,sha in json.loads((runtime/'sha256.json').read_text()).items():assert file_digest(runtime/name)==sha
-    from pulsefield_model.research.oracle_time_continuation import model as module
+    from ensomi_model.research.oracle_time_continuation import model as module
     assert Path(module.__file__).resolve().is_relative_to(runtime.resolve())
     assert file_digest(WEIGHTS)==WEIGHTS_SHA
     endpoint_path=HEAD_OWNER/'fit-u1600'/f'{arm}.pt'

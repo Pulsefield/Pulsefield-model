@@ -9,13 +9,13 @@ import numpy as np
 if importlib.util.find_spec("torch") is None or importlib.util.find_spec("nnAudio") is None:
     raise unittest.SkipTest("requires torch and nnAudio")
 
-from pulsefield_model.features.mel import Stage2MelConfig
-from pulsefield_model.features.mel import load_cached_music_log_mel
-from pulsefield_model.features.mel import load_full_song_packed_mel_20ms
-from pulsefield_model.features.mel import music_log_mel_cache_path
-from pulsefield_model.features.mel import stage2_log_mel_cache_path
-from pulsefield_model.features.mel_base import MUSIC_MEL_CACHE_CONFIG
-from pulsefield_model.features.mel_base import MelCacheConfig
+from ensomi_model.features.mel import Stage2MelConfig
+from ensomi_model.features.mel import load_cached_music_log_mel
+from ensomi_model.features.mel import load_full_song_packed_mel_20ms
+from ensomi_model.features.mel import music_log_mel_cache_path
+from ensomi_model.features.mel import stage2_log_mel_cache_path
+from ensomi_model.features.mel_base import MUSIC_MEL_CACHE_CONFIG
+from ensomi_model.features.mel_base import MelCacheConfig
 
 
 class Stage2MelCacheTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class Stage2MelCacheTests(unittest.TestCase):
             np.save(cache_path, np.ones((3, 80), dtype=np.float32))
 
             with mock.patch(
-                "pulsefield_model.features.mel.load_audio_file",
+                "ensomi_model.features.mel.load_audio_file",
                 side_effect=AssertionError("cache hit should not decode audio"),
             ):
                 packed = load_full_song_packed_mel_20ms(audio_path, config=config)

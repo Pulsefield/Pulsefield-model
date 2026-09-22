@@ -4,8 +4,8 @@ from dataclasses import replace
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
-from pulsefield_model.research.oracle_time_continuation.model import row_index
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine
+from ensomi_model.research.oracle_time_continuation.model import row_index
 from .test_model import make_engine, mixed_rows, skeleton, assert_learned_equal, randomize_optional_readouts
 
 

@@ -67,8 +67,8 @@ does not independently recover the original predictions from those assets.
 The two operator inspection paths also completed:
 
 ```sh
-uv run --offline --python 3.10 --extra mps python -m pulsefield_model.research.oracle_time_continuation.train_hydra --config-name oracle_time_train_mac --cfg job
-uv run --offline --python 3.10 --extra mps python -m pulsefield_model.research.oracle_time_continuation.generate_hydra --cfg job
+uv run --offline --python 3.10 --extra mps python -m ensomi_model.research.oracle_time_continuation.train_hydra --config-name oracle_time_train_mac --cfg job
+uv run --offline --python 3.10 --extra mps python -m ensomi_model.research.oracle_time_continuation.generate_hydra --cfg job
 ```
 
 These commands inspect composition. The tests above separately exercise typed

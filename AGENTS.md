@@ -1,8 +1,8 @@
-# Pulsefield Coding Agent Guide
+# Ensomi Coding Agent Guide
 
 ## Start here
 
-Use `README.md` for the project purpose, Pulsefield V3 status, legacy-code
+Use `README.md` for the project purpose, Ensomi V3 status, legacy-code
 boundary, and documentation authority. Inspect the relevant canonical source
 and nearby tests before editing.
 
@@ -12,11 +12,11 @@ Use task-specific guidance only when its scope matches the work.
 
 | Task | Resource |
 | --- | --- |
-| Git-tracked Agent Note content and lifecycle on the separate `agent-notes` branch | `.agents/skills/pulsf-archive-agent-notes/SKILL.md` |
-| Repository prose writing, review, trimming, restoration, or comment and documentation coverage | `.agents/skills/pulsf-prose-standard/SKILL.md` |
-| Evidence-backed simplification surveys, dead or duplicate surface audits, and scoped cleanup proposals | `.agents/skills/pulsf-find-simplifications/SKILL.md` |
-| Outgoing-diff test selection, pre-push evidence, force-with-lease safety, or readiness claims | `.agents/skills/pulsf-pre-push-checks/SKILL.md` |
-| Authoring-session, review, PR, change-narration, or reasoning-transcript leakage in durable prose | `.agents/skills/pulsf-trim-cot-leakage/SKILL.md` |
+| Git-tracked Agent Note content and lifecycle on the separate `agent-notes` branch | `.agents/skills/ensomi-archive-agent-notes/SKILL.md` |
+| Repository prose writing, review, trimming, restoration, or comment and documentation coverage | `.agents/skills/ensomi-prose-standard/SKILL.md` |
+| Evidence-backed simplification surveys, dead or duplicate surface audits, and scoped cleanup proposals | `.agents/skills/ensomi-find-simplifications/SKILL.md` |
+| Outgoing-diff test selection, pre-push evidence, force-with-lease safety, or readiness claims | `.agents/skills/ensomi-pre-push-checks/SKILL.md` |
+| Authoring-session, review, PR, change-narration, or reasoning-transcript leakage in durable prose | `.agents/skills/ensomi-trim-cot-leakage/SKILL.md` |
 | Packaged Hydra configs, mapper training presets, inference profiles, config adapters, CLI entrypoints, or Hydra tests | `.agents/skills/hydra-conventions/SKILL.md` |
 | ML research direction, analogue search, hypothesis branching, bounded experiment design, or result evaluation | `.agents/skills/research-triage/SKILL.md` |
 | Root-cause analyses, performance investigations, or postmortems | `docs/guides/technical_analysis_writing.md` |

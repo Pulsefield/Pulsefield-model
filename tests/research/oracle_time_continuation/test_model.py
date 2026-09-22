@@ -6,12 +6,12 @@ import sys
 import pytest
 import torch
 
-from pulsefield_model.research.oracle_time_continuation.config import BackboneConfig
-from pulsefield_model.research.oracle_time_continuation.engine import ContinuationEngine
-from pulsefield_model.research.oracle_time_continuation.features import HistoryStatus, clock_features
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone, PreRowEncoding, row_index
-from pulsefield_model.research.oracle_time_continuation.schema import CompleteRow, TimeSkeleton
-from pulsefield_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.oracle_time_continuation.config import BackboneConfig
+from ensomi_model.research.oracle_time_continuation.engine import ContinuationEngine
+from ensomi_model.research.oracle_time_continuation.features import HistoryStatus, clock_features
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone, PreRowEncoding, row_index
+from ensomi_model.research.oracle_time_continuation.schema import CompleteRow, TimeSkeleton
+from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 
 
 @pytest.fixture(autouse=True)
@@ -361,13 +361,13 @@ def test_configuration_and_chunk_bounds():
 def test_backbone_does_not_import_masked_or_legacy_model_paths():
     script = """
 import sys
-from pulsefield_model.research.oracle_time_continuation.model import CausalBackbone
+from ensomi_model.research.oracle_time_continuation.model import CausalBackbone
 for module in sys.modules:
-    assert not module.startswith(('pulsefield_model.models', 'pulsefield_model.timing',
-                                  'pulsefield_model.inference', 'pulsefield_model.training')), module
-    assert module not in ('pulsefield_model.research.source_action_modeling.model',
-                          'pulsefield_model.research.source_action_modeling.observation',
-                          'pulsefield_model.research.source_action_modeling.tensors',
-                          'pulsefield_model.research.source_action_modeling.local_representation'), module
+    assert not module.startswith(('ensomi_model.models', 'ensomi_model.timing',
+                                  'ensomi_model.inference', 'ensomi_model.training')), module
+    assert module not in ('ensomi_model.research.source_action_modeling.model',
+                          'ensomi_model.research.source_action_modeling.observation',
+                          'ensomi_model.research.source_action_modeling.tensors',
+                          'ensomi_model.research.source_action_modeling.local_representation'), module
 """
     subprocess.run([sys.executable, "-c", script], check=True)
