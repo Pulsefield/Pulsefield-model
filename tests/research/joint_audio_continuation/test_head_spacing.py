@@ -66,17 +66,19 @@ def test_zero_scale_preserves_original_row_rng_and_probability_path(device):
     assert torch.equal(acceptance.get_state(), before)
 
 
-def test_forced_terminal_closure_is_reweighted_and_never_rejected():
+@pytest.mark.parametrize('device', ['cpu', pytest.param('mps', marks=pytest.mark.skipif(
+    not torch.backends.mps.is_available(), reason='requires Apple MPS'))])
+def test_forced_terminal_closure_is_reweighted_and_never_rejected(device):
     state = after((0, (2, 1, 0, 0)))
     close, close_tap = (3, 0, 0, 0), (3, 1, 0, 0)
-    logs = torch.full((256,), -torch.inf)
+    logs = torch.full((256,), -torch.inf, device=device)
     logs[ROW_ACTIONS.index(close)] = math.log(.1)
     logs[ROW_ACTIONS.index(close_tap)] = math.log(.9)
     action, accepted, _ = sample_row(logs, state, 1, torch.Generator().manual_seed(17),
         torch.Generator().manual_seed(90), 27, forced_terminal=True)
     assert accepted and action == close
     assert commit(state, CompleteRow(1, action), is_terminal=True).is_complete
-    result = rollout(HoldThenSilence(config()), np.zeros((13, 128), np.float32), 123,
+    result = rollout(HoldThenSilence(config()).to(device), np.zeros((13, 128), np.float32), 123,
                      chunk_ms=7, head_spacing_ms=10000)
     assert result.completed and result.rows[-1] == CompleteRow(123, (3, 0, 0, 0))
     assert not result.metrics['rejected_rows']
@@ -108,8 +110,10 @@ def test_rejections_advance_time_without_entering_exact_or_learned_history(monke
     assert with_cap.metrics['proposed_rows'] == 10 and len(with_cap.rows) == 1
 
 
-def test_marked_thinning_preserves_draws_across_scheduler_partitions():
-    model = small_model()
+@pytest.mark.parametrize('device', ['cpu', pytest.param('mps', marks=pytest.mark.skipif(
+    not torch.backends.mps.is_available(), reason='requires Apple MPS'))])
+def test_marked_thinning_preserves_draws_across_scheduler_partitions(device):
+    model = small_model(device)
     mel = np.random.default_rng(3).normal(size=(101, 128)).astype(np.float32)
     a = rollout(model, mel, 1000, seed=47, chunk_ms=13, head_spacing_ms=270)
     b = rollout(model, mel, 1000, seed=47, chunk_ms=500, head_spacing_ms=270)

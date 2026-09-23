@@ -572,6 +572,16 @@ pileup, not just fewer short gaps. It changes the generated distribution and has
 not established reliable playability. When enabled, the row resource cap also
 bounds rejected proposals; a capped run never invents LN endpoints.
 
+In the initial seed-matched six-TRAIN/twelve-VAL probe, same-lane TAP intervals
+at or below 10 ms fell from 42 to zero; those at or below 20 ms fell from 157 to
+10. Median per-chart head-count ratio was 0.9866. The already reviewed YOASOBI
+sample remained byte-identical. No four-interval same-lane run in the 24–30 ms
+band appeared, and all outputs passed exact replay, export/reparse and strict
+Lens admission. Scoped Lens review retained ordinary repeated-key figures,
+chord repetition and independent LN releases, but also found remaining 14–20 ms
+TAP pairs. The option remains disabled by default: these results support a local
+correction, not reliable playability or equal preservation of every sampled mode.
+
 ## Research trajectory and the next decision
 
 The first runs change the direction in three ways:
