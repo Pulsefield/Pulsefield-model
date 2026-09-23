@@ -11,6 +11,43 @@ The immediate research question is which dependencies a model must preserve to
 turn complete music into varied, coherent timed actions under a playback deadline.
 Selecting a larger network or reducing timing error does not answer that question.
 
+## Current bounded direction
+
+Fix the owner-confirmed repository music Mel representation and jointly learn
+audio conditioning, event timing and complete-row generation from paired audio
+and beatmaps. Do not make an encoder-sufficiency study a prerequisite: useful
+information depends on the chosen decoder and training objective, and a freely
+authored chart does not identify a unique sufficient audio representation.
+
+Use `MUSIC_MEL_CACHE_CONFIG` and `compute_log_mel_10ms` from
+[`mel_base.py`](../../src/ensomi_model/features/mel_base.py), together with the
+repository waveform-loading convention. The frontend is mono 24 kHz, 128 Mel
+bins, 10 ms hop, a 40 ms Hann window, `n_fft=win_length=960`, 20–12,000 Hz,
+`center=False`, power 2, `norm=1`, natural log and a `1e-5` floor. Frame $i$ has
+support $[10i,10i+40)$ ms and center $10i+20$ ms; repository right padding and
+frame-count behavior remain authoritative. Feature spacing is not output-time
+precision.
+
+The first learned encoder should be small and explicit: a projection retaining
+frequency information, a few residual temporal-convolution blocks with a declared
+receptive field, and a shared audio-conditioning readout. Preserve the input time
+resolution initially. Complete audio permits bidirectional context. Both timing
+and action prediction receive the encoded audio; timing can inspect a bounded
+upcoming sequence, and row prediction also receives context at its selected time.
+
+Develop the generation structure and this encoder together. The available direct
+supervision is paired beatmap/audio: event timestamps, complete actions, exact
+replayed state and observed continuation/no-event intervals. Separate charts of
+one recording remain separate training examples. No MERT-style pretraining
+corpus, acoustic teacher labels, instrument annotations or complete style/demand
+labels are assumed. BeatThis and broader encoders remain optional later
+comparisons, not prerequisites for this baseline.
+
+Defer new long-term musical-relation memory. Retain exact state and sufficient
+recent generated history. Existing R1 memory can be retained consistently as an
+initialization choice; this does not start a new retrieval-memory research stage
+or establish that its old behavior survives changed timing inputs.
+
 ## What the first evidence changes
 
 A bounded TRAIN audit compared different arrangements of the same hash-verified
@@ -39,6 +76,12 @@ F1 from 0.677 to 0.732 on six assessment songs; release-only F1 remained low
 (0.035 to 0.051). These are small, single-seed development results, not a quality
 benchmark. The scores use the original fine-offset predictions before the later
 native-millisecond materialization correction.
+
+That pilot also used a separate experimental frontend (`n_fft=1024`, centered
+windows, log10, a `1e-10` floor and different Mel/normalization settings), not the
+owner-confirmed repository music frontend. Its audio-transfer results therefore
+do not benchmark the newly fixed input contract. Preserve its original feature
+identity; a canonical-frontend run needs a separate cache and evidence owner.
 
 The R1 candidate experiment supplies a different observation. Adding unused
 non-head opportunities changes the action distribution even though required head
@@ -92,14 +135,19 @@ a fixed section class, or a five-style label. A direct autoregressive joint mode
 is an alternative that can represent multimodality without an explicit latent
 variable. The need for a separate $Z$ is a hypothesis, not a prerequisite.
 
-The output remains complete simultaneous rows $(t_i,m_i)$. A joint event model
-may factor the next event as a waiting time and a conditional row mark:
+The output remains complete simultaneous rows $(t_i,m_i)$. The first joint model
+factors the next event into a waiting time and a conditional nonempty row:
 
 $$
-P(\Delta t_i,m_i\mid A,H_i,x_i,M_i,c),
+P_\theta(\Delta t_i\mid F_\eta(A),H_i,x_i,c)\,
+P_\phi(m_i\mid F_\eta(A),H_i,x_i,\Delta t_i,c).
 $$
 
-where $x_i$ is exact replay state and $M_i$ is learned history. This must also
+$F_\eta$ is the small learned Mel encoder and $x_i$ is exact replay state.
+The history contains the actions actually chosen, so a newly opened LN can affect
+the next timing decision. Derive head-only, release-only and combined events from
+the sampled complete row. An extra event-kind predictor is an optional future
+factorization, not necessary supervision for the first model. This must also
 account for no event before the horizon. A continuous-time construction needs a
 declared density/measure and finite-sequence behavior. A discrete-time
 implementation must state its clock and support restrictions. Quantization for
@@ -157,7 +205,7 @@ The current client's incremental LN protocol permits an emitted start whose clos
 is still unresolved. It therefore does not require short holds or waiting for all
 future endpoints before playback.
 
-## Audio information must reach arrangement
+## Shared audio conditioning
 
 A timing-only interface implicitly proposes that the skeleton and chart history
 are sufficient for downstream action decisions. In probabilistic terms, dropping
@@ -168,12 +216,12 @@ P(\text{actions}\mid A,S,H,c)
 \approx P(\text{actions}\mid S,H,c).
 $$
 
-That sufficiency has not been established. Timbre, pitch movement, accents,
-texture, sustained energy and changes within repeated musical material may affect
-which arrangement is appropriate even when the event times are unchanged.
-R1 should therefore be allowed a direct audio path, or receive a richer shared
-representation whose sufficiency is tested. A scalar density or style token is
-not assumed to preserve all relevant musical information.
+The first joint design avoids requiring this approximation: the shared Mel encoder
+conditions both predictions. Timbre, pitch movement, accents, texture and sustained
+energy can affect arrangement through task training. Whether a particular network
+uses those features well is an architectural and optimization question, not a
+standalone information-sufficiency pass/fail metric. A scalar density or style
+token is not assumed to preserve all relevant musical information.
 
 Three complementary views are worth distinguishing:
 
@@ -190,7 +238,8 @@ Three complementary views are worth distinguishing:
 pretraining targets. [MusicFM](https://arxiv.org/abs/2311.03318) studies pretrained
 music representations across tasks. These provide candidate feature primitives,
 not evidence that their embeddings already encode the arrangement semantics needed
-here. Their task transfer and extraction cost require local measurement.
+here. They are deferred analogues. The current experiment learns its small encoder
+from the chart-generation objective and does not require their pretraining setup.
 
 ## Primitives and the mechanisms they contribute
 
@@ -248,7 +297,10 @@ $u$ has already elapsed without an event, remaining survival over $v$ is
 $S(u+v)/S(u)$. Restarting the clock every time the scheduler replans would change
 the modeled rest distribution.
 
-## Memory without fixed musical sections
+## Deferred: memory without fixed musical sections
+
+This section preserves future design considerations. It is not a prerequisite
+for the initial shared-Mel, joint timing/row experiment.
 
 Complete audio and generated-history memory answer different questions. Future
 audio is available; future chosen actions are not committed facts.
@@ -285,9 +337,9 @@ which relationships need exact recall and which tolerate summarization.
 
 ```mermaid
 flowchart LR
-    A[Complete audio] --> X[Local and broad musical representations]
+    A[Complete audio] --> X[Canonical Mel and small learned encoder]
     H[Committed chart and fixed-through time] --> E[Exact replay state]
-    H --> M[Recent and paired long-term memory]
+    H --> M[Recent history and consistently retained existing state]
     X --> P[Arrangement and event generation]
     E --> P
     M --> P
@@ -321,43 +373,74 @@ must be reflected in training and cache dependencies. Compute degradation needs
 its own quality evidence; dropping holds or reducing density is not a neutral
 way to meet a deadline.
 
+## Joint training with the available data
+
+For teacher-forced source histories, optimize time/event-sequence likelihood and
+complete-row likelihood jointly, including the probability of no event before a
+censored window boundary. Both losses update the shared audio encoder and any
+shared history/readout parameters. The row loss evaluated at source timestamps
+does not backpropagate through a sampled time or train the time-head parameters
+via that timestamp. This is joint statistical training, not a claim of direct
+playability gradients through discrete generation.
+
+The released R1 needs explicit adaptation to this task. Its future 16-candidate
+roles/offsets, whole-schedule counts and normalized schedule position cannot
+remain source-provided inputs during training if they are unavailable in native
+generation. Replace that condition path with available audio/time/history
+features. Reuse compatible R1 weights as initialization without claiming that
+zeroing missing fields preserves its learned policy.
+
+Likewise, use exact local row legality instead of feasibility tied to an unknown
+future candidate list. An actual event row is nonempty; four held lanes still
+permit a release-only row. Termination cannot leave an open LN, and a crop end is
+not the song end. Train true BOS and short prefixes; do not expose future hold
+endpoints unless the inference condition actually supplies them.
+
+A positive waiting-time mixture with discrete millisecond masses is one simple
+timing-head candidate. It offers multiple possible gaps without an obligatory
+beat lattice. Its precise likelihood, long-gap support, first-event treatment
+at time zero and censored-window survival must be declared before implementation.
+An explicit interval-position decoder is a competing representation only if a
+concrete learning or serving failure justifies that comparison.
+
 ## Research trajectory and the next decision
 
 The first runs change the direction in three ways:
 
 - Source R/H is an arrangement projection, while arbitrary serving opportunities
   are a different object. The timing interface needs a declared semantic owner.
-- The pilot demonstrates transfer from beat-oriented audio features, but does
-  not test whether richer musical information must directly condition actions.
+- The pilot is an audio-transfer baseline on a different frontend; the next model
+  uses the fixed repository Mel and learns audio conditioning jointly with output.
 - Lens inspection separates avoidable action choices from legitimate elaboration.
   A generic sparsity, regularity or repetition objective would erase valid modes.
 
-The current outcome is **REFINE**: establish the joint target and expressivity
-requirements above before another scale-up. The leading hypothesis is that the
-model needs access to full musical content, its own evolving arrangement, and
-exact gameplay state when deciding both time and action. A rigid timing-only
-bottleneck should not be assumed sufficient.
+The selected direction is **TEST**: can a small shared-Mel model learn the joint
+timed-row distribution, initialized where useful from R1, while retaining the
+required rhythmic and LN behaviors? The shared encoder and generation structure
+are learned together under the fixed input contract.
 
-Three questions have different discriminating evidence:
+1. Verify representation and state transitions before learning: adjacent-frame
+   events, multiple same-role events within 10 ms, high fractions/off-grid times,
+   long rests, cross-window holds, BOS, coincident heads/releases and true terminal
+   closure. The frame pilot's peak picker suppresses adjacent occupied primary
+   frames; extra same-frame slots do not repair that separate support limit.
+2. Run a small learning check of the shared encoder, timing head and complete-row
+   decoder together. Use only paired audio/charts; retain alternative charts as
+   distinct samples and split by musical/audio identity. Check both likelihood
+   terms, alignment and open-LN behavior before scaling data or parameters.
+3. Generate native joint continuations. Compare source-time versus predicted-time
+   continuation from matched prefixes as a diagnostic of error propagation, while
+   keeping the fully generated result as the actual quality target. Inspect with
+   Lens for specific burdens and preservation of valid difficult organization.
+4. Choose one correction from an observed failure mechanism. Broader encoders,
+   BeatThis conditioning, latent plans and new long-term memory remain deferred
+   until the joint baseline exposes a reason to introduce them.
 
-| Question | Smallest useful comparison | Evidence that would change the decision |
-| --- | --- | --- |
-| Does audio contain useful arrangement information beyond timing and history? | Hold source timing/history fixed; compare an action decoder with correctly aligned direct audio against audio-free and song-shuffled controls. Only then compare beat-oriented with broader musical features | Held-out conditional prediction and source-grounded continuation review improve specifically with relevant musical content; added capacity or leaked chart identity alone does not establish this |
-| Does generated-history dependence prevent incoherent mixtures of valid rhythms? | Use paired arrangements of the same TRAIN recordings; ablate learned timing-history access within the same event decoder, retaining identical audio, exact state, target representation and decoding | Samples preserve coherent regular, mixed-fraction, elaborated and LN-rich modes without obtaining the gain by deleting difficult material. An event-decoder/frame-classifier comparison alone would confound several mechanisms |
-| Does content-addressed musical memory support repetition with variation? | Compare equally sized memory access with relevant musical retrieval, recency-based selection and a shuffled-retrieval control on recurring and contrasting passages | Related music recalls useful relationships while changed content alters them; additional context/capacity, indiscriminate copying or regular loop collapse does not establish useful musical retrieval |
-
-These are a dependency-ordered research agenda, not a Cartesian architecture
-sweep. First settle what information must reach each decision; then choose the
-simplest representation that can express it. Before a learning comparison, require
-exact representation round trips for adjacent-frame events, multiple same-role
-events within 10 ms, high fractions/off-grid times, long rests and cross-window
-holds. The frame pilot's peak picker suppresses adjacent occupied primary frames;
-extra same-frame slots do not remove that separate support limitation. A support
-failure must not be misdiagnosed as insufficient training or a failed dependency.
-
-Explicit latent variables, joint
-block refinement and larger encoders remain branches to justify, not components
-to add by default.
+Short-horizon source likelihood does not establish rollout quality. Training on
+generated prefixes or adding preferences may become necessary, but their targets
+must be justified: paired audio/charts do not automatically label arbitrary
+sampled continuations as good or bad. Do not convert a numeric gap threshold into
+a universal playability rule or improve metrics by deleting difficult modes.
 
 Evaluation keeps separate distribution coverage, musical correspondence, exact
 mechanics, inspected action quality and deadline behavior. Style annotations
