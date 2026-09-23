@@ -44,9 +44,10 @@ labels are assumed. BeatThis and broader encoders remain optional later
 comparisons, not prerequisites for this baseline.
 
 Defer new long-term musical-relation memory. Retain exact state and sufficient
-recent generated history. Existing R1 memory can be retained consistently as an
-initialization choice; this does not start a new retrieval-memory research stage
-or establish that its old behavior survives changed timing inputs.
+recent generated history. The first implementation retains R1's 511-row finite
+history encoder, historical query projection and compatible action heads. It
+omits the seed residual, landmark memory and future-candidate consequence module.
+This initializes a different model; it does not preserve the released R1 policy.
 
 ## What the first evidence changes
 
@@ -396,12 +397,51 @@ permit a release-only row. Termination cannot leave an open LN, and a crop end i
 not the song end. Train true BOS and short prefixes; do not expose future hold
 endpoints unless the inference condition actually supplies them.
 
-A positive waiting-time mixture with discrete millisecond masses is one simple
-timing-head candidate. It offers multiple possible gaps without an obligatory
-beat lattice. Its precise likelihood, long-gap support, first-event treatment
-at time zero and censored-window survival must be declared before implementation.
-An explicit interval-position decoder is a competing representation only if a
-concrete learning or serving failure justifies that comparison.
+### First implementation: conditional hazards on the native clock
+
+The bounded implementation uses a discrete event hazard at every integer
+millisecond. Given the unchanged physical history, each candidate clock receives
+its local audio context and exact elapsed-time features. A 10 ms query bin returns
+ten hazard logits; this is vectorized computation, not a ten-millisecond event
+lattice. After any sampled event, the next query can select the following
+millisecond. Noninteger V3 times remain outside this native-export experiment.
+
+For logits $l_j$, let $h_j=\operatorname{sigmoid}(l_j)$. The probability of the
+next event at $j$ is $h_j\prod_{k<j}(1-h_k)$; no event through a window has the
+corresponding survival product. An exponential draw is compared with accumulated
+$\operatorname{softplus}(l_j)$ mass. Carry its remaining mass budget through
+empty scheduler windows. Absolute bins, audio and physical history stay the same
+across partitions, so splitting a query changes neither the distribution nor
+the random draw. Advancing the fixed-through clock does not create a history row.
+
+This branch lets timing inspect candidate-local music directly and gives long
+rests an exact survival interpretation. A gap mixture would need an additional
+mechanism to align its modes with future audio. Its potentially cheaper inference
+remains a comparison if the hazard scan becomes the measured bottleneck.
+
+The Mel encoder projects 128 frequency bins to 96 channels and uses six residual
+depthwise temporal convolutions with kernel five and dilations 1 through 32.
+Its halo is 126 Mel frames on each side. Interpolation uses actual frame centers
+at $20+10i$ ms. Training crops include this halo and mask padding beyond the song;
+native generation can cache the same full-song encoding. Timing and row heads
+share it, without downsampling or pretrained acoustic supervision.
+
+True BOS uses a cursor of -1 ms, allowing an initial event at zero. A normal
+query end censors waiting and never forces a release. At the actual decoded
+audio end, an open hold forces an event whose legal row closes every held lane
+and opens none. With no held lanes, the model may finish without another event.
+This terminal safety condition does not teach musically appropriate LN duration;
+earlier releases must be learned from paired charts.
+
+The experimental entrypoint is
+`python -m ensomi_model.research.joint_audio_continuation.hydra`, with the packaged
+`joint_audio` configuration. Preparation creates a fresh canonical Mel cache
+and retains alternative TRAIN arrangements as separate samples. Training samples
+groups, then charts; its BOS/event-prefix/absolute-time/outro query mixture is
+explicitly recorded. Fixed-query memorization is a diagnostic, and validation
+joint likelihood selects a development checkpoint only. Neither score is a
+playability verdict. Each run requires a clean source revision and fresh output
+directory; generation requires an explicit checkpoint path and SHA-256.
 
 ## Research trajectory and the next decision
 
