@@ -582,6 +582,54 @@ chord repetition and independent LN releases, but also found remaining 14–20 m
 TAP pairs. The option remains disabled by default: these results support a local
 correction, not reliable playability or equal preservation of every sampled mode.
 
+### Learning the local correction on generated histories
+
+The [native-window objective](../../src/ensomi_model/research/joint_audio_continuation/distillation.py)
+can distill a corrected next-event law without adding inference parameters.
+For each fixed generated prefix, its teacher assigns probability to every
+native-time/complete-row outcome and to surviving the entire window. The loss
+is KL over that complete distribution, including censor mass. Original chart
+futures are discarded before collation; they cannot label an altered prefix.
+The head factor changes both event hazard and conditional row probabilities.
+
+A paired continuation tested this objective with the same 2.95M model and source
+examples: 600 updates of source likelihood alone versus source likelihood plus
+80 ms native-window KL. The correction used five TRAIN songs' generated histories;
+a sixth song was withheld from correction supervision. Its real chart remained
+in ordinary TRAIN. The 640 correction examples represented 390 unique prefixes;
+the 128 held-out examples represented 70. Both final checkpoints were sampled
+without the decoder prior on the same six TRAIN and twelve validation songs.
+
+| Observation | Starting model | Source-only continuation | With native correction |
+| --- | ---: | ---: | ---: |
+| Fixed 48-query validation joint NLL | 6.091 | 6.449 | 6.436 |
+| Held-out native-window KL | 0.0530 | 0.2012 | 0.1029 |
+| Same-lane TAP intervals at or below 10 ms | 42 | 11 | 2 |
+| Median per-chart head-count ratio to start | 1.000 | 0.642 | 0.688 |
+| Total LN heads across 18 outputs | 1839 | 3202 | 4091 |
+
+The correction reduced its TRAIN pressure-context KL from 0.1163 to 0.0492,
+but did not transfer to the held-out histories or preserve the sampled
+composition. All 36 new outputs passed mechanics, export/reparse and Lens
+admission. Lens inspection still found 3 ms and 9 ms same-key TAP pairs, while
+also finding organized chord motion and independent LN handoffs. One validation
+output contained only ten heads at 7.046–7.820 seconds of a 121.033-second song.
+These checkpoints failed the predeclared preservation and transfer guards and
+were not adopted. A different density or LN fraction alone is not a BAD label;
+the paired result does not establish an improvement in playable generation.
+
+The silent tail exposes a separate recovery question. On that fixed eight-row
+prefix, the corrected model's integrated future hazard was 5.0165, below its
+sampled waiting threshold of 6.3416. Independent integration and generation
+agreed, and 500 ms versus 4000 ms queries produced identical rows. Conditional
+on already waiting four seconds, the predicted probability of no further event
+before audio end was 0.754, versus 0.512 for the starting model on the same
+prefix. This is one development example, not a population estimate. It identifies
+a learned continuation risk that a short-window repetition objective does not
+resolve. Further work must assess activation after rests and arrangement
+composition alongside local press/release quality. It supplies no evidence that
+a larger audio encoder or long-term memory is necessary.
+
 ## Research trajectory and the next decision
 
 The first runs change the direction in three ways:
