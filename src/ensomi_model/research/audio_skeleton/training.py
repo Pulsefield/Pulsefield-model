@@ -81,8 +81,6 @@ def calibrate(charts, predictions):
 
 
 def run(config, *, resolved_yaml=''):
-    if config.mode == 'evaluate':
-        return evaluate(config)
     source_revision = revision()
     directory = Path(config.root) / 'training' / config.run_name
     directory.mkdir(parents=True, exist_ok=False)
@@ -191,7 +189,3 @@ def run(config, *, resolved_yaml=''):
     write_json(directory / 'result.json', result)
     return dict(status=result['status'], updates=last_update, seconds=result['seconds'],
                 result_file=str(directory / 'result.json'), assessment={k:v['macro_f1'] for k,v in records.items()})
-
-
-def evaluate(config):
-    raise ValueError('Use the training run assessment outputs; downstream R1 evaluation is a separate experiment')

@@ -37,6 +37,9 @@ def cli(config: DictConfig):
     elif settings.mode == 'cache':
         from .audio import cache
         result = cache(settings)
+    elif settings.mode == 'evaluate':
+        from .integration import run
+        result = run(settings)
     else:
         from .training import run
         result = run(settings, resolved_yaml=OmegaConf.to_yaml(config, resolve=True))
