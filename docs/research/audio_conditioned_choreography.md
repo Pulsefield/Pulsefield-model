@@ -533,6 +533,45 @@ be treated as negative labels, and style presence must not become a BAD-pattern
 or numerical-difficulty label. New long-term musical-relation memory remains
 deferred.
 
+### Optional marked head-spacing prior
+
+An experimental decoder setting, `head_spacing_ms`, defaults to zero and leaves
+the trained distribution unchanged. A positive scale adds a continuous factor
+to proposed heads using time since the last head on the same lane. For a proposed
+row $m$ at $t$, its acceptance factor is
+
+$$
+a(m,t)=\prod_{j:\,m_j\in\{\mathrm{TAP},\mathrm{LN\_START}\}}
+\min\left(1,\left(\frac{t-t_j^{\mathrm{last\ head}}}{\tau}\right)^4\right).
+$$
+
+A first head contributes one; releases do not contribute. In particular, a short
+tail-to-next-head gap is not treated as a short head-to-head interval. If the base
+hazard is $h_t$ and the conditional row distribution is $q_t(m)$, accepted event
+mass is $h_t q_t(m)a(m,t)$ and no-event mass is
+$1-h_t\sum_m q_t(m)a(m,t)$. The generator implements this by rejecting proposals
+before they enter exact replay or learned history. At a true occupied terminal,
+it instead normalizes weighted legal rows and forces closure. An independent
+acceptance RNG preserves the proposal stream until a rejection occurs.
+
+The initial probe uses $\tau=27$ ms, the smallest consecutive same-key head
+interval in the pinned TRAIN catalog: 11,564 charts and 16,078,013 heads, with no
+interval at or below 20 ms. This is a property of the admitted corpus, not a
+universal physical limit. All its observed event rows have factor one at their
+actual prefixes; novel positive intervals retain positive mathematical support.
+The fixed fourth-power ramp is a hypothesis, not a fitted motor model. No global
+event spacing, beat subdivision or release-gap constraint is introduced.
+
+History-dependent point-process work provides an analogue for separating input
+drive from post-event recovery. It also warns that a refractory constraint alone
+can produce unrealistic rate saturation; its neuronal stability results do not
+transfer directly to this TCN. See
+[Gerhard, Deger and Truccolo (2017)](https://doi.org/10.1371/journal.pcbi.1005390).
+The probe therefore requires native quality review and a check for new interval
+pileup, not just fewer short gaps. It changes the generated distribution and has
+not established reliable playability. When enabled, the row resource cap also
+bounds rejected proposals; a capped run never invents LN endpoints.
+
 ## Research trajectory and the next decision
 
 The first runs change the direction in three ways:

@@ -34,6 +34,11 @@ def test_packaged_configuration_projects_and_rejects_unknown_or_unpinned_inputs(
         compose_config(['full_wait_supervision=true', 'fixed_train_queries=16'])
     expanded = compose_config(['full_wait_supervision=true', 'coverage_pass=true'])
     assert expanded.full_wait_supervision and expanded.coverage_pass
+    prior = compose_config(['mode=generate', 'checkpoint_file=model.pt',
+                            'checkpoint_sha256=' + '0' * 64, 'head_spacing_ms=27'])
+    assert prior.head_spacing_ms == 27
+    with pytest.raises(ValueError, match='decoder setting'):
+        compose_config(['mode=train', 'head_spacing_ms=27'])
 
 
 def test_train_sampling_preserves_alternatives_and_excludes_validation():

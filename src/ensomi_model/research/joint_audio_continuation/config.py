@@ -1,5 +1,6 @@
 """Bounded experiments on the canonical music Mel and timed-row distribution."""
 from dataclasses import dataclass
+import math
 
 
 @dataclass
@@ -40,6 +41,7 @@ class JointConfig:
     checkpoint_file: str = ''
     checkpoint_sha256: str = ''
     audio_file: str = ''
+    head_spacing_ms: float = 0.
     cpu_threads: int = 1
 
     def validate(self):
@@ -73,3 +75,7 @@ class JointConfig:
             raise ValueError('Audio inference requires audio_file')
         if self.mode != 'infer_audio' and self.audio_file:
             raise ValueError('audio_file is consumed only by infer_audio mode')
+        if not math.isfinite(self.head_spacing_ms) or self.head_spacing_ms < 0:
+            raise ValueError('Head-spacing prior scale must be finite and nonnegative')
+        if self.head_spacing_ms and self.mode not in ('generate', 'infer_audio'):
+            raise ValueError('Head-spacing prior is a decoder setting, not a training setting')

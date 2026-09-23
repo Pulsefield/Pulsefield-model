@@ -22,7 +22,6 @@ import psutil
 import torch
 
 from ..audio_skeleton.sensitivity import diagnostics
-from ..bounded_typed_continuation.contract import ROW_ACTIONS
 from ..bounded_typed_continuation.features import content_features
 from ..oracle_time_continuation.data import source_rows
 from ..oracle_time_continuation.export import export_osu, presentation_header, verify_rows
@@ -36,6 +35,7 @@ from .data import digest, load_corpus
 from .model import JointAudioModel, JointModelConfig
 from .state import exact_features, legal_rows
 from .timing import sample_hazards
+from .head_spacing import sample_row
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,8 @@ def _synchronize(device):
 
 @torch.no_grad()
 def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=17,
-            chunk_ms=4000, max_rows=30000, max_seconds=900., stop_callback=None):
+            chunk_ms=4000, max_rows=30000, max_seconds=900., stop_callback=None,
+            head_spacing_ms=0.):
     """Generate native integer-ms rows; return incomplete output on a resource cap.
 
     Mel is the complete canonical song representation. It is encoded once, with
@@ -66,12 +67,17 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     endpoints. An optional callback is checked every twenty scheduler steps and
     returns a stop-reason string or None. It does not participate in sampling.
     Reported inference latency excludes decoding audio and computing Mel.
+    The optional head-spacing prior thins proposed rows. Its rejected proposals
+    advance fixed-through time but not replay/history. When enabled, max_rows
+    also bounds total proposals, including rejected ones.
     """
     if (type(duration_ms) is not int or duration_ms < 0 or type(chunk_ms) is not int or chunk_ms <= 0 or
             type(max_rows) is not int or max_rows <= 0 or not math.isfinite(max_seconds) or max_seconds <= 0):
         raise ContractError('Native generation requires a nonnegative duration and positive resource limits')
     if mel.ndim != 2 or mel.shape[1] != 128 or len(mel) == 0 or not np.isfinite(mel).all():
         raise ContractError('Native generation requires finite complete [frames,128] Mel audio')
+    if not math.isfinite(head_spacing_ms) or head_spacing_ms < 0:
+        raise ContractError('Head-spacing scale must be finite and nonnegative')
     device, dtype = next(model.parameters()).device, next(model.parameters()).dtype
     model.eval()
     _synchronize(device)
@@ -81,11 +87,13 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     audio_seconds = time.perf_counter() - started
     replay, cache = ExactReplayState(), model.temporal.empty_cache()
     rng = torch.Generator(device='cpu').manual_seed(seed)
+    acceptance_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x5A17)
     cursor, residual, rows = -1, None, []
     latencies, coverage = [], []
     startup_seconds, startup_target = None, min(8000, duration_ms)
     first30_seconds = first30_time_ms = None
     stop_reason, bins_scored, clocks_scored, forced_terminal = 'completed', 0, 0, 0
+    proposals, rejected = 0, []
     while cursor < duration_ms:
         if stop_callback is not None and len(latencies) % 20 == 0:
             reason = stop_callback()
@@ -97,6 +105,9 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
             break
         if len(rows) >= max_rows:
             stop_reason = 'row_limit'
+            break
+        if head_spacing_ms and proposals >= max_rows:
+            stop_reason = 'proposal_limit'
             break
         tick = time.perf_counter()
         end = min(cursor + chunk_ms, duration_ms)
@@ -123,14 +134,21 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
             row_exact = torch.as_tensor(exact_features([replay], [cursor]), dtype=dtype, device=device)
             legal = torch.as_tensor(legal_rows([replay], [terminal]), device=device)
             occupancy = torch.tensor([replay.occupancy], dtype=torch.bool, device=device)
-            probs = model.row_log_probs(row_audio, history, row_exact, legal, occupancy)[0].exp().cpu()
-            selected = int(torch.multinomial(probs, 1, generator=rng))
-            row = CompleteRow(cursor, ROW_ACTIONS[selected])
-            previous = None if replay.last_row is None else replay.last_row.time_ms
-            replay = commit(replay, row, is_terminal=terminal)
-            raw = content_features([row], [previous], [[None] * 4])[0]
-            cache = model.temporal.append(cache, torch.as_tensor(raw, dtype=dtype, device=device))
-            rows.append(row)
+            log_probs = model.row_log_probs(row_audio, history, row_exact, legal, occupancy)[0]
+            actions, accepted, factor = sample_row(log_probs, replay, cursor, rng, acceptance_rng,
+                head_spacing_ms, forced_terminal=terminal and any(replay.occupancy))
+            proposals += 1
+            if accepted:
+                row = CompleteRow(cursor, actions)
+                previous = None if replay.last_row is None else replay.last_row.time_ms
+                replay = commit(replay, row, is_terminal=terminal)
+                raw = content_features([row], [previous], [[None] * 4])[0]
+                cache = model.temporal.append(cache, torch.as_tensor(raw, dtype=dtype, device=device))
+                rows.append(row)
+            else:
+                rejected.append(dict(time_ms=cursor, actions=actions, log_acceptance=factor,
+                                     committed_rows=replay.row_count,
+                                     last_lane_head_ms=replay.last_lane_attack_ms))
             residual = None
         _synchronize(device)
         now = time.perf_counter()
@@ -152,6 +170,7 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
              step_p50_ms=float(np.quantile(latencies, .5) * 1000) if latencies else None,
              step_p99_ms=float(np.quantile(latencies, .99) * 1000) if latencies else None,
              scheduler_steps=len(latencies), timing_bins_scored=bins_scored, timing_clocks_scored=clocks_scored,
+             head_spacing_ms=head_spacing_ms, proposed_rows=proposals, rejected_rows=rejected,
              forced_terminal_events=forced_terminal, rows=len(rows), heads=replay.note_count,
              open_lanes=list(replay.occupancy), coverage=coverage))
 
@@ -302,7 +321,7 @@ def generate(config, *, resolved_yaml=''):
         seed = config.generation_seed + index
         native = rollout(model, chart.mel, chart.duration_ms, seed=seed,
                          chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
-                         max_seconds=remaining, stop_callback=resource_stop)
+                         max_seconds=remaining, stop_callback=resource_stop, head_spacing_ms=config.head_spacing_ms)
         info = save_rollout(output / chart.entry['source_sha256'][:12], native,
                             source_file=chart.entry['source_file'], audio_file=chart.entry['audio_file'])
         info.update(source_sha256=chart.entry['source_sha256'], group_id=chart.group_id,
@@ -414,7 +433,8 @@ def infer_audio(config, *, resolved_yaml=''):
         before_rollout = time.perf_counter() - started
         native = rollout(model, mel, duration_ms, seed=config.generation_seed,
             chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
-            max_seconds=config.max_seconds - before_rollout, stop_callback=lambda: _resource_stop(root))
+            max_seconds=config.max_seconds - before_rollout, stop_callback=lambda: _resource_stop(root),
+            head_spacing_ms=config.head_spacing_ms)
         profile['audio_encode_seconds'] = native.metrics['audio_encode_seconds']
         profile['native_generation_seconds'] = native.metrics['generation_seconds']
         profile['startup_coverage_ms'] = native.metrics['startup_target_ms']
