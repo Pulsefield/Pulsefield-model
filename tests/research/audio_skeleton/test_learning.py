@@ -10,10 +10,13 @@ from ensomi_model.research.audio_skeleton.training import loss_terms
 def test_subframe_targets_reconstruct_events_and_reject_collisions():
     times = np.array([0., 17., 44., 99.])
     labels, offsets = event_targets(times, 11)
-    positions = np.flatnonzero(labels)
-    np.testing.assert_allclose((positions + offsets[positions]) * 10, times, atol=1e-5)
-    with pytest.raises(ValueError, match='collide'):
-        event_targets([10., 11.], 10)
+    positions, slots = np.nonzero(labels)
+    np.testing.assert_allclose((positions + offsets[positions, slots]) * 10, times, atol=1e-5)
+    labels, offsets = event_targets([10., 11.], 10)
+    assert labels[1].sum() == 2
+    np.testing.assert_allclose((1 + offsets[1]) * 10, [10., 11.], atol=1e-5)
+    with pytest.raises(ValueError, match='capacity'):
+        event_targets([10., 11., 12.], 10)
     with pytest.raises(ValueError, match='outside'):
         event_targets([1000.], 10)
 

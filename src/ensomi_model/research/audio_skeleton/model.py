@@ -27,8 +27,8 @@ class SkeletonModel(nn.Module):
         self.detail = nn.Sequential(*(Block(width, d) for d in (1, 2, 4, 8, 16, 32)))
         self.phrase = nn.Sequential(*(Block(width, d, 3) for d in (1, 2, 4, 8)))
         self.norm = nn.LayerNorm(width)
-        self.events = nn.Linear(width, 2)
-        self.offsets = nn.Linear(width, 2)
+        self.events = nn.Linear(width, 4)
+        self.offsets = nn.Linear(width, 4)
         # Both arms instantiate the same modules, preserving shared initialization.
         self.beat_norm = nn.LayerNorm(beat_width)
         self.beat_projection = nn.Linear(beat_width, width, bias=False)
@@ -42,4 +42,8 @@ class SkeletonModel(nn.Module):
         slow = self.phrase(slow.transpose(1, 2)).transpose(1, 2)
         slow = F.interpolate(slow, size=value.shape[1], mode='linear', align_corners=False).transpose(1, 2)
         hidden = self.norm(self.detail(value) + slow)
-        return self.events(hidden), self.offsets(hidden).tanh() * .5
+        raw = self.events(hidden).reshape(*hidden.shape[:2], 2, 2)
+        # The second timestamp slot cannot be more likely than the first.
+        probability = raw.sigmoid().cumprod(-1).reshape(*hidden.shape[:2], 4)
+        logits = torch.logit(probability.clamp(1e-6, 1 - 1e-6))
+        return logits, self.offsets(hidden).tanh() * .5

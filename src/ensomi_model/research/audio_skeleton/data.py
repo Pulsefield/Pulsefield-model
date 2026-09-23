@@ -8,6 +8,7 @@ from ..oracle_time_continuation.storage import ROW_DTYPE
 from .corpus import digest, read_manifest
 
 FRAME_MS = 10.
+SLOTS = 2
 WINDOW = 1600
 HALO = 400
 
@@ -16,11 +17,15 @@ def event_targets(times, frames):
     positions = np.rint(np.asarray(times) / FRAME_MS).astype(int)
     if np.any(positions < 0) or np.any(positions >= frames):
         raise ValueError('Chart events extend outside the decoded audio frame clock')
-    if len(np.unique(positions)) != len(positions):
-        raise ValueError('Two same-role events collide on the 10 ms output grid')
-    labels, offsets = np.zeros(frames, np.float32), np.zeros(frames, np.float32)
-    labels[positions] = 1
-    offsets[positions] = np.asarray(times) / FRAME_MS - positions
+    labels, offsets = np.zeros((frames, SLOTS), np.float32), np.zeros((frames, SLOTS), np.float32)
+    counts = np.zeros(frames, dtype=int)
+    for t, position in zip(times, positions):
+        slot = counts[position]
+        if slot == SLOTS:
+            raise ValueError('More same-role events in a frame than the declared slot capacity')
+        labels[position, slot] = 1
+        offsets[position, slot] = t / FRAME_MS - position
+        counts[position] += 1
     return labels, offsets
 
 
@@ -47,7 +52,7 @@ def load_charts(config):
                 raise ValueError('BeatThis cached features changed')
             beats = np.load(beat['file'], mmap_mode='r')
         charts.append(dict(entry=entry, mel=mel, beats=beats, times=times, controls=controls,
-            labels=np.stack([t[0] for t in targets], -1), offsets=np.stack([t[1] for t in targets], -1)))
+            labels=np.concatenate([t[0] for t in targets], -1), offsets=np.concatenate([t[1] for t in targets], -1)))
     return charts
 
 
@@ -93,6 +98,12 @@ def match_events(reference, predicted, tolerance):
 
 def pick_events(probabilities, offsets, threshold):
     p = np.asarray(probabilities)
+    if p.ndim == 2:
+        # Additional same-frame events require the primary slot's local peak.
+        first = p[:, 0]
+        peaks = (first >= threshold) & (first > np.r_[-np.inf, first[:-1]]) & (first >= np.r_[first[1:], -np.inf])
+        frame, slot = np.nonzero(peaks[:, None] & (p >= threshold))
+        return np.unique(np.maximum(0., (frame + offsets[frame, slot]) * FRAME_MS))
     left, right = np.r_[-np.inf, p[:-1]], np.r_[p[1:], -np.inf]
     selected = np.flatnonzero((p >= threshold) & (p > left) & (p >= right))
     return np.maximum(0., (selected + offsets[selected]) * FRAME_MS)

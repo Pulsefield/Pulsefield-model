@@ -25,9 +25,9 @@ def save_checkpoint(path, model, optimizer, update, config, source_revision, rng
 
 
 def loss_terms(logits, offsets, labels, targets, mask):
-    weights = logits.new_tensor([12., 24.])
+    weights = logits.new_tensor([12., 48., 24., 96.])
     bce = F.binary_cross_entropy_with_logits(logits, labels, pos_weight=weights, reduction='none')
-    event = (bce * mask[..., None]).sum() / (mask.sum() * 2).clamp_min(1)
+    event = (bce * mask[..., None]).sum() / (mask.sum() * 4).clamp_min(1)
     positive = labels * mask[..., None]
     offset = (F.smooth_l1_loss(offsets, targets, reduction='none') * positive).sum() / positive.sum().clamp_min(1)
     return event + offset, event, offset
@@ -36,7 +36,7 @@ def loss_terms(logits, offsets, labels, targets, mask):
 @torch.inference_mode()
 def predict(model, chart, device, controls=None):
     model.eval()
-    outputs = np.empty((len(chart['mel']), 4), dtype=np.float32)
+    outputs = np.empty((len(chart['mel']), 8), dtype=np.float32)
     stride = WINDOW - 2 * HALO
     for first in range(0, len(outputs), stride):
         values = window(chart, first - HALO, controls=controls, beat_width=model.beat_width)
@@ -53,7 +53,8 @@ def score_predictions(charts, predictions, thresholds):
     for chart, output in zip(charts, predictions):
         roles = []
         for role in range(2):
-            events = pick_events(output[:, role], output[:, role + 2], thresholds[role])
+            sl = slice(role * 2, role * 2 + 2)
+            events = pick_events(output[:, sl], output[:, 4:][:, sl], thresholds[role])
             roles.append({str(tol): match_events(chart['times'][role], events, tol) for tol in (10, 20, 40, 70)})
         records.append(dict(source_sha256=chart['entry']['source_sha256'], roles=roles))
     means = {name: {str(t): float(np.mean([r['roles'][k][str(t)]['f1'] for r in records]))
@@ -66,7 +67,8 @@ def calibrate(charts, predictions):
     for role in range(2):
         scores = []
         for threshold in (.1, .2, .3, .4, .5, .6, .7, .8, .9):
-            values = [match_events(c['times'][role], pick_events(p[:, role], p[:, role + 2], threshold), 20)['f1']
+            sl = slice(role * 2, role * 2 + 2)
+            values = [match_events(c['times'][role], pick_events(p[:, sl], p[:, 4:][:, sl], threshold), 20)['f1']
                       for c, p in zip(charts, predictions)]
             scores.append((float(np.mean(values)), threshold))
         thresholds.append(max(scores)[1])
