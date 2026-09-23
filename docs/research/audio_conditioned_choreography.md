@@ -443,6 +443,27 @@ joint likelihood selects a development checkpoint only. Neither score is a
 playability verdict. Each run requires a clean source revision and fresh output
 directory; generation requires an explicit checkpoint path and SHA-256.
 
+Long waits need positive transition supervision as well as censored prefixes.
+With `full_wait_supervision=true`, a selected BOS/event-prefix example covers
+the complete observed wait in disjoint bounded queries. Their timing losses and
+the final row loss are summed and normalized as one logical example. The trainer
+microbatches expanded queries and takes one optimizer step per logical batch;
+resource stops occur between those updates. Uniform-time and outro queries keep
+their conditional bounded-window interpretation. `coverage_pass=true` inserts
+each TRAIN transition longer than the horizon once at the beginning of a run,
+without changing random draws for the remaining examples. Separate full-gap VAL
+probes complement the unchanged common-query panel. Window selection uses labels
+for supervision; neither wait length nor a target-selection flag becomes a
+predictor input. Full-audio/crop parity prevents query extent from changing scored
+audio features.
+
+Inference query length can differ from the training horizon. Shorter queries
+reduce discarded future computation after each sampled event; longer queries
+may be cheaper during rests. Neither choice may change the hazard's absolute-bin
+features, actual history or carried survival draw. A trained-checkpoint probe
+produced identical native rows with 500 ms and 4000 ms query blocks. Its measured
+speedup is one-case evidence, not a worst-case latency guarantee.
+
 ## Research trajectory and the next decision
 
 The first runs change the direction in three ways:

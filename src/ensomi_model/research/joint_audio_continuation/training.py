@@ -16,6 +16,7 @@ import torch
 from .batching import batch_losses, collate, score_batch
 from .data import _json, digest, load_corpus, query, smoke_charts, train_groups
 from .model import JointAudioModel, JointModelConfig, initialize_from_r1
+from .sampling import LogicalExample, coverage_examples, draw_examples as draw_logical_examples, full_gap_probes
 
 
 def revision():
@@ -70,6 +71,27 @@ def make_batch(examples, model_config, device):
     return collate([item[1] for item in examples], [item[0] for item in examples], model_config, device=device)
 
 
+def backward_logical(model, examples, config):
+    """Accumulate full waiting likelihood, normalized by logical example count.
+
+    Expanded windows are microbatched at batch_size. Optimizer zero/step and
+    clipping belong to the caller and happen once per logical batch. A long
+    interval contributes all disjoint survival chunks and exactly one row loss.
+    """
+    flat = [(example.chart, sample) for example in examples for sample in example.queries]
+    sums = np.zeros(3, np.float64)
+    for start in range(0, len(flat), config.batch_size):
+        batch = make_batch(flat[start:start + config.batch_size], model.config, config.device)
+        terms = batch_losses(score_batch(model, batch.inputs), batch)
+        loss = terms.total.sum() / len(examples)
+        if not bool(torch.isfinite(loss)):
+            raise RuntimeError('Nonfinite joint timing/action objective')
+        loss.backward()
+        sums += [float(terms.total.sum().detach().cpu()), float(terms.timing.sum().detach().cpu()),
+                 float(terms.row.sum().detach().cpu())]
+    return sums / len(examples), len(flat)
+
+
 @torch.inference_mode()
 def evaluate(model, examples, config):
     model.eval()
@@ -86,6 +108,28 @@ def evaluate(model, examples, config):
                 timing_nll=float(np.mean([r['timing_nll'] for r in records])),
                 row_nll=float(np.mean([r['row_nll'] for r in events])) if events else None,
                 joint_nll=float(np.mean([r['timing_nll'] + r['row_nll'] for r in records])), records=records)
+
+
+@torch.inference_mode()
+def evaluate_full_gaps(model, examples, config):
+    """Score targeted complete waits separately from the fixed common query panel."""
+    model.eval()
+    records = []
+    for example in examples:
+        flat = [(example.chart, sample) for sample in example.queries]
+        timing = row = 0.
+        for start in range(0, len(flat), config.batch_size):
+            batch = make_batch(flat[start:start + config.batch_size], model.config, config.device)
+            terms = batch_losses(score_batch(model, batch.inputs), batch)
+            timing += float(terms.timing.sum().cpu())
+            row += float(terms.row.sum().cpu())
+        records.append(dict(source_sha256=example.chart.entry['source_sha256'],
+            cursor_ms=example.queries[0].cursor_ms, target_time_ms=example.queries[-1].target_time_ms,
+            queries=len(example.queries), timing_nll=timing, row_nll=row, joint_nll=timing + row))
+    return dict(logical_examples=len(records), queries=sum(r['queries'] for r in records),
+        timing_nll=float(np.mean([r['timing_nll'] for r in records])) if records else None,
+        row_nll=float(np.mean([r['row_nll'] for r in records])) if records else None,
+        joint_nll=float(np.mean([r['joint_nll'] for r in records])) if records else None, records=records)
 
 
 def save_checkpoint(path, model, optimizer, update, config, source_revision, rng, manifest_sha, transfer):
@@ -135,16 +179,22 @@ def train(config, *, resolved_yaml=''):
     val_probe = [(chart, sample_query(chart, val_rng, config)) for chart in validation for _ in range(4)]
     if not val_probe:
         raise ValueError('A separate validation cohort is required')
+    gap_probe = full_gap_probes(charts, 'validation', config)
+    coverage = coverage_examples([c for group in groups for c in group], config) if config.coverage_pass else []
     _json(directory / 'freeze.json', dict(source_revision=source_revision, config=asdict(config),
         manifest_sha256=manifest_sha, normalization_sha256=digest(Path(config.root) / 'normalization.json'),
         transfer=transfer, training_groups=[[chart.entry['source_sha256'] for chart in group] for group in groups],
         train_probe=[dict(source_sha256=c.entry['source_sha256'], cursor_ms=q.cursor_ms) for c, q in train_probe],
         validation_probe=[dict(source_sha256=c.entry['source_sha256'], cursor_ms=q.cursor_ms) for c, q in val_probe],
+        full_gap_probe=[dict(source_sha256=e.chart.entry['source_sha256'], cursor_ms=e.queries[0].cursor_ms,
+                            target_time_ms=e.queries[-1].target_time_ms, queries=len(e.queries)) for e in gap_probe],
+        coverage_pass=[dict(source_sha256=e.chart.entry['source_sha256'], cursor_ms=e.queries[0].cursor_ms,
+                           target_time_ms=e.queries[-1].target_time_ms, queries=len(e.queries)) for e in coverage],
         selection='fixed-query TRAIN diagnostic' if fixed else 'fixed VAL query joint NLL; not playability',
         query_mixture=dict(bos=.08, event_prefix=.70, absolute_cursor=.17, outro=.05),
         environment=dict(torch=torch.__version__, python=__import__('sys').version, ram_bytes=psutil.virtual_memory().total)))
     best, best_update, last_update, stop_reason = float('inf'), 0, 0, 'updates_complete'
-    histories = []
+    histories, consumed_queries, coverage_consumed = [], 0, 0
     try:
         with (directory / 'updates.jsonl').open('w') as log:
             for update in range(config.updates + 1):
@@ -159,25 +209,26 @@ def train(config, *, resolved_yaml=''):
                         if shutil.disk_usage(directory).free < 40 * 1024 ** 3:
                             stop_reason = 'free_disk_below_40GiB'; break
                     model.train()
-                    examples = ([fixed[int(rng.integers(len(fixed)))] for _ in range(config.batch_size)] if fixed
-                                else draw_examples(groups, rng, config, config.batch_size))
-                    batch = make_batch(examples, model.config, config.device)
+                    examples = ([LogicalExample(c, (q,)) for c, q in
+                                 [fixed[int(rng.integers(len(fixed)))] for _ in range(config.batch_size)]] if fixed
+                                else draw_logical_examples(groups, rng, config, config.batch_size))
+                    if update <= len(coverage):
+                        examples[0] = coverage[update - 1]
+                        coverage_consumed += 1
                     optimizer.zero_grad(set_to_none=True)
-                    terms = batch_losses(score_batch(model, batch.inputs), batch)
-                    loss = terms.total.mean()
-                    if not bool(torch.isfinite(loss)):
-                        raise RuntimeError('Nonfinite joint timing/action objective')
-                    loss.backward()
+                    averages, query_count = backward_logical(model, examples, config)
                     grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.max_grad_norm,
                                                                error_if_nonfinite=True)
                     optimizer.step()
                     last_update = update
-                    histories.append((float(loss.detach().cpu()), float(terms.timing.mean().detach().cpu()),
-                                      float(terms.row.mean().detach().cpu())))
+                    consumed_queries += query_count
+                    histories.append(averages)
                     if update % 20 == 0:
                         averages = np.mean(histories[-20:], axis=0)
                         record = dict(update=update, seconds=time.perf_counter() - started,
-                            joint_nll=float(averages[0]), timing_nll=float(averages[1]), row_nll_per_query=float(averages[2]),
+                            joint_nll=float(averages[0]), timing_nll=float(averages[1]), row_nll_per_example=float(averages[2]),
+                            logical_examples=update * config.batch_size, physical_queries=consumed_queries,
+                            coverage_examples=coverage_consumed,
                             grad_norm=float(grad_norm.cpu()), rss_bytes=psutil.Process().memory_info().rss,
                             available_bytes=psutil.virtual_memory().available,
                             mps_driver_bytes=torch.mps.driver_allocated_memory() if config.device == 'mps' else 0)
@@ -186,10 +237,12 @@ def train(config, *, resolved_yaml=''):
                 if update % config.validation_every == 0 or update == config.updates:
                     train_metrics = evaluate(model, train_probe, config)
                     val_metrics = evaluate(model, val_probe, config)
-                    metrics = dict(update=update, train=train_metrics, validation=val_metrics)
+                    gap_metrics = evaluate_full_gaps(model, gap_probe, config)
+                    metrics = dict(update=update, train=train_metrics, validation=val_metrics, full_gap_validation=gap_metrics)
                     _json(directory / f'evaluation-{update}.json', metrics)
                     print(json.dumps(dict(update=update, train={k:v for k,v in train_metrics.items() if k != 'records'},
-                                          validation={k:v for k,v in val_metrics.items() if k != 'records'})), flush=True)
+                                          validation={k:v for k,v in val_metrics.items() if k != 'records'},
+                                          full_gap_validation={k:v for k,v in gap_metrics.items() if k != 'records'})), flush=True)
                     score = (train_metrics if fixed else val_metrics)['joint_nll']
                     if score < best:
                         best, best_update = score, update
@@ -205,6 +258,8 @@ def train(config, *, resolved_yaml=''):
                   updates=last_update, seconds=time.perf_counter() - started, best_update=best_update,
                   best_joint_nll=best, best_checkpoint_sha256=digest(directory / 'best.pt'),
                   last_checkpoint_sha256=digest(directory / 'last.pt'), source_revision=source_revision,
+                  logical_examples=last_update * config.batch_size, physical_queries=consumed_queries,
+                  coverage_examples=coverage_consumed, coverage_total=len(coverage),
                   selection='TRAIN memorization diagnostic' if fixed else 'VAL development joint NLL')
     _json(directory / 'result.json', result)
     return dict(result_file=str(directory / 'result.json'), **result)

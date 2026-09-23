@@ -1,12 +1,20 @@
 from dataclasses import replace
+import copy
 from importlib.resources import files
 
 import numpy as np
 import pytest
+import torch
 
 from ensomi_model.research.joint_audio_continuation.config import JointConfig
 from ensomi_model.research.joint_audio_continuation.hydra import compose_config
-from ensomi_model.research.joint_audio_continuation.training import draw_examples, selected_groups
+from ensomi_model.research.joint_audio_continuation.training import (
+    backward_logical, draw_examples, make_batch, selected_groups,
+)
+from ensomi_model.research.joint_audio_continuation.batching import batch_losses, score_batch
+from ensomi_model.research.joint_audio_continuation.data import query
+from ensomi_model.research.joint_audio_continuation.model import JointAudioModel, JointModelConfig
+from ensomi_model.research.joint_audio_continuation.sampling import LogicalExample
 from .test_data import chart
 
 
@@ -20,6 +28,12 @@ def test_packaged_configuration_projects_and_rejects_unknown_or_unpinned_inputs(
         compose_config(['mode=generate'])
     with pytest.raises(ValueError, match='511'):
         compose_config(['history_rows=512'])
+    with pytest.raises(ValueError, match='Coverage pass'):
+        compose_config(['coverage_pass=true'])
+    with pytest.raises(ValueError, match='random queries'):
+        compose_config(['full_wait_supervision=true', 'fixed_train_queries=16'])
+    expanded = compose_config(['full_wait_supervision=true', 'coverage_pass=true'])
+    assert expanded.full_wait_supervision and expanded.coverage_pass
 
 
 def test_train_sampling_preserves_alternatives_and_excludes_validation():
@@ -37,3 +51,28 @@ def test_train_sampling_preserves_alternatives_and_excludes_validation():
     assert any(q.cursor_ms == -1 for c, q in examples)
     assert any(q.censored and q.replay.occupancy[0] for c, q in examples)
     assert any(q.censored and q.source_index == 3 for c, q in examples)
+
+
+@pytest.mark.parametrize('microbatch_size', [1, 2, 4])
+def test_microbatch_gradients_normalize_per_logical_wait_not_window_count(microbatch_size):
+    torch.manual_seed(917)
+    source = chart([(2, 0, 0, 0), (3, 0, 0, 0), (0, 1, 0, 0)], [0, 90, 110], duration_ms=120)
+    examples = [LogicalExample(source, tuple(query(source, cursor, horizon_ms=30) for cursor in (0, 30, 60))),
+                LogicalExample(source, (query(source, 90, horizon_ms=20),))]
+    settings = JointModelConfig(hidden=8, audio_width=8, audio_levels=1, history_levels=2,
+                                expansion=2, coupling_rank=2, routing_hidden=12, release_hidden=12)
+    model = JointAudioModel(settings)
+    reference = copy.deepcopy(model)
+    flat = [(e.chart, q) for e in examples for q in e.queries]
+    batch = make_batch(flat, settings, 'cpu')
+    terms = batch_losses(score_batch(reference, batch.inputs), batch)
+    expected = terms.total.sum() / len(examples)
+    expected.backward()
+    observed, windows = backward_logical(model, examples, JointConfig(device='cpu', batch_size=microbatch_size))
+    assert windows == 4
+    assert observed[0] == pytest.approx(expected.item(), rel=1e-6)
+    for a, b in zip(model.parameters(), reference.parameters()):
+        if a.grad is None or b.grad is None:
+            assert a.grad is None and b.grad is None
+        else:
+            torch.testing.assert_close(a.grad, b.grad, atol=2e-5, rtol=2e-5)
