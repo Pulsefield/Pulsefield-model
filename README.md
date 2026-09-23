@@ -46,6 +46,10 @@ complete-row generation. Its research entrypoint supports new audio without a
 source chart or seed. Lens inspection has identified a prototype for playtesting
 and remaining failures; reliable playability remains under investigation.
 
+The [audio joint-model research question](docs/research/audio_joint_expert_question.md)
+provides a self-contained architecture review brief, including the full-audio
+information contract, bounded learning results and inspected generation failures.
+
 ## Legacy code boundary
 
 > **Do not use mapper v2/v2.1, the pre-V3 timing stack, Control V3, or the

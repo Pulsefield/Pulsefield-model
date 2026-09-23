@@ -208,6 +208,20 @@ future endpoints before playback.
 
 ## Shared audio conditioning
 
+Complete-song audio is available during both training and inference. Playback
+deadlines constrain when chart actions must be ready; they do not impose an
+audio-observation causality mask. Final note placement, including LN releases,
+is the target. Redline metadata and estimated beats do not define timing truth
+or the allowed event support.
+
+The finite Mel encoder currently has equivalent cropped-training and full-song
+inference outputs when its full halo is supplied. That equivalence only covers
+the implemented local receptive field. It does not give each position access
+to whole-song musical relationships. A broader audio representation must use
+the same complete-song information in training and inference, independently of
+target-selected query bounds. This remains an open design question, distinct
+from the mismatch between teacher-forced and generated chart histories.
+
 A timing-only interface implicitly proposes that the skeleton and chart history
 are sufficient for downstream action decisions. In probabilistic terms, dropping
 audio asserts an approximation such as
