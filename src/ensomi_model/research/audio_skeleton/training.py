@@ -57,9 +57,14 @@ def score_predictions(charts, predictions, thresholds):
             events = pick_events(output[:, sl], output[:, 4:][:, sl], thresholds[role])
             roles.append({str(tol): match_events(chart['times'][role], events, tol) for tol in (10, 20, 40, 70)})
         records.append(dict(source_sha256=chart['entry']['source_sha256'], roles=roles))
-    means = {name: {str(t): float(np.mean([r['roles'][k][str(t)]['f1'] for r in records]))
-                    for t in (10, 20, 40, 70)} for k, name in enumerate(('head', 'release_only'))}
-    return dict(macro_f1=means, charts=records)
+    means, empty = {}, {}
+    for k, name in enumerate(('head', 'release_only')):
+        positive = [r for r in records if r['roles'][k]['20']['reference'] > 0]
+        negative = [r for r in records if r['roles'][k]['20']['reference'] == 0]
+        means[name] = {str(t): float(np.mean([r['roles'][k][str(t)]['f1'] for r in positive]))
+                      if positive else None for t in (10, 20, 40, 70)}
+        empty[name] = dict(charts=len(negative), predicted_events=sum(r['roles'][k]['20']['predicted'] for r in negative))
+    return dict(macro_f1=means, empty_reference=empty, charts=records)
 
 
 def calibrate(charts, predictions):
@@ -69,18 +74,19 @@ def calibrate(charts, predictions):
         for threshold in (.1, .2, .3, .4, .5, .6, .7, .8, .9):
             sl = slice(role * 2, role * 2 + 2)
             values = [match_events(c['times'][role], pick_events(p[:, sl], p[:, 4:][:, sl], threshold), 20)['f1']
-                      for c, p in zip(charts, predictions)]
-            scores.append((float(np.mean(values)), threshold))
+                      for c, p in zip(charts, predictions) if len(c['times'][role])]
+            scores.append((float(np.mean(values)) if values else 0., threshold))
         thresholds.append(max(scores)[1])
     return thresholds, score_predictions(charts, predictions, thresholds)
 
 
-def run(config):
+def run(config, *, resolved_yaml=''):
     if config.mode == 'evaluate':
         return evaluate(config)
     source_revision = revision()
     directory = Path(config.root) / 'training' / config.run_name
     directory.mkdir(parents=True, exist_ok=False)
+    (directory / 'resolved.yaml').write_text(resolved_yaml)
     manifest_sha = digest(Path(config.root) / 'manifest.json')
     feature_sha = digest(Path(config.root) / 'features/index.json')
     torch.set_num_threads(2)
@@ -94,7 +100,8 @@ def run(config):
     # calibration; the other is read only after checkpoint selection completes.
     calibration, assessment = validation[::2], validation[1::2]
     if config.overfit_charts:
-        train = train[:config.overfit_charts]
+        selected = np.linspace(0, len(train) - 1, min(len(train), config.overfit_charts)).astype(int)
+        train = [train[i] for i in selected]
         calibration = train
     beat_width = next((c['beats'].shape[1] for c in charts if c['beats'] is not None), 514)
     model = SkeletonModel(use_beat_features=config.use_beat_features, beat_width=beat_width).to(config.device)
@@ -156,7 +163,8 @@ def run(config):
             if update % config.validation_every == 0 or update == config.updates:
                 predictions = [predict(model, c, config.device) for c in calibration]
                 thresholds, metrics = calibrate(calibration, predictions)
-                score = np.mean([metrics['macro_f1'][role]['20'] for role in ('head', 'release_only')])
+                score = np.mean([metrics['macro_f1'][role]['20'] for role in ('head', 'release_only')
+                                 if metrics['macro_f1'][role]['20'] is not None])
                 write_json(directory / f'calibration-{update}.json', dict(update=update, thresholds=thresholds, **metrics))
                 print(json.dumps(dict(update=update, calibration=metrics['macro_f1'], thresholds=thresholds)), flush=True)
                 if score > best:

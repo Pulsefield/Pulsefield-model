@@ -39,7 +39,7 @@ def cli(config: DictConfig):
         result = cache(settings)
     else:
         from .training import run
-        result = run(settings)
+        result = run(settings, resolved_yaml=OmegaConf.to_yaml(config, resolve=True))
     print(json.dumps(result, indent=2, allow_nan=False))
 
 
