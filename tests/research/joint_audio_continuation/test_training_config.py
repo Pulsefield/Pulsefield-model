@@ -1,6 +1,8 @@
 from dataclasses import replace
 import copy
 from importlib.resources import files
+import json
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -9,10 +11,10 @@ import torch
 from ensomi_model.research.joint_audio_continuation.config import JointConfig
 from ensomi_model.research.joint_audio_continuation.hydra import compose_config
 from ensomi_model.research.joint_audio_continuation.training import (
-    backward_logical, draw_examples, make_batch, selected_groups,
+    backward_logical, draw_examples, make_batch, selected_groups, training_normalization,
 )
 from ensomi_model.research.joint_audio_continuation.batching import batch_losses, score_batch
-from ensomi_model.research.joint_audio_continuation.data import query
+from ensomi_model.research.joint_audio_continuation.data import digest, frontend_identity, query
 from ensomi_model.research.joint_audio_continuation.model import JointAudioModel, JointModelConfig
 from ensomi_model.research.joint_audio_continuation.sampling import LogicalExample
 from .test_data import chart
@@ -39,6 +41,47 @@ def test_packaged_configuration_projects_and_rejects_unknown_or_unpinned_inputs(
     assert prior.head_spacing_ms == 27
     with pytest.raises(ValueError, match='decoder setting'):
         compose_config(['mode=train', 'head_spacing_ms=27'])
+    pinned = compose_config(['mode=train', 'normalization_file=stats.json',
+                             'normalization_sha256=' + 'a' * 64])
+    assert pinned.normalization_file == 'stats.json' and pinned.normalization_sha256 == 'a' * 64
+    with pytest.raises(ValueError, match='normalization override'):
+        compose_config(['mode=train', 'normalization_file=stats.json'])
+    with pytest.raises(ValueError, match='train mode'):
+        compose_config(['normalization_file=stats.json', 'normalization_sha256=' + 'a' * 64])
+
+
+def test_frozen_normalization_uses_training_subset_and_reaches_model_buffers(tmp_path):
+    current = dict(mean=[1.] * 128, std=[2.] * 128)
+    frozen = dict(mean=[3.] * 128, std=[4.] * 128, audio_sha256=['a' * 64],
+                  frame_count=100, frontend=frontend_identity())
+    path = tmp_path / 'frozen.json'
+    path.write_text(json.dumps(frozen))
+    charts = [SimpleNamespace(split=split, entry=dict(audio_sha256=sha * 64))
+              for split, sha in [('train', 'a'), ('train', 'b'), ('validation', 'c')]]
+    cfg = JointConfig(mode='train', normalization_file=str(path), normalization_sha256=digest(path))
+    selected, identity = training_normalization(cfg, charts, current)
+    assert selected == frozen and identity['normalization_override']
+    assert identity['normalization_sha256'] == digest(path)
+    model = JointAudioModel(JointModelConfig())
+    model.set_audio_normalization(torch.tensor(selected['mean']), torch.tensor(selected['std']))
+    torch.testing.assert_close(model.audio_mean, torch.full((128,), 3.))
+    torch.testing.assert_close(model.audio_std, torch.full((128,), 4.))
+    # Adding a held-out identity to the pinned metadata is still forbidden.
+    frozen['audio_sha256'].append('c' * 64)
+    path.write_text(json.dumps(frozen))
+    with pytest.raises(ValueError, match='pinned SHA'):
+        training_normalization(cfg, charts, current)
+    with pytest.raises(ValueError, match='TRAIN audio subset'):
+        training_normalization(replace(cfg, normalization_sha256=digest(path)), charts, current)
+
+
+def test_default_normalization_keeps_corpus_statistics(tmp_path):
+    statistics = dict(mean=[0.] * 128, std=[1.] * 128)
+    path = tmp_path / 'normalization.json'
+    path.write_text(json.dumps(statistics))
+    chosen, identity = training_normalization(JointConfig(root=str(tmp_path)), [], statistics)
+    assert chosen is statistics and not identity['normalization_override']
+    assert identity['normalization_sha256'] == digest(path)
 
 
 def test_train_sampling_preserves_alternatives_and_excludes_validation():

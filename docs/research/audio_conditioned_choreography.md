@@ -646,36 +646,62 @@ a larger audio encoder or long-term memory is necessary.
 
 ## Research trajectory and the next decision
 
-The first runs change the direction in three ways:
+Next-time likelihood and conditional complete-row likelihood form a valid chain
+factorization. Evaluating the row loss at the reference time, without a gradient
+through a sampled time, is not itself an incorrect joint likelihood. A marked
+intensity can represent the same distribution: set
+$\Lambda_t=-\log(1-h_t)$ and $\lambda_{t,a}=\Lambda_tq_t(a)$.
+Changes to that parameterization need an optimization or computational rationale,
+not a claim that the current factorization assumes independent time and action.
 
-- Source R/H is an arrangement projection, while arbitrary serving opportunities
-  are a different object. The timing interface needs a declared semantic owner.
-- The pilot is an audio-transfer baseline on a different frontend; the next model
-  uses the fixed repository Mel and learns audio conditioning jointly with output.
-- Lens inspection separates avoidable action choices from legitimate elaboration.
-  A generic sparsity, regularity or repetition objective would erase valid modes.
+The next experiments separate three explanations:
 
-The selected direction is **TEST**: can a small shared-Mel model learn the joint
-timed-row distribution, initialized where useful from R1, while retaining the
-required rhythmic and LN behaviors? The shared encoder and generation structure
-are learned together under the fixed input contract.
+1. **Paired-data coverage.** Hold the model, likelihood, query policy and logical
+   exposure budget fixed while expanding the training songs. A prepared corpus
+   has 240 TRAIN groups with 585 separate arrangements and 36 validation songs,
+   retaining all 133 charts of the first corpus. Encoded-audio and canonical PCM
+   identities are disjoint across its splits. A catalog-wide audit found one
+   exact-audio cross-split collision outside both selected cohorts; this does not
+   guarantee perceptual, crop or speed-variant independence. Compare the original
+   12 validation songs and additional 24 separately, and check R1's pretraining
+   exposure. A matched short budget cannot reject larger data merely because it
+   has not converged.
+2. **Full-song audio and history coupling.** On fixed data and a fixed training
+   objective, compare local versus local-plus-coarse-full-song audio, crossed with
+   the original timing fusion versus an audio/hold-state timing base plus bounded
+   history modulation. A small bidirectional coarse branch is a candidate, not an
+   adopted architecture. Coarse audio token spacing does not quantize event times.
+   Decaying the timing modulation during free-lane rests must preserve content
+   history and exact holds, and must be tested on legitimate rests and long Jack
+   figures. It must not force events or hide a missing audio drive.
+3. **Persistent arrangement intent, only if needed.** A small variable sampled once
+   per song could condition both heads if finite history cannot preserve early
+   arrangement choices. It is not automatically a style or difficulty label.
+   Reference-conditioned posterior reconstruction cannot substitute for generation
+   from an audio-only prior. A larger codebook is not the default response to
+   latent collapse or fixed-loop outputs.
 
-1. Verify representation and state transitions before learning: adjacent-frame
-   events, multiple same-role events within 10 ms, high fractions/off-grid times,
-   long rests, cross-window holds, BOS, coincident heads/releases and true terminal
-   closure. The frame pilot's peak picker suppresses adjacent occupied primary
-   frames; extra same-frame slots do not repair that separate support limit.
-2. Run a small learning check of the shared encoder, timing head and complete-row
-   decoder together. Use only paired audio/charts; retain alternative charts as
-   distinct samples and split by musical/audio identity. Check both likelihood
-   terms, alignment and open-LN behavior before scaling data or parameters.
-3. Generate native joint continuations. Compare source-time versus predicted-time
-   continuation from matched prefixes as a diagnostic of error propagation, while
-   keeping the fully generated result as the actual quality target. Inspect with
-   Lens for specific burdens and preservation of valid difficult organization.
-4. Choose one correction from an observed failure mechanism. Broader encoders,
-   BeatThis conditioning, latent plans and new long-term memory remain deferred
-   until the joint baseline exposes a reason to introduce them.
+Continuous source-time interval likelihood and explicitly missing content-history
+views are candidates for the second stage, not simultaneous changes in the data
+comparison. Interval sampling must state whether it estimates total chart, per-
+song or per-time likelihood and apply the corresponding weights. Hiding history
+observations with an unknown/truncated marker is different from changing the
+actual prefix and reusing its original future. Unknown history is not BOS.
+
+Recovery evaluation must include BOS, prefixes with 1–29 heads, mature prefixes,
+and held/free states. The 144 mature free-lane probes excluded the ten-head SCREW
+failure by construction. Missing early content, unavailable strata and incomplete
+outputs remain visible outcomes. Report unconditional gap probability separately
+from conditional recovery, and count short TAP relations both absolutely and per
+eligible consecutive TAP-to-TAP transition. Head activity, LN occupancy time and
+duration distributions guard against replacing taps with holds or silence.
+
+For controlled data comparisons, training can use a pinned `normalization_file`
+and `normalization_sha256`. The statistics must come from a nonempty subset of the
+current corpus's TRAIN audio under the canonical frontend. The run records the
+actual file and digest; inference uses checkpoint buffers. By default, training
+continues to use its corpus normalization. Freezing this transform avoids changing
+the initial raw-Mel function when the supervised corpus is expanded.
 
 Short-horizon source likelihood does not establish rollout quality. Training on
 generated prefixes or adding preferences may become necessary, but their targets

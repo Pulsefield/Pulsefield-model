@@ -15,6 +15,8 @@ class JointConfig:
     max_train_alternatives: int = 2
     r1_checkpoint_file: str = 'artifacts/audio-skeleton/20260923-v1/inputs/r1.pt'
     r1_checkpoint_sha256: str = '4b3ec1561e33d0ebe2756cfe13571ec414fd5bb470b430f0c578545863115f70'
+    normalization_file: str | None = None
+    normalization_sha256: str | None = None
     run_name: str = 'smoke-v1'
     device: str = 'mps'
     seed: int = 230923
@@ -79,3 +81,7 @@ class JointConfig:
             raise ValueError('Head-spacing prior scale must be finite and nonnegative')
         if self.head_spacing_ms and self.mode not in ('generate', 'infer_audio'):
             raise ValueError('Head-spacing prior is a decoder setting, not a training setting')
+        if self.normalization_file is not None or self.normalization_sha256 is not None:
+            if (self.mode != 'train' or not self.normalization_file or
+                    not self.normalization_sha256 or len(self.normalization_sha256) != 64):
+                raise ValueError('A normalization override requires train mode and a pinned file')

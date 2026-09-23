@@ -14,7 +14,7 @@ import psutil
 import torch
 
 from .batching import batch_losses, collate, score_batch
-from .data import _json, digest, load_corpus, query, smoke_charts, train_groups
+from .data import _json, digest, frontend_identity, load_corpus, query, smoke_charts, train_groups
 from .model import JointAudioModel, JointModelConfig, initialize_from_r1
 from .sampling import LogicalExample, coverage_examples, draw_examples as draw_logical_examples, full_gap_probes
 
@@ -35,6 +35,30 @@ def selected_groups(charts, count):
     first = [chart.group_id for chart in smoke_charts(charts)]
     order = {group: index for index, group in enumerate(first)}
     return sorted(groups, key=lambda group: (order.get(group[0].group_id, len(order)), group[0].group_id))[:count]
+
+
+def training_normalization(config, charts, corpus_normalization):
+    """Select recorded TRAIN-only statistics without changing canonical Mel.
+
+    An override can freeze feature scaling across a data-coverage comparison.
+    Its pinned audio identities must be a nonempty subset of this corpus's TRAIN
+    identities. The model separately validates finite means and positive scales.
+    Inference reads the resulting checkpoint buffers, not this statistics file.
+    """
+    path = Path(config.normalization_file or Path(config.root) / 'normalization.json')
+    sha = digest(path)
+    normalization = corpus_normalization
+    if config.normalization_file is not None:
+        if sha != config.normalization_sha256:
+            raise ValueError('Training normalization differs from its pinned SHA-256')
+        normalization = json.loads(path.read_text())
+        train_audio = {chart.entry['audio_sha256'] for chart in charts if chart.split == 'train'}
+        scope = set(normalization['audio_sha256'])
+        if (normalization['frontend'] != frontend_identity() or not scope or
+                not scope <= train_audio or normalization['frame_count'] <= 0):
+            raise ValueError('Normalization must use canonical Mel and a nonempty current TRAIN audio subset')
+    return normalization, dict(normalization_file=str(path.resolve()), normalization_sha256=sha,
+                               normalization_override=config.normalization_file is not None)
 
 
 def sample_query(chart, rng, config):
@@ -161,6 +185,7 @@ def train(config, *, resolved_yaml=''):
     random.seed(config.seed)
     rng = np.random.default_rng(config.seed)
     charts, normalization = load_corpus(config.root)
+    normalization, normalization_identity = training_normalization(config, charts, normalization)
     groups = selected_groups(charts, config.train_groups)
     model = JointAudioModel(JointModelConfig(audio_width=config.audio_width, audio_levels=config.audio_levels))
     transfer = initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256)
@@ -182,7 +207,7 @@ def train(config, *, resolved_yaml=''):
     gap_probe = full_gap_probes(charts, 'validation', config)
     coverage = coverage_examples([c for group in groups for c in group], config) if config.coverage_pass else []
     _json(directory / 'freeze.json', dict(source_revision=source_revision, config=asdict(config),
-        manifest_sha256=manifest_sha, normalization_sha256=digest(Path(config.root) / 'normalization.json'),
+        manifest_sha256=manifest_sha, **normalization_identity,
         transfer=transfer, training_groups=[[chart.entry['source_sha256'] for chart in group] for group in groups],
         train_probe=[dict(source_sha256=c.entry['source_sha256'], cursor_ms=q.cursor_ms) for c, q in train_probe],
         validation_probe=[dict(source_sha256=c.entry['source_sha256'], cursor_ms=q.cursor_ms) for c, q in val_probe],
