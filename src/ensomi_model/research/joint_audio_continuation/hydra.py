@@ -34,9 +34,12 @@ def cli(config: DictConfig):
     elif settings.mode == 'train':
         from .training import train
         result = train(settings, resolved_yaml=OmegaConf.to_yaml(config, resolve=True))
-    else:
+    elif settings.mode == 'generate':
         from .generation import generate
         result = generate(settings, resolved_yaml=OmegaConf.to_yaml(config, resolve=True))
+    else:
+        from .generation import infer_audio
+        result = infer_audio(settings, resolved_yaml=OmegaConf.to_yaml(config, resolve=True))
     print(json.dumps(result, indent=2, allow_nan=False))
 
 

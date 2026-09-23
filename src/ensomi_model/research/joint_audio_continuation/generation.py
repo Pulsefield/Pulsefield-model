@@ -59,10 +59,10 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
             chunk_ms=4000, max_rows=30000, max_seconds=900., stop_callback=None):
     """Generate native integer-ms rows; return incomplete output on a resource cap.
 
-Mel is the complete canonical song representation. It is encoded once, with
-no source rows or seed. Startup coverage includes audio encoding and requires
-fixed decisions through min(8000, duration_ms), including empty intervals.
-The time budget is checked between scheduler steps; a cap never fabricates LN
+    Mel is the complete canonical song representation. It is encoded once, with
+    no source rows or seed. Startup coverage includes audio encoding and requires
+    fixed decisions through min(8000, duration_ms), including empty intervals.
+    The time budget is checked between scheduler steps; a cap never fabricates LN
     endpoints. An optional callback is checked every twenty scheduler steps and
     returns a stop-reason string or None. It does not participate in sampling.
     Reported inference latency excludes decoding audio and computing Mel.
@@ -84,6 +84,7 @@ The time budget is checked between scheduler steps; a cap never fabricates LN
     cursor, residual, rows = -1, None, []
     latencies, coverage = [], []
     startup_seconds, startup_target = None, min(8000, duration_ms)
+    first30_seconds = first30_time_ms = None
     stop_reason, bins_scored, clocks_scored, forced_terminal = 'completed', 0, 0, 0
     while cursor < duration_ms:
         if stop_callback is not None and len(latencies) % 20 == 0:
@@ -137,6 +138,8 @@ The time budget is checked between scheduler steps; a cap never fabricates LN
         coverage.append(dict(coverage_ms=cursor, elapsed_seconds=now - started))
         if startup_seconds is None and cursor >= startup_target:
             startup_seconds = now - started
+        if first30_seconds is None and replay.note_count >= 30:
+            first30_seconds, first30_time_ms = now - started, cursor
     completed = cursor == duration_ms
     if completed and any(replay.occupancy):
         raise ContractError('Completed native generation left an open long note')
@@ -144,6 +147,7 @@ The time budget is checked between scheduler steps; a cap never fabricates LN
     return NativeGeneration(tuple(rows), completed, stop_reason, cursor,
         dict(audio_encode_seconds=audio_seconds, generation_seconds=elapsed,
              startup_target_ms=startup_target, startup_seconds=startup_seconds,
+             first30_heads_seconds=first30_seconds, first30_heads_through_ms=first30_time_ms,
              latency_scope='cached Mel through fixed chart coverage; excludes waveform decode and Mel computation',
              step_p50_ms=float(np.quantile(latencies, .5) * 1000) if latencies else None,
              step_p99_ms=float(np.quantile(latencies, .99) * 1000) if latencies else None,
@@ -174,6 +178,19 @@ def _write_json(path, value):
     Path(path).write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
 
 
+def _source_free_header(audio_file=None):
+    title = 'Generated audio' if audio_file is None else Path(audio_file).stem
+    title = ''.join(' ' if ord(character) < 32 else character for character in title).strip() or 'Generated audio'
+    lines = ['osu file format v14', '[General]', 'Mode:3', '[Metadata]',
+             f'Title:{title} (joint audio prototype)', 'Artist:Unknown', 'Creator:Ensomi',
+             'Version:Prototype 4K', 'BeatmapID:0', 'BeatmapSetID:-1', '[Difficulty]',
+             'HPDrainRate:5', 'CircleSize:4', 'OverallDifficulty:5', 'ApproachRate:5',
+             'SliderMultiplier:1.4', 'SliderTickRate:1', '[TimingPoints]',
+             '// Constant 120 BPM for editor and scroll only; not an inferred musical beat grid.',
+             '0,500,4,2,0,100,1,0', '[HitObjects]']
+    return ('\n'.join(lines) + '\n').encode('utf-8')
+
+
 def save_rollout(directory, result: NativeGeneration, *, source_file=None, audio_file=None):
     """Persist rows, independently verify them and export only complete charts."""
     directory = Path(directory)
@@ -188,8 +205,8 @@ def save_rollout(directory, result: NativeGeneration, *, source_file=None, audio
                 coverage_ms=result.coverage_ms, mechanics=mechanics, rows_sha256=digest(row_file),
                 **result.metrics)
     if result.completed:
-        header = None if source_file is None else presentation_header(Path(source_file))
-        if header is not None:
+        header = _source_free_header(audio_file) if source_file is None else presentation_header(Path(source_file))
+        if source_file is not None:
             header = header.replace(b' (oracle continuation)', b' (joint audio native)')
         if audio_file is not None:
             original = Path(audio_file)
@@ -197,11 +214,13 @@ def save_rollout(directory, result: NativeGeneration, *, source_file=None, audio
             # independently of the source mapset's relative audio location.
             destination = directory / ('audio' + original.suffix.lower())
             shutil.copyfile(original, destination)
-            if header is not None:
-                lines = header.decode('utf-8').splitlines()
+            lines = header.decode('utf-8').splitlines()
+            if any(line.startswith('AudioFilename:') for line in lines):
                 lines = [f'AudioFilename:{destination.name}' if line.startswith('AudioFilename:') else line
                          for line in lines]
-                header = ('\n'.join(lines) + '\n').encode('utf-8')
+            else:
+                lines.insert(lines.index('[General]') + 1, f'AudioFilename:{destination.name}')
+            header = ('\n'.join(lines) + '\n').encode('utf-8')
             info['audio_file'] = str(destination.resolve())
         osu = directory / 'generated.osu'
         export_osu(row_file, osu, times,
@@ -231,24 +250,32 @@ def _select_cases(charts, split, count):
     return selected
 
 
+def _clean_revision():
+    if subprocess.check_output(['git', 'status', '--porcelain'], text=True).strip():
+        raise ContractError('Experiments require a clean committed source checkout')
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+
+
+def _resource_stop(root):
+    if (root / 'PAUSE').exists():
+        return 'pause_file'
+    if psutil.virtual_memory().available < 2 * 1024 ** 3:
+        return 'available_memory_below_2_gib'
+    if shutil.disk_usage(root).free < 40 * 1024 ** 3:
+        return 'free_disk_below_40_gib'
+    return None
+
+
 def generate(config, *, resolved_yaml=''):
     """Run a pinned, fresh native cohort and persist complete or capped outcomes."""
     config.validate()
-    if subprocess.check_output(['git', 'status', '--porcelain'], text=True).strip():
-        raise ContractError('Experiments require a clean committed source checkout')
-    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    revision = _clean_revision()
     started = time.perf_counter()
     torch.set_num_threads(config.cpu_threads)
     root = Path(config.root).resolve()
 
     def resource_stop():
-        if (root / 'PAUSE').exists():
-            return 'pause_file'
-        if psutil.virtual_memory().available < 2 * 1024 ** 3:
-            return 'available_memory_below_2_gib'
-        if shutil.disk_usage(root).free < 40 * 1024 ** 3:
-            return 'free_disk_below_40_gib'
-        return None
+        return _resource_stop(root)
 
     if reason := resource_stop():
         raise ResourceLimit(f'Joint generation stopped before initialization: {reason}')
@@ -298,3 +325,126 @@ def generate(config, *, resolved_yaml=''):
                 cases=[dict(source_sha256=case['source_sha256'], completed=case['completed'],
                             rows=case['rows'], startup_seconds=case['startup_seconds'],
                             step_p99_ms=case['step_p99_ms']) for case in results])
+
+
+def infer_audio(config, *, resolved_yaml=''):
+    """Generate a prototype chart from new audio without opening a chart corpus.
+
+    The checkpoint supplies audio normalization. Canonical decoding and Mel
+    computation use the complete input audio; no seed, source chart or beat grid
+    is supplied. The fresh run records input/model hashes, frontend identity and
+    per-stage latency after imports and Git validation. Resource/time stops are
+    checked between preprocessing stages and by the native scheduler. Incomplete
+    runs retain available rows without exporting invented hold endpoints.
+    """
+    from ...features.audio import load_audio_file
+    from ...features.mel_base import MUSIC_MEL_CACHE_CONFIG, compute_log_mel_10ms
+    from .data import frontend_identity
+
+    config.validate()
+    if config.mode != 'infer_audio':
+        raise ContractError('New-audio inference requires mode=infer_audio')
+    revision = _clean_revision()
+    torch.set_num_threads(config.cpu_threads)
+    root = Path(config.root).resolve()
+    output = root / 'inference' / config.run_name
+    output.mkdir(parents=True, exist_ok=False)
+    (output / 'config.yaml').write_text(resolved_yaml)
+    started = time.perf_counter()
+    phase, profile = 'initialization', {}
+    recipe = dict(format='joint-audio/new-audio-inference-v1', source_revision=revision,
+        config=asdict(config), checkpoint_file=str(Path(config.checkpoint_file).resolve()),
+        checkpoint_sha256=config.checkpoint_sha256, frontend=frontend_identity(),
+        normalization='checkpoint audio_mean/audio_std buffers; no statistics fitted to input audio',
+        initialization='BOS; no source beatmap, seed or supplied event times',
+        presentation='constant 120 BPM and constant SV for editor/scroll only; no inferred musical beat grid',
+        environment=dict(device=config.device, cpu_threads=config.cpu_threads, torch=str(torch.__version__)),
+        latency_scope='after module imports and Git validation; includes input verification and artifact writes')
+
+    def check(next_phase):
+        nonlocal phase
+        phase = next_phase
+        reason = _resource_stop(root)
+        if reason is None and time.perf_counter() - started >= config.max_seconds:
+            reason = 'time_limit'
+        if reason:
+            raise ResourceLimit(reason)
+
+    try:
+        check('input_verification')
+        tick = time.perf_counter()
+        audio_file = Path(config.audio_file).resolve()
+        audio_sha256 = digest(audio_file)
+        recipe['audio'] = dict(path=str(audio_file), sha256=audio_sha256, bytes=audio_file.stat().st_size)
+        profile['input_verification_seconds'] = time.perf_counter() - tick
+
+        check('model_load')
+        tick = time.perf_counter()
+        model, checkpoint = load_model(config.checkpoint_file, config.checkpoint_sha256, device=config.device)
+        _synchronize(next(model.parameters()).device)
+        profile['model_load_seconds'] = time.perf_counter() - tick
+        recipe['checkpoint'] = checkpoint
+        recipe['parameters'] = model.parameter_counts()
+
+        check('audio_decode')
+        tick = time.perf_counter()
+        waveform = load_audio_file(audio_file, MUSIC_MEL_CACHE_CONFIG.sample_rate)
+        profile['audio_decode_seconds'] = time.perf_counter() - tick
+        if not len(waveform) or not np.isfinite(waveform).all():
+            raise ContractError('Audio inference requires a nonempty finite decoded waveform')
+        if digest(audio_file) != audio_sha256:
+            raise ContractError('Input audio changed during decoding')
+        duration_ms = len(waveform) * 1000 // MUSIC_MEL_CACHE_CONFIG.sample_rate
+        recipe['decoded_audio'] = dict(samples=len(waveform), sample_rate=MUSIC_MEL_CACHE_CONFIG.sample_rate,
+            duration_ms=duration_ms, sha256=hashlib.sha256(waveform.tobytes()).hexdigest())
+
+        check('mel_computation')
+        tick = time.perf_counter()
+        mel = compute_log_mel_10ms(waveform, sample_rate=MUSIC_MEL_CACHE_CONFIG.sample_rate,
+                                   config=MUSIC_MEL_CACHE_CONFIG)
+        profile['mel_seconds'] = time.perf_counter() - tick
+        if mel.ndim != 2 or mel.shape[1] != 128 or not len(mel) or not np.isfinite(mel).all():
+            raise ContractError('Canonical audio frontend produced invalid Mel frames')
+        mel_file = output / 'mel.npy'
+        np.save(mel_file, mel)
+        recipe['mel'] = dict(path=str(mel_file), sha256=digest(mel_file), shape=list(mel.shape))
+        _write_json(output / 'recipe.json', recipe)
+
+        check('native_generation')
+        before_rollout = time.perf_counter() - started
+        native = rollout(model, mel, duration_ms, seed=config.generation_seed,
+            chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
+            max_seconds=config.max_seconds - before_rollout, stop_callback=lambda: _resource_stop(root))
+        profile['audio_encode_seconds'] = native.metrics['audio_encode_seconds']
+        profile['native_generation_seconds'] = native.metrics['generation_seconds']
+        profile['startup_coverage_ms'] = native.metrics['startup_target_ms']
+        profile['startup_from_audio_seconds'] = (None if native.metrics['startup_seconds'] is None else
+                                                 before_rollout + native.metrics['startup_seconds'])
+        profile['first30_heads_from_audio_seconds'] = (None if native.metrics['first30_heads_seconds'] is None else
+                                                       before_rollout + native.metrics['first30_heads_seconds'])
+        phase = 'export'
+        tick = time.perf_counter()
+        info = save_rollout(output / 'chart', native, audio_file=audio_file)
+        profile['export_seconds'] = time.perf_counter() - tick
+        if native.completed and digest(info['audio_file']) != audio_sha256:
+            raise ContractError('Bundled audio differs from the decoded input')
+        report = dict(status='completed' if native.completed else 'capped', source_revision=revision,
+            audio_sha256=audio_sha256, checkpoint_sha256=config.checkpoint_sha256,
+            duration_ms=duration_ms, recipe_file=str(output / 'recipe.json'), profile=profile,
+            seconds=time.perf_counter() - started, **info)
+    except ResourceLimit as error:
+        report = dict(status='capped', completed=False, stop_reason=str(error), phase=phase,
+                      source_revision=revision, profile=profile, seconds=time.perf_counter()-started,
+                      recipe_file=str(output / 'recipe.json'))
+        _write_json(output / 'recipe.json', recipe)
+    except BaseException as error:
+        _write_json(output / 'recipe.json', recipe)
+        _write_json(output / 'failure.json', dict(phase=phase, error=repr(error),
+                                                 seconds=time.perf_counter()-started))
+        raise
+    _write_json(output / 'result.json', report)
+    return dict(status=report['status'], result_file=str(output / 'result.json'),
+                recipe_file=str(output / 'recipe.json'), osu_file=report.get('osu_file'),
+                audio_file=report.get('audio_file'), rows=report.get('rows', 0), heads=report.get('heads', 0),
+                profile=profile, step_p99_ms=report.get('step_p99_ms'),
+                stop_reason=report.get('stop_reason'), seconds=report['seconds'])

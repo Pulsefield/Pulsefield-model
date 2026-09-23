@@ -39,11 +39,12 @@ class JointConfig:
     generation_max_rows: int = 30000
     checkpoint_file: str = ''
     checkpoint_sha256: str = ''
+    audio_file: str = ''
     cpu_threads: int = 1
 
     def validate(self):
-        if self.mode not in ('prepare', 'train', 'generate'):
-            raise ValueError('Joint mode must be prepare, train or generate')
+        if self.mode not in ('prepare', 'train', 'generate', 'infer_audio'):
+            raise ValueError('Joint mode must be prepare, train, generate or infer_audio')
         if self.device not in ('cpu', 'mps') or self.generation_split not in ('train', 'validation'):
             raise ValueError('Use CPU/MPS and TRAIN/validation only')
         if '/' in self.run_name or self.run_name in ('', '.', '..'):
@@ -66,5 +67,9 @@ class JointConfig:
             raise ValueError('Coverage pass requires full waiting-interval supervision and random queries')
         if any(getattr(self, n) <= 0 for n in ('learning_rate', 'inherited_learning_rate', 'max_seconds', 'max_grad_norm')):
             raise ValueError('Learning rates, gradient and time limits must be positive')
-        if self.mode == 'generate' and (not self.checkpoint_file or len(self.checkpoint_sha256) != 64):
+        if self.mode in ('generate', 'infer_audio') and (not self.checkpoint_file or len(self.checkpoint_sha256) != 64):
             raise ValueError('Generation requires a pinned joint checkpoint')
+        if self.mode == 'infer_audio' and not self.audio_file:
+            raise ValueError('Audio inference requires audio_file')
+        if self.mode != 'infer_audio' and self.audio_file:
+            raise ValueError('audio_file is consumed only by infer_audio mode')

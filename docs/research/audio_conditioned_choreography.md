@@ -464,6 +464,75 @@ features, actual history or carried survival draw. A trained-checkpoint probe
 produced identical native rows with 500 ms and 4000 ms query blocks. Its measured
 speedup is one-case evidence, not a worst-case latency guarantee.
 
+For a new audio file, use `mode=infer_audio` with `audio_file`, an explicit
+`checkpoint_file` and `checkpoint_sha256`. This path computes canonical Mel and
+uses checkpoint normalization without loading a chart corpus, source beatmap or
+seed. It writes fresh output under `root/inference/run_name`, including the
+input audio, verified `.osu`, feature identity and per-stage latency. A constant
+120 BPM export placeholder serves editor/scroll presentation only; it is not an
+estimated musical beat grid. Model timestamps remain authoritative for playback.
+
+### Bounded joint-model evidence
+
+The first corpus contains 121 separate TRAIN arrangements from 48 song groups
+and 12 validation songs. The model has 2,950,458 parameters, including 463,392 in
+the learned Mel encoder. The input contract and model architecture stay fixed
+across the following learning checks:
+
+| Check | Observation | Supported conclusion |
+| --- | --- | --- |
+| Memorize 32 queries | TRAIN joint NLL 9.619 to 0.00124; validation 10.494 to 45.349 | Both heads can fit; the fit is not a useful native generator. |
+| Random queries across TRAIN | Best fixed-panel validation joint NLL 6.071; native samples lose many earlier millisecond repetition storms | Learning transfers beyond the memorized queries, but some duplicate-like TAP choices remain. |
+| Complete waiting intervals and rare-transition coverage | Common validation NLL 6.091; two full-gap examples improve from 17.127 to 14.628 | The targeted coverage correction helps these development examples without a material common-panel regression. |
+
+The validation panel has only 48 queries and is unblinded development evidence.
+The two long-gap cases are diagnostics, not a population estimate. Time and row
+losses can move differently: the late-start case improves its timing likelihood
+while its first-row likelihood worsens. No TEST result or listening/playtest
+quality estimate follows from these scores.
+
+Lens review found both negative and positive native examples. Duplicate-like
+same-column TAPs remain in some dense sampled passages. Conversely, one complete
+YOASOBI output has 896 action events, 967 heads and 301 LNs, with coherent tap
+motion, LN chains and independent held/released roles. Its complete event sequence
+and systematic/targeted renders supported handing that exact chart off for
+prototype playtesting. Musical correspondence, enjoyment and calibrated player
+demand remain unverified. This is one positive candidate, not reliable generation
+across seeds and songs.
+
+Short nominal release-to-head gaps require a different interpretation from rapid
+repeated TAPs. Two initially flagged 10/13 ms tail gaps occur between same-lane
+heads 189 ms apart, compatible with LN-jack articulation. They are unresolved
+preference cases, not established BAD labels. No global release-gap filter was
+introduced. Density differences from the reference are likewise not sufficient
+to reject an alternative arrangement.
+
+Diagnostic interventions also rejected a simple timing-jitter explanation for
+two duplicate-TAP witnesses. Moving the consumed source row 1/3/5 ms earlier
+left the next-5-ms event probability negligible, while native histories gave
+large short-gap mass. The native prefixes had much higher event rates and
+different hold composition. Nonphysical swaps of encoded history and exact
+features identified network sensitivity to those histories; they do not prove a
+causal mechanism in valid charts. This separates a history/state question from
+an unsupported decision to enlarge the audio encoder or forbid close events.
+
+On one 4630-row sample, 500 ms and 4000 ms inference queries produced identical
+row and `.osu` bytes; CPU generation fell from 38.22 to 9.39 seconds. For the
+reviewed YOASOBI sample, a fresh Python process with warm OS disk caches covered
+the first 8 audio seconds in 1.44 seconds and the first 31 heads in 1.51 seconds,
+including imports, model loading, decoding, Mel and generation. It generated the
+full 242.7-second song in 3.38 seconds. Interpreter startup before the script,
+network and client costs are excluded. These are single-machine probes, not
+deadline guarantees.
+
+The implementation exposes audio/history/exact-state conditioning but does not
+yet implement requested style or difficulty controls. A control adapter can
+enter the shared condition used by both heads; generated-window readouts can
+receive scoped annotation supervision separately. Missing annotations must not
+be treated as negative labels, and style presence must not become a BAD-pattern
+or numerical-difficulty label. New long-term musical-relation memory remains
+deferred.
+
 ## Research trajectory and the next decision
 
 The first runs change the direction in three ways:
@@ -514,6 +583,16 @@ that diagnostic practice, without replacing the Lens Foundation or human review.
 
 ## Evidence identity
 
+- Joint implementation: `09b919cdeab90e3856fee03a9198d59b4dc527af`; complete-wait
+  supervision: `608f092e6cd534638e8e47432bcb98973b79a5a4`.
+- Canonical joint corpus manifest SHA-256:
+  `4b995029a5344569d4506ff6b11249f61585d2bf7649285754340909bb06c21b`.
+- Selected complete-wait training checkpoint SHA-256:
+  `85f643077d127f9fe3e5256dc7b88512912d9ce8be39d6dbe164ef3ef4c9327e`.
+- Equivalent inference-only checkpoint SHA-256:
+  `29237d5bf25ed40fe1db4a8e022280ee834eae29521d62e3666462c110a71f49`.
+- Joint learning, native outputs, Lens traces, targeted diagnostics and latency
+  receipts: `artifacts/joint-audio/20260923-v1/`.
 - Product baseline for the audit and native-millisecond generation:
   `068988e670e174621f96627827dc28386b1e6775`.
 - Released R1 checkpoint SHA-256:

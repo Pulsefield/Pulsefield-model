@@ -40,6 +40,12 @@ small response candidate from plain R1, adding seed, memory and the three native
 correction modules in order. New trajectories and final quality require evaluation;
 it is separate from the 35M teacher queue.
 
+The [audio-conditioned choreography study](docs/research/audio_conditioned_choreography.md)
+implements a small shared Mel encoder with joint event timing and R1-derived
+complete-row generation. Its research entrypoint supports new audio without a
+source chart or seed. Lens inspection has identified a prototype for playtesting
+and remaining failures; reliable playability remains under investigation.
+
 ## Legacy code boundary
 
 > **Do not use mapper v2/v2.1, the pre-V3 timing stack, Control V3, or the
