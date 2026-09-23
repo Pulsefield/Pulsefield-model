@@ -103,7 +103,7 @@ def pick_events(probabilities, offsets, threshold):
         first = p[:, 0]
         peaks = (first >= threshold) & (first > np.r_[-np.inf, first[:-1]]) & (first >= np.r_[first[1:], -np.inf])
         frame, slot = np.nonzero(peaks[:, None] & (p >= threshold))
-        return np.unique(np.maximum(0., (frame + offsets[frame, slot]) * FRAME_MS))
+        return np.unique(np.rint(np.maximum(0., (frame + offsets[frame, slot]) * FRAME_MS)))
     left, right = np.r_[-np.inf, p[:-1]], np.r_[p[1:], -np.inf]
     selected = np.flatnonzero((p >= threshold) & (p > left) & (p >= right))
-    return np.maximum(0., (selected + offsets[selected]) * FRAME_MS)
+    return np.unique(np.rint(np.maximum(0., (selected + offsets[selected]) * FRAME_MS)))

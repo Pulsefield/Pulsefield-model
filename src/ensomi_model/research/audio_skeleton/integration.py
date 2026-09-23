@@ -18,15 +18,16 @@ from .sensitivity import run_case
 def predicted_condition(original, heads, release_only, terminal_ms):
     """Retain only the supplied physical seed and its known future obligations."""
     boundary = original.seed_rows[-1].time_ms
+    terminal_ms = float(np.floor(terminal_ms))
     if terminal_ms <= boundary:
         raise ValueError('Predicted schedule needs a true horizon after the seed')
     head_times = {r.time_ms for r in original.seed_rows if any(a in (1, 2) for a in r.actions)}
-    head_times.update(float(t) for t in heads if boundary < t <= terminal_ms)
+    head_times.update(float(round(t)) for t in heads if boundary < round(t) <= terminal_ms)
     known = [None if i is None else original.timing.times_ms[i] for i in original.crossing_ends]
     if any(t is not None and t > terminal_ms for t in known):
         raise ValueError('Predicted horizon excludes a committed seed endpoint')
     times = {r.time_ms for r in original.seed_rows} | head_times | {float(terminal_ms)}
-    times.update(float(t) for t in release_only if boundary < t <= terminal_ms)
+    times.update(float(round(t)) for t in release_only if boundary < round(t) <= terminal_ms)
     times.update(t for t in known if t is not None)
     times = tuple(sorted(times))
     lookup = {t: i for i, t in enumerate(times)}
@@ -45,7 +46,7 @@ def run(config):
         raise ValueError('Integration corpus differs from model training')
     if digest(trained / 'best.pt') != result['checkpoint_sha256']:
         raise ValueError('Selected skeleton model checkpoint changed')
-    directory = root / 'integration' / config.run_name
+    directory = root / 'integration-ms' / config.run_name
     directory.mkdir(parents=True, exist_ok=False)
     features = json.loads((root / 'features/index.json').read_text())
     entries = {e['source_sha256']: e for e in read_manifest(root)['charts']}

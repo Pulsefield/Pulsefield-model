@@ -35,7 +35,7 @@ def augment(condition, every):
     for i in range(len(condition.seed_rows) - 1, len(times) - 1):
         if times[i + 1] - times[i] >= 20:
             if eligible % every == 0:
-                added.append((times[i] + times[i + 1]) / 2)
+                added.append(float(round((times[i] + times[i + 1]) / 2)))
             eligible += 1
     combined = tuple(sorted((*times, *added)))
     heads = {t for t, h in zip(times, condition.timing.onsets) if h}

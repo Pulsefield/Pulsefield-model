@@ -38,6 +38,8 @@ def test_predicted_schedule_does_not_retain_unrequested_source_suffix_events():
     assert predicted.timing.onsets == (True, True, False, False, True, False)
     assert predicted.timing.times_ms[predicted.crossing_ends[0]] == 200.
     assert 100. not in predicted.timing.times_ms and 400. not in predicted.timing.times_ms
+    rounded = predicted_condition(original, [90.234], [180.755], 500.9)
+    assert rounded.timing.times_ms == (0., 90., 181., 200., 500.)
 
 
 def test_packaged_schema_rejects_unknown_and_invalid_fields():

@@ -27,6 +27,7 @@ def test_matching_uses_each_event_once_and_keeps_ordered_maximum():
     assert match_events([10., 11.], [10.], 2.)['matches'] == 1
     assert match_events([], [], 2.)['f1'] == 1.
     np.testing.assert_allclose(pick_events([.1, .8, .8, .1], np.zeros(4), .5), [10.])
+    np.testing.assert_array_equal(pick_events([.1, .8, .1], np.array([0., .12345, 0.]), .5), [11.])
 
 
 def test_optional_beat_context_starts_neutral_and_learns_without_padded_loss():
