@@ -84,6 +84,12 @@ request, so excluding that input is an approximation to evaluate, not an
 established improvement. A matched continuation fit with unchanged routing
 separates the architecture intervention from additional training.
 
+The [matched routing evaluation](profile_density_routing_evaluation.md) finds
+larger native control errors and more short same-column attacks after this
+input removal. Several inspected LN relations are also weakened. The comparison
+does not establish that ordinary additional fitting improves the original
+checkpoint, and neither continuation endpoint is adopted.
+
 ## Supervision and interpretation of likelihood
 
 A chart's nearest representative supplies its fixed training assignment. This
