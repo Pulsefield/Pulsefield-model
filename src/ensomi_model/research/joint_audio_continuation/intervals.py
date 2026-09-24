@@ -198,10 +198,15 @@ Neither a crop end nor source exhaustion forces a release.
                          example.weight_per_second)
 
 
-def score_interval(model, inputs, coarse=None):
-    """Read full-song audio context and shared causal history without targets."""
+def encode_interval(model, inputs, coarse=None):
+    """Compute shared audio and causal history once, without target tensors."""
     encoded = model.encode_crop(inputs.mel, inputs.mel_valid, inputs.mel_start, inputs.frame_count, coarse)
     history = model.temporal(inputs.raw, inputs.history_valid)[0] if inputs.raw.shape[1] else None
+    return encoded, history
+
+
+def score_encoded_interval(model, inputs, encoded, history):
+    """Score query states from already encoded, explicitly conditioned audio."""
 
     def gather(indices):
         boundary = model.temporal.boundary[0].expand(len(indices), 2, -1)
@@ -219,6 +224,17 @@ def score_interval(model, inputs, coarse=None):
     else:
         rows = timing.new_empty((0, 256))
     return IntervalScores(timing, rows)
+
+
+def score_interval(model, inputs, coarse=None, *, code=None):
+    """Read full-song audio and causal history; latent models require a code."""
+    from .intent_model import IntentAudioModel
+    encoded, history = encode_interval(model, inputs, coarse)
+    if isinstance(model, IntentAudioModel):
+        encoded = model.apply_code(encoded, code)
+    elif code is not None:
+        raise ContractError('This interval model has no persistent intent code')
+    return score_encoded_interval(model, inputs, encoded, history)
 
 
 def interval_losses(scores, batch):

@@ -203,6 +203,12 @@ gap. Padding is never a synthetic empty event; zero-length prefixes are legal.
         counts['total'] = sum(p.numel() for p in self.parameters())
         return counts
 
+    def encode_generation(self, mel, *, seed, code=None):
+        """Encode complete audio for models without an arrangement latent."""
+        if code is not None:
+            raise ContractError('This checkpoint has no persistent intent code')
+        return self.encode_audio(mel), {}
+
 
 @torch.no_grad()
 def initialize_from_r1(model: JointAudioModel, checkpoint_path, expected_sha256: str):

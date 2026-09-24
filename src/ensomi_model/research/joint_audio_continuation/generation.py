@@ -106,7 +106,7 @@ def _synchronize(device):
 @torch.no_grad()
 def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=17,
             chunk_ms=4000, max_rows=30000, max_seconds=900., stop_callback=None,
-            head_spacing_ms=0., on_update=None, prefix: ObservedPrefix | None = None):
+            head_spacing_ms=0., on_update=None, prefix: ObservedPrefix | None = None, intent_code=None):
     """Generate native integer-ms rows; return incomplete output on a resource cap.
 
     Mel is the complete canonical song representation. Default generation starts
@@ -128,6 +128,9 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     step budgets; exceptions propagate. A resource cap does not emit a fake
     completion or close. Only new rows are published; supplied rows are not
     republished. Omitting the callback preserves sampling behavior.
+    Latent checkpoints select one audio-prior code before the first query using
+    a separate RNG. intent_code fixes that categorical choice for diagnostics;
+    non-latent checkpoints reject it. The selected code persists through silence.
     """
     if (type(duration_ms) is not int or duration_ms < 0 or type(chunk_ms) is not int or chunk_ms <= 0 or
             type(max_rows) is not int or max_rows <= 0 or not math.isfinite(max_seconds) or max_seconds <= 0):
@@ -146,7 +149,8 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     model.eval()
     _synchronize(device)
     started = time.perf_counter()
-    encoded = model.encode_audio(torch.as_tensor(np.array(mel, copy=True), dtype=dtype, device=device)[None])
+    encoded, condition_receipt = model.encode_generation(
+        torch.as_tensor(np.array(mel, copy=True), dtype=dtype, device=device)[None], seed=seed ^ 0x17C0, code=intent_code)
     _synchronize(device)
     audio_seconds = time.perf_counter() - started
     tick = time.perf_counter()
@@ -235,7 +239,7 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
         raise ContractError('Completed native generation left an open long note')
     elapsed = time.perf_counter() - started
     return NativeGeneration(tuple(rows), completed, stop_reason, cursor,
-        dict(audio_encode_seconds=audio_seconds, generation_seconds=elapsed,
+        dict(**condition_receipt, audio_encode_seconds=audio_seconds, generation_seconds=elapsed,
              prefix_rows=len(prefix.rows), prefix_heads=prefix_heads, prefix_coverage_ms=prefix.coverage_ms,
              prefix_prefill_seconds=prefill_seconds, generated_rows=len(rows)-len(prefix.rows),
              generated_heads=replay.note_count-prefix_heads,
@@ -259,7 +263,10 @@ def load_model(path, expected_sha256, *, device='cpu'):
     required = {'model_config', 'model', 'source_revision', 'manifest_sha256', 'config'}
     if not isinstance(payload, dict) or not required <= set(payload):
         raise ContractError('Joint checkpoint lacks model configuration or training provenance')
-    if payload.get('format') == 'joint-audio/context-v1':
+    if payload.get('format') == 'joint-audio/intent-v1':
+        from .intent_model import IntentAudioModel, IntentModelConfig
+        model = IntentAudioModel(IntentModelConfig(**payload['model_config']))
+    elif payload.get('format') == 'joint-audio/context-v1':
         from .context_model import ContextAudioModel, ContextModelConfig
         model = ContextAudioModel(ContextModelConfig(**payload['model_config']))
     else:
@@ -409,7 +416,8 @@ def generate(config, *, resolved_yaml=''):
         seed = config.generation_seed + index
         native = rollout(model, chart.mel, chart.duration_ms, seed=seed,
                          chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
-                         max_seconds=remaining, stop_callback=resource_stop, head_spacing_ms=config.head_spacing_ms)
+                         max_seconds=remaining, stop_callback=resource_stop, head_spacing_ms=config.head_spacing_ms,
+                         intent_code=config.intent_code)
         info = save_rollout(output / chart.entry['source_sha256'][:12], native,
                             source_file=chart.entry['source_file'], audio_file=chart.entry['audio_file'])
         info.update(source_sha256=chart.entry['source_sha256'], group_id=chart.group_id,
@@ -529,7 +537,7 @@ def infer_audio(config, *, resolved_yaml=''):
             native = rollout(model, mel, duration_ms, seed=config.generation_seed,
                 chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
                 max_seconds=config.max_seconds - before_rollout, stop_callback=lambda: _resource_stop(root),
-                head_spacing_ms=config.head_spacing_ms, on_update=publish)
+                head_spacing_ms=config.head_spacing_ms, on_update=publish, intent_code=config.intent_code)
             stream.write(json.dumps(dict(kind='stop', elapsed_seconds=time.perf_counter()-started,
                 completed=native.completed, stop_reason=native.stop_reason, coverage_ms=native.coverage_ms)) + '\n')
             stream.flush()

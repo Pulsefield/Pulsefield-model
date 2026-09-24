@@ -46,6 +46,7 @@ class JointConfig:
     checkpoint_sha256: str = ''
     audio_file: str = ''
     head_spacing_ms: float = 0.
+    intent_code: int | None = None
     cpu_threads: int = 1
 
     def validate(self):
@@ -83,6 +84,9 @@ class JointConfig:
             raise ValueError('Head-spacing prior scale must be finite and nonnegative')
         if self.head_spacing_ms and self.mode not in ('generate', 'infer_audio'):
             raise ValueError('Head-spacing prior is a decoder setting, not a training setting')
+        if self.intent_code is not None and (self.mode not in ('generate', 'infer_audio') or
+                type(self.intent_code) is not int or not 0 <= self.intent_code < 4):
+            raise ValueError('intent_code requires generation mode and an integer in [0,4)')
         if self.normalization_file is not None or self.normalization_sha256 is not None:
             if (self.mode != 'train' or not self.normalization_file or
                     not self.normalization_sha256 or len(self.normalization_sha256) != 64):
