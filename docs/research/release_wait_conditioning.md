@@ -91,9 +91,10 @@ normalization can be tested without inventing a calibrated gameplay penalty.
 ## Training and inference requirements
 
 The conditional law is implemented in interval training and native sampling.
-Existing checkpoints were fitted under the deadline-atom law; enabling the flag
-on those fixed weights is an intervention on the generated distribution, not
-evidence of a trained conditional-law endpoint.
+The original bounded checkpoint was fitted under the deadline-atom law; enabling
+the flag on those fixed weights is an intervention on the generated distribution.
+The subsequent [matched joint fit](head_plan_row_response.md) uses the conditional
+law during training, but does not establish an overall playability improvement.
 
 For a full-occupancy wait, training must include the same normalizer used at
 inference. If an interval ends before the first release, it scores conditional
@@ -187,5 +188,6 @@ Lens review:
 9ad0f8b47d917db39c1d0ab522c0cf2aaec088a1b759d862352eac9f3fd2ba74.
 Exposure audit:
 8ec4c6ba78dd4e4a49472411fce0f35567496ee135e82f0a7b8d4ef9338304eb.
-This is an exploratory comparison of changed inference with frozen weights;
-training under the conditional law remains a separate question.
+This is an exploratory comparison of changed inference with frozen weights.
+The [joint-fit and head-plan comparison](head_plan_row_response.md) separates
+that local gain from changes in the learned arrangement.

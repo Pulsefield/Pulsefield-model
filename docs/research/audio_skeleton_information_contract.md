@@ -249,6 +249,15 @@ LN coordination and long repeated figures cannot be replaced by a universal
 anti-repeat objective. Same-column close-and-restart is not added without
 source evidence requiring it.
 
+Successive attacks in the same column less than 20 ms apart are a high-confidence
+bad pattern and an independent generation-quality failure. Attack means TAP or
+LN head; this strict threshold does not classify exactly 20 ms. Cross-column
+attacks, LN duration and release-to-head gaps have separate meanings. The
+criterion is a quality requirement, not a change to chart syntax or physical
+occupancy legality. The [candidate-response analysis](head_plan_row_response.md)
+shows why avoiding such a repeat can require changing an earlier chord before
+the later head becomes unavoidable.
+
 Only true audio termination resolves remaining holds. Cache boundaries,
 training intervals and resource pauses do not. Independent RNG streams and
 immutable publication frontiers prevent scheduler order from changing content.
