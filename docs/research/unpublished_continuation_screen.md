@@ -120,3 +120,73 @@ limited proposal support. More retries cannot manufacture missing probability
 mass. A failure must remain visible; this research decoder has no production
 quality fallback. Improving predictive consequences, learning a future-potential
 proposal or changing the joint event representation are separate interventions.
+
+## Measured failure removal and composition change
+
+At implementation `452abc689055e2660bda5f62989cf70c95b0db8b`, a paired comparison
+uses the shared-profile checkpoint
+`abc27f1d192869419e42729a6b9fcdfd1c507fd672e12c9a9c7c868a5082a2ef`.
+The 15 cases comprise nine automatic-profile outputs, one unchanged clean
+control and five fixed-H component crosses from the
+[profile-path study](shared_arrangement_profiles.md#separating-the-two-condition-paths).
+Every unbuffered output reproduces its saved baseline rows exactly. No model
+weights are fitted or changed.
+
+All 15 screened outputs complete and independently reparse with identical H
+times. Strict HH pairs fall from three to zero; RH<=20 pairs fall from twelve
+to zero. Across 337 accepted windows, 349 proposals are evaluated, including
+12 rejected proposals. The largest window uses three attempts under the cap
+of four. Seven cases require no rejection and remain entirely row-identical.
+
+On Apple M5 with one CPU thread, total sampler time is 34.690 seconds for the
+baseline and 35.953 seconds for buffering, a 3.64% increase. Maximum measured
+validation-window service is .537 seconds; maximum 30-row/eight-second
+readiness is .323 seconds from cached canonical Mel. This excludes imports,
+checkpoint loading, waveform decoding and Mel computation. Rejected-future
+completions for inspection are separate offline work. Maximum unpublished
+proposal size is 136 rows. These measurements do not establish behavior under
+OS contention, client transport or other songs.
+
+An inspected Prom Queen episode demonstrates the release dependency directly.
+The rejected trajectory keeps three columns held across H times 105943,
+105945 and 105949 ms, creating 2- and 4-ms repeated attacks in the sole free
+column. The accepted continuation closes the already-started column-2/3 holds
+at 105429 ms. The same three H times then use columns 1, 0 and 3, while a new
+column-2 LN remains held. Later rows retain overlapping holds, independent
+releases and repeated double grips. The earlier published LN heads are unchanged;
+their tails had not been promised, so this remains consistent with incremental
+LN publication.
+
+The comparison nevertheless fails its composition guard in two LN-heavy
+component crosses. The guard limits absolute LN-head-fraction change to .10.
+
+| Case, fixed H0/downstream profile 2 | Baseline LN-head fraction | Buffered fraction | Held lane-time fraction, baseline to buffered |
+| --- | ---: | ---: | ---: |
+| Prom Queen, seed 19 | .5726 | .3995 | .3779 to .2904 |
+| Airborne, seed 33 | .4375 | .3021 | .2267 to .1589 |
+
+Both still contain substantial independently articulated LN material in their
+inspected fixed scopes. The count change is therefore not a complete loss of
+LN capability, but the requested arrangement is not preserved within the
+declared bound. All per-case note counts remain between .940 and 1.069 times
+baseline, and the other numeric guards pass.
+
+In Prom Queen, LN starts inside the two resampled windows increase from 57 to
+64. The remaining suffix outside those windows changes from 288 to 110 LN
+starts; the already-published prefix is identical. For Airborne, the resampled
+window changes from 46 to 4 LN starts, while the remaining suffix changes from
+1195 to 810. Changes therefore extend beyond the locally screened windows.
+Changed history and continued RNG state are both live explanations; these
+counts do not isolate their contributions or prove a systematic population
+bias toward taps.
+
+This is bounded evidence of physical-failure removal at low measured sampling
+cost, with two failed composition guards. Whole-cohort musical quality and the
+remaining Lens scopes are not established. The policy remains a research option
+and is not enabled in the packaged CLI.
+
+Local evidence owner: `artifacts/joint-audio/20260925-unpublished-continuation-v1`.
+Result SHA-256:
+`3fff511d78ef4d0fd3400f33853d2e79219a69dbd034e67bee9d1263b5cb2ca9`.
+The full Lens plan has 52 scopes, reusing 21 event-identical views with explicit
+provenance; a rendered page alone is not evidence of completed inspection.
