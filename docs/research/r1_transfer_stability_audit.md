@@ -115,6 +115,68 @@ audio, generated startup seeds or a new timing distribution. Separate manual
 reviews, if any, need their own source/checkpoint/scope evidence; they are not
 implied by the ledger.
 
+## Direct removal of persistent neural conditions
+
+A paired inference probe starts from the actual 6.5M release checkpoint, whose
+`frontier2` correction is absent. It zeros only `seed_residual.2.weight` and
+`long_memory.output.weight`; the other 132 state tensors are bit-identical.
+The architecture, module state updates, original R/H, physical seeds, known
+crossing seed tails and generation seeds remain fixed. This isolates the combined
+neural readout contribution, without separating seed from memory or reproducing
+all changes made by audio transfer.
+
+The original `val-08-s17` rows and decision journals reproduce byte-for-byte
+before reusing the original baseline. All 16 ablated outputs complete with legal
+replay and exact osu! reparse. Runtime source is
+`0848d8d6898939d850cf3bd7bbf4332ab121dceb`, Python 3.10.20 and Torch 2.11.0 on
+one Apple M5 CPU thread. The 30 bounded-model source files match the original
+training revision after the package rename. The complete probe takes 62.71 s.
+
+| Diagnostic, 16 paired outputs | Original release model | Neural seed/memory outputs zeroed |
+| --- | ---: | ---: |
+| Heads | 36,947 | 38,069 |
+| LN heads | 10,875 | 10,803 |
+| Mean per-chart LN/head | 27.67% | 26.80% |
+| Mean first/last onset-quarter LN/head | 21.75% / 29.42% | 26.43% / 26.34% |
+| Head→head `<30 ms` | 2 | 6 |
+| Release→head `<30 ms` | 67 | 56 |
+| Longest unchanged three-hold run | 2 H | 2 H |
+
+The mean absolute paired LN-fraction change is 6.88 percentage points, below the
+probe's predeclared 10-point material-effect threshold. The signed mean is
+−0.88 points. Neither is a percentage attribution for current audio-model
+failures. Two cases nevertheless change by more than 23 points, and every
+head-count ratio remains within 0.7–1.3. With eight song groups and two seeds,
+these observations do not establish a population effect or general harmlessness.
+
+Lens inspection covers the two most changed song groups, Youma Yakou and
+tanasinn, at both seeds: source, baseline and intervention in four ten-second
+contexts, with all 48 time-view pages inspected. Local changes run in both
+directions. In tanasinn seed 17, one eight-second window changes from 121/128
+LN heads to 10/138; in seed 23, another changes from 24/153 to 109/134. The
+latter whole-chart fraction changes by only +2.48 points. These post-hoc windows
+locate differences rather than estimate their prevalence.
+
+In Youma Yakou seed 17, the source's consecutive single-LN handoffs become
+overlapping LNs in the baseline. Removing the neural conditions changes that
+passage into taps around sustained anchors, including a 3750 ms hold. A lower
+LN-head fraction therefore need not reduce sustained occupancy. At seed 23,
+the more tap-heavy alternative also increases chord burden. None of these
+changes alone establishes worse or better playability, and no listening or
+player execution is claimed.
+
+This probe does not support a uniform long-form deterioration from deleting
+these two readouts under original conditions. It does establish that they can
+change regional arrangement choices substantially. A direct restoration of the
+modules is therefore not yet an evidence-based remedy for the audio model's
+specific failure. Refitting, loss of future timing features, generated event
+times and audio-only BOS remain unresolved contributors.
+
+Evidence owner: `artifacts/joint-audio/20260924-r1-condition-ablation-v1`;
+result SHA-256:
+`72df5d4a8f09ad01e57d82c00977bf59fb3dd2db2ef6c0611955aba989aa039b`.
+The diagnostic checkpoint is an inference intervention, not a trained candidate.
+
 ## Attribution and next comparison
 
 The evidence supports separating three questions: remaining weaknesses of the
@@ -123,13 +185,19 @@ new dynamics introduced by joint audio/timing training. Their effects interact;
 there is no defensible additive percentage decomposition from the existing
 experiments. The last-stage transfer identity is the narrow exception above.
 
-A useful next diagnostic keeps original R/H and physical seeds fixed while
-removing only the persistent seed/memory residual outputs from a pinned parent.
-This measures dependence on those neural conditions before changing the task.
-A later matched joint-training comparison can use plain 4.5M, memory 6M and
-release 6.5M initialization with identical audio, sampling and learning-rate
-assignment. Release 6.5M and response 6.75M need not be separate transfer arms.
-Such comparisons measure specific interventions, not universal blame shares.
+The remaining initialization question requires a matched joint-training
+comparison using plain 4.5M, memory 6M and release 6.5M weights with identical
+audio, sampling, objective and compute. Assign learning rates by the same module
+families in every arm: grouping by copied tensor names would give newly
+initialized routing modules a different rate and confound the comparison.
+Release 6.5M and response 6.75M need not be separate transfer arms. Such
+comparisons measure specific interventions, not universal blame shares.
+
+Evaluation should retain separate head/release action checks and inspect local
+organization alongside whole-chart descriptors. Regional mode changes, sustained
+occupancy and chord burden can be hidden by a stable global LN fraction. Matching
+a reference fraction or removing all rapid releases is not a sufficient training
+target for free-form playable arrangements.
 
 Local evidence owner:
 `artifacts/joint-audio/20260924-r1-lineage-audit-v1`; read-only audit result SHA:
