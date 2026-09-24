@@ -1,6 +1,6 @@
 # R1 restoration, transfer and long-form stability
 
-The current audio model inherits selected R1 weights. It does not preserve the
+The flat joint audio baseline inherits selected R1 weights. It does not preserve the
 complete policy released as `r1-restored-6.75m`. The actual restored lineage
 shows improvements in several fixed-condition diagnostics, while the transfer
 omits modules responsible for part of that behavior. Neither observation gives
@@ -38,9 +38,10 @@ The omitted `frontier2` is a candidate-row consequence residual. It uses exact
 post-action features and supplied timing through the second future H; it is not
 the complete gameplay frontier defined by the formulation. The proposed
 [skeleton and row contract](audio_skeleton_information_contract.md#candidate-consequences-and-the-gameplay-frontier)
-retains candidate-consequence evaluation as an explicit row-decision component,
-while requiring new treatment of release opportunities that are no longer
-supplied in advance. That proposal is not yet implemented.
+retains candidate-consequence evaluation as an explicit row-decision component.
+The separate [planned prototype](planned_audio_continuation.md) implements that
+path and transfers frontier2 weights with native-ms release opportunities.
+That new interface has no established policy parity or playability result.
 
 R1 predicts actions on supplied source R/H timing with an original observed
 seed. The audio model learns event time as well as actions, starts at BOS and

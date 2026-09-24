@@ -20,8 +20,10 @@ The [skeleton/row information contract](audio_skeleton_information_contract.md)
 sets the next prototype's dependency boundary: skeleton history is separate from
 row-content history, explicit LN-state feedback remains available, and rows
 receive audio as well as skeleton information. It records a measured violation
-of that boundary in the current timing residual and a proposed head-plan/release-
-clock factorization. The existing joint models are diagnostic baselines for it.
+of that boundary in the flat timing residual. The
+[planned head/release prototype](planned_audio_continuation.md) implements the
+candidate factorization with explicit row consequences. The earlier joint
+models remain diagnostic baselines; native playability is not yet established.
 
 ## Current bounded direction
 

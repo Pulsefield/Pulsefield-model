@@ -1,9 +1,9 @@
 # Audio, skeleton and row information contract
 
-This document fixes input requirements for the next research prototype and
-proposes a small factorization that satisfies them. The existing joint audio
-model remains a diagnostic baseline. No implementation or playability result
-is claimed for the proposed factorization.
+This document fixes input requirements and a small candidate factorization.
+The [planned head/release prototype](planned_audio_continuation.md) implements
+that factorization; playability remains under evaluation. The earlier flat
+joint audio model remains a diagnostic baseline.
 
 ## Required information paths
 
@@ -190,11 +190,15 @@ Immediate transitions are exact. Further continuation responses are evaluated
 on declared hypothetical futures, with an explicit horizon and approximation.
 They must not use future actual rows, reference LN endpoints or future actual
 occupancy. A generated head preview is available to the row policy; upcoming
-release-only times are still conditional on LN choices. The evaluator must
-either mark them unknown or query the release model on a candidate's hypothetical
-LN projection. Substituting the next H for an unknown next release opportunity
-would change the old feature's meaning. Copying old weights requires compatible
-input semantics, not just compatible tensor shapes.
+release-only times are still conditional on LN choices. Their realized times
+remain unknown unless explicitly queried as hypothetical futures. On the
+prototype's native clock, the next millisecond is the earliest possible release
+opportunity, including an H clock where another lane can provide its required
+head. This structural lower bound retains the old feature's meaning without
+predicting a tail. Its distribution differs from supplied R1 candidates.
+Substituting the next H for the earliest opportunity would change that meaning.
+Copying old weights requires compatible input semantics, not just compatible
+tensor shapes, and does not establish policy parity.
 
 Hypothetical queries do not mutate committed state or consume publication RNG.
 After one row is chosen, only its actual LN projection feeds skeleton generation.
@@ -223,7 +227,10 @@ column under the present action alphabet, so at least one must end before the
 next head. If no intervening integer time exists, the preceding row cannot leave
 all columns held. Conditioning a release waiting-time distribution on such a
 deadline requires the same normalization in training and sampling. An
-inference-only forced release would instead change the policy. Incompatible
+alternative, used by the prototype, defines hazard one at the last legal
+release clock. It assigns remaining survival mass to that deadline in both
+training and sampling; this is a deadline atom rather than conditional
+renormalization of the unconstrained waiting law. Incompatible
 external prefixes and plans must be detected before publication.
 
 Physical feasibility is not comfortable play. Release-to-head gaps, chord
@@ -260,7 +267,7 @@ shift still require native evaluation. A changed row prefix must not be trained
 against the old suffix as though the same physical world had occurred.
 
 Finite head/row histories, coarse audio resolution, lookahead length and deadline
-normalization are explicit modeling or computation choices. Full audio in both
+treatment are explicit modeling or computation choices. Full audio in both
 modes, causal LN observations, exact replay and matching clocks are invariants.
 The current 511-row history counts physical events: extra releases shorten its
 span in seconds. That history must not silently become the separated head

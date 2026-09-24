@@ -1,0 +1,153 @@
+"""Joint head/release/row likelihood with the same native clock as generation."""
+from dataclasses import dataclass, replace
+
+import numpy as np
+import torch
+from torch.nn import functional as F
+
+from ..bounded_typed_continuation.contract import Arm
+from ..joint_audio_continuation.batching import interpolate_audio
+from ..joint_audio_continuation.intervals import IntervalInputs, _pad_first, collate_interval as collate_rows
+from ..scoped_style_modeling.dataset import ContractError
+from .features import (
+    LNProjection, consequences, head_clocks, preview_after, preview_features,
+    release_clocks, release_masks, row_support, skeleton_tokens,
+)
+
+
+@dataclass(frozen=True)
+class PlannedInputs:
+    base: IntervalInputs
+    head_raw: torch.Tensor
+    head_history_valid: torch.Tensor
+    head_history: torch.Tensor
+    head_clock: torch.Tensor
+    skeleton_raw: torch.Tensor
+    release_clock: torch.Tensor
+    release_valid: torch.Tensor
+    release_forced: torch.Tensor
+    row_preview: torch.Tensor
+    consequence_local: torch.Tensor
+    consequence_timing: torch.Tensor
+
+
+@dataclass(frozen=True)
+class PlannedBatch:
+    inputs: PlannedInputs
+    head_event: torch.Tensor
+    release_event: torch.Tensor
+    row_index: torch.Tensor
+    weight_per_second: float
+
+
+@dataclass(frozen=True)
+class PlannedScores:
+    head: torch.Tensor
+    release: torch.Tensor
+    row: torch.Tensor
+
+
+def collate_interval(example, config, device='cpu'):
+    """Keep teacher head plans distinct from future row/LN materialization."""
+    base = collate_rows(example, config, 'cpu')
+    x = base.inputs
+    source = example.chart.source
+    times = source.rows['time']
+    roles = np.isin(source.rows['actions'], (1, 2)).any(-1)
+    head_indices = np.flatnonzero(roles)
+    heads = times[head_indices]
+    first = int(np.searchsorted(times, example.start_ms))
+    stop = int(np.searchsorted(times, example.end_ms))
+    row_start = max(0, first - (2 ** (config.history_levels + 1) - 1))
+    head_start = max(0, int(np.searchsorted(head_indices, first)) - (2 ** (config.head_levels + 1) - 1))
+    head_stop = int(np.searchsorted(head_indices, stop))
+    head_positions = np.arange(head_start, head_stop)
+    previous_heads = [heads[i - 1] if i else None for i in head_positions]
+    head_raw = skeleton_tokens(heads[head_positions], previous_heads)
+    skeleton_raw = skeleton_tokens(times[row_start:stop],
+        [times[i - 1] if i else None for i in range(row_start, stop)], roles[row_start:stop])
+
+    query_indices = x.timing_history.numpy() + row_start + 1
+    replays = [replace(source.state(Arm.R0, int(i)).replay, is_complete=False) for i in query_indices]
+    previous_skeleton = [times[i - 1] if i else None for i in query_indices]
+    observed = [max(example.start_ms - 1, int(t) if t is not None else -1) for t in previous_skeleton]
+    ln = [LNProjection(s.open_ln_start_ms, t) for s, t in zip(replays, observed)]
+    previews = [preview_after(heads, t, config.lookahead) for t in observed]
+    query_head_positions = np.searchsorted(head_indices, query_indices) - 1
+    clocks = head_clocks([heads[i] if i >= 0 else None for i in query_head_positions], x.timing_times.numpy())
+    r_clocks = release_clocks(ln, previous_skeleton, x.timing_times.numpy(), previews, example.chart.duration_ms)
+    native = x.timing_times.numpy()[:, None] - 9 + np.arange(10)[None]
+    r_valid, r_forced = release_masks(ln, native, previews, example.chart.duration_ms)
+    r_valid &= x.timing_valid.numpy()
+    r_forced &= r_valid
+    target_head = np.asarray([bool(roles[i]) if i < len(roles) else False for i in query_indices])
+    head_event = base.targets.timing_event.numpy() & target_head[:, None]
+    release_event = base.targets.timing_event.numpy() & ~target_head[:, None]
+    if np.any(release_event & ~r_valid) or np.any(r_forced & ~release_event):
+        raise ContractError('Source release likelihood violates the planned head deadline or LN state')
+
+    row_indices = x.row_history.numpy() + row_start + 1
+    row_states = [replace(source.state(Arm.R0, int(i)).replay, is_complete=False) for i in row_indices]
+    row_times = x.row_times.numpy()
+    row_roles = roles[row_indices]
+    row_previews = [preview_after(heads, t, config.lookahead) for t in row_times]
+    support = row_support(row_states, row_times, row_roles, row_previews, example.chart.duration_ms)
+    if any(not support[i, target] for i, target in enumerate(base.targets.row_index.tolist())):
+        raise ContractError('Source row cannot realize its head plan')
+    row_preview = preview_features(row_previews, row_times, row_roles, example.chart.duration_ms, config.lookahead)
+    local, future = consequences(row_states, row_times, row_previews, example.chart.duration_ms)
+
+    def tensor(value, dtype=None):
+        return torch.as_tensor(value, dtype=dtype, device=device)
+
+    x = replace(x, row_legal=torch.from_numpy(support))
+    x = IntervalInputs(**{name: value.to(device) for name, value in vars(x).items()})
+    inputs = PlannedInputs(x, tensor(_pad_first(head_raw)[None]),
+        tensor(_pad_first(np.ones(len(head_raw), np.bool_))[None]),
+        tensor(query_head_positions - head_start, torch.long), tensor(clocks),
+        tensor(_pad_first(skeleton_raw)[None]), tensor(r_clocks), tensor(r_valid), tensor(r_forced),
+        tensor(row_preview), tensor(local), tensor(future))
+    return PlannedBatch(inputs, tensor(head_event), tensor(release_event), base.targets.row_index.to(device),
+                        example.weight_per_second)
+
+
+def _gather(module, encoded, indices):
+    boundary = module.boundary[0].expand(len(indices), 2, -1)
+    if encoded is None:
+        return boundary
+    return torch.where((indices >= 0)[:, None, None], encoded[indices.clamp_min(0)], boundary)
+
+
+def score_interval(model, inputs, coarse):
+    x = inputs.base
+    encoded = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
+    row_history = model.temporal(x.raw, x.history_valid)[0] if x.raw.shape[1] else None
+    skeleton_history = (model.skeleton_temporal(inputs.skeleton_raw, x.history_valid)[0]
+                        if inputs.skeleton_raw.shape[1] else None)
+    head_history = (model.head_temporal(inputs.head_raw, inputs.head_history_valid)[0]
+                    if inputs.head_raw.shape[1] else None)
+    audio = interpolate_audio(encoded, x.timing_times[None], x.mel_start, x.frame_count)[0]
+    h = model.head_logits(audio, _gather(model.head_temporal, head_history, inputs.head_history), inputs.head_clock)
+    r = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, x.timing_history),
+                             inputs.release_clock)
+    if len(x.row_times):
+        audio = interpolate_audio(encoded, x.row_times[None], x.mel_start, x.frame_count)[0]
+        rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),
+            x.row_exact, x.row_legal, x.occupancy, inputs.row_preview,
+            inputs.consequence_local, inputs.consequence_timing)
+    else:
+        rows = h.new_empty((0, 256))
+    return PlannedScores(h, r, rows)
+
+
+def interval_losses(scores, batch):
+    """Return head, release, row and joint NLL sums on the actual audio clock."""
+    def binary(logits, event, valid):
+        active = torch.where(valid, logits, 0.)
+        return torch.where(event, F.softplus(-active), F.softplus(active)).masked_select(valid).sum()
+
+    h = binary(scores.head, batch.head_event, batch.inputs.base.timing_valid)
+    r = binary(scores.release, batch.release_event, batch.inputs.release_valid & ~batch.inputs.release_forced)
+    row = (-scores.row[torch.arange(len(batch.row_index), device=h.device), batch.row_index].sum()
+           if len(batch.row_index) else h * 0)
+    return h, r, row, h + r + row
