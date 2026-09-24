@@ -13,8 +13,8 @@ The released checkpoint has SHA-256
 parameters. The [transfer function](../../src/ensomi_model/research/joint_audio_continuation/model.py)
 copies 2,444,688 parameters from temporal, exact, fuse, joint, head-routing and
 release-routing modules. It omits 523,776 parameters in `seed_residual`,
-`long_memory` and `row_consequence`, and discards 115,968 columns' worth of
-exact-projection weights. The projection input changes from 1435 to 529 features.
+`long_memory` and `row_consequence`, and discards another 115,968 exact-projection
+weights. The projection input changes from 1435 to 529 features.
 Parameter fractions are not fractions of causal responsibility.
 
 The last restoration stage trains only `frontier2` row consequence. Its parent

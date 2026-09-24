@@ -9,6 +9,11 @@ finite action history and bounded historical timing modulation. The
 information paths. This is a playtest candidate, not an adopted V3 architecture
 or a universal playability result.
 
+The [R1 transfer audit](r1_transfer_stability_audit.md) distinguishes the complete
+released policy from the selected weights inherited here. Seed, landmark memory
+and the final response module are absent from this audio model; the original
+R1 quality evidence does not automatically transfer with the remaining weights.
+
 ## What the experiments establish
 
 The native-ms hazard followed by a conditional complete-row distribution is
