@@ -106,8 +106,105 @@ loads that family directly. `arrangement_profile=null` samples the prior once;
 an integer requests a bank index. An override absent from the checkpoint is
 rejected. Results record the selected index, raw descriptor values, prior
 probabilities, profile RNG seed and whether selection was requested or sampled.
+The native metric `arrangement_values` contains the selected representative,
+not statistics measured from the generated chart. Evaluation must recompute
+realized descriptors from the output rows.
 
 Native evaluation must test realized descriptor control and complete-chart
 failures alongside Lens-inspected musical organization. The prior's own
 calibration is a separate question. Neither the profile approximation nor
 successful streaming establishes the final playable model.
+
+## Measured control and remaining coupling failures
+
+A matched comparison at source
+`10ddaa8daf7db1b5851d1f8c10733744da368b7e` continues the same planned checkpoint
+for 1200 updates, with and without the profile modules. Both arms use the same
+615 TRAIN arrangements, 240 audio groups, exposure plan and fresh optimizer.
+Fitting takes 964.4 and 920.7 seconds, respectively, on Apple M5 MPS. No endpoint
+is selected by validation NLL. The conditioned model has 4250174 parameters.
+
+Native evaluation uses five audio assets and nine fixed audio/seed cases:
+two automatic arms plus four explicit requests per case give 54 complete,
+independently reparsed outputs. The requests are the first four TRAIN medoids;
+they are not derived from the evaluation arrangements. Aggregate measurements
+describe this small cohort, without a population confidence claim.
+
+| Measurement | Unconditioned continuation | Shared profiles |
+| --- | ---: | ---: |
+| Mean squared distance to the requested standardized descriptors | 13.2592 | 7.5809 |
+| Strict same-column successive attacks below 20 ms, all outputs | 0 | 0 |
+| Release-to-next-head gaps at most 20 ms, automatic outputs | 0 | 3 |
+
+The descriptor error decreases 42.8%, with improvement in every component.
+Centering requests and outputs within each audio/seed case excludes a constant
+output that merely approaches the request mean: error relative to that constant
+case decreases 32.0%, 34.4% and 26.3% for H rate, chord width and LN-head fraction.
+This establishes partial use of all three controls in these trajectories.
+It does not establish calibrated realization or playable organization.
+
+The finite response matrix makes the coupling visible. Rows are requested
+standardized descriptor changes; columns are realized standardized changes.
+The matrix fits the four fixed requests and averages across the nine cases;
+it is not an infinitesimal derivative.
+
+| Requested change | H rate | Chord width | LN-head fraction |
+| --- | ---: | ---: | ---: |
+| H rate | .363 | .491 | .050 |
+| Chord width | .200 | .468 | .040 |
+| LN-head fraction | .073 | -.069 | .177 |
+
+Increasing requested H rate also increases chord width substantially. The
+LN-heavy representative requests .734 LN-head fraction, but its nine outputs
+realize only .036 to .282. The audio prior's mean reference-class cross-entropy
+on 36 VAL charts is 2.534, versus 2.588 for the constant TRAIN-mass prior. That
+modest change is separate from native control and quality.
+
+Lens inspection covers all 43 declared scopes: 118 time-proportional pages,
+complete action tables and LN articulation. Broad chord flow appears in Good
+Luck and Prom Queen under the broad-chord request, while Who remains mainly
+single-note flow under the same request. Independent LN release survives,
+including long holds spanning other-column attacks. Few LN starts can still
+produce substantial held-lane time: one Death Piano scope contains only one
+new H, but entering/new holds last 4.389, 6.673 and 6.968 seconds. LN-head fraction
+therefore cannot substitute for sustained occupancy or coordination. Fine Tech
+and dump coverage remain unresolved; no listening or player verdict was taken.
+
+All individual completion, startup and strict-attack guards pass, but the
+automatic release-to-head guard fails. All automatic fixed scopes remain
+nonempty; the controlled profile-0 Death Piano seed-19 scope is empty, outside
+the declared automatic nonempty-scope guard. The three automatic and two explicitly
+controlled witnesses have distinct action dependencies:
+
+| Generated case | Release to next head | Observed dependency |
+| --- | --- | --- |
+| Automatic Good Luck, seed 17, column 2 | 197518 to 197536 ms | Four columns were held at 197436. The first release leaves only 18 ms before the required H. |
+| Automatic Prom Queen, seed 17, column 0 | 84345 to 84351 ms | Column 1 is available and rested; the row instead chooses the just-released column. |
+| Automatic Airborne, seed 33, column 2 | 133516 to 133519 ms | The preceding row attacks columns 0/3 and releases 1/2, leaving no column avoiding both short HH and RH at the next H. |
+| Profile 1 Good Luck, seed 17, column 1 | 184037 to 184055 ms | Three holds release, leaving only column 0 rested. A single head is available, but the chosen double requires a just-released column. |
+| Profile 3 Prom Queen, seed 17, column 2 | 39201 to 39204 ms | The preceding row attacks columns 1/3 and releases 0/2, again consuming every rested choice for the next H. |
+
+The confirmed bad-pattern criterion remains strictly below 20 ms between
+successive same-column attacks, including TAP and LN heads. RH gaps are a
+separate diagnostic. Across the 651 admitted paired source charts, all 151003
+release-to-next-head pairs exceed 20 ms, with a minimum of 30 ms. The source
+parser and admission path preserve literal starts and endpoints rather than
+clamping these gaps; corpus selection can still bias their distribution.
+This audit does not establish a universal RH threshold.
+
+These failures distinguish release timing, immediate row choice, and an
+earlier row's consumption of future playable choices. Reducing one close-gap
+count or improving descriptor error alone cannot promote the model. Crossing
+generated H plans while holding downstream profile conditions fixed can
+separate the plan-mediated and downstream paths of the measured control
+response before changing their architecture.
+
+The unconditioned endpoint is
+`5f26b7b15d97fa2d6964cf77a4cadea016f5ace9dfd578ce2fae5dc7c8a0e121`;
+the conditioned endpoint is
+`abc27f1d192869419e42729a6b9fcdfd1c507fd672e12c9a9c7c868a5082a2ef`.
+Local evidence owner: `artifacts/joint-audio/20260924-shared-profile-v1`.
+Native result SHA-256:
+`de5544efff6ffdaeca0c0388636e60dcfe67dc2691d20466c10704be4f8abea4`;
+completed Lens review:
+`0a7fdd8562fc8885a034a998eecc1ba75ccd16802bd612a956c7747bbe703e1e`.
