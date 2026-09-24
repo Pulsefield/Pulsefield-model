@@ -155,6 +155,18 @@ The conditional-probe result SHA-256 is
 `9305057f4284d73dfa9a3ca756a178818f025b43f30f76ba1fed47cdfc6106b6`.
 No human labels were edited, and no listening or player test is implied.
 
+The Python research API also accepts
+`rollout(..., prefix=ObservedPrefix(rows, coverage_ms))` for conditional
+continuation diagnostics. It replays the entire observed prefix for exact
+occupancy and clocks, and rebuilds only the finite neural suffix with its true
+predecessor gap. Unknown hold endpoints are not supplied. Sampling uses a fresh
+survival draw after known coverage; it does not restore an earlier RNG stream.
+Returned rows retain the prefix, exported rows identify observed versus sampled
+origin, and callbacks publish only newly generated rows. Caps and first-30
+metrics count new material. Diagnostic startup means eight seconds beyond the
+observed clock and cannot be reported as audio-only startup latency. The
+source-free command continues to use BOS.
+
 ## Actual prefix publication and runtime
 
 `rollout` now exposes immutable incremental rows and fixed-through coverage.

@@ -1,4 +1,4 @@
-"""Native joint time/row generation from audio and an empty chart prefix.
+"""Native joint time/row generation from audio and observed physical history.
 
 An exponential survival threshold persists across scheduler chunks. Chunks do
 not become timing inputs or release deadlines; only the decoded song terminal
@@ -48,6 +48,42 @@ class NativeGeneration:
 
 
 @dataclass(frozen=True)
+class ObservedPrefix:
+    """Already committed rows and fixed-through time for conditional resampling.
+
+    Rows contain no future LN endpoints. Empty time after the last row is an
+    observation, not a history token. This is not an RNG-restoring checkpoint.
+    The complete prefix is needed for exact clocks even when neural history is
+    finite. Rollout validates occupancy and requires coverage before audio end.
+    """
+    rows: tuple[CompleteRow, ...]
+    coverage_ms: int
+
+    def __post_init__(self):
+        if (type(self.coverage_ms) is not int or self.coverage_ms < -1 or
+                not isinstance(self.rows, (tuple, list)) or
+                any(not isinstance(row, CompleteRow) or int(row.time_ms) != row.time_ms or
+                    row.time_ms > self.coverage_ms for row in self.rows)):
+            raise ContractError('Observed prefix requires integer-ms rows within its fixed coverage')
+        object.__setattr__(self, 'rows', tuple(self.rows))
+
+
+def _prefix_context(model, prefix):
+    """Replay all physical facts and prefill only the finite neural suffix."""
+    replay = ExactReplayState()
+    for row in prefix.rows:
+        replay = commit(replay, row)
+    start = max(0, len(prefix.rows) - model.temporal.config.receptive_tokens)
+    cache = model.temporal.empty_cache(truncated_start=start > 0)
+    like = next(model.parameters())
+    for index in range(start, len(prefix.rows)):
+        previous = prefix.rows[index - 1].time_ms if index else None
+        raw = content_features([prefix.rows[index]], [previous], [[None] * 4])[0]
+        cache = model.temporal.append(cache, torch.as_tensor(raw, dtype=like.dtype, device=like.device))
+    return replay, cache
+
+
+@dataclass(frozen=True)
 class GenerationUpdate:
     """One irrevocable row or empty extension of fixed chart coverage.
 
@@ -70,12 +106,16 @@ def _synchronize(device):
 @torch.no_grad()
 def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=17,
             chunk_ms=4000, max_rows=30000, max_seconds=900., stop_callback=None,
-            head_spacing_ms=0., on_update=None):
+            head_spacing_ms=0., on_update=None, prefix: ObservedPrefix | None = None):
     """Generate native integer-ms rows; return incomplete output on a resource cap.
 
-    Mel is the complete canonical song representation. It is encoded once, with
-    no source rows or seed. Startup coverage includes audio encoding and requires
-    fixed decisions through min(8000, duration_ms), including empty intervals.
+    Mel is the complete canonical song representation. Default generation starts
+    from BOS. An explicit observed prefix enables conditional resampling; it
+    supplies no future labels and uses a fresh survival draw after known coverage.
+    Returned rows include the prefix, with its size/coverage recorded in metrics.
+    max_rows and first30 metrics count new sampled rows/heads only. Startup is
+    fixed coverage eight seconds beyond the supplied clock (or zero for BOS),
+    clipped at real audio end, and includes audio encoding and neural prefill.
     The time budget is checked between scheduler steps; a cap never fabricates LN
     endpoints. An optional callback is checked every twenty scheduler steps and
     returns a stop-reason string or None. It does not participate in sampling.
@@ -86,7 +126,8 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     on_update receives each immutable fixed-coverage update synchronously,
     after computation and commit. Its elapsed time counts toward the run and
     step budgets; exceptions propagate. A resource cap does not emit a fake
-    completion or close. Omitting the callback preserves sampling behavior.
+    completion or close. Only new rows are published; supplied rows are not
+    republished. Omitting the callback preserves sampling behavior.
     """
     if (type(duration_ms) is not int or duration_ms < 0 or type(chunk_ms) is not int or chunk_ms <= 0 or
             type(max_rows) is not int or max_rows <= 0 or not math.isfinite(max_seconds) or max_seconds <= 0):
@@ -97,6 +138,10 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
         raise ContractError('Head-spacing scale must be finite and nonnegative')
     if on_update is not None and not callable(on_update):
         raise ContractError('Generation update consumer must be callable')
+    if prefix is None:
+        prefix = ObservedPrefix((), -1)
+    if not isinstance(prefix, ObservedPrefix) or prefix.coverage_ms >= duration_ms:
+        raise ContractError('Observed prefix coverage must precede true audio end')
     device, dtype = next(model.parameters()).device, next(model.parameters()).dtype
     model.eval()
     _synchronize(device)
@@ -104,12 +149,16 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     encoded = model.encode_audio(torch.as_tensor(np.array(mel, copy=True), dtype=dtype, device=device)[None])
     _synchronize(device)
     audio_seconds = time.perf_counter() - started
-    replay, cache = ExactReplayState(), model.temporal.empty_cache()
+    tick = time.perf_counter()
+    replay, cache = _prefix_context(model, prefix)
+    _synchronize(device)
+    prefill_seconds = time.perf_counter() - tick
+    prefix_heads = replay.note_count
     rng = torch.Generator(device='cpu').manual_seed(seed)
     acceptance_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x5A17)
-    cursor, residual, rows = -1, None, []
+    cursor, residual, rows = prefix.coverage_ms, None, list(prefix.rows)
     latencies, coverage = [], []
-    startup_seconds, startup_target = None, min(8000, duration_ms)
+    startup_seconds, startup_target = None, min(max(0, prefix.coverage_ms) + 8000, duration_ms)
     first30_seconds = first30_time_ms = None
     stop_reason, bins_scored, clocks_scored, forced_terminal = 'completed', 0, 0, 0
     proposals, rejected = 0, []
@@ -122,7 +171,7 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
         if time.perf_counter() - started >= max_seconds:
             stop_reason = 'time_limit'
             break
-        if len(rows) >= max_rows:
+        if len(rows) - len(prefix.rows) >= max_rows:
             stop_reason = 'row_limit'
             break
         if head_spacing_ms and proposals >= max_rows:
@@ -179,7 +228,7 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
         coverage.append(dict(coverage_ms=cursor, elapsed_seconds=now - started))
         if startup_seconds is None and cursor >= startup_target:
             startup_seconds = now - started
-        if first30_seconds is None and replay.note_count >= 30:
+        if first30_seconds is None and replay.note_count - prefix_heads >= 30:
             first30_seconds, first30_time_ms = now - started, cursor
     completed = cursor == duration_ms
     if completed and any(replay.occupancy):
@@ -187,6 +236,9 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     elapsed = time.perf_counter() - started
     return NativeGeneration(tuple(rows), completed, stop_reason, cursor,
         dict(audio_encode_seconds=audio_seconds, generation_seconds=elapsed,
+             prefix_rows=len(prefix.rows), prefix_heads=prefix_heads, prefix_coverage_ms=prefix.coverage_ms,
+             prefix_prefill_seconds=prefill_seconds, generated_rows=len(rows)-len(prefix.rows),
+             generated_heads=replay.note_count-prefix_heads,
              startup_target_ms=startup_target, startup_seconds=startup_seconds,
              first30_heads_seconds=first30_seconds, first30_heads_through_ms=first30_time_ms,
              latency_scope='cached Mel through fixed chart coverage; excludes waveform decode and Mel computation',
@@ -242,9 +294,13 @@ def save_rollout(directory, result: NativeGeneration, *, source_file=None, audio
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
     row_file = directory / 'rows.jsonl'
+    prefix_rows = result.metrics.get('prefix_rows', 0)
     with row_file.open('w') as stream:
         for index, row in enumerate(result.rows):
-            stream.write(json.dumps(dict(event_id=index, **asdict(row))) + '\n')
+            record = dict(event_id=index, **asdict(row))
+            if prefix_rows:
+                record['origin'] = 'observed' if index < prefix_rows else 'sampled'
+            stream.write(json.dumps(record) + '\n')
     times = [row.time_ms for row in result.rows]
     mechanics = verify_rows(row_file, times, require_complete=result.completed)
     info = dict(completed=result.completed, stop_reason=result.stop_reason,
@@ -254,6 +310,11 @@ def save_rollout(directory, result: NativeGeneration, *, source_file=None, audio
         header = _source_free_header(audio_file) if source_file is None else presentation_header(Path(source_file))
         if source_file is not None:
             header = header.replace(b' (oracle continuation)', b' (joint audio native)')
+        if prefix_rows or result.metrics.get('prefix_coverage_ms', -1) >= 0:
+            lines = header.decode('utf-8').splitlines()
+            version = f"Version:Observed prefix through {result.metrics['prefix_coverage_ms']} ms + model continuation"
+            lines = [version if line.startswith('Version:') else line for line in lines]
+            header = ('\n'.join(lines) + '\n').encode('utf-8')
         if audio_file is not None:
             original = Path(audio_file)
             # Copy into the case directory so the exported chart is playable
