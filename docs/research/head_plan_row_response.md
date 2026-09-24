@@ -186,6 +186,28 @@ attack-pair diagnostic. This policy preserves H timestamps and imposes neither
 a general onset gap nor a minimum LN duration. It is an optional research
 intervention, not an established solution to musical arrangement or playability.
 
+The bounded comparison at source
+7ea2e82eebd9afbc97ec8db23cf361885fc8e0a1 checks 651 real charts and eleven fixed
+generated cases. All 683341 source rows have zero optimistic response cost;
+none of those source charts contains a strict short-attack pair. The policy
+leaves ten already healthy generated outputs row-identical. In the remaining
+Good Luck A/B case, one correction changes the three-tap row at 47163 to
+TAP0/3. TAP2 at 47166 and TAP1 at 47182 preserve the original three H clocks
+without the 19-ms same-column pair. All eleven outputs have zero strict pairs.
+
+The full-chart comparison nevertheless fails its release-to-head regression
+guard. The changed autoregressive suffix closes four holds at 193538, then
+taps column 3 at 193542. Aggregate RH<=20 rises from one to two, although
+head-count, LN-fraction, physical validity and startup checks pass. Eleven new
+Lens pages cover the correction, fixed musical scope, late occupancy episodes
+and this RH4 witness. Chords and independent LN releases remain present, but
+neither the local correction nor their presence establishes a playable chart.
+The policy remains optional and off by default. Its result is a local response
+improvement with a failed whole-chart guard, not an overall model promotion.
+
+The [playback-budget study](audio_playback_system.md) separates this unresolved
+musical/physical interaction from measured end-to-end compute capacity.
+
 ## Evidence identities
 
 All fitting, native comparison and score-audit code runs at clean product
@@ -201,3 +223,9 @@ artifacts/joint-audio/20260924-feasible-release-v1.
 
 The crossover took 9.78 s and the score audit 3.43 s on one CPU thread. The
 trained endpoint fails its composition guard and remains a research model.
+
+The correction comparison's local owner is
+artifacts/joint-audio/20260924-short-attack-response-v1. Corpus result:
+5f9d45de29756e188b6b6568e0887060b1c1b9dd1e3ecb2d7e2409a0b73372c6;
+native result: 1c5fcedf09f8c26d4e51015867d0eec7371e5c86718ef8c53c9d48c1a2cdb7ce;
+Lens review: b708a90c48f08d58b9fbb299a9dc3c3eeeb525d93e99155da83b7cfe3c265c8a.

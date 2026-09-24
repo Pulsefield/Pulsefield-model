@@ -142,3 +142,8 @@ dense-window throughput and inspected action organization. Head-to-head and
 release-to-head intervals remain separate diagnostics. Lens evidence and
 playtesting determine whether better NLL or different LN fractions correspond
 to better charts; no numerical proxy alone selects the model.
+
+The [full-audio playback study](audio_playback_system.md) measures fresh-input
+startup, dense and long source-H workloads, settled coverage and virtual
+presentation deadlines. It separates demonstrated compute headroom from the
+remaining musical-distribution and control questions.
