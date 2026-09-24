@@ -208,3 +208,104 @@ Native result SHA-256:
 `de5544efff6ffdaeca0c0388636e60dcfe67dc2691d20466c10704be4f8abea4`;
 completed Lens review:
 `0a7fdd8562fc8885a034a998eecc1ba75ccd16802bd612a956c7747bbe703e1e`.
+
+## Separating the two condition paths
+
+A frozen-weight crossover separates the profile's effect through generated
+H times from its direct input to release/row generation. Let $F(i,j)$ be the
+realized standardized descriptor vector when using the generated H plan for
+profile $i$ and downstream profile $j$. Every arm retains the same complete
+audio, checkpoint, original release/row RNG streams and native LN replay.
+Only generated timestamps enter the fixed plan; no reference chart, future
+row or LN endpoint enters the decoder.
+
+The nine fixed audio/seed cases use profile 0 as the reference and profiles
+1, 2 and 3 as contrasts. Nine $F(0,0)$ controls reproduce the complete saved
+rows exactly. The remaining 54 outputs cross each alternative plan with
+downstream profile 0, and each alternative downstream profile with plan 0.
+All outputs complete, independently reparse and preserve their supplied H
+times; checkpoint tensors remain unchanged. The original diagonal samples
+$F(j,j)$ are reused after verifying their row hashes and realized statistics.
+
+For each contrast, the two contributions average the two possible intervention
+orders:
+
+$$
+\begin{aligned}
+P_j &= \tfrac12\big[F(j,0)-F(0,0)+F(j,j)-F(0,j)\big],\\
+C_j &= \tfrac12\big[F(0,j)-F(0,0)+F(j,j)-F(j,0)\big].
+\end{aligned}
+$$
+
+They sum exactly to $F(j,j)-F(0,0)$. Here $P$ changes the H plan and $C$ changes
+the condition used by both release and row factors. This attribution shares
+their interaction equally; it is not a unique module-responsibility fraction
+or a population causal estimate. The three request contrasts form a full-rank
+matrix with condition number 1.699, permitting the same finite linear response
+calculation as the diagonal comparison.
+
+| Finite response coefficient | Via H plan | Via downstream condition | Total |
+| --- | ---: | ---: | ---: |
+| H-rate request to chord width | .11077 | .37983 | .49060 |
+| Width request to chord width | .04401 | .42395 | .46796 |
+| LN-fraction request to LN fraction | -.04022 | .21697 | .17675 |
+
+Under this convention, the downstream path accounts for 77.4% of the observed
+H-rate-to-width response, with a positive contribution in all nine cases.
+The two individual intervention orders give 66.4% and 88.4%, so the exact share
+depends on interaction allocation. The downstream path is a useful first
+place to examine unwanted control coupling; this does not show that the H
+planner is generally unimportant. For LN response, the negative plan component
+partially cancels the downstream effect rather than contributing a positive
+percentage. In Prom Queen seed 19, keeping plan 0 and requesting downstream
+profile 2 produces .573 LN-head fraction, versus .036 under plan 2/profile 2.
+One sampled trajectory cannot establish that this large difference generalizes.
+
+These crossed conditions also expose three strict short-attack pairs and nine
+RH diagnostics. Lens review covers all witnesses and the six fixed musical
+contexts: 38 time pages and complete action/articulation tables in 15 scopes.
+Two strict-attack mechanisms are directly visible:
+
+- Airborne plan 0/profile 1 taps all four columns at 144014 ms. The next H is
+  144025 ms, making a short repeat unavoidable after that chord. Reserving one
+  column at the earlier row is necessary for a locally safe continuation.
+- Prom Queen seed 17, plan 0/profile 1, keeps columns 1/2/3 held at H times
+  105943, 105945 and 105949 ms. The only free column receives TAP, TAP and an LN
+  head, yielding 2- and 4-ms repeats. Column 1 closes at 106041 ms; the other
+  two entering holds last 4.137 and 5.170 seconds. The next head clocks are
+  known, but actual releases do not free the needed columns in time.
+
+The first mechanism is a deterministic consequence of the immediate chord.
+The second also depends on the future availability of held columns. The
+existing frontier2 representation uses the earliest *possible* release clock,
+`now + 1`; it does not forecast the release model's sampled event. Thus a
+continuation that is possible under optimistic release assumptions need not
+occur under the composed generator. These traces identify the information
+gap without proving which learned response feature or constraint will fix it.
+
+Training preserves physical row legality and scores each factor on source
+histories and source H previews. The loss sums head, release and row NLL; it
+does not evaluate the sampled future caused by every alternative current row.
+The legal-row support also does not enforce the strict short-attack criterion.
+Consequently, neither physical validity nor a lower teacher-forced NLL supplies
+an invariant that every generated continuation retains a playable lane. Joint
+gradients through the audio and condition modules do not supply that missing
+runtime guarantee. A release forecast used by a candidate evaluator must be
+computed from allowed audio, skeleton history and the candidate's LN projection,
+with its approximation stated; a source tail cannot serve as that forecast.
+
+No crossed output is promoted as a playable endpoint. Off-diagonal profiles
+deliberately disagree across components and may fall outside training support;
+shared RNGs do not fix the resulting autoregressive histories. Musical fit and
+fine Tech/dump coverage remain unresolved. A focused next comparison should
+separate unwanted direct control effects from prediction of future lane
+availability, preserving direct audio-to-row input in both cases.
+
+The crossover ran in 97.15 seconds on one CPU thread at clean source
+`d80de496293d344c4c803d30f05b0e4d957ba863`, with the same conditioned checkpoint.
+Its timing excludes head-plan generation and is not startup-latency evidence.
+Local owner: `artifacts/joint-audio/20260925-profile-path-crossover-v1`.
+Result SHA-256:
+`95964d01b5e12ed8c5a811151f2d22c99dfd35592e5eb201d55f6d78e6f85175`;
+completed Lens review:
+`bea426a8ceb332793eccf4ec4787e203aea92355eb3557443d11412772687508`.
