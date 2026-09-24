@@ -102,6 +102,59 @@ player validation, a whole-corpus Tech/dump verdict or calibrated difficulty.
 The candidate's LN preference, music alignment, consistent authored intent
 and future controls remain open questions. No TEST split selected the model.
 
+### Annotation-anchored follow-up
+
+A fixed-weight diagnostic at source
+`de2ff6207158edf1e1cd71ae1697b4195ba73854` generated Who?, death piano,
+Prom Queen and Good Luck, Babe! from BOS at seeds 17 and 19. These are catalog
+TRAIN songs used for diagnosis, not new held-out-song evidence. All eight runs
+completed, exceeded 30 heads and had no same-key head interval <=20 ms.
+Complete Lens action rows and time-proportional pages nevertheless show an
+expressive-coverage gap: both death piano outputs are predominantly LN-based
+in the reference's tap-only Tech episode; both Prom Queen outputs replace
+much of the reference's changing-chord repetition with staggered holds.
+Different arrangements are legitimate, but these outcomes do not demonstrate
+the reference relations merely by being active or complex.
+
+A conditional-row probe scored every event in each episode using that chart's
+own actual prefix and event time. The statistic below is the sum of expected
+LN starts divided by the sum of expected heads from the legal full-row
+distribution. It excludes the optional decoder prior.
+
+| Episode, source ms | Real-prefix expected LN fraction | Native-prefix fraction, seed 17 / 19 |
+| --- | ---: | ---: |
+| Who?, [75000, 85000) | 65.03% | 71.97% / 75.00% |
+| death piano, [103453, 106630) | 0.73% | 88.83% / 82.26% |
+| Prom Queen, [75838, 78338) | 0.87% | 85.67% / 75.09% |
+| Good Luck, Babe!, [128423, 131252) | 0.71% | 3.58% / 11.45% |
+
+The reference's observed LN fraction is 66.67% for Who? and zero for the other
+three episodes. Across 795 source/native events, direct full-audio row scoring
+agreed with canonical crop scoring within 3.82e-6 log-probability on twelve
+selected parity checks. The predictor received no future chart or LN endpoint.
+Native self-likelihood is not a quality measure. These are different trajectories
+with different times and occupancy, so the contrast does not isolate history
+causally. It does show that tap-heavy conditional predictions remain available;
+native arrangement selection and persistence need separate investigation before
+adding a latent or declaring the action decoder incapable.
+
+This review also found a pairing omission: 490 catalog sources pointed to
+imported copies without adjacent audio, although byte-identical originals with
+audio existed locally. Explicit verified aliases recovered all 490: 427 TRAIN
+and 63 VAL, including 113 human-reference sources. Thirty TRAIN alternatives
+share the existing selected audio exactly. A fresh corpus restores those targets
+while retaining every old chart, audio asset, normalization value and VAL chart;
+it has 615 TRAIN arrangements and has not been fitted for this candidate.
+The [pairing contract](audio_conditioned_choreography.md) preserves catalog
+identity and rejects differing-audio ambiguity. The original experiment corpus
+and checkpoint remain unchanged.
+
+Local evidence is under
+`artifacts/joint-audio/20260924-expanded-v1/lens-review/context-gb-prior27-v1/style-audit-v1`.
+The conditional-probe result SHA-256 is
+`9305057f4284d73dfa9a3ca756a178818f025b43f30f76ba1fed47cdfc6106b6`.
+No human labels were edited, and no listening or player test is implied.
+
 ## Actual prefix publication and runtime
 
 `rollout` now exposes immutable incremental rows and fixed-through coverage.
