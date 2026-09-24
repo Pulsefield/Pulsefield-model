@@ -93,6 +93,16 @@ class IntervalScores:
     row_log_probs: torch.Tensor
 
 
+def _pad_first(values, quantum=128, *, edge=False):
+    """Bound runtime shape variety without adding scored rows or audio frames."""
+    values = np.asarray(values)
+    padding = (-len(values)) % quantum
+    if not padding or not len(values):
+        return values
+    extra = np.repeat(values[-1:], padding, axis=0) if edge else np.zeros((padding, *values.shape[1:]), values.dtype)
+    return np.concatenate((values, extra), axis=0)
+
+
 def collate_interval(example, model_config, device='cpu'):
     """Build one interval with true prefix state and causal per-query indices.
 
@@ -162,16 +172,29 @@ Neither a crop end nor source exhaustion forces a release.
     if any(not support[i, target] for i, target in enumerate(row_targets)):
         raise ContractError('Interval target row violates its true prefix occupancy')
 
+    # MPS caches first-seen operator shapes. Pad only computation axes; exact
+    # replay and target counts remain actual, and every added timing slot is
+    # excluded from likelihood. Repeated row queries have no corresponding
+    # targets. No padding position is an observed history row or audio frame.
+    raw_valid = _pad_first(np.ones(len(raw), np.bool_))
+    raw = _pad_first(raw)
+    mel = _pad_first(mel[0])[None]
+    mel_valid = _pad_first(mel_valid[0])[None]
+    timing_exact = _pad_first(exact_features(timing_states, timing_times), edge=True)
+    row_exact = _pad_first(exact_features(row_states, row_times), 64, edge=True)
+    row_occupancy = _pad_first(np.asarray([s.occupancy for s in row_states], np.bool_).reshape(-1, 4), 64, edge=True)
+
     def tensor(value, dtype=None):
         return torch.as_tensor(value, dtype=dtype, device=device)
 
     inputs = IntervalInputs(tensor(mel), tensor(mel_valid), tensor([audio_start]), tensor([frames]),
-        tensor(raw[None]), tensor(np.ones((1, len(raw)), np.bool_)), tensor(timing_times),
-        tensor(timing_history), tensor(exact_features(timing_states, timing_times)),
-        tensor(timing_valid, torch.bool), tensor(timing_forced, torch.bool), tensor(row_times, torch.long),
-        tensor(row_history, torch.long), tensor(exact_features(row_states, row_times)), tensor(support),
-        tensor(np.asarray([s.occupancy for s in row_states], np.bool_).reshape(-1, 4)))
-    return IntervalBatch(inputs, IntervalTargets(tensor(timing_event, torch.bool), tensor(row_targets, torch.long)),
+        tensor(raw[None]), tensor(raw_valid[None]), tensor(_pad_first(timing_times, edge=True)),
+        tensor(_pad_first(timing_history, edge=True)), tensor(timing_exact),
+        tensor(_pad_first(timing_valid), torch.bool), tensor(_pad_first(timing_forced), torch.bool),
+        tensor(_pad_first(row_times, 64, edge=True), torch.long),
+        tensor(_pad_first(row_history, 64, edge=True), torch.long), tensor(row_exact),
+        tensor(_pad_first(support, 64, edge=True)), tensor(row_occupancy))
+    return IntervalBatch(inputs, IntervalTargets(tensor(_pad_first(timing_event), torch.bool), tensor(row_targets, torch.long)),
                          example.weight_per_second)
 
 

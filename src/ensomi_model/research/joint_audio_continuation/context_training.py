@@ -82,7 +82,13 @@ def song_context(model, chart, device):
     """The only coarse-encoder input is complete canonical song Mel."""
     if not model.config.global_audio:
         return None
-    return model.encode_coarse(torch.as_tensor(np.array(chart.mel, copy=True), device=device)[None])
+    frames = len(chart.mel)
+    tokens = (frames + 49) // 50
+    capacity = 50 * (1 << (tokens - 1).bit_length())
+    mel = np.zeros((1, capacity, 128), np.float32)
+    mel[0, :frames] = chart.mel
+    valid = np.arange(capacity)[None] < frames
+    return model.encode_coarse(torch.as_tensor(mel, device=device), torch.as_tensor(valid, device=device))
 
 
 def backward_update(model, planned_songs, charts, device):
@@ -107,7 +113,7 @@ def backward_update(model, planned_songs, charts, device):
             counts['intervals'] += 1
             counts['milliseconds'] += example.end_ms - example.start_ms
             counts['event_rows'] += len(batch.targets.row_index)
-            counts['timing_bins'] += len(batch.inputs.timing_times)
+            counts['timing_bins'] += int(batch.inputs.timing_valid.any(-1).sum())
             counts['heads'] += int(sum(sum(a in (1, 2) for a in actions) for actions in
                 example.chart.source.rows['actions'][(example.chart.source.rows['time'] >= example.start_ms) &
                                                      (example.chart.source.rows['time'] < example.end_ms)]))
@@ -137,7 +143,10 @@ The shift rotates real encoded coarse tokens by half a song, with no chart input
         if context_mode == 'zero':
             coarse = (torch.zeros_like(coarse[0]), coarse[1])
         elif context_mode == 'shift':
-            coarse = (torch.roll(coarse[0], coarse[0].shape[1] // 2, dims=1), coarse[1])
+            real_tokens = int(coarse[1][0])
+            shifted = coarse[0].clone()
+            shifted[:, :real_tokens] = torch.roll(coarse[0][:, :real_tokens], real_tokens // 2, dims=1)
+            coarse = (shifted, coarse[1])
         for record in group:
             example = example_from_identity(record, charts)
             batch = collate_interval(example, model.config, device)
@@ -238,6 +247,8 @@ native sampling and Lens/player assessment are separate from this entrypoint.
                             joint_nll_per_second=float(means[0]), timing_nll_per_second=float(means[1]),
                             row_nll_per_second=float(means[2]), grad_norm=float(norm_value.cpu()), **counts,
                             available_bytes=psutil.virtual_memory().available,
+                            rss_bytes=psutil.Process().memory_info().rss,
+                            active_mps_bytes=torch.mps.current_allocated_memory() if config.device == 'mps' else 0,
                             mps_driver_bytes=torch.mps.driver_allocated_memory() if config.device == 'mps' else 0)
                         log.write(json.dumps(record, allow_nan=False) + '\n'); log.flush()
                         print(json.dumps(record), flush=True)

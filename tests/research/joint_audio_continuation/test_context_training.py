@@ -71,13 +71,14 @@ def test_real_training_runner_consumes_full_audio_normalizer_plan_and_serializes
 
     def small_model(config):
         model = ContextAudioModel(context_config(global_audio=config.global_audio, bounded_timing=config.bounded_timing))
-        model.context.register_forward_pre_hook(lambda module, args: encoded_lengths.append(args[0].shape[1]))
+        model.context.register_forward_pre_hook(lambda module, args: encoded_lengths.append((args[0].shape[1], int(args[1].sum()))))
         return model
 
     monkeypatch.setattr(training, 'ContextAudioModel', small_model)
     result = training.train(cfg, resolved_yaml='global_audio: true\nbounded_timing: true\n')
     assert result['status'] == 'completed' and result['intervals'] == 4
-    assert encoded_lengths and set(encoded_lengths) == {len(charts[0].mel)}
+    assert encoded_lengths and {real for padded, real in encoded_lengths} == {len(charts[0].mel)}
+    assert all(padded >= real for padded, real in encoded_lengths)
     directory = tmp_path / 'context-training' / cfg.run_name
     assert (directory / 'resolved.yaml').read_text().startswith('global_audio: true')
     assert json.loads((directory / 'config.json').read_text())['interval_ms'] == 500

@@ -95,6 +95,14 @@ The existing verified generation loader recognizes `joint-audio/context-v1`
 checkpoints and preserves old checkpoint defaults. Native generation and
 source-free inference reuse the existing scheduler and export protocol.
 
+Training computation uses finite padding buckets to limit first-seen MPS
+operator shapes. Local audio, history and timing-query axes use multiples of
+128; row-query axes use multiples of 64. Full-song coarse input uses a power
+of two in 50-frame cells. Real-frame/history masks and actual target counts
+exclude padding from the modeled distribution and exposure totals. Coarse
+context perturbations rotate real tokens only. Padding changes execution cost,
+not the source clock or interval objective.
+
 Population validation reports importance-weighted NLL per second. BOS is
 reported separately using observed interval duration. Global diagnostics can
 zero or shift coarse context by half a song while keeping local audio fixed.

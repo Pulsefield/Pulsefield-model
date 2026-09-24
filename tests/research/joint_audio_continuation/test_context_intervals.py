@@ -146,7 +146,9 @@ def test_interval_causal_indices_exclude_current_and_future_target_content():
     source = chart([10, 17, 40], [(1, 0, 0, 0), (0, 2, 0, 0), (0, 3, 0, 0)], 80)
     model = ContextAudioModel(context_config())
     batch = collate_interval(IntervalExample(source, 0, 100), model.config)
-    assert batch.inputs.row_history.tolist() == [-1, 0, 1]
+    assert batch.inputs.row_history[:3].tolist() == [-1, 0, 1]
+    assert batch.inputs.history_valid.sum() == 3
+    assert batch.inputs.row_times.shape == (64,) and batch.targets.row_index.shape == (3,)
     original = score_interval(model, batch.inputs)
     raw = batch.inputs.raw.clone()
     raw[:, 1:] = torch.randn_like(raw[:, 1:]) * 20
