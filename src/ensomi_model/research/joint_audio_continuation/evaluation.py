@@ -26,6 +26,8 @@ def native_diagnostics(rows, *, coverage_ms, duration_ms):
 
     First-30 time includes the complete crossing row. TAP interval denominators
     count consecutive same-lane TAP-to-TAP head relations, not all chart heads.
+    All-head diagnostics separately include LN heads and preserve transition
+    types, so changing a TAP into an LN cannot hide a short repeated press.
     Release-to-next-head intervals consume each release once and stay separate.
     Empty charts retain their full observed BOS duration and undefined rates.
     """
@@ -38,6 +40,7 @@ def native_diagnostics(rows, *, coverage_ms, duration_ms):
     previous_heads, pending_releases = [None] * 4, [None] * 4
     heads, head_rows, ln_heads = [], [], 0
     closed_lengths, tap_gaps, release_gaps = [], [], []
+    head_gaps = {kind: [] for kind in ('tap_to_tap', 'tap_to_ln', 'ln_to_tap', 'ln_to_ln')}
     lane_time = 0.
     cursor = 0.
     first30 = None
@@ -59,6 +62,9 @@ def native_diagnostics(rows, *, coverage_ms, duration_ms):
         for lane, action in enumerate(row.actions):
             if action in (1, 2):
                 previous = previous_heads[lane]
+                if previous is not None:
+                    kind = ('tap' if previous[1] == 1 else 'ln') + '_to_' + ('tap' if action == 1 else 'ln')
+                    head_gaps[kind].append(float(row.time_ms - previous[0]))
                 if action == 1 and previous is not None and previous[1] == 1:
                     tap_gaps.append(float(row.time_ms - previous[0]))
                 if pending_releases[lane] is not None:
@@ -80,6 +86,8 @@ def native_diagnostics(rows, *, coverage_ms, duration_ms):
     max_heads = (int((np.searchsorted(times, times + 1000., side='left') - np.arange(len(times))).max())
                  if len(times) else 0)
     bands = {str(band): sum(gap <= band for gap in tap_gaps) for band in (5, 10, 20, 40, 80)}
+    all_heads = [gap for values in head_gaps.values() for gap in values]
+    head_bands = {str(band): sum(gap <= band for gap in all_heads) for band in (5, 10, 20, 40, 80)}
     quantiles = (dict(zip(('minimum', 'median', 'p90', 'maximum'),
                           map(float, np.quantile(closed_lengths, [0., .5, .9, 1.])))) if closed_lengths else None)
     gaps = np.diff(np.asarray([0., *head_rows, float(coverage_ms)]))
@@ -95,5 +103,13 @@ def native_diagnostics(rows, *, coverage_ms, duration_ms):
         eligible_tap_tap_transitions=len(tap_gaps), tap_tap_counts_le_ms=bands,
         tap_tap_rate_per1000_transitions={key: 1000 * count / len(tap_gaps) if tap_gaps else None
                                         for key, count in bands.items()},
+        eligible_head_transitions=len(all_heads), head_counts_le_ms=head_bands,
+        head_rate_per1000_transitions={key: 1000 * count / len(all_heads) if all_heads else None
+                                      for key, count in head_bands.items()},
+        eligible_head_transitions_by_type={kind: len(values) for kind, values in head_gaps.items()},
+        head_counts_by_type_le_ms={kind: {str(band): sum(gap <= band for gap in values)
+                                         for band in (5, 10, 20, 40, 80)} for kind, values in head_gaps.items()},
+        closed_ln_duration_counts_le_ms={str(band): sum(length <= band for length in closed_lengths)
+                                        for band in (5, 10, 20, 40, 80)},
         release_to_next_head_count=len(release_gaps),
         minimum_release_to_next_head_ms=min(release_gaps) if release_gaps else None)
