@@ -179,3 +179,8 @@ The eleven-case run took 37.248 s. Corpus manifest:
 The [candidate-response study](head_plan_row_response.md) contains the separate
 quality intervention and its failed full-chart release-to-head guard. Neither
 study promotes the checkpoint as a final playable system.
+
+The [fresh-audio system evaluation](fresh_audio_system_evaluation.md) measures
+the later shared-profile checkpoint with unpublished-window screening, including
+fresh preprocessing, actual CLI startup and completed Lens scope inspection.
+Its timing and quality conclusions are separate from this resident-model probe.

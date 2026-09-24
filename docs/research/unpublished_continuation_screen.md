@@ -221,3 +221,8 @@ Completed review SHA-256:
 `7d41b477474a0ee0c0a95a367675fe51d33b743794be9568700ec675332c7267`.
 The supplementary duration scope adds one inspected time page to the 109 pages
 in the declared plan. A rendered page alone is not evidence of inspection.
+
+The [fresh-audio system evaluation](fresh_audio_system_evaluation.md) tests the
+packaged path on eight additional audio contexts and three matched profile
+requests. It confirms complete screened publication at low measured cost while
+exposing weak profile calibration and remaining articulation questions.
