@@ -69,6 +69,11 @@ supplies the second-H gap. On this native clock the earliest possible release
 opportunity is now plus one millisecond. This is a structural possibility;
 actual future release times and source LN endpoints remain unknown.
 Candidate scores join the row logits before legal normalization.
+Both interval training and cached native generation use this path. The residual
+receives row-likelihood gradients at the inherited R1 learning rate; it is not a
+frozen or evaluation-only copy. The 16-head preview also enters the shared row
+condition, while the consequence features explicitly describe the next H and
+the second-H gap.
 
 The input opportunity distribution and row condition differ from supplied-time
 R1. Weight transfer is not policy preservation. Seed and landmark modules remain
@@ -76,6 +81,12 @@ omitted, and the exact projection retains its historical slice. The old 30 ms
 machine-preference objective is not used for new fitting. Joint source
 likelihood trains all modules; it does not give the residual a calibrated
 gameplay-demand interpretation.
+The [release waiting-law analysis](release_wait_conditioning.md#relationship-to-frontier2)
+shows a case where this active residual shifts probability from starting two
+holds toward tap-containing alternatives, yet its earliest-release feature
+misses substantial probability of a release immediately before H. Retaining
+frontier2 does not establish that its finite features capture the formulation's
+full gameplay frontier.
 
 ## Execution and evidence
 

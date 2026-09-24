@@ -43,27 +43,34 @@ remains sensitive to row history. Joint gradients through a shared audio encoder
 are compatible with this runtime independence. A shared sampling RNG is not:
 row draws must not advance the skeleton generator's random stream.
 
-## A located dependency in the current model
+## Dependencies in the earlier flat joint model
 
-The [current timing path](../../src/ensomi_model/research/joint_audio_continuation/context_model.py)
+The [flat joint timing path](../../src/ensomi_model/research/joint_audio_continuation/context_model.py)
 uses an audio/LN-state base plus a bounded residual reading the row TCN and full
 historical exact-state vector. The base has the appropriate restricted physical
 input. Bounding the residual does not remove its row-content dependency.
 
 The [row decoder](../../src/ensomi_model/research/joint_audio_continuation/model.py)
 receives local and full-song audio directly through `audio_residual` and
-`context_condition`. Its skeleton input is currently the sampled event time;
+`context_condition`. Its skeleton input in that model is the sampled event time;
 there is no separate forward skeleton input. Audio can suggest possible future
 arrangements but does not identify which one will be sampled. This missing
 interface is not a proof that the joint distribution is unrepresentable.
 
-Neither joint model instantiates R1's `row_consequence` module. The transfer
+Neither flat joint model instantiates R1's `row_consequence` module. Its transfer
 also removes its supplied future-timing inputs. As verified in the
 [transfer audit](r1_transfer_stability_audit.md#what-actually-transfers), the
 6.5M and 6.75M R1 checkpoints initialize identical joint models: the final
-`frontier2` correction has no direct parameter effect after migration. This
+`frontier2` correction has no direct parameter effect in those flat models. This
 is a missing candidate-action consequence path, not a measurement of how much
 of the new system's generation failure it explains.
+
+The [planned model](../../src/ensomi_model/research/planned_audio_continuation/model.py)
+restores `RowConsequence(hidden, 'frontier2')`, explicitly copies its released
+weights, and includes its scores in both training and native row selection.
+It trains at the inherited R1 learning rate. The flat-model omission therefore
+does not describe this prototype; the remaining consequence approximations are
+defined [below](#candidate-consequences-and-the-gameplay-frontier).
 
 A controlled audit uses a complete Airborne Robots output from checkpoint
 `02f6511fbd146a656b84e6aaf95821068d56f9dc16b3a0d36c51e0267a3be910`.
@@ -132,7 +139,7 @@ with empty row realizations are another possible representation, but then many
 skeletons can realize the same chart. These meanings require different support
 and likelihood definitions; they must not be mixed silently.
 
-A release-clock event cannot become a new head. In the current flat model,
+A release-clock event cannot become a new head. In the earlier flat model,
 one hazard predicts every nonempty event, then the row distribution chooses
 heads and/or releases. A probability increase through hold-related timing inputs
 is not structurally required to resolve a hold. It can be spent on heads and new
@@ -149,9 +156,10 @@ to compare these consequences alongside its musical and arrangement preferences.
 The numerical target responses remain unspecified; paired charts and style
 annotations alone do not supply calibrated gameplay costs.
 
-The old [R1 consequence module](../../src/ensomi_model/research/bounded_typed_continuation/consequence.py)
-is a limited implementation of this idea. A small mirror-equivariant network
-adds one residual score per complete candidate row. It reads candidate action,
+The [R1 consequence module](../../src/ensomi_model/research/bounded_typed_continuation/consequence.py),
+reused by the planned model, is a limited implementation of this idea. A small
+mirror-equivariant network adds one residual score per complete candidate row.
+It reads candidate action,
 post-action occupancy, immediate head/release intervals, and clocks passively
 advanced to the next strictly future H. Its shared timing features include the
 next candidate and next H; `frontier2` adds the gap to the second H. It does not
@@ -169,10 +177,11 @@ Two distinct approximations must remain visible:
   machine preference is neither a complete playability target nor an inference
   legality constraint.
 
-For the next prototype, retain the candidate-action interface in the row
-decision. For every legal candidate $a$, compute the exact immediate transition
+The planned prototype retains the candidate-action interface in the row
+decision. For every legal candidate $a$, it computes the exact immediate
+transition
 $S_i^a=T(S_i,a)$ and consequence features $\phi_i(a)$ from the past, this
-hypothetical state and the available head preview. A small initial design is
+hypothetical state and the available head preview. Its candidate score is
 
 $$
 \ell_i(a)=\ell_{\mathrm{row}}(A,C,K,R_{<i},S_i,a)
@@ -207,9 +216,9 @@ would violate the stated skeleton independence and requires a separate design
 change. This places the first consequence module in row selection without
 silently reintroducing the removed row-content-to-timing path.
 
-Train the initial residual jointly with the row likelihood on the same inputs
-available at inference, including explicitly marked finite lookahead. The old
-30 ms preference is not automatically inherited as a universal target. Test
+The prototype trains the residual jointly with the row likelihood on the same
+inputs available at inference, including explicitly marked finite lookahead.
+The old 30 ms preference is not automatically inherited as a universal target. Test
 same-head-mask tap/LN choices, release-before-head alternatives and increasing
 lookahead on matched states before attributing native improvements to a richer
 frontier approximation. Legal support, source likelihood and inspected
