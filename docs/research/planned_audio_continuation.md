@@ -127,11 +127,12 @@ reads its full layout history and exact state. Training uses past source counts;
 native generation appends only emitted counts, with the same cached queries.
 Models in this mode require at least four row-history levels.
 
-The [composition evidence](head_materializer_composition.md) motivates separating
-these decisions, but does not establish this factorization as an improvement.
-Count control, physical feasibility, repeated grips and independently held LN
-roles require native evaluation. This mode does not add an HH constraint or
-make the possible release opportunity into an actual release forecast.
+The [matched evaluation](count_layout_materializer_evaluation.md) improves mean
+width/LN descriptor error but increases sub-20-ms same-column attacks and
+exhausts a publication retry budget. R1 cannot reduce an excessive count after
+normalization within its group. Some independent LN relationships survive,
+while others weaken in inspected contexts; this mode is not an adopted playable
+endpoint. It adds neither an HH constraint nor an actual release forecast.
 
 Training also accepts `train_scope=materializer` with a pinned planned
 initialization. It freezes the full audio encoders, shared profile projection
