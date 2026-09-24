@@ -23,6 +23,8 @@ from ..bounded_typed_continuation.temporal import FiniteTemporal, TemporalConfig
 from ..scoped_style_modeling.dataset import ContractError
 from .state import BASE_QUERY_DIM
 
+R1_TRANSFER_MODULES = ('temporal', 'exact', 'fuse', 'joint', 'route_residual', 'release_residual')
+
 
 @dataclass(frozen=True)
 class JointModelConfig:
@@ -229,10 +231,9 @@ initialization of a different trainable model, not R1 behavior preservation.
         raise ContractError('Initialization requires an R1 checkpoint with model configuration')
     source, destination = payload['model'], model.state_dict()
     copied, sliced, used = [], [], set()
-    modules = ('temporal', 'exact', 'fuse', 'joint', 'route_residual', 'release_residual')
     updates = {}
     for name, tensor in destination.items():
-        if name.split('.')[0] not in modules:
+        if name.split('.')[0] not in R1_TRANSFER_MODULES:
             continue
         if name not in source:
             if name.startswith(('route_residual.', 'release_residual.')):

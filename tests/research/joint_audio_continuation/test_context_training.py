@@ -1,4 +1,5 @@
 from dataclasses import replace
+import hashlib
 from importlib.resources import files
 import json
 
@@ -12,6 +13,9 @@ from ensomi_model.research.joint_audio_continuation.context_model import Context
 from ensomi_model.research.joint_audio_continuation import context_training as training
 from ensomi_model.research.joint_audio_continuation.data import digest, frontend_identity
 from ensomi_model.research.joint_audio_continuation.generation import load_model, rollout
+from ensomi_model.research.joint_audio_continuation.model import initialize_from_r1
+from ensomi_model.research.bounded_typed_continuation.contract import Arm
+from ensomi_model.research.bounded_typed_continuation.model import BoundedModel, ModelConfig
 from .test_batching import chart
 from .test_context_intervals import context_config
 
@@ -51,6 +55,37 @@ def test_protocol_pairs_architecture_cells_preserves_alternatives_and_rejects_ch
         training.freeze_protocol(charts, replace(cfg, interval_ms=500))
 
 
+def test_routing_learning_rate_is_independent_of_checkpoint_stage(tmp_path):
+    config = context_config(global_audio=True, bounded_timing=True)
+    settings = ContextTrainConfig()
+    rates, audio_identities = [], []
+    for routing in (False, True):
+        source = BoundedModel(ModelConfig(Arm.R1, hidden=config.hidden,
+            levels=config.history_levels, expansion=config.expansion, coupling_rank=config.coupling_rank,
+            head_routing='residual' if routing else 'none', routing_hidden=config.routing_hidden,
+            release_routing='residual' if routing else 'none', release_hidden=config.release_hidden))
+        checkpoint = tmp_path / f'r1-{routing}.pt'
+        torch.save(dict(config=dict(model=dict(arm='r1')), model=source.state_dict()), checkpoint)
+        torch.manual_seed(37)
+        model = ContextAudioModel(config)
+        transfer = initialize_from_r1(model, checkpoint, hashlib.sha256(checkpoint.read_bytes()).hexdigest())
+        groups = training.optimizer_groups(model, settings)
+        receipts = training.initial_group_receipts(groups)
+        rate = {name:group['lr'] for group in groups for name in group['param_names']}
+        assert len(rate) == sum(len(g['params']) for g in groups) == len(list(model.parameters()))
+        assert rate['route_residual.score.2.weight'] == settings.inherited_learning_rate
+        assert rate['release_residual.score.2.weight'] == settings.inherited_learning_rate
+        assert rate['audio_input.weight'] == settings.learning_rate
+        if routing:
+            assert set(groups[0]['param_names']) == set(transfer['copied'])
+        else:
+            assert 'route_residual.score.2.weight' not in transfer['copied']
+        rates.append(rate)
+        audio_identities.append(next(r['initial_parameters_sha256'] for r in receipts if r['name']=='audio_timing'))
+    assert rates[0] == rates[1]
+    assert audio_identities[0] == audio_identities[1]
+
+
 def test_real_training_runner_consumes_full_audio_normalizer_plan_and_serializes_native_model(tmp_path, monkeypatch):
     charts = corpus()
     manifest = tmp_path / 'manifest.json'
@@ -84,6 +119,12 @@ def test_real_training_runner_consumes_full_audio_normalizer_plan_and_serializes
     assert json.loads((directory / 'config.json').read_text())['interval_ms'] == 500
     freeze = json.loads((directory / 'freeze.json').read_text())
     assert freeze['normalization_sha256'] == digest(norm_file)
+    groups = {g['name']:g for g in freeze['optimizer_groups']}
+    assert groups['r1']['learning_rate'] == cfg.inherited_learning_rate
+    assert 'route_residual.score.2.weight' in groups['r1']['param_names']
+    checkpoint = torch.load(directory/'last.pt', map_location='cpu', weights_only=True)
+    assert checkpoint['optimizer']['param_groups'][0]['param_names'] == groups['r1']['param_names']
+    assert checkpoint['optimizer']['param_groups'][0]['lr'] == cfg.inherited_learning_rate
     model, metadata = load_model(directory / 'last.pt', result['checkpoint_sha256'])
     torch.testing.assert_close(model.audio_mean, torch.full((128,), .7))
     torch.testing.assert_close(model.audio_std, torch.full((128,), 1.3))

@@ -74,6 +74,16 @@ so the local/fused cell is a newly trained interval control. The four cells
 cross local/global audio with original/bounded timing using the same exposure
 plan, R1 initialization, TRAIN normalizer and optimizer.
 
+The context trainer assigns `inherited_learning_rate` to temporal, exact-state,
+fusion, joint-row, head-routing and release-routing parameters. All audio and
+timing parameters use `learning_rate`. This assignment depends on module role,
+including routing modules absent from an earlier R1 checkpoint; it does not
+depend on which tensors copied successfully. Thus comparing initialization
+stages does not silently change their learning rates. The freeze records group
+ownership, rates, parameter counts and initial weight hashes; optimizer
+checkpoints retain parameter names. Transfer receipts separately record which
+weights were inherited.
+
 ## Execution and evidence
 
 The typed schema and package-local `joint_audio_context.yaml` own settings:

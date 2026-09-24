@@ -18,7 +18,7 @@ from .context_model import ContextAudioModel, ContextModelConfig
 from .data import _json, digest, load_corpus, train_groups
 from .generation import _resource_stop
 from .intervals import IntervalExample, collate_interval, interval_losses, score_interval
-from .model import initialize_from_r1
+from .model import R1_TRANSFER_MODULES, initialize_from_r1
 from .training import revision, training_normalization
 
 
@@ -172,6 +172,34 @@ def model_identity(model):
     return h.hexdigest()
 
 
+def optimizer_groups(model, config):
+    """Keep module learning rates fixed even when an R1 stage lacks routing.
+
+    Parameter names are retained in the optimizer checkpoint for auditing;
+    whether a tensor was copied is initialization provenance, not its rate.
+    """
+    groups = [dict(name=name, params=[], param_names=[], lr=rate) for name, rate in
+              (('r1', config.inherited_learning_rate), ('audio_timing', config.learning_rate))]
+    for name, parameter in model.named_parameters():
+        group = groups[int(name.split('.')[0] not in R1_TRANSFER_MODULES)]
+        group['params'].append(parameter)
+        group['param_names'].append(name)
+    return [group for group in groups if group['params']]
+
+
+def initial_group_receipts(groups):
+    receipts = []
+    for group in groups:
+        identity = hashlib.sha256()
+        for name, value in zip(group['param_names'], group['params']):
+            identity.update(name.encode())
+            identity.update(value.detach().cpu().numpy().tobytes())
+        receipts.append(dict(name=group['name'], learning_rate=group['lr'], param_names=group['param_names'],
+                             parameters=sum(p.numel() for p in group['params']),
+                             initial_parameters_sha256=identity.hexdigest()))
+    return receipts
+
+
 def save_checkpoint(path, model, optimizer, update, config, source, protocol_identity, transfer):
     temporary = path.with_suffix('.tmp')
     torch.save(dict(format='joint-audio/context-v1', model_config=asdict(model.config), model=model.state_dict(),
@@ -208,11 +236,9 @@ native sampling and Lens/player assessment are separate from this entrypoint.
     model.set_audio_normalization(torch.tensor(norm['mean']), torch.tensor(norm['std']))
     initial_common_sha = model_identity(model)
     model.to(config.device)
-    copied = set(transfer['copied'])
-    optimizer = torch.optim.AdamW([
-        dict(params=[p for name, p in model.named_parameters() if name in copied], lr=config.inherited_learning_rate),
-        dict(params=[p for name, p in model.named_parameters() if name not in copied], lr=config.learning_rate)],
-        weight_decay=config.weight_decay)
+    groups = optimizer_groups(model, config)
+    group_receipts = initial_group_receipts(groups)
+    optimizer = torch.optim.AdamW(groups, weight_decay=config.weight_decay)
     validation = protocol['validation']
     if config.validation_songs:
         selected = sorted({r['source_sha256'] for r in validation})[:config.validation_songs]
@@ -220,6 +246,7 @@ native sampling and Lens/player assessment are separate from this entrypoint.
     _json(directory / 'freeze.json', dict(source_revision=source, config=asdict(config),
         manifest_sha256=config.manifest_sha256, **protocol_identity, **norm_identity, transfer=transfer,
         initial_common_sha256=initial_common_sha, parameters=model.parameter_counts(), validation=validation,
+        optimizer_groups=group_receipts,
         environment=dict(torch=torch.__version__, python=__import__('sys').version,
                          ram_bytes=psutil.virtual_memory().total)))
     counts = dict(intervals=0, milliseconds=0, event_rows=0, heads=0, timing_bins=0)
