@@ -77,7 +77,46 @@ def _audio_path(source):
     return None
 
 
-def _source_entry(entry, source_root, cache_root):
+def load_source_aliases(path, expected_sha256, catalog, catalog_sha256):
+    """Read explicit source-file alternatives; never infer pairing from song names.
+
+    The pinned manifest maps catalog TRAIN/VAL source hashes to nonempty lists
+    of candidate paths. Each candidate's bytes and path are checked when used.
+    Candidates must be under catalog_root; relative paths use that root.
+    """
+    if digest(path) != expected_sha256:
+        raise ValueError('Source aliases differ from their pinned SHA-256')
+    manifest = json.loads(Path(path).read_text())
+    if (manifest.get('format') != 'joint-audio/source-aliases-v1' or
+            manifest.get('catalog_sha256') != catalog_sha256):
+        raise ValueError('Source aliases use a different format or catalog identity')
+    sources = manifest.get('sources')
+    allowed = {e['source_sha256'] for e in catalog if e['split'] in ('train', 'validation')}
+    if not isinstance(sources, dict) or not set(sources) <= allowed:
+        raise ValueError('Source aliases must name only catalog TRAIN/VAL sources')
+    if any(not isinstance(paths, list) or not paths or
+           any(not isinstance(p, str) or not p for p in paths) for paths in sources.values()):
+        raise ValueError('Each source alias requires a nonempty list of file paths')
+    return sources
+
+
+def _paired_audio(source_file, source_root, expected_sha256, aliases):
+    choices = {}
+    for source in [source_file, *sorted((source_root / p).resolve() for p in aliases)]:
+        if not source.is_relative_to(source_root) or digest(source) != expected_sha256:
+            raise ValueError('Paired source alias path or bytes differ from the pinned source')
+        audio = _audio_path(source)
+        if audio is not None:
+            choices.setdefault(digest(audio), (audio, source))
+    if len(choices) > 1:
+        raise ValueError('Identical source aliases refer to ambiguous audio bytes')
+    if not choices:
+        raise ValueError('Source has no readable local paired audio')
+    return next(iter(choices.values()))
+
+
+def _source_entry(entry, source_root, cache_root, *, paired_source_files=()):
+    source_root, cache_root = Path(source_root).resolve(), Path(cache_root).resolve()
     source_file = (source_root / entry['path']).resolve()
     if not source_file.is_relative_to(source_root) or digest(source_file) != entry['source_sha256']:
         raise ValueError('Source path or bytes differ from the pinned catalog')
@@ -85,9 +124,7 @@ def _source_entry(entry, source_root, cache_root):
     source = SourceChart.from_cache(directory, SourceIdentity(**{key: entry[key] for key in IDENTITY_KEYS}))
     if np.any(source.rows['time'] != np.rint(source.rows['time'])):
         raise ValueError('Joint event clock requires original integer-millisecond source times')
-    audio_file = _audio_path(source_file)
-    if audio_file is None:
-        raise ValueError('Source has no readable local paired audio')
+    audio_file, paired_source = _paired_audio(source_file, source_root, entry['source_sha256'], paired_source_files)
     heads = np.isin(source.rows['actions'], (1, 2))
     density = float(heads.any(-1).sum() / max(1., (source.rows['time'][-1] - source.rows['time'][0]) / 1000.))
     ln_fraction = float((source.rows['actions'] == 2).sum() / heads.sum())
@@ -96,10 +133,12 @@ def _source_entry(entry, source_root, cache_root):
                   metadata_sha256=digest(directory / 'metadata.json'), density=density, ln_fraction=ln_fraction,
                   stratum=[0 if density < 4 else 1 if density < 8 else 2, int(ln_fraction >= .1)],
                   row_count=len(source.rows), last_row_ms=int(source.rows['time'][-1]))
+    if paired_source != source_file:
+        result['paired_source_file'] = str(paired_source)
     return result
 
 
-def select_entries(base, catalog, *, source_root, cache_root, max_train_alternatives=2):
+def select_entries(base, catalog, *, source_root, cache_root, max_train_alternatives=2, source_aliases=None):
     """Verify the base cohort and add separate targets from its TRAIN audio groups.
 
     Catalog TEST entries are never opened. Alternatives must retain the original
@@ -109,6 +148,7 @@ def select_entries(base, catalog, *, source_root, cache_root, max_train_alternat
     if type(max_train_alternatives) is not int or max_train_alternatives < 0:
         raise ValueError('Alternative count must be a nonnegative integer')
     source_root, cache_root = Path(source_root).resolve(), Path(cache_root).resolve()
+    source_aliases = {} if source_aliases is None else source_aliases
     by_sha = {entry['source_sha256']: entry for entry in catalog if entry['split'] in ('train', 'validation')}
     selected, exclusions, groups, audio_splits = [], [], {}, {}
     for original in base['charts']:
@@ -118,7 +158,7 @@ def select_entries(base, catalog, *, source_root, cache_root, max_train_alternat
         catalog_entry = by_sha[sha]
         if any(original[key] != catalog_entry[key] for key in (*IDENTITY_KEYS, 'path')):
             raise ValueError('Base identity differs from the pinned catalog')
-        entry = _source_entry(catalog_entry, source_root, cache_root)
+        entry = _source_entry(catalog_entry, source_root, cache_root, paired_source_files=source_aliases.get(sha, ()))
         for key in ('audio_sha256', 'rows_sha256', 'metadata_sha256'):
             if entry[key] != original[key]:
                 raise ValueError(f'Base {key} differs from its pinned manifest')
@@ -139,7 +179,8 @@ def select_entries(base, catalog, *, source_root, cache_root, max_train_alternat
             if accepted == max_train_alternatives:
                 break
             try:
-                entry = _source_entry(candidate, source_root, cache_root)
+                entry = _source_entry(candidate, source_root, cache_root,
+                                      paired_source_files=source_aliases.get(candidate['source_sha256'], ()))
                 if entry['audio_sha256'] != groups[group]['audio_sha256']:
                     raise ValueError('Alternative audio bytes differ from the original TRAIN group')
             except (ValueError, OSError, KeyError) as error:
@@ -169,9 +210,13 @@ def prepare(config):
     base = json.loads(Path(config.base_manifest_file).read_text())
     if base['config']['catalog_sha256'] != config.catalog_sha256:
         raise ValueError('Base cohort and alternative catalog have different pins')
-    selected, exclusions = select_entries(base, json.loads(Path(config.catalog_file).read_text()),
+    catalog = json.loads(Path(config.catalog_file).read_text())
+    aliases = ({} if config.source_aliases_file is None else
+               load_source_aliases(config.source_aliases_file, config.source_aliases_sha256,
+                                   catalog, config.catalog_sha256))
+    selected, exclusions = select_entries(base, catalog,
         source_root=config.catalog_root, cache_root=config.source_cache_dir,
-        max_train_alternatives=config.max_train_alternatives)
+        max_train_alternatives=config.max_train_alternatives, source_aliases=aliases)
     assets, count = {}, 0
     total = np.zeros(MUSIC_MEL_CACHE_CONFIG.mel_bins, np.float64)
     total_square = np.zeros_like(total)
@@ -229,6 +274,9 @@ def prepare(config):
         normalization_file=str(root / 'normalization.json'), normalization_sha256=digest(root / 'normalization.json'),
         exclusions_sha256=digest(root / 'exclusions.json'), counts=dict(Counter(e['split'] for e in admitted)),
         split_scope='Original TRAIN groups with separate arrangements; unchanged VAL cohort; TEST unopened')
+    if config.source_aliases_file is not None:
+        manifest['source_aliases_file'] = str(Path(config.source_aliases_file).resolve())
+        manifest['source_aliases_sha256'] = config.source_aliases_sha256
     _json(root / 'manifest.json', manifest)
     return dict(manifest=str(root / 'manifest.json'), sha256=digest(root / 'manifest.json'),
                 counts=manifest['counts'], exclusions=len(exclusions), seconds=time.monotonic() - started)
@@ -285,6 +333,11 @@ def load_corpus(root):
                 digest(entry['rows_file']) != entry['rows_sha256'] or
                 digest(directory / 'metadata.json') != entry['metadata_sha256']):
             raise ValueError('Source, paired audio or admitted cache bytes changed')
+        if 'paired_source_file' in entry:
+            paired = Path(entry['paired_source_file'])
+            if (digest(paired) != entry['source_sha256'] or
+                    _audio_path(paired) != Path(entry['audio_file']).resolve()):
+                raise ValueError('Paired source alias bytes or audio reference changed')
         source = SourceChart.from_cache(directory, SourceIdentity(**{key: entry[key] for key in IDENTITY_KEYS}))
         if source.rows['time'][-1] > asset['duration_ms']:
             raise ValueError('Source rows exceed the true audio clock')

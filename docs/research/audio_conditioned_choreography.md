@@ -462,6 +462,26 @@ joint likelihood selects a development checkpoint only. Neither score is a
 playability verdict. Each run requires a clean source revision and fresh output
 directory; generation requires an explicit checkpoint path and SHA-256.
 
+Preparation normally resolves `AudioFilename` beside the catalog's source file.
+If that file is an imported copy without its audio, `source_aliases_file` and
+`source_aliases_sha256` can supply an explicit, pinned pairing manifest:
+
+```json
+{
+  "format": "joint-audio/source-aliases-v1",
+  "catalog_sha256": "<catalog SHA-256>",
+  "sources": {"<source SHA-256>": ["dataset/mapset/chart.osu"]}
+}
+```
+
+Paths resolve under `catalog_root`. Each candidate must have exactly the same
+source bytes; song titles and mapset metadata are insufficient. Differing audio
+bytes across identical-source candidates are ambiguous and rejected. The corpus
+retains the catalog identity and records `paired_source_file` separately, then
+verifies that source and its audio reference when loading. This restores a file
+location relationship; it does not establish audio uniqueness across splits or
+authorize changing an existing corpus. The options are preparation-only.
+
 Long waits need positive transition supervision as well as censored prefixes.
 With `full_wait_supervision=true`, a selected BOS/event-prefix example covers
 the complete observed wait in disjoint bounded queries. Their timing losses and

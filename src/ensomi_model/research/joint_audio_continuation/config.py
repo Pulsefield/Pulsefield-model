@@ -12,6 +12,8 @@ class JointConfig:
     catalog_sha256: str = 'e31b7e8f4daa044503ef2b8411bc41727ba371eec804c9462a4608be8112ad28'
     catalog_root: str = '.'
     source_cache_dir: str = 'artifacts/oracle-time-continuation/full-cache-v1'
+    source_aliases_file: str | None = None
+    source_aliases_sha256: str | None = None
     max_train_alternatives: int = 2
     r1_checkpoint_file: str = 'artifacts/audio-skeleton/20260923-v1/inputs/r1.pt'
     r1_checkpoint_sha256: str = '4b3ec1561e33d0ebe2756cfe13571ec414fd5bb470b430f0c578545863115f70'
@@ -85,3 +87,8 @@ class JointConfig:
             if (self.mode != 'train' or not self.normalization_file or
                     not self.normalization_sha256 or len(self.normalization_sha256) != 64):
                 raise ValueError('A normalization override requires train mode and a pinned file')
+        if self.source_aliases_file is not None or self.source_aliases_sha256 is not None:
+            if (self.mode != 'prepare' or not self.source_aliases_file or
+                    not isinstance(self.source_aliases_sha256, str) or len(self.source_aliases_sha256) != 64 or
+                    any(c not in '0123456789abcdef' for c in self.source_aliases_sha256)):
+                raise ValueError('Source aliases require prepare mode and a pinned SHA-256 file')

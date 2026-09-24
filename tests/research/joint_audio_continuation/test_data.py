@@ -146,7 +146,8 @@ def test_preparation_load_and_unique_train_only_normalization(tmp_path, monkeypa
     monkeypatch.setattr(data.subprocess, 'check_output', lambda args, **kwargs: '' if 'status' in args else 'revision')
     config = SimpleNamespace(root=str(tmp_path / 'output'), base_manifest_file=str(base_file),
         catalog_file=str(catalog_file), catalog_sha256=data.digest(catalog_file), catalog_root=str(source_root),
-        source_cache_dir=str(cache_root), max_train_alternatives=2, max_seconds=60.)
+        source_cache_dir=str(cache_root), max_train_alternatives=2, max_seconds=60.,
+        source_aliases_file=None, source_aliases_sha256=None)
     receipt = data.prepare(config)
     assert receipt['counts'] == {'train': 2, 'validation': 1}
     charts, normalization = data.load_corpus(config.root)
@@ -178,9 +179,81 @@ def test_preparation_rejects_rows_past_audio_without_changing_duration(tmp_path,
     monkeypatch.setattr(data, 'load_audio_file', lambda *args: np.zeros(2400, np.float32))
     config = SimpleNamespace(root=str(tmp_path / 'output'), base_manifest_file=str(base_file),
         catalog_file=str(catalog_file), catalog_sha256=data.digest(catalog_file), catalog_root=str(source_root),
-        source_cache_dir=str(cache_root), max_train_alternatives=0, max_seconds=60.)
+        source_cache_dir=str(cache_root), max_train_alternatives=0, max_seconds=60.,
+        source_aliases_file=None, source_aliases_sha256=None)
     with pytest.raises(ValueError, match='true audio end'):
         data.prepare(config)
     assert not (tmp_path / 'output' / 'manifest.json').exists()
     exclusions = json.loads((tmp_path / 'output' / 'exclusions.json').read_text())
     assert len(exclusions) == 2 and all(item['duration_ms'] == 100 for item in exclusions)
+
+
+def test_pinned_alias_restores_pair_without_replacing_catalog_source(tmp_path, monkeypatch):
+    source_root, cache_root, catalog, base, alternative = fixture_corpus(tmp_path)
+    original = source_root / alternative['path']
+    imported = source_root / 'imported' / original.name
+    imported.parent.mkdir()
+    imported.write_bytes(original.read_bytes())
+    alternative['path'] = str(imported.relative_to(source_root))
+    with pytest.raises(ValueError, match='no readable local paired audio'):
+        data._source_entry(alternative, source_root, cache_root)
+    catalog_file = tmp_path / 'catalog.json'
+    catalog_file.write_text(json.dumps(catalog))
+    pin = data.digest(catalog_file)
+    aliases_file = tmp_path / 'aliases.json'
+    aliases_file.write_text(json.dumps(dict(format='joint-audio/source-aliases-v1',
+        catalog_sha256=pin, sources={alternative['source_sha256']: [original.name]})))
+    base['config'] = dict(catalog_sha256=pin)
+    base_file = tmp_path / 'base.json'
+    base_file.write_text(json.dumps(base))
+    monkeypatch.setattr(data.subprocess, 'check_output', lambda args, **kwargs: '' if 'status' in args else 'revision')
+    config = SimpleNamespace(root=str(tmp_path / 'output'), base_manifest_file=str(base_file),
+        catalog_file=str(catalog_file), catalog_sha256=pin, catalog_root=str(source_root),
+        source_cache_dir=str(cache_root), max_train_alternatives=2, max_seconds=60.,
+        source_aliases_file=str(aliases_file), source_aliases_sha256=data.digest(aliases_file))
+    data.prepare(config)
+    charts, _ = data.load_corpus(config.root)
+    recovered = next(c for c in charts if c.entry['source_sha256'] == alternative['source_sha256'])
+    assert recovered.entry['path'] == alternative['path']
+    assert recovered.entry['source_file'] == str(imported)
+    assert recovered.entry['paired_source_file'] == str(original)
+    assert recovered.entry['audio_sha256'] == base['charts'][0]['audio_sha256']
+    manifest = json.loads((tmp_path / 'output' / 'manifest.json').read_text())
+    assert manifest['source_aliases_sha256'] == data.digest(aliases_file)
+    original.write_bytes(original.read_bytes() + b'\n')
+    with pytest.raises(ValueError, match='Paired source alias'):
+        data.load_corpus(config.root)
+
+
+def test_pairing_rejects_wrong_bytes_escaped_paths_and_ambiguous_audio(tmp_path):
+    source_root, cache_root, catalog, _, alternative = fixture_corpus(tmp_path)
+    wrong = source_root / catalog[0]['path']
+    with pytest.raises(ValueError, match='alias path or bytes'):
+        data._source_entry(alternative, source_root, cache_root, paired_source_files=[str(wrong)])
+    with pytest.raises(ValueError, match='alias path or bytes'):
+        data._source_entry(alternative, source_root, cache_root, paired_source_files=['../outside.osu'])
+    original = source_root / alternative['path']
+    duplicate = source_root / 'duplicate' / original.name
+    duplicate.parent.mkdir()
+    duplicate.write_bytes(original.read_bytes())
+    (duplicate.parent / 'train.wav').write_bytes(b'different encoded audio')
+    with pytest.raises(ValueError, match='ambiguous audio'):
+        data._source_entry(alternative, source_root, cache_root,
+                           paired_source_files=[str(duplicate.relative_to(source_root))])
+
+
+def test_alias_manifest_rejects_unpinned_unknown_and_test_sources(tmp_path):
+    _, _, catalog, _, alternative = fixture_corpus(tmp_path)
+    path = tmp_path / 'aliases.json'
+    payload = dict(format='joint-audio/source-aliases-v1', catalog_sha256='a' * 64,
+                   sources={alternative['source_sha256']: ['alias.osu']})
+    path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match='pinned SHA'):
+        data.load_source_aliases(path, '0' * 64, catalog, 'a' * 64)
+    with pytest.raises(ValueError, match='catalog identity'):
+        data.load_source_aliases(path, data.digest(path), catalog, 'b' * 64)
+    for sha in ('0' * 64, 'f' * 64):
+        payload['sources'] = {sha: ['must-not-be-opened.osu']}
+        path.write_text(json.dumps(payload))
+        with pytest.raises(ValueError, match='TRAIN/VAL'):
+            data.load_source_aliases(path, data.digest(path), catalog, 'a' * 64)

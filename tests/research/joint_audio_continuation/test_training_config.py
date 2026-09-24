@@ -48,6 +48,13 @@ def test_packaged_configuration_projects_and_rejects_unknown_or_unpinned_inputs(
         compose_config(['mode=train', 'normalization_file=stats.json'])
     with pytest.raises(ValueError, match='train mode'):
         compose_config(['normalization_file=stats.json', 'normalization_sha256=' + 'a' * 64])
+    paired = compose_config(['source_aliases_file=aliases.json', 'source_aliases_sha256=' + 'b' * 64])
+    assert paired.source_aliases_file == 'aliases.json' and paired.source_aliases_sha256 == 'b' * 64
+    for overrides in (['source_aliases_file=aliases.json'],
+                      ['source_aliases_file=aliases.json', 'source_aliases_sha256=' + 'z' * 64],
+                      ['mode=train', 'source_aliases_file=aliases.json', 'source_aliases_sha256=' + 'b' * 64]):
+        with pytest.raises(ValueError, match='Source aliases require prepare mode'):
+            compose_config(overrides)
 
 
 def test_frozen_normalization_uses_training_subset_and_reaches_model_buffers(tmp_path):
