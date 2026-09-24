@@ -16,6 +16,7 @@ from ..joint_audio_continuation.timing import sample_hazards
 from ..oracle_time_continuation.replay import ExactReplayState, commit
 from ..oracle_time_continuation.schema import CompleteRow
 from ..scoped_style_modeling.dataset import ContractError
+from .attack_response import short_attack_costs, short_attack_pairs, select_response_row
 from .features import (
     HeadPreview, LNProjection, consequences, head_clocks, preview_features,
     release_clocks, release_masks, row_support, skeleton_tokens,
@@ -78,10 +79,12 @@ class HeadPlanner:
 
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
-            max_rows=30000, max_seconds=90., on_update=None, stop_callback=None):
+            max_rows=30000, max_seconds=90., on_update=None, stop_callback=None,
+            correct_short_attacks=False):
     if (type(duration_ms) is not int or duration_ms < 0 or
             any(type(v) is not int or v <= 0 for v in (chunk_ms, head_chunk_ms, max_rows)) or
-            not np.isfinite(max_seconds) or max_seconds <= 0):
+            not np.isfinite(max_seconds) or max_seconds <= 0 or
+            type(correct_short_attacks) is not bool):
         raise ContractError('Planned rollout requires a finite audio clock and positive resource bounds')
     model.eval()
     device, dtype = next(model.parameters()).device, next(model.parameters()).dtype
@@ -96,6 +99,8 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
     row_cache, skeleton_cache = model.temporal.empty_cache(), model.skeleton_temporal.empty_cache()
     release_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x4E51)
     row_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0xA301)
+    correction_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x52C4) if correct_short_attacks else None
+    response_decisions = []
 
     def guard():
         if time.perf_counter() - started >= max_seconds:
@@ -176,7 +181,22 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
                 log_probs = model.planned_row_log_probs(audio, model.temporal.read(row_cache)[None],
                     tensor(exact_features([replay], [cursor])), tensor(legal, torch.bool),
                     tensor([replay.occupancy], torch.bool), tensor(context), tensor(local), tensor(future))[0]
-                index = int(torch.multinomial(log_probs.detach().cpu().double().exp(), 1, generator=row_rng))
+                proposal_log_probs = log_probs.detach().cpu().double()
+                index = int(torch.multinomial(proposal_log_probs.exp(), 1, generator=row_rng))
+                if correct_short_attacks:
+                    costs = short_attack_costs(replay, cursor, preview)
+                    minimum = float(costs[legal[0]].min())
+                    if not np.isfinite(minimum):
+                        raise ContractError('Legal row has no relaxed head continuation')
+                    selected = select_response_row(proposal_log_probs, index, legal[0], costs, correction_rng)
+                    if selected != index or minimum > 0:
+                        response_decisions.append(dict(time_ms=cursor, proposal=list(ROW_ACTIONS[index]),
+                            selected=list(ROW_ACTIONS[selected]), proposal_cost=float(costs[index]),
+                            selected_cost=minimum, corrected=selected != index,
+                            previous_attacks=list(replay.last_lane_attack_ms),
+                            ln_starts=list(replay.open_ln_start_ms), future_heads=list(preview.times_ms),
+                            preview_complete=preview.complete))
+                    index = selected
                 published = CompleteRow(cursor, ROW_ACTIONS[index])
                 replay = commit(replay, published, is_terminal=cursor == duration_ms)
                 row_cache = model.temporal.append(row_cache,
@@ -219,6 +239,8 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
         scheduler_steps=len(latencies), head_bins_scored=planner.bins, release_bins_scored=release_bins,
         forced_deadline_releases=deadline_events, forced_terminal_releases=terminal_events,
         conditioned_release_waits=conditioned_waits,
+        correct_short_attacks=correct_short_attacks, short_attack_pairs=short_attack_pairs(rows),
+        response_decisions=response_decisions,
         planned_heads=len(planner.generated), coverage=coverage,
         latency_scope='cached canonical Mel through published coverage; excludes waveform decode and Mel computation'))
 

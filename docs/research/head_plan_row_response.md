@@ -158,6 +158,34 @@ responses is distinct from the trained proposal likelihood and needs its own
 full-generation checks. Sparse-piano and arrangement-control questions remain
 separate; a universal anti-repeat objective would discard useful structure.
 
+## Optional candidate-response correction
+
+The planned rollout accepts `correct_short_attacks=True`, defaulting to false
+for checkpoint reproduction. It draws the original row proposal first, then
+evaluates that row against the other physically legal candidates. The evaluator
+counts strict same-column attack pairs in the current row and minimizes the
+additional count over all previewed H events before the current time plus
+20 ms. A 16-state dynamic program tracks which columns have been used inside
+that horizon. Each future H needs one hypothetical TAP; committed LN occupancy
+can clear at its earliest possible native release clock. No actual future
+actions or endpoints are inputs.
+
+When the proposal already has minimum response cost, selection returns it
+unchanged and consumes no correction randomness. Otherwise it restricts to
+minimum-cost rows, then minimizes changes in head count, LN-start count, release
+count and lane-action Hamming distance, in that order. Original proposal
+probabilities select within the remaining family using a separate random
+generator. The policy changes the generated distribution; the original model's
+NLL does not evaluate this correction kernel.
+
+The computation is optimistic about unknown releases and limited to the
+supplied preview. A zero minimum therefore does not guarantee that the actual
+future sampler will avoid short pairs. Positive minima are recorded as
+unresolved decisions, and complete generated charts receive a separate strict
+attack-pair diagnostic. This policy preserves H timestamps and imposes neither
+a general onset gap nor a minimum LN duration. It is an optional research
+intervention, not an established solution to musical arrangement or playability.
+
 ## Evidence identities
 
 All fitting, native comparison and score-audit code runs at clean product
