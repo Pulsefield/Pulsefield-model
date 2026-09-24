@@ -118,10 +118,11 @@ rendering, network delivery, background contention and unmeasured extremes.
 The initial serving path can encode full audio once, fill head lookahead,
 interleave release and row generation, and publish settled coverage into a
 buffer. The measured workloads do not require a draft model to meet deadlines.
-A useful next runtime deliverable is an audio-only streaming entrypoint with
-this contract and visible per-stage timing. It should retain the native
-model's musical failures in its reports rather than equating successful
-scheduling with successful choreography.
+The [audio-only streaming entrypoint](planned_audio_continuation.md#generate-and-stream-from-an-audio-file)
+implements this contract with visible per-stage timing. It retains native
+quality diagnostics rather than equating successful scheduling with successful
+choreography. The producer is local and synchronous; client transport and
+playback remain outside this repository.
 
 Exact speculative decoding uses draft proposals and a verification rule that
 preserves the target distribution; it is not simply replacing expensive steps

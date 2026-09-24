@@ -147,3 +147,79 @@ The [full-audio playback study](audio_playback_system.md) measures fresh-input
 startup, dense and long source-H workloads, settled coverage and virtual
 presentation deadlines. It separates demonstrated compute headroom from the
 remaining musical-distribution and control questions.
+
+## Generate and stream from an audio file
+
+The source-chart-free entrypoint accepts a planned-family checkpoint and audio
+file. It uses the checkpoint's normalization and settings, including its
+release waiting law, and generates its own initial context from BOS. It does
+not load the checkpoint's training corpus. Run from a clean committed checkout:
+
+```bash
+uv run --extra mps python -m ensomi_model.research.planned_audio_continuation.infer_hydra \
+  audio_file=/absolute/path/song.mp3 \
+  checkpoint_file=artifacts/joint-audio/20260924-alias-restored-v1/planned-training/planned-feasible-release-main-v1/last.pt \
+  checkpoint_sha256=67b8fc8fbac5f7ca2debe99524e29ac002546f12cb8a3c4c9acf68d68d7f3839 \
+  output_dir=artifacts/planned-audio-playtest/song-v1 device=cpu seed=17
+```
+
+The checkpoint in this example is a local research asset, absent in a fresh
+clone and not promoted as a final playable model. Substitute another pinned
+planned-family checkpoint explicitly. The output directory must not already
+exist. `--help` and `--cfg job` inspect packaged settings without importing
+Torch. Unknown settings are rejected by typed projection.
+
+CLI stdout and `events.jsonl` carry the same ordered JSONL records. Each record
+has `kind`, `sequence` and wall `elapsed_seconds`:
+
+| Kind | Consumer meaning |
+| --- | --- |
+| `start` | Stream format `planned-audio/stream-v1`, four columns indexed from zero, action vocabulary and startup requirements |
+| `audio_ready` | Complete decoded audio duration, verified audio identity and preprocessing timings; chart generation has not completed |
+| `update` | Optional complete `row`, inclusive `coverage_ms`, cumulative `row_count`, true-audio `completed` and `playback_ready` |
+| `stop` | Generation status, stop reason, final coverage and result-file location |
+| `error` | A failed producer or consumer operation, with the last committed coverage preserved in the file |
+
+`stop` describes generation status. The result file and full event-file digest
+are finalized when the producer returns; a callback should not read that report
+before the call finishes.
+
+An update atomically fixes its row and all row/no-row decisions through
+`coverage_ms`. `row=null` advances settled empty coverage without adding a
+history token. Row timestamps are integer-valued milliseconds. Actions are
+`[EMPTY, TAP, LN_START, LN_CLOSE]` indexed by codes 0–3. LN starts contain no
+guessed endpoint; later rows close the occupied columns. Consumers replay
+those complete rows in order. `completed` denotes the true audio end with all
+holds closed, never a cache or time-budget boundary.
+
+By default, `playback_ready` becomes true after both 30 physical rows and
+8000 ms of coverage are ready, or at true completion for shorter charts.
+`startup_min_rows` and `startup_coverage_ms` change that presentation decision
+without changing samples. Readiness is not a guarantee of future throughput or
+musical quality. A consumer owns its player clock and must handle a later
+`stop` with `status=capped` without inventing LN tails.
+
+Python consumers call
+`inference.infer_audio(AudioInferenceConfig(...), on_event=callback)`. Records
+are flushed to disk before the synchronous callback receives an independent
+JSON-compatible object. Slow consumers apply backpressure; they do not draw
+random numbers for the model. Callback exceptions propagate after an error
+record is saved. The file is an inspectable prefix, not a crash-resume format.
+
+Settings `chunk_ms` and `head_chunk_ms` control query work partitioning;
+`max_rows` and `max_seconds` bound generation. Time/resource checks occur
+between preprocessing stages and scheduler iterations, so one operation,
+callback or final export can exceed the elapsed-time bound. The existing
+research resource guard also recognizes an output-directory `PAUSE` file,
+requires 2 GiB free RAM and 40 GiB free disk, and records a capped result on a
+guard stop. `correct_short_attacks` remains false by default because its
+[whole-chart quality comparison](head_plan_row_response.md) failed a guard.
+
+The run saves resolved YAML, typed settings, input/model/frontend identities,
+per-stage timings, events and native row diagnostics. A complete run also
+exports `chart/generated.osu` and its paired audio, then independently reparses
+the chart. Presentation uses constant editor timing and SV; it does not infer a
+musical redline grid. A capped run saves its available rows and open LN state
+without exporting a completed chart. The total startup profile includes model
+loading and fresh audio preprocessing but excludes Python imports, Hydra/Git
+validation and output setup.
