@@ -162,8 +162,10 @@ def test_preprocessing_stop_and_consumer_failure_leave_honest_streams(tmp_path, 
 def test_packaged_inference_projection_and_cli_callback(tmp_path, monkeypatch, capsys):
     assert files('ensomi_model.configs.inference').joinpath('planned_audio.yaml').is_file()
     args = ['audio_file=music.wav', 'checkpoint_file=model.pt', 'checkpoint_sha256=' + 'a'*64,
-            'output_dir=' + str(tmp_path), 'seed=99', 'startup_min_rows=12', 'head_chunk_ms=73']
+            'output_dir=' + str(tmp_path), 'seed=99', 'startup_min_rows=12', 'head_chunk_ms=73',
+            'screen_unpublished=true']
     cfg = infer_hydra.compose_config(args)
+    assert cfg.screen_unpublished
     received = []
 
     def run(settings, *, resolved_yaml, on_event):
@@ -176,9 +178,29 @@ def test_packaged_inference_projection_and_cli_callback(tmp_path, monkeypatch, c
     assert json.loads(capsys.readouterr().out) == {'kind': 'fixture'}
     with pytest.raises(ValueError, match='Unknown'):
         infer_hydra.compose_config(args + ['+unused=1'])
-    for change in ('device=cuda', 'startup_min_rows=-1', 'max_seconds=0', 'checkpoint_sha256=bad'):
+    for change in ('device=cuda', 'startup_min_rows=-1', 'max_seconds=0', 'checkpoint_sha256=bad',
+                   'correct_short_attacks=true'):
         with pytest.raises(ValueError):
             infer_hydra.compose_config(args + [change])
+
+
+def test_screened_entrypoint_caps_impossible_head_flow_without_publishing_speculation(tmp_path, monkeypatch):
+    # The real fixture's near-certain hazard generates a head every millisecond.
+    # Four columns cannot realize that flow without strict short repeats.
+    cfg = replace(inputs(tmp_path, monkeypatch), screen_unpublished=True)
+    result = inference.infer_audio(cfg)
+    report = read(result['result_file'])
+    assert result['status'] == 'capped' and result['stop_reason'] == 'planning_attempt_limit'
+    assert not result['completed'] and result['osu_file'] is None
+    assert report['publication_policy'] == 'unpublished-continuation-screen-v1'
+    assert report['rejected_proposals'] == 4
+    assert all(a['pairs'] for a in report['windows'][0]['attempts'])
+    assert report['evaluated_speculative_rows'] > 0
+    assert report['rows'] == 0 and report['coverage_ms'] == -1
+    events = [json.loads(x) for x in Path(result['events_file']).read_text().splitlines()]
+    assert not any(e['kind'] == 'update' for e in events)
+    assert events[-1]['kind'] == 'stop' and not events[-1]['completed']
+    assert result['profile']['playback_ready_seconds'] is None
 
 
 def test_help_and_config_inspection_do_not_import_torch():

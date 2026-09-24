@@ -220,6 +220,17 @@ requires 2 GiB free RAM and 40 GiB free disk, and records a capped result on a
 guard stop. `correct_short_attacks` remains false by default because its
 [whole-chart quality comparison](head_plan_row_response.md) failed a guard.
 
+`screen_unpublished=true` selects the optional
+[joint continuation screen](unpublished_continuation_screen.md). It validates
+an eight-second unpublished window and a 20-ms halo, with at most four proposals,
+before exposing the accepted prefix to the same event stream. The policy checks
+strict same-column attack gaps below 20 ms and the separate experimental
+release-to-head criterion. Exhaustion returns `planning_attempt_limit` with
+only the previously published prefix; open LNs retain unknown tails. This
+research option defaults to false and cannot be combined with
+`correct_short_attacks`. Its measured physical-screen benefit does not establish
+musical quality or preservation of the requested arrangement.
+
 The run saves resolved YAML, typed settings, input/model/frontend identities,
 per-stage timings, events and native row diagnostics. A complete run also
 exports `chart/generated.osu` and its paired audio, then independently reparses

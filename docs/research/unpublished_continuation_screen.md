@@ -7,9 +7,10 @@ candidate evaluation: the earliest physically possible LN release does not
 predict which lanes the composed model will actually free.
 
 The implementation is available as `buffering.rollout_buffered`. The packaged
-audio-file CLI still uses the original single-trajectory decoder. No checkpoint
-weights or training objective change, and this policy has not established
-musical quality or production readiness.
+audio-file CLI selects it with `screen_unpublished=true`, using the window,
+attempt and RH-screen defaults described below. The original single-trajectory
+decoder remains the default. No checkpoint weights or training objective change,
+and this policy has not established musical quality or production readiness.
 
 ## State and information
 
@@ -210,7 +211,8 @@ not evidence for a universal LN-duration floor.
 This is bounded evidence of physical-failure removal at low measured sampling
 cost, with two failed composition guards and retained expressive mechanisms
 in inspected scopes. No listening or player test establishes musical quality.
-The policy remains a research option and is not enabled in the packaged CLI.
+The policy remains a research option and is not enabled by default in the
+packaged CLI.
 
 Local evidence owner: `artifacts/joint-audio/20260925-unpublished-continuation-v1`.
 Result SHA-256:

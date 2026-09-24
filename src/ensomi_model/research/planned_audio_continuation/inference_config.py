@@ -19,6 +19,7 @@ class AudioInferenceConfig:
     startup_coverage_ms: int = 8000
     startup_min_rows: int = 30
     correct_short_attacks: bool = False
+    screen_unpublished: bool = False
     arrangement_profile: int | None = None
 
     def validate(self):
@@ -39,7 +40,10 @@ class AudioInferenceConfig:
             raise ValueError('seed must be an integer in [0, 2**63)')
         if not math.isfinite(self.max_seconds) or self.max_seconds <= 0:
             raise ValueError('max_seconds must be finite and positive')
-        if type(self.correct_short_attacks) is not bool:
-            raise ValueError('correct_short_attacks must be boolean')
+        for name in ('correct_short_attacks', 'screen_unpublished'):
+            if type(getattr(self, name)) is not bool:
+                raise ValueError(f'{name} must be boolean')
+        if self.screen_unpublished and self.correct_short_attacks:
+            raise ValueError('screen_unpublished and correct_short_attacks select different policies; enable only one')
         if self.arrangement_profile is not None and (type(self.arrangement_profile) is not int or self.arrangement_profile < 0):
             raise ValueError('arrangement_profile must be null or a nonnegative index')

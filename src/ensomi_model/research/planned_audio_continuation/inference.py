@@ -19,6 +19,7 @@ from ...features.mel_base import MUSIC_MEL_CACHE_CONFIG, compute_log_mel_10ms
 from ..joint_audio_continuation.data import digest, frontend_identity
 from ..joint_audio_continuation.generation import _clean_revision, _resource_stop, _synchronize, save_rollout
 from ..scoped_style_modeling.dataset import ContractError
+from .buffering import rollout_buffered
 from .generation import load_model, rollout
 from .inference_config import AudioInferenceConfig
 
@@ -46,6 +47,8 @@ def infer_audio(config: AudioInferenceConfig, *, resolved_yaml='', on_event=None
     A capped run keeps its prefix and open LNs, without exporting fabricated tails.
     Readiness requires the configured row count and coverage, or true completion
     for shorter charts. It does not certify musical quality or future throughput.
+    With screen_unpublished, callbacks see only windows accepted by the bounded
+    joint-continuation screen. Attempt exhaustion preserves the published prefix.
     """
     config.validate()
     revision = _clean_revision()
@@ -148,11 +151,15 @@ def infer_audio(config: AudioInferenceConfig, *, resolved_yaml='', on_event=None
                     ready_seconds = time.perf_counter() - started
                 emit('update', **asdict(update), row_count=row_count, playback_ready=ready)
 
-            native = rollout(model, mel, duration_ms, seed=config.seed, chunk_ms=config.chunk_ms,
+            options = dict(seed=config.seed, chunk_ms=config.chunk_ms,
                 head_chunk_ms=config.head_chunk_ms, max_rows=config.max_rows,
                 max_seconds=config.max_seconds-before_rollout, stop_callback=stop_reason,
-                on_update=publish, correct_short_attacks=config.correct_short_attacks,
-                arrangement_profile=config.arrangement_profile)
+                on_update=publish, arrangement_profile=config.arrangement_profile)
+            if config.screen_unpublished:
+                native = rollout_buffered(model, mel, duration_ms, **options)
+            else:
+                native = rollout(model, mel, duration_ms,
+                                 correct_short_attacks=config.correct_short_attacks, **options)
             profile.update(audio_encode_seconds=native.metrics['audio_encode_seconds'],
                 generation_seconds=native.metrics['generation_seconds'],
                 playback_ready_seconds=ready_seconds,

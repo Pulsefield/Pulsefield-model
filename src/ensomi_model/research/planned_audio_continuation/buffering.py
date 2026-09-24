@@ -69,7 +69,7 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
     in-memory fork for offline inspection. It must not mutate shared weights or
     audio; its work counts toward the time budget. Observer/consumer exceptions
     propagate. Exhaustion returns an incomplete result with original open holds.
-    The packaged inference entrypoint does not select this policy.
+    The packaged inference entrypoint selects this policy only when requested.
     """
     if (any(type(v) is not int or v <= 0 for v in (window_ms, max_attempts)) or
             type(screen_release_heads) is not bool):
