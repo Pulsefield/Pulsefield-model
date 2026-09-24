@@ -20,6 +20,7 @@ from ..oracle_time_continuation.replay import ExactReplayState, commit
 from ..oracle_time_continuation.schema import CompleteRow
 from ..scoped_style_modeling.dataset import ContractError
 from .attack_response import short_attack_costs, short_attack_pairs, select_response_row
+from .counts import count_state, count_tokens
 from .features import (HeadPreview, LNProjection, consequences, preview_features,
                        release_clocks, release_masks, row_support, skeleton_tokens)
 from .release import conditioned_release_logits
@@ -94,6 +95,8 @@ class ContinuationSession:
         self.cursor, self.residual = -1, None
         self.replay = ExactReplayState()
         self.row_cache, self.skeleton_cache = model.temporal.empty_cache(), model.skeleton_temporal.empty_cache()
+        self.count_cache = (model.row_counts.temporal.empty_cache()
+                            if model.config.row_factorization == 'count_layout' else None)
         self.release_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x4E51)
         self.row_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0xA301)
         self.correction_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x52C4) if correct_short_attacks else None
@@ -190,10 +193,15 @@ class ContinuationSession:
             legal = row_support([self.replay], [self.cursor], [head_role], [preview], self.duration_ms)
             context = preview_features([preview], [self.cursor], [head_role], self.duration_ms, self.model.config.lookahead)
             local, future = consequences([self.replay], [self.cursor], [preview], self.duration_ms)
+            counts = {}
+            if self.model.config.row_factorization == 'count_layout':
+                counts = dict(count_history=self.model.row_counts.temporal.read(self.count_cache)[None],
+                    count_clock=self.tensor(count_state([self.replay.open_ln_start_ms], [previous], [self.cursor])))
             audio = interpolate_audio(self.downstream_encoded, torch.tensor([self.cursor], device=self.device))
             log_probs = self.model.planned_row_log_probs(audio, self.model.temporal.read(self.row_cache)[None],
                 self.tensor(exact_features([self.replay], [self.cursor])), self.tensor(legal, torch.bool),
-                self.tensor([self.replay.occupancy], torch.bool), self.tensor(context), self.tensor(local), self.tensor(future))[0]
+                self.tensor([self.replay.occupancy], torch.bool), self.tensor(context), self.tensor(local), self.tensor(future),
+                **counts)[0]
             proposal_log_probs = log_probs.detach().cpu().double()
             index = int(torch.multinomial(proposal_log_probs.exp(), 1, generator=self.row_rng))
             if self.correct_short_attacks:
@@ -216,6 +224,9 @@ class ContinuationSession:
                 self.tensor(content_features([published], [previous], [[None] * 4])[0]))
             self.skeleton_cache = self.model.skeleton_temporal.append(self.skeleton_cache,
                 self.tensor(skeleton_tokens([self.cursor], [previous], [head_role])[0]))
+            if self.model.config.row_factorization == 'count_layout':
+                self.count_cache = self.model.row_counts.temporal.append(self.count_cache,
+                    self.tensor(count_tokens([self.cursor], [previous], [published.actions])[0]))
             self.rows.append(published)
             if head_role:
                 if not self.planner.queue or self.planner.queue.pop(0) != self.cursor:

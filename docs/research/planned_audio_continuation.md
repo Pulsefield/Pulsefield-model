@@ -97,6 +97,52 @@ misses substantial probability of a release immediately before H. Retaining
 frontier2 does not establish that its finite features capture the formulation's
 full gameplay frontier.
 
+## Optional count and layout factorization
+
+The default `row_factorization=flat` normalizes all legal complete-row scores
+together. The experimental `count_layout` mode instead learns an explicit
+distribution over $(\text{attacks},\text{LN starts},\text{releases})$. The four-key
+alphabet has 35 joint count triples, including the no-op/terminal case. For
+legal rows $G_m$ having triple $m$, the conditional distribution is
+
+$$
+\log p(y)=\log q(m(y)) + s_{R1}(y)
+-\log\sum_{v\in G_{m(y)}}\exp s_{R1}(v).
+$$
+
+Only nonempty groups receive count mass. R1's complete-row score and frontier2
+still determine relative probabilities inside each group; changing their
+common group bias cannot change the count marginal. Every physically legal
+row remains representable. Training uses the exact resulting row likelihood,
+without auxiliary count-loss weights. Native generation samples the resulting
+256-way distribution once with the existing row RNG.
+
+The count conditional reads full profile-conditioned audio, the 16-H preview,
+elapsed time since the last row and sorted ages of active holds. Its own
+32-wide, four-level finite encoder reads 31 previous rows, each represented by
+elapsed time and the three counts. It excludes column assignments, the R1 row
+embedding, cumulative replay totals and hidden future tails. This preserves
+temporal count organization while separating it from layout history. R1 still
+reads its full layout history and exact state. Training uses past source counts;
+native generation appends only emitted counts, with the same cached queries.
+Models in this mode require at least four row-history levels.
+
+The [composition evidence](head_materializer_composition.md) motivates separating
+these decisions, but does not establish this factorization as an improvement.
+Count control, physical feasibility, repeated grips and independently held LN
+roles require native evaluation. This mode does not add an HH constraint or
+make the possible release opportunity into an actual release forecast.
+
+Training also accepts `train_scope=materializer` with a pinned planned
+initialization. It freezes the full audio encoders, shared profile projection
+and prior, and every H module. R, row-conditioning/layout and optional count
+modules remain trainable. Frozen parameter identities are checked before
+checkpoint saves. This isolates materialization from H drift in a matched
+comparison; the default `train_scope=all` continues joint fitting. Warm starts
+copy all common tensors and explicitly report new count-module tensors.
+Both fields pass through the packaged Hydra schema and are saved in training
+configuration; row factorization is also saved in the model configuration.
+
 ## Execution and evidence
 
 The implementation is in

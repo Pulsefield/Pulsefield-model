@@ -14,6 +14,7 @@ from .features import (
     release_clocks, release_masks, row_support, skeleton_tokens,
 )
 from .release import conditioned_release_logits
+from .counts import count_state, count_tokens
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,8 @@ class PlannedInputs:
     consequence_local: torch.Tensor
     consequence_timing: torch.Tensor
     release_waits: tuple[ReleaseWaitInputs, ...]
+    count_raw: torch.Tensor | None = None
+    count_clock: torch.Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -148,6 +151,13 @@ def collate_interval(example, config, device='cpu'):
         raise ContractError('Source row cannot realize its head plan')
     row_preview = preview_features(row_previews, row_times, row_roles, example.chart.duration_ms, config.lookahead)
     local, future = consequences(row_states, row_times, row_previews, example.chart.duration_ms)
+    count_raw = count_clock = None
+    if config.row_factorization == 'count_layout':
+        count_raw = tensor(_pad_first(count_tokens(times[row_start:stop],
+            [times[i - 1] if i else None for i in range(row_start, stop)],
+            source.rows['actions'][row_start:stop]))[None])
+        count_clock = tensor(count_state([s.open_ln_start_ms for s in row_states],
+            [times[i - 1] if i else None for i in row_indices], row_times))
 
     x = replace(x, row_legal=torch.from_numpy(support))
     x = IntervalInputs(**{name: value.to(device) for name, value in vars(x).items()})
@@ -155,7 +165,7 @@ def collate_interval(example, config, device='cpu'):
         tensor(_pad_first(np.ones(len(head_raw), np.bool_))[None]),
         tensor(query_head_positions - head_start, torch.long), tensor(clocks),
         tensor(_pad_first(skeleton_raw)[None]), tensor(r_clocks), tensor(r_valid), tensor(r_forced),
-        tensor(row_preview), tensor(local), tensor(future), tuple(waits))
+        tensor(row_preview), tensor(local), tensor(future), tuple(waits), count_raw, count_clock)
     return PlannedBatch(inputs, tensor(head_event), tensor(release_event), base.targets.row_index.to(device),
                         example.weight_per_second)
 
@@ -191,9 +201,15 @@ def score_interval(model, inputs, coarse, *, profile_index=None):
         r = r.flatten().index_copy(0, wait.destinations, conditional[wait.offsets]).reshape_as(r)
     if len(x.row_times):
         audio = interpolate_audio(downstream, x.row_times[None], x.mel_start, x.frame_count)[0]
+        counts = {}
+        if model.config.row_factorization == 'count_layout':
+            past = (model.row_counts.temporal(inputs.count_raw, x.history_valid)[0]
+                    if inputs.count_raw.shape[1] else None)
+            counts = dict(count_history=_gather(model.row_counts.temporal, past, x.row_history),
+                          count_clock=inputs.count_clock)
         rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),
             x.row_exact, x.row_legal, x.occupancy, inputs.row_preview,
-            inputs.consequence_local, inputs.consequence_timing)
+            inputs.consequence_local, inputs.consequence_timing, **counts)
     else:
         rows = h.new_empty((0, 256))
     return PlannedScores(h, r, rows)

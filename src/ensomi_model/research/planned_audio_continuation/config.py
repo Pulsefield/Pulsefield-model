@@ -27,6 +27,8 @@ class PlannedTrainConfig(ContextTrainConfig):
     profile_bank_file: str | None = None
     profile_bank_sha256: str | None = None
     profile_head_rate_downstream: bool = True
+    row_factorization: str = 'flat'
+    train_scope: str = 'all'
 
     def validate(self):
         super().validate()
@@ -49,3 +51,9 @@ class PlannedTrainConfig(ContextTrainConfig):
             raise ValueError('Downstream profile head-rate mode must be boolean')
         if not self.profile_head_rate_downstream and self.profile_bank_file is None:
             raise ValueError('Downstream profile routing requires a profile bank')
+        if self.row_factorization not in ('flat', 'count_layout'):
+            raise ValueError('Row factorization must be flat or count_layout')
+        if self.train_scope not in ('all', 'materializer'):
+            raise ValueError('Training scope must be all or materializer')
+        if self.train_scope == 'materializer' and self.initial_checkpoint_file is None:
+            raise ValueError('Materializer-only fitting requires a pinned planned checkpoint')

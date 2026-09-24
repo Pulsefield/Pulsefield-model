@@ -5,6 +5,7 @@ The three factors keep separate sums; no per-event loss reweighting changes
 the joint chart-time likelihood.
 """
 from dataclasses import asdict
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -27,12 +28,35 @@ from .profiles import build_profile_bank, chart_assignment
 INHERITED = (*R1_TRANSFER_MODULES, 'row_consequence')
 LOSS_NAMES = ('head_nll_per_second', 'release_nll_per_second', 'row_nll_per_second',
               'conditional_nll_per_second', 'profile_nll_per_second', 'joint_nll_per_second')
+MATERIALIZER_MODULES = (*INHERITED, 'audio_residual', 'context_condition', 'preview_condition',
+                        'skeleton_temporal', 'release_clock', 'row_counts')
+
+
+def frozen_fingerprint(model):
+    digest = hashlib.sha256()
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            digest.update(name.encode())
+            digest.update(parameter.detach().cpu().numpy().tobytes())
+    return digest.hexdigest()
+
+
+def configure_train_scope(model, scope):
+    """Materializer-only fitting keeps every shared H/audio/profile tensor fixed."""
+    if scope not in ('all', 'materializer'):
+        raise ValueError('Training scope must be all or materializer')
+    for name, parameter in model.named_parameters():
+        parameter.requires_grad_(scope == 'all' or name.split('.')[0] in MATERIALIZER_MODULES)
+    return dict(scope=scope, frozen_sha256=frozen_fingerprint(model),
+                frozen_parameters=[n for n, p in model.named_parameters() if not p.requires_grad])
 
 
 def optimizer_groups(model, config):
     groups = [dict(name=name, params=[], param_names=[], lr=rate) for name, rate in
               (('r1', config.inherited_learning_rate), ('audio_skeleton', config.learning_rate))]
     for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
         group = groups[int(name.split('.')[0] not in INHERITED)]
         group['params'].append(parameter)
         group['param_names'].append(name)
@@ -75,7 +99,9 @@ def backward_update(model, planned_songs, charts, device, profiles=None):
             counts['head_rows'] += int(batch.head_event.sum())
             counts['release_rows'] += int(batch.release_event.sum())
             counts['release_clocks'] += int(batch.inputs.release_valid.sum())
-        total.backward()
+        # A silent interval has no learnable factor when H/audio are frozen.
+        if total.requires_grad:
+            total.backward()
     return totals, counts
 
 
@@ -120,7 +146,7 @@ def initialize_from_planned(model, config, norm):
 
     A profiled source requires the same bank and preserves its learned prior.
     An unprofiled source can initialize the common tensors of a profiled model.
-    The only permitted same-bank architecture change is downstream density use.
+    Same-bank changes may route density or add the separate count conditional.
     """
     from .generation import load_model
     baseline, metadata = load_model(config.initial_checkpoint_file, config.initial_checkpoint_sha256)
@@ -129,6 +155,7 @@ def initialize_from_planned(model, config, norm):
         raise ValueError('Planned initialization differs in arrangement profile count')
     expected['profile_count'] = baseline.config.profile_count
     expected['profile_head_rate_downstream'] = baseline.config.profile_head_rate_downstream
+    expected['row_factorization'] = baseline.config.row_factorization
     if asdict(baseline.config) != expected or metadata['manifest_sha256'] != config.manifest_sha256:
         raise ValueError('Planned initialization differs in architecture or training corpus')
     for name, values in (('audio_mean', norm['mean']), ('audio_std', norm['std'])):
@@ -143,12 +170,15 @@ def initialize_from_planned(model, config, norm):
     added = {'profile_values', 'profile_codes', 'profile_mean', 'profile_std',
              'profile_condition.weight', 'profile_prior.weight', 'profile_prior.bias'} if (
                  model.config.profile_count and not baseline.config.profile_count) else set()
+    if model.config.row_factorization == 'count_layout' and baseline.config.row_factorization == 'flat':
+        added.update(n for n in model.state_dict() if n.startswith('row_counts.'))
     if set(missing) != added or unexpected:
         raise ValueError('Warm initialization did not copy exactly the common model')
     return dict(initialization='planned_weights_fresh_optimizer', checkpoint_sha256=config.initial_checkpoint_sha256,
                 source_revision=metadata['source_revision'], copied=sorted(source), new=sorted(added),
                 profile_head_rate_downstream=dict(source=baseline.config.profile_head_rate_downstream,
-                                                  target=model.config.profile_head_rate_downstream))
+                                                  target=model.config.profile_head_rate_downstream),
+                row_factorization=dict(source=baseline.config.row_factorization, target=model.config.row_factorization))
 
 
 def train(config, *, resolved_yaml=''):
@@ -181,14 +211,20 @@ def train(config, *, resolved_yaml=''):
     model = PlannedAudioModel(PlannedModelConfig(bounded_head=config.bounded_head,
         head_bound=config.head_bound, head_decay_ms=config.head_decay_ms,
         condition_full_holds=config.condition_full_holds, profile_count=0 if bank is None else bank['count'],
-        profile_head_rate_downstream=config.profile_head_rate_downstream))
+        profile_head_rate_downstream=config.profile_head_rate_downstream, row_factorization=config.row_factorization))
     if bank is not None:
         model.configure_profiles(bank)
     transfer = (initialize_from_planned(model, config, norm) if config.initial_checkpoint_file is not None else
                 initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256))
     model.set_audio_normalization(torch.tensor(norm['mean']), torch.tensor(norm['std']))
+    scope = configure_train_scope(model, config.train_scope)
+
+    def verify_frozen():
+        if frozen_fingerprint(model) != scope['frozen_sha256']:
+            raise RuntimeError('Frozen head/audio/profile parameters changed during materializer fitting')
+
     tracked_modules = tuple(name for name in ('head_temporal', 'head_condition', 'timing', 'release_clock',
-        'skeleton_temporal', 'row_consequence', 'head_base', 'profile_condition', 'profile_prior') if hasattr(model, name))
+        'skeleton_temporal', 'row_consequence', 'head_base', 'profile_condition', 'profile_prior', 'row_counts') if hasattr(model, name))
     initial = {n: p.detach().cpu().clone() for n, p in model.named_parameters() if n.split('.')[0] in tracked_modules}
     model.to(config.device)
     groups = optimizer_groups(model, config)
@@ -200,7 +236,7 @@ def train(config, *, resolved_yaml=''):
         validation = [r for r in validation if r['source_sha256'] in selected]
     _json(directory / 'freeze.json', dict(source_revision=source, config=asdict(config), model_config=asdict(model.config),
         **protocol_identity, **norm_identity, transfer=transfer, parameters=model.parameter_counts(),
-        optimizer_groups=receipts, validation=validation,
+        optimizer_groups=receipts, parameter_scope=scope, validation=validation,
         environment=dict(torch=str(torch.__version__), python=__import__('sys').version,
                          ram_bytes=psutil.virtual_memory().total)))
     last, reason, latest = 0, 'updates_complete', None
@@ -233,6 +269,7 @@ def train(config, *, resolved_yaml=''):
                         log.flush()
                         print(json.dumps(record), flush=True)
                 if update % config.validation_every == 0 or update == config.updates:
+                    verify_frozen()
                     latest = evaluate_intervals(model, validation, by, config.device, profiles)
                     _json(directory / f'evaluation-{update}.json', dict(update=update, **latest))
                     print(json.dumps(dict(update=update, population=latest['population'], bos=latest['bos'])), flush=True)
@@ -240,13 +277,14 @@ def train(config, *, resolved_yaml=''):
     except BaseException as error:
         _json(directory / 'failure.json', dict(update=last, error=repr(error), seconds=time.perf_counter() - started))
         raise
+    verify_frozen()
     save_checkpoint(directory / 'last.pt', model, optimizer, last, config, source, protocol_identity, transfer)
     changes = {module: 0. for module in tracked_modules}
     for name, parameter in model.named_parameters():
         if name in initial:
             changes[name.split('.')[0]] += float((parameter.detach().cpu() - initial[name]).square().sum())
     result = dict(status='completed' if last == config.updates else 'bounded_stop', stop_reason=reason, updates=last,
-        seconds=time.perf_counter() - started, **counts, source_revision=source,
+        seconds=time.perf_counter() - started, **counts, source_revision=source, parameter_scope=scope,
         checkpoint_sha256=digest(directory / 'last.pt'), **protocol_identity,
         parameter_update_l2={name: value ** .5 for name, value in changes.items()},
         final_evaluation_update=last if last == config.updates else (last // config.validation_every) * config.validation_every,

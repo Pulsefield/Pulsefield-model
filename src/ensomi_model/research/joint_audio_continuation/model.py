@@ -199,7 +199,7 @@ gap. Padding is never a synthetic empty event; zero-length prefixes are legal.
         return scores.masked_fill(~mask, -torch.inf).log_softmax(-1)
 
     def parameter_counts(self):
-        """Count trainable parameters by first-level module and in total."""
+        """Count all parameters by first-level module and in total."""
         counts = {name: sum(p.numel() for p in module.parameters())
                   for name, module in self.named_children()}
         counts['total'] = sum(p.numel() for p in self.parameters())
