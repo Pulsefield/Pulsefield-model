@@ -309,3 +309,7 @@ Result SHA-256:
 `95964d01b5e12ed8c5a811151f2d22c99dfd35592e5eb201d55f6d78e6f85175`;
 completed Lens review:
 `bea426a8ceb332793eccf4ec4787e203aea92355eb3557443d11412772687508`.
+
+The optional [unpublished continuation screen](unpublished_continuation_screen.md)
+implements a bounded test of actual joint R/row futures before publication.
+It changes the decoding policy and requires separate musical and runtime evidence.
