@@ -240,14 +240,13 @@ attributable to restored R1, prove that density must always enter every factor,
 or establish that the encoder or corpus is sufficient. Additional training
 also changes the comparator adversely on the matched original subset.
 
-The next causal question is where that training-induced drift enters the
-generated process: the full-audio H base, its sampled-history correction, or
-the R/row response to the resulting H spacing. Measuring those contributions
-on the saved trajectories and separating them with fixed-input probes can
-distinguish loss of conditional information from altered shared representations
-and autoregressive amplification. Any crossed probe is diagnostic and may be
-outside training support. A further architecture or training change requires
-that distinction, alongside native and Lens evidence; NLL alone cannot select it.
+The [head-factor diagnostic](head_factor_drift.md) separates full-audio base,
+learned residual and sampled-history contributions on the saved trajectories.
+It finds substantial history effects in several density increases and large
+base changes elsewhere, with no single component meeting its dominance rule
+across the cohort. The R/row response to changed H spacing remains a distinct
+question. Any crossed probe may be outside training support; further model
+selection still requires native and Lens evidence beyond NLL.
 
 ## Reproduction identities
 
