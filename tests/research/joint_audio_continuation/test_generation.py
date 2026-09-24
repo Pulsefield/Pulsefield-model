@@ -105,6 +105,37 @@ def test_resource_callback_checks_every_twenty_steps_without_changing_draws():
     assert [row.time_ms for row in result.rows] == list(range(20))
 
 
+def test_incremental_updates_publish_unresolved_heads_and_empty_coverage_before_terminal():
+    updates = []
+    result = rollout(HoldThenSilence(config()), np.zeros((13, 128), np.float32), 123,
+                     chunk_ms=25, on_update=updates.append)
+    assert updates[0].row == CompleteRow(0, (2, 0, 0, 0))
+    assert not updates[0].completed
+    assert any(u.row is None and u.coverage_ms < 123 for u in updates)
+    assert [u.coverage_ms for u in updates] == sorted({u.coverage_ms for u in updates})
+    assert tuple(u.row for u in updates if u.row is not None) == result.rows
+    assert updates[-1].row == CompleteRow(123, (3, 0, 0, 0)) and updates[-1].completed
+    capped = []
+    result = rollout(HoldThenSilence(config()), np.zeros((13, 128), np.float32), 123,
+                     max_rows=1, on_update=capped.append)
+    assert not result.completed and len(capped) == 1 and not capped[0].completed
+
+
+def test_publication_callback_does_not_change_draws_and_consumer_errors_propagate():
+    torch.manual_seed(37)
+    model = JointAudioModel(config())
+    mel = np.zeros((51, 128), np.float32)
+    expected = rollout(model, mel, 500, seed=71, chunk_ms=71)
+    updates = []
+    actual = rollout(model, mel, 500, seed=71, chunk_ms=71, on_update=updates.append)
+    assert actual.rows == expected.rows
+    assert tuple(u.row for u in updates if u.row is not None) == actual.rows
+    def fail(update):
+        raise RuntimeError('consumer disconnected')
+    with pytest.raises(RuntimeError, match='consumer disconnected'):
+        rollout(model, mel, 500, on_update=fail)
+
+
 def test_no_event_song_has_fixed_empty_coverage_without_a_terminal_tap():
     model = JointAudioModel(config())
     with torch.no_grad():

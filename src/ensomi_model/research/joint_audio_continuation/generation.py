@@ -47,6 +47,19 @@ class NativeGeneration:
     metrics: dict
 
 
+@dataclass(frozen=True)
+class GenerationUpdate:
+    """One irrevocable row or empty extension of fixed chart coverage.
+
+    Rows are complete four-lane transactions. An LN head has no future end;
+    its later CLOSE arrives in another update. A missing row is not an empty
+    history token. Completion denotes the real audio end, never a query edge.
+    """
+    row: CompleteRow | None
+    coverage_ms: int
+    completed: bool
+
+
 def _synchronize(device):
     if device.type == 'mps':
         torch.mps.synchronize()
@@ -57,7 +70,7 @@ def _synchronize(device):
 @torch.no_grad()
 def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=17,
             chunk_ms=4000, max_rows=30000, max_seconds=900., stop_callback=None,
-            head_spacing_ms=0.):
+            head_spacing_ms=0., on_update=None):
     """Generate native integer-ms rows; return incomplete output on a resource cap.
 
     Mel is the complete canonical song representation. It is encoded once, with
@@ -70,6 +83,10 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
     The optional head-spacing prior thins proposed rows. Its rejected proposals
     advance fixed-through time but not replay/history. When enabled, max_rows
     also bounds total proposals, including rejected ones.
+    on_update receives each immutable fixed-coverage update synchronously,
+    after computation and commit. Its elapsed time counts toward the run and
+    step budgets; exceptions propagate. A resource cap does not emit a fake
+    completion or close. Omitting the callback preserves sampling behavior.
     """
     if (type(duration_ms) is not int or duration_ms < 0 or type(chunk_ms) is not int or chunk_ms <= 0 or
             type(max_rows) is not int or max_rows <= 0 or not math.isfinite(max_seconds) or max_seconds <= 0):
@@ -78,6 +95,8 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
         raise ContractError('Native generation requires finite complete [frames,128] Mel audio')
     if not math.isfinite(head_spacing_ms) or head_spacing_ms < 0:
         raise ContractError('Head-spacing scale must be finite and nonnegative')
+    if on_update is not None and not callable(on_update):
+        raise ContractError('Generation update consumer must be callable')
     device, dtype = next(model.parameters()).device, next(model.parameters()).dtype
     model.eval()
     _synchronize(device)
@@ -110,6 +129,7 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
             stop_reason = 'proposal_limit'
             break
         tick = time.perf_counter()
+        published_row = None
         end = min(cursor + chunk_ms, duration_ms)
         bins = torch.arange((cursor + 1) // 10, end // 10 + 1, device=device, dtype=torch.long)
         bin_times = bins * 10 + 9
@@ -145,12 +165,15 @@ def rollout(model: JointAudioModel, mel: np.ndarray, duration_ms: int, *, seed=1
                 raw = content_features([row], [previous], [[None] * 4])[0]
                 cache = model.temporal.append(cache, torch.as_tensor(raw, dtype=dtype, device=device))
                 rows.append(row)
+                published_row = row
             else:
                 rejected.append(dict(time_ms=cursor, actions=actions, log_acceptance=factor,
                                      committed_rows=replay.row_count,
                                      last_lane_head_ms=replay.last_lane_attack_ms))
             residual = None
         _synchronize(device)
+        if on_update is not None:
+            on_update(GenerationUpdate(published_row, cursor, cursor == duration_ms))
         now = time.perf_counter()
         latencies.append(now - tick)
         coverage.append(dict(coverage_ms=cursor, elapsed_seconds=now - started))
@@ -435,10 +458,20 @@ def infer_audio(config, *, resolved_yaml=''):
 
         check('native_generation')
         before_rollout = time.perf_counter() - started
-        native = rollout(model, mel, duration_ms, seed=config.generation_seed,
-            chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
-            max_seconds=config.max_seconds - before_rollout, stop_callback=lambda: _resource_stop(root),
-            head_spacing_ms=config.head_spacing_ms)
+        events_file = output / 'events.jsonl'
+        with events_file.open('x') as stream:
+            def publish(update):
+                stream.write(json.dumps(dict(kind='update', elapsed_seconds=time.perf_counter()-started,
+                                              **asdict(update)), allow_nan=False) + '\n')
+                stream.flush()
+
+            native = rollout(model, mel, duration_ms, seed=config.generation_seed,
+                chunk_ms=config.timing_horizon_ms, max_rows=config.generation_max_rows,
+                max_seconds=config.max_seconds - before_rollout, stop_callback=lambda: _resource_stop(root),
+                head_spacing_ms=config.head_spacing_ms, on_update=publish)
+            stream.write(json.dumps(dict(kind='stop', elapsed_seconds=time.perf_counter()-started,
+                completed=native.completed, stop_reason=native.stop_reason, coverage_ms=native.coverage_ms)) + '\n')
+            stream.flush()
         profile['audio_encode_seconds'] = native.metrics['audio_encode_seconds']
         profile['native_generation_seconds'] = native.metrics['generation_seconds']
         profile['startup_coverage_ms'] = native.metrics['startup_target_ms']
@@ -455,6 +488,7 @@ def infer_audio(config, *, resolved_yaml=''):
         report = dict(status='completed' if native.completed else 'capped', source_revision=revision,
             audio_sha256=audio_sha256, checkpoint_sha256=config.checkpoint_sha256,
             duration_ms=duration_ms, recipe_file=str(output / 'recipe.json'), profile=profile,
+            events_file=str(events_file), events_sha256=digest(events_file),
             seconds=time.perf_counter() - started, **info)
     except ResourceLimit as error:
         report = dict(status='capped', completed=False, stop_reason=str(error), phase=phase,
@@ -469,6 +503,7 @@ def infer_audio(config, *, resolved_yaml=''):
     _write_json(output / 'result.json', report)
     return dict(status=report['status'], result_file=str(output / 'result.json'),
                 recipe_file=str(output / 'recipe.json'), osu_file=report.get('osu_file'),
+                events_file=report.get('events_file'),
                 audio_file=report.get('audio_file'), rows=report.get('rows', 0), heads=report.get('heads', 0),
                 profile=profile, step_p99_ms=report.get('step_p99_ms'),
                 stop_reason=report.get('stop_reason'), seconds=report['seconds'])

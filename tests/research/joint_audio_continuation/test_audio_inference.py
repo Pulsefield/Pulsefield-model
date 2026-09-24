@@ -94,6 +94,12 @@ def test_new_audio_inference_needs_no_manifest_cache_source_or_seed(tmp_path, mo
     rows = source_rows(parse_source(contents, hashlib.sha256(contents).hexdigest()).objects)
     assert len(rows) == 11 and [row.time_ms for row in rows] == list(range(11))
     assert report['reparse_pass'] and report['first30_heads_through_ms'] == 7
+    published = [json.loads(line) for line in Path(result['events_file']).read_text().splitlines()]
+    updates = [item for item in published if item['kind'] == 'update']
+    assert [u['row']['time_ms'] for u in updates if u['row']] == list(range(11))
+    assert all(not u['completed'] for u in updates[:-1]) and updates[-1]['completed']
+    assert published[-1]['kind'] == 'stop' and published[-1]['completed']
+    assert published[0]['elapsed_seconds'] < published[-1]['elapsed_seconds']
     assert report['profile']['startup_coverage_ms'] == 10
     for key in ('audio_decode_seconds', 'mel_seconds', 'model_load_seconds', 'audio_encode_seconds',
                 'startup_from_audio_seconds', 'first30_heads_from_audio_seconds'):

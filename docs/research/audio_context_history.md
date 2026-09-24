@@ -95,6 +95,15 @@ The existing verified generation loader recognizes `joint-audio/context-v1`
 checkpoints and preserves old checkpoint defaults. Native generation and
 source-free inference reuse the existing scheduler and export protocol.
 
+`rollout(..., on_update=consumer)` can publish each immutable complete row and
+its fixed-through audio clock synchronously. LN heads arrive before their later
+release rows. Empty updates advance coverage without adding history tokens;
+resource stops do not fabricate closure or completion. Consumer time is included
+in runtime measurements and consumer exceptions propagate. Source-free audio
+inference flushes these updates to `events.jsonl` as generation proceeds, followed
+by a stop record. This local research stream is available before whole-song
+export; it is not a client transport or a crash-durable acknowledgement protocol.
+
 Training computation uses finite padding buckets to limit first-seen MPS
 operator shapes. Local audio, history and timing-query axes use multiples of
 128; row-query axes use multiples of 64. Full-song coarse input uses a power
