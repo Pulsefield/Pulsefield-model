@@ -150,15 +150,14 @@ LN realization; its As It Was comparison also shows a large LN change with a
 much smaller density change. R/row response must be evaluated with H held fixed
 before assigning those failures to a dense plan or to restored R1 alone.
 
-A useful next comparison exchanges complete generated H plans between the
-original and shared continuation while each R/row model retains its own full
-audio encoding, profile and committed state. This tests whether the earlier H
-process and later materialization retain complementary improvements. It also
-tests the reverse pairing, which is needed to distinguish a plan effect from a
-materialization effect. These are coherent conditional-model queries, but their
-generated histories may still be outside training support. Native completion,
-short attacks, requested controls and Lens-inspected LN/chord organization must
-decide whether any composition is useful.
+The [head/materializer composition study](head_materializer_composition.md)
+exchanges complete generated H plans while each R/row model retains its own
+full audio encoding, profile and committed state. Neither direction supplies
+a consistent control improvement. The original-H/continued-body pairing keeps
+useful LN relations in some audios, while the reverse pairing also exhausts a
+publication window's four-proposal budget. These conditional queries can still
+be outside training support, but establish that simple module recombination
+does not solve the observed system failures.
 
 Changes of representation remain open. A
 [conditional renewal model](https://proceedings.neurips.cc/paper/3740-time-rescaling-methods-for-the-estimation-and-assessment-of-non-poisson-neural-encoding-models.pdf)
