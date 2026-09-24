@@ -34,6 +34,14 @@ Head and release routing do transfer; their effects after joint fitting remain
 possible contributors. Earlier seed/memory stages also changed the shared
 backbone while those conditions were available.
 
+The omitted `frontier2` is a candidate-row consequence residual. It uses exact
+post-action features and supplied timing through the second future H; it is not
+the complete gameplay frontier defined by the formulation. The proposed
+[skeleton and row contract](audio_skeleton_information_contract.md#candidate-consequences-and-the-gameplay-frontier)
+retains candidate-consequence evaluation as an explicit row-decision component,
+while requiring new treatment of release opportunities that are no longer
+supplied in advance. That proposal is not yet implemented.
+
 R1 predicts actions on supplied source R/H timing with an original observed
 seed. The audio model learns event time as well as actions, starts at BOS and
 permits every legal nonempty row. These condition/support changes compound the

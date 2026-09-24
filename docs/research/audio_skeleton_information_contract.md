@@ -17,8 +17,12 @@ Skeleton reads its own history and an explicit projection of committed LN
 state. It does not read learned row-content history or a generic replay object
 that exposes unrelated history. Row materialization reads audio, skeleton,
 its own row history and exact physical state. It chooses columns, chords,
-tap/LN kinds and releases. Incremental publication does not require deciding
-an LN endpoint when publishing its head.
+tap/LN kinds and releases. Its design must also account for how candidate
+actions change the responses to subsequent legal continuations. The
+[gameplay frontier](../formulation/gameplay-state.md#target-response-and-frontier)
+owns that conceptual role; the finite evaluator and its training targets remain
+research choices. Incremental publication does not require deciding an LN
+endpoint when publishing its head.
 
 Let $A$ be audio, $C$ an optional external control, $K$ skeleton, $R$ rows and
 $S_i$ exact replay state. Define $O_i=\pi_{\mathrm{LN}}(S_i)$ explicitly:
@@ -53,6 +57,14 @@ there is no separate forward skeleton input. Audio can suggest possible future
 arrangements but does not identify which one will be sampled. This missing
 interface is not a proof that the joint distribution is unrepresentable.
 
+Neither joint model instantiates R1's `row_consequence` module. The transfer
+also removes its supplied future-timing inputs. As verified in the
+[transfer audit](r1_transfer_stability_audit.md#what-actually-transfers), the
+6.5M and 6.75M R1 checkpoints initialize identical joint models: the final
+`frontier2` correction has no direct parameter effect after migration. This
+is a missing candidate-action consequence path, not a measurement of how much
+of the new system's generation failure it explains.
+
 A controlled audit uses a complete Airborne Robots output from checkpoint
 `02f6511fbd146a656b84e6aaf95821068d56f9dc16b3a0d36c51e0267a3be910`.
 Only preceding taps are moved to available lanes. All event times, H/R roles,
@@ -83,14 +95,20 @@ flowchart TD
     A[Complete audio] --> E[Shared local and full-song encoding]
     E --> H[Head plan: previous head skeleton]
     E --> L[Release clock: skeleton history and LN state]
-    E --> M[Row materializer]
+    E --> M[Audio-conditioned row context and base scores]
     H --> L
     H --> M
     L --> M
     P[Past committed rows and exact state] --> M
     P --> O[LN-only projection]
     O --> L
-    M --> P
+    P --> X[Candidate post-action states and clocks]
+    H --> X
+    M --> F[Consequence-conditioned candidate preferences]
+    X --> F
+    M --> Q[Legal normalization and row sampling]
+    F --> Q
+    Q --> P
     C[Optional control] --> H
     C --> L
     C --> M
@@ -120,6 +138,78 @@ heads and/or releases. A probability increase through hold-related timing inputs
 is not structurally required to resolve a hold. It can be spent on heads and new
 holds, changing later history and timing. This is a possible amplification path,
 not yet a confirmed cause of the observed LN-heavy outputs.
+
+## Candidate consequences and the gameplay frontier
+
+The formulation's frontier is a response function over legal continuations
+and explicit horizons. It is not a single difficulty score or the name of one
+network. For the same past, choosing a tap, opening a hold or releasing a lane
+can change the responses to later actions. A row policy therefore needs a way
+to compare these consequences alongside its musical and arrangement preferences.
+The numerical target responses remain unspecified; paired charts and style
+annotations alone do not supply calibrated gameplay costs.
+
+The old [R1 consequence module](../../src/ensomi_model/research/bounded_typed_continuation/consequence.py)
+is a limited implementation of this idea. A small mirror-equivariant network
+adds one residual score per complete candidate row. It reads candidate action,
+post-action occupancy, immediate head/release intervals, and clocks passively
+advanced to the next strictly future H. Its shared timing features include the
+next candidate and next H; `frontier2` adds the gap to the second H. It does not
+simulate all actions at those two heads or encode the full frontier.
+
+Two distinct approximations must remain visible:
+
+- The feature module assumes no intervening actions when advancing clocks. Its
+  earliest-release field is a possibility from the supplied schedule, not a
+  predicted or committed LN tail. The next candidate can itself be H.
+- The final-stage [response preference](../../src/ensomi_model/research/bounded_typed_continuation/response.py)
+  evaluates an optimistic future with one tap at each of the next two H events
+  and unknown holds released at their earliest legal opportunities. It counts
+  heads with a same-lane prior-head or prior-release gap below 30 ms. That
+  machine preference is neither a complete playability target nor an inference
+  legality constraint.
+
+For the next prototype, retain the candidate-action interface in the row
+decision. For every legal candidate $a$, compute the exact immediate transition
+$S_i^a=T(S_i,a)$ and consequence features $\phi_i(a)$ from the past, this
+hypothetical state and the available head preview. A small initial design is
+
+$$
+\ell_i(a)=\ell_{\mathrm{row}}(A,C,K,R_{<i},S_i,a)
++g_\theta\bigl(h_i^{\mathrm{row}},\phi_i(a)\bigr),
+$$
+
+followed by normalization over legal rows. The row context includes direct
+audio and skeleton inputs. Candidate-dependent occupancy and release effects
+can distinguish tap/LN alternatives even when head and release masks coincide;
+the existing mask-only routing terms cannot do that at a fixed context.
+An uncalibrated learned residual is a consequence-conditioned preference,
+not an estimated canonical demand quantity merely because it uses these features.
+
+Immediate transitions are exact. Further continuation responses are evaluated
+on declared hypothetical futures, with an explicit horizon and approximation.
+They must not use future actual rows, reference LN endpoints or future actual
+occupancy. A generated head preview is available to the row policy; upcoming
+release-only times are still conditional on LN choices. The evaluator must
+either mark them unknown or query the release model on a candidate's hypothetical
+LN projection. Substituting the next H for an unknown next release opportunity
+would change the old feature's meaning. Copying old weights requires compatible
+input semantics, not just compatible tensor shapes.
+
+Hypothetical queries do not mutate committed state or consume publication RNG.
+After one row is chosen, only its actual LN projection feeds skeleton generation.
+Using the full-history consequence score to resample or reject skeleton plans
+would violate the stated skeleton independence and requires a separate design
+change. This places the first consequence module in row selection without
+silently reintroducing the removed row-content-to-timing path.
+
+Train the initial residual jointly with the row likelihood on the same inputs
+available at inference, including explicitly marked finite lookahead. The old
+30 ms preference is not automatically inherited as a universal target. Test
+same-head-mask tap/LN choices, release-before-head alternatives and increasing
+lookahead on matched states before attributing native improvements to a richer
+frontier approximation. Legal support, source likelihood and inspected
+playability answer different questions.
 
 ## Feasibility, lookahead and publication
 
