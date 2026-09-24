@@ -13,6 +13,17 @@ from .features import (
     LNProjection, consequences, head_clocks, preview_after, preview_features,
     release_clocks, release_masks, row_support, skeleton_tokens,
 )
+from .release import conditioned_release_logits
+
+
+@dataclass(frozen=True)
+class ReleaseWaitInputs:
+    times: torch.Tensor
+    history: torch.Tensor
+    clocks: torch.Tensor
+    native_indices: torch.Tensor
+    destinations: torch.Tensor
+    offsets: torch.Tensor
 
 
 @dataclass(frozen=True)
@@ -29,6 +40,7 @@ class PlannedInputs:
     row_preview: torch.Tensor
     consequence_local: torch.Tensor
     consequence_timing: torch.Tensor
+    release_waits: tuple[ReleaseWaitInputs, ...]
 
 
 @dataclass(frozen=True)
@@ -80,6 +92,46 @@ def collate_interval(example, config, device='cpu'):
     r_valid, r_forced = release_masks(ln, native, previews, example.chart.duration_ms)
     r_valid &= x.timing_valid.numpy()
     r_forced &= r_valid
+
+    def tensor(value, dtype=None):
+        return torch.as_tensor(value, dtype=dtype, device=device)
+
+    waits = []
+    last_audio_query = int(x.timing_times.max())
+    if config.condition_full_holds:
+        # Each prefix defines a hypothetical unchanged LN state through H-1.
+        # Actual future releases only select scored targets, never this horizon.
+        for prefix in np.unique(query_indices[r_valid.any(-1)]):
+            i = int(np.flatnonzero(query_indices == prefix)[0])
+            if not all(t is not None for t in ln[i].starts_ms) or not previews[i].times_ms:
+                continue
+            start, deadline = observed[i], previews[i].times_ms[0] - 1
+            bins = np.arange((start + 1) // 10, deadline // 10 + 1)
+            anchors = bins * 10 + 9
+            padded = _pad_first(anchors, edge=True)
+            clocks_r = release_clocks([ln[i]] * len(anchors), [previous_skeleton[i]] * len(anchors),
+                                     anchors, [previews[i]] * len(anchors), example.chart.duration_ms)
+            destinations = np.flatnonzero(((query_indices == prefix)[:, None] & r_valid).reshape(-1))
+            waits.append(ReleaseWaitInputs(tensor(padded),
+                tensor(np.full(len(padded), int(x.timing_history[i])), torch.long),
+                tensor(_pad_first(clocks_r, edge=True)),
+                tensor(np.arange(start + 1, deadline + 1) - bins[0] * 10, torch.long),
+                tensor(destinations, torch.long), tensor(native.reshape(-1)[destinations] - start - 1, torch.long)))
+            last_audio_query = max(last_audio_query, int(anchors[-1]))
+
+    if waits:
+        # Refill from complete audio: formerly padded crop positions can become
+        # real frames when the hypothetical wait extends past the interval.
+        frames, audio_start = len(example.chart.mel), int(x.mel_start[0])
+        high = np.clip((last_audio_query - 20) / 10, 0., frames - 1)
+        audio_stop = min(frames - 1, int(np.floor(high)) + 1) + config.audio_halo_frames + 1
+        mel = np.zeros((audio_stop - audio_start, 128), np.float32)
+        valid = np.zeros(len(mel), np.bool_)
+        low, high = max(0, audio_start), min(frames, audio_stop)
+        mel[low - audio_start:high - audio_start] = example.chart.mel[low:high]
+        valid[low - audio_start:high - audio_start] = True
+        x = replace(x, mel=torch.from_numpy(_pad_first(mel)[None]),
+                    mel_valid=torch.from_numpy(_pad_first(valid)[None]))
     target_head = np.asarray([bool(roles[i]) if i < len(roles) else False for i in query_indices])
     head_event = base.targets.timing_event.numpy() & target_head[:, None]
     release_event = base.targets.timing_event.numpy() & ~target_head[:, None]
@@ -97,16 +149,13 @@ def collate_interval(example, config, device='cpu'):
     row_preview = preview_features(row_previews, row_times, row_roles, example.chart.duration_ms, config.lookahead)
     local, future = consequences(row_states, row_times, row_previews, example.chart.duration_ms)
 
-    def tensor(value, dtype=None):
-        return torch.as_tensor(value, dtype=dtype, device=device)
-
     x = replace(x, row_legal=torch.from_numpy(support))
     x = IntervalInputs(**{name: value.to(device) for name, value in vars(x).items()})
     inputs = PlannedInputs(x, tensor(_pad_first(head_raw)[None]),
         tensor(_pad_first(np.ones(len(head_raw), np.bool_))[None]),
         tensor(query_head_positions - head_start, torch.long), tensor(clocks),
         tensor(_pad_first(skeleton_raw)[None]), tensor(r_clocks), tensor(r_valid), tensor(r_forced),
-        tensor(row_preview), tensor(local), tensor(future))
+        tensor(row_preview), tensor(local), tensor(future), tuple(waits))
     return PlannedBatch(inputs, tensor(head_event), tensor(release_event), base.targets.row_index.to(device),
                         example.weight_per_second)
 
@@ -130,6 +179,11 @@ def score_interval(model, inputs, coarse):
     h = model.head_logits(audio, _gather(model.head_temporal, head_history, inputs.head_history), inputs.head_clock)
     r = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, x.timing_history),
                              inputs.release_clock)
+    for wait in inputs.release_waits:
+        audio = interpolate_audio(encoded, wait.times[None], x.mel_start, x.frame_count)[0]
+        raw = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, wait.history), wait.clocks)
+        conditional = conditioned_release_logits(raw.flatten()[wait.native_indices])
+        r = r.flatten().index_copy(0, wait.destinations, conditional[wait.offsets]).reshape_as(r)
     if len(x.row_times):
         audio = interpolate_audio(encoded, x.row_times[None], x.mel_start, x.frame_count)[0]
         rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),

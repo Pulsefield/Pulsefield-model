@@ -1,11 +1,12 @@
 # First-release conditioning before a required head
 
 A known future H and four occupied lanes require at least one intervening
-release. The [planned prototype](planned_audio_continuation.md) currently makes
-the last available release clock certain. That preserves legal completion but
-can concentrate substantial probability one millisecond before the head.
-Conditioning the learned waiting law on a feasible release offers a different
-distribution without imposing a minimum gap or forbidding four-lane holds.
+release. The default law in the [planned prototype](planned_audio_continuation.md)
+moves surviving probability to the last available release clock. That preserves
+legal completion but can concentrate substantial probability one millisecond
+before the head. The optional `condition_full_holds` law conditions the raw
+waiting distribution on a feasible release without imposing a minimum gap or
+forbidding four-lane holds. Native quality under this law requires evaluation.
 
 ## Located event and exact reproduction
 
@@ -36,7 +37,7 @@ $$
 q(u)=r_u\prod_{v=s+1}^{u-1}(1-r_v).
 $$
 
-The current implementation replaces $r_d$ with one. Therefore its event mass
+The deadline-atom implementation replaces $r_d$ with one. Therefore its event mass
 at $d$ is the entire preceding survival probability
 
 $$
@@ -89,8 +90,10 @@ normalization can be tested without inventing a calibrated gameplay penalty.
 
 ## Training and inference requirements
 
-This alternative has not been implemented or trained. Changing only inference
-would no longer sample the current deadline-atom likelihood.
+The conditional law is implemented in interval training and native sampling.
+Existing checkpoints were fitted under the deadline-atom law; enabling the flag
+on those fixed weights is an intervention on the generated distribution, not
+evidence of a trained conditional-law endpoint.
 
 For a full-occupancy wait, training must include the same normalizer used at
 inference. If an interval ends before the first release, it scores conditional
@@ -102,6 +105,21 @@ no-release state. This may extend beyond a source interval's actual first
 release or local audio crop. Complete audio and the chosen head plan permit
 those hypothetical queries in both modes. Future actual occupancy and source
 LN endpoints do not. Local audio must include the required horizon and halo.
+
+The shared probability primitive computes conditional hazard odds as
+
+$$
+\frac{r_u^*}{1-r_u^*}
+=\frac{\exp(\operatorname{logit}(r_u))}
+{1-\prod_{v=u+1}^{d}(1-r_v)},\qquad u<d.
+$$
+
+Suffix probabilities are accumulated in log space. The final hazard is one,
+while its raw value still influences earlier hazards through normalization.
+Tests compare probabilities and gradients to normalized first-event masses,
+including very small raw probabilities. The implementation uses `logaddexp`
+for the integrated hazard because the tested MPS `softplus` operation rounds
+very small positive outputs to zero before the subsequent logarithm.
 
 The head process has no analogous requirement to produce an event during every
 rest. This conditioning applies when a release is required by the known head

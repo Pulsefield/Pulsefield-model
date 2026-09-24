@@ -116,7 +116,8 @@ def train(config, *, resolved_yaml=''):
     norm, norm_identity = training_normalization(config, charts, norm)
     protocol, protocol_identity = freeze_protocol(charts, config)
     model = PlannedAudioModel(PlannedModelConfig(bounded_head=config.bounded_head,
-        head_bound=config.head_bound, head_decay_ms=config.head_decay_ms))
+        head_bound=config.head_bound, head_decay_ms=config.head_decay_ms,
+        condition_full_holds=config.condition_full_holds))
     transfer = initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256)
     model.set_audio_normalization(torch.tensor(norm['mean']), torch.tensor(norm['std']))
     tracked_modules = tuple(name for name in ('head_temporal', 'head_condition', 'timing', 'release_clock',

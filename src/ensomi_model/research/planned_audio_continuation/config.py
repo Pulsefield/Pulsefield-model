@@ -21,6 +21,7 @@ class PlannedTrainConfig(ContextTrainConfig):
     bounded_head: bool = False
     head_bound: float = 4.
     head_decay_ms: float = 1000.
+    condition_full_holds: bool = False
 
     def validate(self):
         super().validate()
@@ -28,5 +29,7 @@ class PlannedTrainConfig(ContextTrainConfig):
             raise ValueError('Planned training requires full audio and separate skeleton timing')
         if type(self.bounded_head) is not bool:
             raise ValueError('Bounded head mode must be boolean')
+        if type(self.condition_full_holds) is not bool:
+            raise ValueError('Full-hold conditioning mode must be boolean')
         if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
             raise ValueError('Head history bound and decay must be finite and positive')

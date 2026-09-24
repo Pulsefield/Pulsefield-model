@@ -28,6 +28,7 @@ class PlannedModelConfig(ContextModelConfig):
     bounded_head: bool = False
     head_bound: float = 4.
     head_decay_ms: float = 1000.
+    condition_full_holds: bool = False
 
     def __post_init__(self):
         super().__post_init__()
@@ -40,6 +41,8 @@ class PlannedModelConfig(ContextModelConfig):
             raise ContractError('Skeleton context exceeds its bounded history or lacks two-head preview')
         if type(self.bounded_head) is not bool:
             raise ContractError('Bounded head mode must be boolean')
+        if type(self.condition_full_holds) is not bool:
+            raise ContractError('Full-hold conditioning mode must be boolean')
         if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
             raise ContractError('Head history bound and decay must be finite and positive')
 

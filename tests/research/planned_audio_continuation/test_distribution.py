@@ -21,6 +21,7 @@ from ensomi_model.research.planned_audio_continuation.features import (
 from ensomi_model.research.planned_audio_continuation.generation import rollout
 from ensomi_model.research.planned_audio_continuation.intervals import collate_interval, interval_losses, score_interval
 from ensomi_model.research.planned_audio_continuation.model import PlannedAudioModel, PlannedModelConfig
+from ensomi_model.research.planned_audio_continuation.release import conditioned_release_logits
 from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 
 
@@ -179,11 +180,13 @@ def test_mirrored_charts_have_the_same_skeleton_and_mirrored_row_probabilities()
 
 @pytest.mark.skipif(not torch.backends.mps.is_available(), reason='MPS unavailable')
 @pytest.mark.parametrize('bounded', [False, True])
-def test_mps_joint_distribution_and_gradients_match_cpu(bounded):
+@pytest.mark.parametrize('conditioned', [False, True])
+def test_mps_joint_distribution_and_gradients_match_cpu(bounded, conditioned):
     torch.manual_seed(52)
-    cpu = PlannedAudioModel(replace(config(), bounded_head=bounded))
+    settings = replace(config(), bounded_head=bounded, condition_full_holds=conditioned)
+    cpu = PlannedAudioModel(settings)
     torch.nn.init.normal_(cpu.row_consequence.output.weight, std=.05)
-    mps = PlannedAudioModel(replace(config(), bounded_head=bounded)).to('mps')
+    mps = PlannedAudioModel(settings).to('mps')
     mps.load_state_dict(cpu.state_dict())
     c = source()
     losses, gradients = [], []
@@ -201,14 +204,25 @@ def test_mps_joint_distribution_and_gradients_match_cpu(bounded):
 
 
 @pytest.mark.parametrize('bounded', [False, True])
-def test_cached_native_scores_match_teacher_scores_and_chunk_partition_preserves_draws(bounded):
+@pytest.mark.parametrize('conditioned', [False, True])
+def test_cached_native_scores_match_teacher_scores_and_chunk_partition_preserves_draws(bounded, conditioned):
     torch.manual_seed(113)
-    model = PlannedAudioModel(replace(config(), bounded_head=bounded)).eval()
+    model = PlannedAudioModel(replace(config(), bounded_head=bounded, condition_full_holds=conditioned)).eval()
     with torch.no_grad():
         (model.head_base if bounded else model.timing[-1]).bias.fill_(math.log(.05 / .95))
         model.release_clock[-1].bias.fill_(math.log(.08 / .92))
         model.row_consequence.output.weight.normal_(std=.05)
     mel = np.random.default_rng(32).normal(size=(15, 128)).astype(np.float32)
+    if conditioned:
+        row_base = model.planned_row_log_probs
+
+        def favor_full_holds(*args):
+            scores = row_base(*args)
+            bias = torch.zeros(256)
+            bias[ROW_ACTIONS.index((2, 2, 2, 2))] = 30
+            return (scores + bias).log_softmax(-1)
+
+        model.planned_row_log_probs = favor_full_holds
     original_head, original_release, original_row = model.head_logits, model.release_logits, model.planned_row_log_probs
     head_records, release_records, row_records = {}, {}, []
 
@@ -232,6 +246,8 @@ def test_cached_native_scores_match_teacher_scores_and_chunk_partition_preserves
     a = rollout(model, mel, 150, seed=17, chunk_ms=23, head_chunk_ms=31, max_seconds=20)
     model.head_logits, model.release_logits, model.planned_row_log_probs = original_head, original_release, original_row
     assert a.completed and a.rows and not any(a.metrics['open_lanes'])
+    if conditioned:
+        assert a.metrics['conditioned_release_waits'] > 0
     b = rollout(model, mel, 150, seed=17, chunk_ms=17, head_chunk_ms=7, max_seconds=20)
     assert a.rows == b.rows
     generated = chart([r.time_ms for r in a.rows], [r.actions for r in a.rows], 150)
@@ -244,5 +260,21 @@ def test_cached_native_scores_match_teacher_scores_and_chunk_partition_preserves
     for i in torch.where(batch.inputs.base.timing_valid.any(-1))[0]:
         torch.testing.assert_close(scores.head[i], head_records[head_clocks_array[i].tobytes()], atol=2e-5, rtol=2e-6)
     release_clocks_array = batch.inputs.release_clock.cpu().numpy()
+    ordinary = batch.inputs.release_valid.clone().flatten()
+    for wait in batch.inputs.release_waits:
+        ordinary[wait.destinations] = False
+        native_raw = torch.stack([release_records[t.tobytes()] for t in wait.clocks.cpu().numpy()])
+        expected = conditioned_release_logits(native_raw.flatten()[wait.native_indices])[wait.offsets]
+        torch.testing.assert_close(scores.release.flatten()[wait.destinations], expected, atol=2e-5, rtol=2e-6)
+    ordinary = ordinary.reshape_as(batch.inputs.release_valid)
     for i in torch.where(batch.inputs.release_valid.any(-1))[0]:
-        torch.testing.assert_close(scores.release[i], release_records[release_clocks_array[i].tobytes()], atol=2e-5, rtol=2e-6)
+        mask = ordinary[i]
+        if mask.any():
+            torch.testing.assert_close(scores.release[i][mask], release_records[release_clocks_array[i].tobytes()][mask],
+                                       atol=2e-5, rtol=2e-6)
+    if conditioned:
+        model.config = replace(model.config, condition_full_holds=False)
+        baseline = rollout(model, mel, 150, seed=17, max_seconds=20)
+        assert baseline.completed
+        heads = lambda rows: [r.time_ms for r in rows if any(a in (1, 2) for a in r.actions)]
+        assert heads(a.rows) == heads(baseline.rows)

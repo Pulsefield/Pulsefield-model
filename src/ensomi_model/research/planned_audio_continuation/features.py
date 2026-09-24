@@ -93,7 +93,11 @@ def release_clocks(states, previous_skeleton_times, times, previews, duration_ms
 
 
 def release_masks(states, native_times, previews, duration_ms):
-    """A deadline atom is part of both training and sampling, never a crop edge."""
+    """Mark physical support and certain last hazards, never a crop-edge closure.
+
+    A full-hold wait's earlier hazards determine whether its final event mass
+    follows the raw deadline-atom law or the conditionally normalized law.
+    """
     valid = np.zeros_like(native_times, dtype=np.bool_)
     forced = np.zeros_like(valid)
     for i, (state, preview) in enumerate(zip(states, previews)):

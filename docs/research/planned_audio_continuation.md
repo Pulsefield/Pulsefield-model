@@ -46,12 +46,21 @@ holds. Source head plans are teacher-forced intermediates during fitting,
 not additional inference inputs unavailable to the generator.
 
 If all four lanes are held, at least one release must occur before the next H.
-The release hazard is exactly one at H minus one millisecond. At the true audio
-end, remaining holds close with probability one. These deadline atoms assign
-remaining survival mass to the boundary in both training and sampling.
-They do not conditionally renormalize an unconstrained waiting distribution.
-A row cannot leave all lanes occupied when the next H is one millisecond away.
-These are feasibility conditions, not comfort guarantees.
+The default law assigns remaining survival mass to H minus one millisecond;
+this reproduces the first checkpoints. With `condition_full_holds=true`, the
+raw first-release distribution is instead conditioned on an event before H.
+Both modes have a certain final hazard, but their earlier hazards and final
+event probabilities differ. The flag reaches training and is checkpointed.
+No parameters are added. The [waiting-law analysis](release_wait_conditioning.md)
+defines the distinction and the observed deadline artifact.
+
+Conditional training queries hypothetical no-release states through H minus
+one, extending the local audio crop and halo if necessary. No actual future
+tails enter these queries. Native generation scores the same complete feasible
+wait before sampling; `chunk_ms` does not truncate its normalizer. This additional
+work scales with the wait length. Partial occupancy and true audio-end closure
+retain the original law. A row cannot leave all lanes occupied when the next H
+is one millisecond away. These are feasibility conditions, not comfort guarantees.
 
 ## Audio, row state and consequences
 

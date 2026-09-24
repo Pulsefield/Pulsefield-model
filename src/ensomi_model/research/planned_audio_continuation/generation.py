@@ -21,6 +21,7 @@ from .features import (
     release_clocks, release_masks, row_support, skeleton_tokens,
 )
 from .model import PlannedAudioModel, PlannedModelConfig
+from .release import conditioned_release_logits
 
 
 class _BudgetStop(Exception):
@@ -109,7 +110,7 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
     planner = HeadPlanner(model, encoded, duration_ms, seed ^ 0x17AB, head_chunk_ms, guard)
     startup = first30_rows = first30_heads = None
     first30_rows_clock = first30_heads_clock = None
-    release_bins = deadline_events = terminal_events = 0
+    release_bins = deadline_events = terminal_events = conditioned_waits = 0
     reason = 'completed'
 
     def tensor(value, dtype_override=None):
@@ -131,7 +132,9 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
                 else:
                     event_time, head_role = next_h, True
             else:
-                end = min(cursor + chunk_ms, duration_ms if next_h is None else next_h - 1)
+                conditioned = model.config.condition_full_holds and all(replay.occupancy) and next_h is not None
+                end = (next_h - 1 if conditioned else
+                       min(cursor + chunk_ms, duration_ms if next_h is None else next_h - 1))
                 if end > cursor:
                     bins = torch.arange((cursor + 1) // 10, end // 10 + 1, device=device)
                     anchors = bins * 10 + 9
@@ -146,6 +149,10 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
                     valid, forced = release_masks(states, native.cpu().numpy(), previews, duration_ms)
                     valid &= native.cpu().numpy() <= end
                     forced &= valid
+                    if conditioned:
+                        indices = torch.where(tensor(valid, torch.bool).flatten())[0]
+                        logits = logits.index_copy(0, indices, conditioned_release_logits(logits[indices]))
+                        conditioned_waits += 1
                     event, residual = sample_hazards(logits, tensor(valid, torch.bool).flatten(),
                         tensor(forced, torch.bool).flatten(), release_rng, residual)
                     release_bins += len(bins)
@@ -211,6 +218,7 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
         step_p99_ms=float(np.quantile(latencies, .99) * 1000) if latencies else None,
         scheduler_steps=len(latencies), head_bins_scored=planner.bins, release_bins_scored=release_bins,
         forced_deadline_releases=deadline_events, forced_terminal_releases=terminal_events,
+        conditioned_release_waits=conditioned_waits,
         planned_heads=len(planner.generated), coverage=coverage,
         latency_scope='cached canonical Mel through published coverage; excludes waveform decode and Mel computation'))
 

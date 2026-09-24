@@ -235,12 +235,13 @@ Every committed head must remain realizable. Four active holds leave no free
 column under the present action alphabet, so at least one must end before the
 next head. If no intervening integer time exists, the preceding row cannot leave
 all columns held. Conditioning a release waiting-time distribution on such a
-deadline requires the same normalization in training and sampling. An
-alternative, used by the prototype, defines hazard one at the last legal
-release clock. It assigns remaining survival mass to that deadline in both
-training and sampling; this is a deadline atom rather than conditional
-renormalization of the unconstrained waiting law. Incompatible
-external prefixes and plans must be detected before publication.
+deadline requires the same normalization in training and sampling. The
+prototype implements this with `condition_full_holds=true`. Its default mode
+preserves the earlier deadline atom: only the last raw hazard changes to one,
+assigning remaining survival mass there. Conditional normalization also has a
+certain last hazard, but changes preceding hazards to preserve the normalized
+first-event shape. Incompatible external prefixes and plans must be detected
+before publication.
 
 Physical feasibility is not comfortable play. Release-to-head gaps, chord
 burden and sustained occupancy still need contextual inspection. Valid Tech,
