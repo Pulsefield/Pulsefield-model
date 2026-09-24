@@ -180,13 +180,36 @@ Changed history and continued RNG state are both live explanations; these
 counts do not isolate their contributions or prove a systematic population
 bias toward taps.
 
+The completed Lens inspection covers 52 declared scopes: 31 newly inspected
+scopes with 109 time pages and complete action/articulation tables, plus 21
+scopes reused through exact action, entry-hold and articulation identity. The
+scope selection includes fixed musical contexts, every resampled publication
+window and every rejected proposal. It is not whole-song visual review.
+
+The accepted scopes retain dense cross-column H bursts, broad chords,
+overlapping holds and independently released subsets. Composition changes are
+visible as well as measurable. In Airborne's LN-heavy edited window, a mostly
+continuous LN relay becomes primarily single/double taps before LNs return.
+Prom Queen's edited windows remain LN-rich, but its later fixed scope changes
+from three occupied columns with repeated free-column taps to more available
+columns and different overlapping holds. Neither LN presence nor aggregate
+LN fraction captures this organizational difference.
+
+A supplementary Airborne inspection finds an isolated column-0 LN from
+82889 to 82890 ms, well before audio end and without full occupation. The
+1-ms object passes both close-pair screens. Its musical and player meaning
+is unresolved; it demonstrates an uncovered duration/articulation question,
+not evidence for a universal LN-duration floor.
+
 This is bounded evidence of physical-failure removal at low measured sampling
-cost, with two failed composition guards. Whole-cohort musical quality and the
-remaining Lens scopes are not established. The policy remains a research option
-and is not enabled in the packaged CLI.
+cost, with two failed composition guards and retained expressive mechanisms
+in inspected scopes. No listening or player test establishes musical quality.
+The policy remains a research option and is not enabled in the packaged CLI.
 
 Local evidence owner: `artifacts/joint-audio/20260925-unpublished-continuation-v1`.
 Result SHA-256:
 `3fff511d78ef4d0fd3400f33853d2e79219a69dbd034e67bee9d1263b5cb2ca9`.
-The full Lens plan has 52 scopes, reusing 21 event-identical views with explicit
-provenance; a rendered page alone is not evidence of completed inspection.
+Completed review SHA-256:
+`7d41b477474a0ee0c0a95a367675fe51d33b743794be9568700ec675332c7267`.
+The supplementary duration scope adds one inspected time page to the 109 pages
+in the declared plan. A rendered page alone is not evidence of inspection.
