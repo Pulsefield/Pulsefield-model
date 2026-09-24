@@ -21,6 +21,8 @@ def test_packaged_settings_reject_flat_timing_and_unused_fields():
     cfg = compose_config(['updates=32', 'validation_every=32', 'validation_songs=6', 'run_name=probe'])
     assert cfg.updates == 32 and cfg.global_audio and not cfg.bounded_timing
     assert cfg.validation_songs == 6 and cfg.run_name == 'probe'
+    bounded = compose_config(['bounded_head=true', 'head_bound=3', 'head_decay_ms=400'])
+    assert bounded.bounded_head and bounded.head_bound == 3 and bounded.head_decay_ms == 400
     for override in ('global_audio=false', 'bounded_timing=true'):
         with pytest.raises(ValueError, match='separate skeleton'):
             compose_config([override])
@@ -67,15 +69,17 @@ def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_pa
     cfg = PlannedTrainConfig(root=str(tmp_path), manifest_sha256=digest(manifest),
         normalization_file=str(norm_file), normalization_sha256=digest(norm_file),
         plan_updates=2, updates=2, songs_per_update=1, intervals_per_song=2,
-        interval_ms=7, validation_every=2, device='cpu', max_seconds=60)
+        interval_ms=7, validation_every=2, device='cpu', max_seconds=60,
+        bounded_head=True, head_bound=3, head_decay_ms=400)
     monkeypatch.setattr(training, 'revision', lambda: 'f' * 40)
     monkeypatch.setattr(training, 'load_corpus', lambda root: (charts, norm))
     monkeypatch.setattr(training, 'initialize_from_r1', lambda *args: {'copied': []})
     monkeypatch.setattr(training, '_resource_stop', lambda root: None)
     lengths = []
 
-    def small_model(_):
-        model = PlannedAudioModel(config())
+    def small_model(settings):
+        model = PlannedAudioModel(replace(config(), bounded_head=settings.bounded_head,
+            head_bound=settings.head_bound, head_decay_ms=settings.head_decay_ms))
         model.context.register_forward_pre_hook(lambda module, args: lengths.append(int(args[1].sum())))
         return model
 
@@ -91,6 +95,7 @@ def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_pa
     torch.testing.assert_close(model.audio_mean, torch.full((128,), .7))
     torch.testing.assert_close(model.audio_std, torch.full((128,), 1.3))
     assert metadata['source_revision'] == 'f' * 40
+    assert model.config.bounded_head and model.config.head_bound == 3 and model.config.head_decay_ms == 400
     generated = rollout(model, src.mel, src.duration_ms, seed=3, max_seconds=10)
     assert generated.completed and not any(generated.metrics['open_lanes'])
     with pytest.raises(FileExistsError):

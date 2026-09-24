@@ -44,12 +44,13 @@ def source():
     return chart([0, 4, 5, 10], [(2, 2, 2, 2), (3, 0, 0, 0), (1, 0, 0, 0), (0, 3, 3, 3)], 10)
 
 
-def test_joint_law_counts_head_survival_and_release_deadline_atoms_independently():
-    model = PlannedAudioModel(config())
+@pytest.mark.parametrize('bounded', [False, True])
+def test_joint_law_counts_head_survival_and_release_deadline_atoms_independently(bounded):
+    model = PlannedAudioModel(replace(config(), bounded_head=bounded))
     for parameter in model.parameters():
         torch.nn.init.zeros_(parameter)
     with torch.no_grad():
-        model.timing[-1].bias.fill_(math.log(.2 / .8))
+        (model.head_base if bounded else model.timing[-1]).bias.fill_(math.log(.2 / .8))
         model.release_clock[-1].bias.fill_(math.log(.3 / .7))
     c = source()
     coarse = model.encode_coarse(torch.from_numpy(c.mel)[None])
@@ -177,11 +178,12 @@ def test_mirrored_charts_have_the_same_skeleton_and_mirrored_row_probabilities()
 
 
 @pytest.mark.skipif(not torch.backends.mps.is_available(), reason='MPS unavailable')
-def test_mps_joint_distribution_and_gradients_match_cpu():
+@pytest.mark.parametrize('bounded', [False, True])
+def test_mps_joint_distribution_and_gradients_match_cpu(bounded):
     torch.manual_seed(52)
-    cpu = PlannedAudioModel(config())
+    cpu = PlannedAudioModel(replace(config(), bounded_head=bounded))
     torch.nn.init.normal_(cpu.row_consequence.output.weight, std=.05)
-    mps = PlannedAudioModel(config()).to('mps')
+    mps = PlannedAudioModel(replace(config(), bounded_head=bounded)).to('mps')
     mps.load_state_dict(cpu.state_dict())
     c = source()
     losses, gradients = [], []
@@ -198,11 +200,12 @@ def test_mps_joint_distribution_and_gradients_match_cpu():
         torch.testing.assert_close(gradients[0][name], gradients[1][name], atol=2e-4, rtol=2e-4)
 
 
-def test_cached_native_scores_match_teacher_scores_and_chunk_partition_preserves_draws():
+@pytest.mark.parametrize('bounded', [False, True])
+def test_cached_native_scores_match_teacher_scores_and_chunk_partition_preserves_draws(bounded):
     torch.manual_seed(113)
-    model = PlannedAudioModel(config()).eval()
+    model = PlannedAudioModel(replace(config(), bounded_head=bounded)).eval()
     with torch.no_grad():
-        model.timing[-1].bias.fill_(math.log(.05 / .95))
+        (model.head_base if bounded else model.timing[-1]).bias.fill_(math.log(.05 / .95))
         model.release_clock[-1].bias.fill_(math.log(.08 / .92))
         model.row_consequence.output.weight.normal_(std=.05)
     mel = np.random.default_rng(32).normal(size=(15, 128)).astype(np.float32)

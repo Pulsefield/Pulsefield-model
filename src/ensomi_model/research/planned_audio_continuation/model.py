@@ -25,6 +25,9 @@ class PlannedModelConfig(ContextModelConfig):
     skeleton_hidden: int = 64
     skeleton_levels: int = 5
     lookahead: int = 16
+    bounded_head: bool = False
+    head_bound: float = 4.
+    head_decay_ms: float = 1000.
 
     def __post_init__(self):
         super().__post_init__()
@@ -35,6 +38,10 @@ class PlannedModelConfig(ContextModelConfig):
             raise ContractError('Skeleton dimensions and lookahead must be positive integers')
         if self.head_levels > 8 or self.skeleton_levels > self.history_levels or self.lookahead < 2:
             raise ContractError('Skeleton context exceeds its bounded history or lacks two-head preview')
+        if type(self.bounded_head) is not bool:
+            raise ContractError('Bounded head mode must be boolean')
+        if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
+            raise ContractError('Head history bound and decay must be finite and positive')
 
 
 class PlannedAudioModel(ContextAudioModel):
@@ -58,6 +65,14 @@ class PlannedAudioModel(ContextAudioModel):
         self.preview_condition = nn.Linear((config.lookahead + 1) * TIME_DIM + 2, config.hidden, bias=False)
         nn.init.zeros_(self.preview_condition.weight)
         self.row_consequence = RowConsequence(config.hidden, 'frontier2')
+        if config.bounded_head:
+            # Construct after all shared modules so the baseline parameter draws
+            # remain paired. This branch is a rate; the old timing MLP becomes
+            # a centered historical correction rather than another rate.
+            self.head_base = nn.Linear(config.conditioned_audio_width, 10)
+            nn.init.normal_(self.head_base.weight, std=.001)
+            nn.init.constant_(self.head_base.bias, math.log(.006 / .994))
+            nn.init.zeros_(self.timing[-1].bias)
 
     def timing_logits(self, *args, **kwargs):
         raise ContractError('Planned model requires separate head and release probability queries')
@@ -65,7 +80,7 @@ class PlannedAudioModel(ContextAudioModel):
     def row_log_probs(self, *args, **kwargs):
         raise ContractError('Planned rows require head preview and candidate consequences')
 
-    def head_logits(self, audio, history, clocks):
+    def _head_proposal(self, audio, history, clocks):
         if (audio.shape[:-1] != history.shape[:-2] or history.shape[-2:] != (2, self.config.head_hidden) or
                 clocks.shape != (*audio.shape[:-1], 2 * TIME_DIM)):
             raise ContractError('Head queries require their own history and head-only clocks')
@@ -73,6 +88,29 @@ class PlannedAudioModel(ContextAudioModel):
         value = pointwise(self.timing[0], torch.cat((value, audio[..., :self.config.audio_width]), -1))
         value = value + pointwise(self.context_timing, audio[..., self.config.audio_width:])
         return pointwise(self.timing[2], self.timing[1](value))
+
+    def head_parts(self, audio, history, clocks):
+        """Return an audio base, bounded historical residual and recency gate.
+
+        The first clock is elapsed time since the last H at the canonical bin
+        query time. Its availability bit distinguishes BOS from a long wait.
+        A long wait removes the historical veto, never forces a new head.
+        """
+        if not self.config.bounded_head:
+            raise ContractError('Head decomposition requires bounded head mode')
+        raw = self._head_proposal(audio, history, clocks)
+        base = pointwise(self.head_base, audio)
+        age = clocks[..., :TIME_DIM]
+        elapsed_ms = 1000 * age[..., 1].sinh().clamp_min(0)
+        gate = torch.exp(-elapsed_ms / self.config.head_decay_ms) * age[..., -1]
+        residual = self.config.head_bound * gate[..., None] * raw.tanh()
+        return base, residual, gate
+
+    def head_logits(self, audio, history, clocks):
+        if not self.config.bounded_head:
+            return self._head_proposal(audio, history, clocks)
+        base, residual, _ = self.head_parts(audio, history, clocks)
+        return base + residual
 
     def release_logits(self, audio, history, clocks):
         if (audio.shape[:-1] != history.shape[:-2] or

@@ -1,5 +1,6 @@
 """Typed process settings for the planned head/release research prototype."""
 from dataclasses import dataclass
+import math
 
 from ..joint_audio_continuation.context_config import ContextTrainConfig
 
@@ -17,8 +18,15 @@ class PlannedTrainConfig(ContextTrainConfig):
     validation_seed: int = 230943
     validation_every: int = 300
     max_seconds: float = 3600.
+    bounded_head: bool = False
+    head_bound: float = 4.
+    head_decay_ms: float = 1000.
 
     def validate(self):
         super().validate()
         if not self.global_audio or self.bounded_timing:
             raise ValueError('Planned training requires full audio and separate skeleton timing')
+        if type(self.bounded_head) is not bool:
+            raise ValueError('Bounded head mode must be boolean')
+        if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
+            raise ValueError('Head history bound and decay must be finite and positive')

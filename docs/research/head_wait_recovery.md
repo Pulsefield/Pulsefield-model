@@ -133,7 +133,11 @@ veto subsequent audio evidence. Both likelihood and sampling must use this
 same law. It does not force a head, impose a minimum interval or restrict
 events to detected beats. The audio base can still predict silence.
 
-This is an architecture hypothesis, not a completed remedy. Risks include
+The prototype exposes this law through its bounded_head option, using a linear
+audio base with 2250 parameters, a default bound of 4 and a 1000 ms decay time.
+The old timing MLP becomes the historical residual with a zero initial output
+bias. Every other shared initial parameter draw is unchanged. This is an
+architecture hypothesis, not a completed remedy. Risks include
 forgetting useful density/phase choices across rests and an audio base that
 itself fails to distinguish later activity. Evaluation must retain genuine
 rests, one-cue repeated figures, irregular placement and LN articulation,

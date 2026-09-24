@@ -28,6 +28,15 @@ A release-only event must release at least one hold and cannot create a head.
 This head-stream independence from LN choices is a stronger pilot bias than
 the general LN-feedback contract.
 
+The optional bounded head mode adds a 2250-parameter linear audio readout.
+Its historical correction has magnitude at most head_bound times
+exp(-head_age_ms / head_decay_ms), with zero historical correction at BOS.
+The default bound is 4 and decay time is 1000 ms. These settings are projected
+from the training config and saved with the model. After a long wait, current
+audio regains control without a forced head. The unbounded mode remains the
+default for reproducing the first checkpoint; the recovery hypothesis and its
+limitations are defined in the [waiting-time analysis](head_wait_recovery.md).
+
 For a fixed head plan, the row/release process visits only committed physical
 states. Its joint likelihood is the sum of the head hazard likelihood over
 every native millisecond, release hazard likelihood on occupied non-H clocks,
@@ -86,6 +95,11 @@ uv run --extra mps python -m ensomi_model.research.planned_audio_continuation.hy
   run_name=planned-preflight-v1 updates=32 validation_every=32 \
   validation_songs=6 max_seconds=300
 ```
+
+The recovery comparison uses bounded_head=true with the fresh run name
+planned-bounded-head-preflight-v1; its full fit uses
+planned-bounded-head-main-v1 and the same frozen exposure plan. No preflight
+model or optimizer state is reused for the full fit.
 
 The default full run uses 1200 fresh updates. Each run requires a clean product
 revision, pinned corpus/normalization/R1 bytes, and a fresh output directory.
