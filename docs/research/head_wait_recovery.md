@@ -144,6 +144,47 @@ rests, one-cue repeated figures, irregular placement and LN articulation,
 alongside recovery at the located failures. NLL and larger generated note
 counts cannot establish improvement by themselves.
 
+## Bounded comparison
+
+Source 88e56832287f492fdca81ea7194b90753526cc96 adds only the 2250-parameter
+base and the declared bounded historical path. Shared initial parameters,
+R1/consequence transfer, corpus, exposure plan and optimizer families remain
+matched, except the intentionally centered historical output bias. The
+4,247,438-parameter model completes 1200 fresh updates in 867.46 seconds.
+Checkpoint SHA-256 is
+47d41844afc673788cb640c67a1d5e41b2b9ca75ae679298c10072200925bce6.
+
+| Frozen failed prefix | Original next-H CDF within 5 s | Bounded CDF | Audio-base-only CDF |
+| --- | ---: | ---: | ---: |
+| Who?, 19 | 91.92% | >99.9999% | 99.9993% |
+| Death Piano, 19 | 69.51% | 93.52% | 79.33% |
+| Good Luck, Babe!, 17 | 70.65% | >99.9999% | 99.9996% |
+| Good Luck, Babe!, 19 | 63.84% | >99.9999% | 99.9984% |
+
+The predeclared requirement of at least 99% in all four cases fails on Death
+Piano. Report partial recovery. The three large improvements do not justify
+changing that threshold after seeing the result.
+
+All nine new native outputs complete and reparse. Every fixed review window
+now contains heads. Who's recurring pulse relations and Prom Queen's repeated
+chords/tap-LN exchanges remain visible; Good Luck includes distinct overlapping
+hold/release roles in one sample. Death Piano remains sparse, with only two
+and four heads in the reviewed contexts and internal head gaps up to 10.493 s.
+Expressive coverage and audio/player approval remain unestablished.
+
+Source-conditioned NLL/s is slightly worse: population 40.56 and BOS 27.40.
+This illustrates why native failure recovery is separate from proxy ranking.
+The first 30 physical rows take 0.147–0.258 s from cached canonical Mel.
+The densest two-second generated windows contain 15–28 heads and require
+0.019–0.042 s of publication work. These measured outputs do not establish
+arbitrary dense-source or concurrent-load performance, and timing excludes
+waveform decoding and Mel extraction.
+
+One all-held release deadline produces a 1 ms release-to-next-head gap.
+The [release waiting-law investigation](release_wait_conditioning.md) separates
+that boundary artifact from head recovery. This bounded endpoint is still an
+experimental model, not a final playability selection.
+
 ## Evidence identities
 
 Local owner:
@@ -158,3 +199,10 @@ Target-clock audit:
 d2fc84af6bdf9b605b468517049059358812264af4e78bdf1b1b47e92d3f5c55.
 These are exploratory, selected-scope results; no listening or player trial is
 included and this endpoint has not been promoted as playable.
+
+Bounded recovery probe:
+cd1148a1b6200e889945aef9e762a9de1d12657387352cd0d162231a79d04dc1.
+Bounded native result:
+29257b415498fcb432819057a3012e64de21f0a65b7a45d63c06c54688dc0273.
+Bounded Lens manifest:
+ceb8572f1d5ebe428b9dd375a40e5de16eae6991a5bce00fd5f81d14fb2a18c7.
