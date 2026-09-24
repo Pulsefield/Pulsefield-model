@@ -127,6 +127,46 @@ plan, rather than acting as a general event-rate floor. It does not by itself
 guarantee comfortable play: a very short feasible interval or a learned event
 shape concentrated near H can still produce difficult release/head relations.
 
+## Frozen-weight native comparison
+
+Source `12d80eb3ae488dbe8c13083975d3e60e702f4ef2` implements the conditional law.
+The unchanged bounded checkpoint was generated with both settings on Who,
+Death Piano, Prom Queen and Good Luck at seeds 17/19, and Airborne at seed 33.
+The default setting reproduced every row of all nine saved baseline outputs.
+All conditional outputs completed and independently reparsed; every planned H
+timestamp remained identical. Seven complete charts were unchanged.
+
+Across the nine charts, same-column release-to-next-head gaps at most 20 ms
+decreased from one to zero; head-to-head gaps at most 20 ms remained zero.
+These are diagnostic counts, not legality constraints or complete BAD labels.
+Airborne realizes the predicted 40148 ms release and 63 ms gap. Its following
+head becomes a 73 ms LN, and later row choices differ. The LN fraction changes
+from 14.90% to 13.82%. Good Luck seed 17 moves its first full-occupancy release
+from 199984 to 199980 ms and two later tails by one millisecond, preserving
+its long right-hand holds and their joint exit.
+
+Lens inspection covered the fixed comparison scopes and both changed
+full-occupancy episodes, including entering holds and Good Luck's exit.
+Fourteen new pages were viewed, with 36 pages verified byte-identical to the
+earlier inspected evidence. The specific one-millisecond re-press is removed;
+the later Airborne fixed window becomes all taps instead of containing one LN.
+Thus improved release mechanics do not imply identical musical organization
+or preserved style in every passage. Sparse piano generation and expressive
+coverage remain unresolved. There is no listening or player-verdict claim.
+
+Cached-Mel first-30-row latency was 0.155–0.258 s and eight-second readiness
+0.153–0.334 s. The paired run took 30.98 s on one CPU thread. These figures omit
+waveform/Mel preprocessing and do not establish simultaneous-load performance.
+
+The training corpus contains 1377 full-occupancy waits before a known H across
+108 of its 615 training arrangements. Their first-release-to-H gaps range from
+39 to 1872 ms, with median 97 ms. The frozen 1200-update exposure plan encounters
+787 such interval segments in 215 updates, including ten in the first 32
+updates. They cover 107210 scored milliseconds and require 205480 hypothetical
+milliseconds for normalization; the longest queried wait is 7107 ms. This
+establishes available supervision and bounded observed query cost, without
+turning the observed minimum gap into a constraint.
+
 ## Evidence
 
 Source: 88e56832287f492fdca81ea7194b90753526cc96.
@@ -139,3 +179,13 @@ d9141ebcf077625dfd884941fac7ea70548ffbbb70e5390ed9f6e7a5d8e7a53b.
 The diagnostic took 4.84 s on one CPU thread and is exploratory. The larger
 playability goal, piano activity, expressive coverage and validated release
 behavior remain open.
+
+The frozen native comparison and exposure audit are owned by
+artifacts/joint-audio/20260924-feasible-release-v1. Comparison result SHA-256:
+e992e57c53e848abffc9a6c1b16c20e8ccd55c2047bec95c31fce3be9eaad1c9.
+Lens review:
+9ad0f8b47d917db39c1d0ab522c0cf2aaec088a1b759d862352eac9f3fd2ba74.
+Exposure audit:
+8ec4c6ba78dd4e4a49472411fce0f35567496ee135e82f0a7b8d4ef9338304eb.
+This is an exploratory comparison of changed inference with frozen weights;
+training under the conditional law remains a separate question.
