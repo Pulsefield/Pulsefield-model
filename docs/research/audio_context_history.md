@@ -6,6 +6,10 @@ It retains native integer-millisecond hazards, complete legal action rows,
 exact LN state and the R1-derived finite causal history encoder. It is a
 research comparison, not an adopted V3 architecture.
 
+The [v2 playtest result](audio_joint_playtest_v2.md) records the matched four-cell
+study, fixed decoder refinement, scoped Lens observations and measured prefix
+publication latency.
+
 ## Conditions
 
 The local branch remains the canonical 128-bin Mel input and a 100 Hz,
