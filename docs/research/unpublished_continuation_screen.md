@@ -180,6 +180,12 @@ Changed history and continued RNG state are both live explanations; these
 counts do not isolate their contributions or prove a systematic population
 bias toward taps.
 
+The subsequent [state/stream diagnostic](continuation_state_dependence.md)
+crosses coherent generated states with saved and fresh RNG streams. It finds
+substantial sampled variation and a negative conditional state effect in one
+case, without establishing the declared magnitude threshold or a common
+persistent-collapse explanation.
+
 The completed Lens inspection covers 52 declared scopes: 31 newly inspected
 scopes with 109 time pages and complete action/articulation tables, plus 21
 scopes reused through exact action, entry-hold and articulation identity. The
