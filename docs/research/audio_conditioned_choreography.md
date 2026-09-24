@@ -16,6 +16,13 @@ optional coarse full-song branch, bounded timing modulation and shared-history
 interval likelihood. Its four matched cells separate the audio-context and
 history-path hypotheses; native playability remains an independent evaluation.
 
+The [skeleton/row information contract](audio_skeleton_information_contract.md)
+sets the next prototype's dependency boundary: skeleton history is separate from
+row-content history, explicit LN-state feedback remains available, and rows
+receive audio as well as skeleton information. It records a measured violation
+of that boundary in the current timing residual and a proposed head-plan/release-
+clock factorization. The existing joint models are diagnostic baselines for it.
+
 ## Current bounded direction
 
 Fix the owner-confirmed repository music Mel representation and jointly learn

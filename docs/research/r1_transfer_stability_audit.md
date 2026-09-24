@@ -185,13 +185,28 @@ new dynamics introduced by joint audio/timing training. Their effects interact;
 there is no defensible additive percentage decomposition from the existing
 experiments. The last-stage transfer identity is the narrow exception above.
 
-The remaining initialization question requires a matched joint-training
-comparison using plain 4.5M, memory 6M and release 6.5M weights with identical
-audio, sampling, objective and compute. Assign learning rates by the same module
-families in every arm: grouping by copied tensor names would give newly
-initialized routing modules a different rate and confound the comparison.
-Release 6.5M and response 6.75M need not be separate transfer arms. Such
-comparisons measure specific interventions, not universal blame shares.
+A matched joint-training comparison subsequently fitted plain 4.5M, memory 6M
+and release 6.5M initializations under source
+`4db2335bec1996626f7eec526ecb3a7bb8f7ab9e`. The repaired corpus has 615 TRAIN
+arrangements/240 songs. Each arm consumed the same 37,253,258 ms, 253,512 event
+rows and 345,613 heads in 1200 updates. Learning rates were assigned by module
+family in all arms; copied-name grouping would otherwise give newly initialized
+routing modules a different rate. Non-R1 initial parameters were identical.
+Release 6.5M and response 6.75M remain redundant transfer arms.
+
+Fixed source-conditioned validation NLL/s is 40.40358 for plain, 40.05814 for
+memory and 40.06002 for release. These scores do not rank playability. The native
+readout reached its 1800-second overall budget after 246 of 276 attempts: 245
+completed and one plain output was partial. Release and memory each completed
+84 cohort cases plus eight style cases; plain has 62 attempts and no completed
+style panel. Thirty cases remain unattempted. This is an incomplete three-arm
+comparison, not evidence of a per-chart model failure or a selected winner.
+
+The matched-run owner is `artifacts/joint-audio/20260924-r1-joint-lineage-v1`;
+training result SHA is
+`21aede634fed0106535cd7bf77b4470d858306a9489307bcd0d72f801fda965a` and bounded
+native-progress SHA is
+`0908f003216ddd944b795a3b4fb4ffa61d9e890341136e7d64a21cad4a46eedf`.
 
 Evaluation should retain separate head/release action checks and inspect local
 organization alongside whole-chart descriptors. Regional mode changes, sustained
@@ -199,7 +214,15 @@ occupancy and chord burden can be hidden by a stable global LN fraction. Matchin
 a reference fraction or removing all rapid releases is not a sufficient training
 target for free-form playable arrangements.
 
+The [skeleton/row information contract](audio_skeleton_information_contract.md)
+now separates the next prototype's skeleton history from row-content history,
+while retaining explicit LN-state feedback and direct audio conditioning of
+rows. Its prefix intervention locates an active row-content path in the current
+timing residual. The models above remain diagnostic baselines for that different
+dependency structure; additional fitting of them is not the presumed solution.
+
 Local evidence owner:
 `artifacts/joint-audio/20260924-r1-lineage-audit-v1`; read-only audit result SHA:
 `09b58360f7f08b2c75002d17e3fcab04d8921e9e31d76d4a28e20bf99ae297a5`.
-The audit does not refit models, alter original artifacts or add human judgments.
+That initial audit was read-only. Later runs have the separate owners identified
+above and do not modify the original restoration assets or human judgments.
