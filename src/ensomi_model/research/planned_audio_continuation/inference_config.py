@@ -19,6 +19,7 @@ class AudioInferenceConfig:
     startup_coverage_ms: int = 8000
     startup_min_rows: int = 30
     correct_short_attacks: bool = False
+    arrangement_profile: int | None = None
 
     def validate(self):
         if any(not isinstance(getattr(self, name), str) or not getattr(self, name).strip()
@@ -40,3 +41,5 @@ class AudioInferenceConfig:
             raise ValueError('max_seconds must be finite and positive')
         if type(self.correct_short_attacks) is not bool:
             raise ValueError('correct_short_attacks must be boolean')
+        if self.arrangement_profile is not None and (type(self.arrangement_profile) is not int or self.arrangement_profile < 0):
+            raise ValueError('arrangement_profile must be null or a nonnegative index')

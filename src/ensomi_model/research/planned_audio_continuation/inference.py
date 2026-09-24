@@ -106,6 +106,8 @@ def infer_audio(config: AudioInferenceConfig, *, resolved_yaml='', on_event=None
             check('model_load')
             tick = time.perf_counter()
             model, metadata = load_model(config.checkpoint_file, config.checkpoint_sha256, device=config.device)
+            if config.arrangement_profile is not None and config.arrangement_profile >= model.config.profile_count:
+                raise ContractError('Requested arrangement_profile is absent from this checkpoint')
             _synchronize(next(model.parameters()).device)
             profile['model_load_seconds'] = time.perf_counter() - tick
             recipe['checkpoint'] = metadata
@@ -149,7 +151,8 @@ def infer_audio(config: AudioInferenceConfig, *, resolved_yaml='', on_event=None
             native = rollout(model, mel, duration_ms, seed=config.seed, chunk_ms=config.chunk_ms,
                 head_chunk_ms=config.head_chunk_ms, max_rows=config.max_rows,
                 max_seconds=config.max_seconds-before_rollout, stop_callback=stop_reason,
-                on_update=publish, correct_short_attacks=config.correct_short_attacks)
+                on_update=publish, correct_short_attacks=config.correct_short_attacks,
+                arrangement_profile=config.arrangement_profile)
             profile.update(audio_encode_seconds=native.metrics['audio_encode_seconds'],
                 generation_seconds=native.metrics['generation_seconds'],
                 playback_ready_seconds=ready_seconds,

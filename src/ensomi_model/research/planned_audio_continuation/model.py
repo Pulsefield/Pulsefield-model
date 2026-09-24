@@ -29,6 +29,7 @@ class PlannedModelConfig(ContextModelConfig):
     head_bound: float = 4.
     head_decay_ms: float = 1000.
     condition_full_holds: bool = False
+    profile_count: int = 0
 
     def __post_init__(self):
         super().__post_init__()
@@ -43,6 +44,8 @@ class PlannedModelConfig(ContextModelConfig):
             raise ContractError('Bounded head mode must be boolean')
         if type(self.condition_full_holds) is not bool:
             raise ContractError('Full-hold conditioning mode must be boolean')
+        if type(self.profile_count) is not int or self.profile_count < 0:
+            raise ContractError('Profile count must be a nonnegative integer')
         if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
             raise ContractError('Head history bound and decay must be finite and positive')
 
@@ -76,6 +79,68 @@ class PlannedAudioModel(ContextAudioModel):
             nn.init.normal_(self.head_base.weight, std=.001)
             nn.init.constant_(self.head_base.bias, math.log(.006 / .994))
             nn.init.zeros_(self.timing[-1].bias)
+        if config.profile_count:
+            self.profile_condition = nn.Linear(3, config.conditioned_audio_width, bias=False)
+            self.profile_prior = nn.Linear(config.context_width, config.profile_count)
+            nn.init.zeros_(self.profile_condition.weight)
+            nn.init.zeros_(self.profile_prior.weight)
+            nn.init.zeros_(self.profile_prior.bias)
+            self.register_buffer('profile_values', torch.zeros(config.profile_count, 3))
+            self.register_buffer('profile_codes', torch.zeros(config.profile_count, 3))
+            self.register_buffer('profile_mean', torch.zeros(3))
+            self.register_buffer('profile_std', torch.ones(3))
+
+    @torch.no_grad()
+    def configure_profiles(self, bank):
+        from .profiles import PROFILE_FORMAT, normalized
+        if bank['format'] != PROFILE_FORMAT or bank['count'] != self.config.profile_count:
+            raise ContractError('Profile bank differs from the model configuration')
+        for buffer, value in ((self.profile_values, bank['profiles']), (self.profile_mean, bank['mean']),
+                              (self.profile_std, bank['std']), (self.profile_codes, normalized(bank['profiles'], bank))):
+            buffer.copy_(torch.as_tensor(value, dtype=buffer.dtype, device=buffer.device))
+        masses = self.profile_prior.bias.new_tensor(bank['masses'])
+        if not bool((masses > 0).all()) or not bool((self.profile_std > 0).all()):
+            raise ContractError('Profile masses and scales must be positive')
+        self.profile_prior.bias.copy_(masses.log())
+
+    def profile_log_probs(self, coarse):
+        """One prior over arrangements, reading only real full-song audio tokens."""
+        if not self.config.profile_count:
+            raise ContractError('This checkpoint has no arrangement profile prior')
+        values, counts = coarse
+        valid = torch.arange(values.shape[1], device=values.device)[None] < counts[:, None]
+        pooled = (values * valid[..., None]).sum(1) / counts[:, None]
+        return self.profile_prior(pooled).log_softmax(-1)
+
+    def condition_audio(self, encoded, profile_index=None):
+        """Add the same fixed chart condition to timing, release and row inputs."""
+        if not self.config.profile_count and profile_index is None:
+            return encoded
+        if type(profile_index) is not int or not 0 <= profile_index < self.config.profile_count:
+            raise ContractError('A profiled query requires an in-range arrangement profile index')
+        return encoded + self.profile_condition(self.profile_codes[profile_index])
+
+    def encode_generation(self, mel, *, seed, code=None):
+        """Encode once; choose a persistent profile without event-RNG consumption."""
+        if not self.config.profile_count:
+            if code is not None:
+                raise ContractError('This checkpoint has no arrangement profiles')
+            return self.encode_audio(mel), {}
+        if len(mel) != 1:
+            raise ContractError('Native profile selection requires one complete song')
+        valid = torch.ones(mel.shape[:2], dtype=torch.bool, device=mel.device)
+        coarse = self.encode_coarse(mel, valid)
+        prior = self.profile_log_probs(coarse)[0].exp()
+        sampled = code is None
+        if sampled:
+            rng = torch.Generator(device='cpu').manual_seed(seed)
+            code = int(torch.multinomial(prior.detach().cpu().double(), 1, generator=rng))
+        encoded = self.encode_crop(mel, valid, torch.zeros(1, dtype=torch.long, device=mel.device),
+                                   valid.sum(-1), coarse)
+        encoded = self.condition_audio(encoded, code)
+        return encoded, dict(arrangement_profile=code, arrangement_values=self.profile_values[code].tolist(),
+            arrangement_seed=seed, arrangement_selection='audio_prior' if sampled else 'requested',
+            arrangement_prior=prior.detach().cpu().tolist())
 
     def timing_logits(self, *args, **kwargs):
         raise ContractError('Planned model requires separate head and release probability queries')

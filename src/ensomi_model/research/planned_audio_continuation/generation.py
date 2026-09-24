@@ -80,7 +80,7 @@ class HeadPlanner:
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
             max_rows=30000, max_seconds=90., on_update=None, stop_callback=None,
-            correct_short_attacks=False):
+            correct_short_attacks=False, arrangement_profile=None):
     if (type(duration_ms) is not int or duration_ms < 0 or
             any(type(v) is not int or v <= 0 for v in (chunk_ms, head_chunk_ms, max_rows)) or
             not np.isfinite(max_seconds) or max_seconds <= 0 or
@@ -90,7 +90,9 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
     device, dtype = next(model.parameters()).device, next(model.parameters()).dtype
     _synchronize(device)
     started = time.perf_counter()
-    encoded = model.encode_audio(torch.as_tensor(np.array(mel, copy=True), dtype=dtype, device=device)[None])
+    encoded, arrangement = model.encode_generation(
+        torch.as_tensor(np.array(mel, copy=True), dtype=dtype, device=device)[None],
+        seed=seed ^ 0x61F9, code=arrangement_profile)
     _synchronize(device)
     audio_seconds = time.perf_counter() - started
     rows, coverage, latencies = [], [], []
@@ -240,7 +242,7 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
         forced_deadline_releases=deadline_events, forced_terminal_releases=terminal_events,
         conditioned_release_waits=conditioned_waits,
         correct_short_attacks=correct_short_attacks, short_attack_pairs=short_attack_pairs(rows),
-        response_decisions=response_decisions,
+        response_decisions=response_decisions, **arrangement,
         planned_heads=len(planner.generated), coverage=coverage,
         latency_scope='cached canonical Mel through published coverage; excludes waveform decode and Mel computation'))
 
@@ -250,10 +252,14 @@ def load_model(path, expected_sha256, *, device='cpu'):
     if hashlib.sha256(data).hexdigest() != expected_sha256:
         raise ContractError('Planned checkpoint differs from its pinned SHA-256')
     payload = torch.load(io.BytesIO(data), map_location='cpu', weights_only=True)
-    if payload.get('format') != 'joint-audio/planned-v1':
+    if payload.get('format') not in ('joint-audio/planned-v1', 'joint-audio/planned-profile-v1'):
         raise ContractError('Expected a planned audio checkpoint')
     model = PlannedAudioModel(PlannedModelConfig(**payload['model_config']))
+    if bool(model.config.profile_count) != (payload['format'] == 'joint-audio/planned-profile-v1'):
+        raise ContractError('Checkpoint family differs from its arrangement configuration')
     model.load_state_dict(payload['model'], strict=True)
     if any(not bool(torch.isfinite(v).all()) for v in model.state_dict().values()) or not bool((model.audio_std > 0).all()):
         raise ContractError('Planned checkpoint has nonfinite tensors or invalid audio normalization')
+    if model.config.profile_count and not bool((model.profile_std > 0).all()):
+        raise ContractError('Profile checkpoint has invalid normalization')
     return model.to(device).eval(), {k: payload[k] for k in ('source_revision', 'manifest_sha256', 'config')}

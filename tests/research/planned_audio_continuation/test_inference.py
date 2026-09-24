@@ -196,3 +196,28 @@ runpy.run_module('ensomi_model.research.planned_audio_continuation.infer_hydra',
         result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         assert 'startup_coverage_ms' in result.stdout and 'checkpoint_sha256' in result.stdout
+
+
+def test_profile_checkpoint_and_override_flow_through_the_audio_entrypoint(tmp_path, monkeypatch):
+    from .test_profiles import corpus
+    from ensomi_model.research.planned_audio_continuation.profiles import build_profile_bank
+
+    cfg = inputs(tmp_path, monkeypatch)
+    base, _ = load_model(cfg.checkpoint_file, cfg.checkpoint_sha256)
+    model = PlannedAudioModel(replace(base.config, profile_count=2))
+    model.load_state_dict(base.state_dict(), strict=False)
+    bank = build_profile_bank(corpus(), 2)
+    model.configure_profiles(bank)
+    checkpoint = tmp_path / 'profiled.pt'
+    torch.save(dict(format='joint-audio/planned-profile-v1', model_config=asdict(model.config),
+        model=model.state_dict(), source_revision='a'*40, manifest_sha256='b'*64, config={}), checkpoint)
+    cfg = replace(cfg, checkpoint_file=str(checkpoint), checkpoint_sha256=data.digest(checkpoint), arrangement_profile=1)
+    result = inference.infer_audio(cfg)
+    report = read(result['result_file'])
+    assert report['completed'] and report['arrangement_profile'] == 1
+    assert report['arrangement_selection'] == 'requested'
+    np.testing.assert_allclose(report['arrangement_values'], bank['profiles'][1])
+    assert read(Path(cfg.output_dir) / 'config.json')['arrangement_profile'] == 1
+    projected = infer_hydra.compose_config(['audio_file=a.wav', 'checkpoint_file=p.pt',
+        'checkpoint_sha256='+'a'*64, 'output_dir=fresh', 'arrangement_profile=1'])
+    assert projected.arrangement_profile == 1

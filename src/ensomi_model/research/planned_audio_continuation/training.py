@@ -22,8 +22,11 @@ from ..joint_audio_continuation.model import R1_TRANSFER_MODULES
 from ..joint_audio_continuation.training import revision, training_normalization
 from .intervals import collate_interval, interval_losses, score_interval
 from .model import PlannedAudioModel, PlannedModelConfig, initialize_from_r1
+from .profiles import build_profile_bank, chart_assignment
 
 INHERITED = (*R1_TRANSFER_MODULES, 'row_consequence')
+LOSS_NAMES = ('head_nll_per_second', 'release_nll_per_second', 'row_nll_per_second',
+              'conditional_nll_per_second', 'profile_nll_per_second', 'joint_nll_per_second')
 
 
 def optimizer_groups(model, config):
@@ -36,24 +39,36 @@ def optimizer_groups(model, config):
     return groups
 
 
-def backward_update(model, planned_songs, charts, device):
-    totals = np.zeros(4, np.float64)
+def _weighted_losses(losses, weight, prior, profile_index, duration_ms, population_divisor):
+    """A profile is one chart factor; all factors share the inclusive native clock."""
+    conditional = losses[-1] * weight
+    profile = (conditional.new_zeros(()) if prior is None else
+               -prior[0, profile_index] * (1000 / (duration_ms + 1)) / population_divisor)
+    return torch.stack((*(v * weight for v in losses[:3]), conditional, profile, conditional + profile))
+
+
+def backward_update(model, planned_songs, charts, device, profiles=None):
+    totals = np.zeros(len(LOSS_NAMES), np.float64)
     counts = dict(intervals=0, milliseconds=0, event_rows=0, head_rows=0, release_rows=0, release_clocks=0)
     for records in planned_songs:
         examples = [example_from_identity(r, charts) for r in records]
         if len({e.chart.entry['audio_sha256'] for e in examples}) != 1:
             raise ValueError('Song microbatch has inconsistent complete audio')
         coarse = song_context(model, examples[0].chart, device)
+        prior = model.profile_log_probs(coarse) if model.config.profile_count else None
         total = None
         for example in examples:
+            profile_index = profiles[example.chart.entry['source_sha256']] if prior is not None else None
             batch = collate_interval(example, model.config, device)
-            losses = interval_losses(score_interval(model, batch.inputs, coarse), batch)
-            weight = example.weight_per_second / (len(planned_songs) * len(examples))
-            loss = losses[-1] * weight
+            losses = interval_losses(score_interval(model, batch.inputs, coarse, profile_index=profile_index), batch)
+            divisor = len(planned_songs) * len(examples)
+            values = _weighted_losses(losses, example.weight_per_second / divisor, prior,
+                                      profile_index, example.chart.duration_ms, divisor)
+            loss = values[-1]
             if not bool(torch.isfinite(loss)):
                 raise RuntimeError('Nonfinite planned joint likelihood')
             total = loss if total is None else total + loss
-            totals += np.asarray([float(v.detach().cpu()) for v in losses]) * weight
+            totals += values.detach().cpu().numpy()
             counts['intervals'] += 1
             counts['milliseconds'] += example.end_ms - example.start_ms
             counts['event_rows'] += len(batch.row_index)
@@ -65,7 +80,7 @@ def backward_update(model, planned_songs, charts, device):
 
 
 @torch.inference_mode()
-def evaluate_intervals(model, records, charts, device):
+def evaluate_intervals(model, records, charts, device, profiles=None):
     model.eval()
     groups = {}
     for record in records:
@@ -73,28 +88,52 @@ def evaluate_intervals(model, records, charts, device):
     results = []
     for sha, group in groups.items():
         coarse = song_context(model, charts[sha], device)
+        prior = model.profile_log_probs(coarse) if model.config.profile_count else None
+        profile_index = profiles[sha] if prior is not None else None
         for record in group:
             example = example_from_identity(record, charts)
             batch = collate_interval(example, model.config, device)
-            losses = interval_losses(score_interval(model, batch.inputs, coarse), batch)
+            losses = interval_losses(score_interval(model, batch.inputs, coarse, profile_index=profile_index), batch)
             weight = example.weight_per_second if record['panel'] == 'population' else 1000 / (example.end_ms - example.start_ms)
+            values = _weighted_losses(losses, weight, prior, profile_index, example.chart.duration_ms, 1)
             results.append(dict(**record, event_rows=len(batch.row_index),
-                **{name: float(value.cpu()) * weight for name, value in
-                   zip(('head_nll_per_second', 'release_nll_per_second', 'row_nll_per_second', 'joint_nll_per_second'), losses)}))
+                **{name: float(value.cpu()) for name, value in zip(LOSS_NAMES, values)}, arrangement_profile=profile_index))
     summary = {panel: dict(intervals=sum(r['panel'] == panel for r in results),
         **{name: float(np.mean([r[name] for r in results if r['panel'] == panel])) for name in
-           ('head_nll_per_second', 'release_nll_per_second', 'row_nll_per_second', 'joint_nll_per_second')})
+           LOSS_NAMES})
         for panel in ('population', 'bos')}
-    return dict(**summary, records=results)
+    return dict(**summary, records=results, arrangement_condition='reference_profile' if profiles is not None else 'none')
 
 
 def save_checkpoint(path, model, optimizer, update, config, source, protocol, transfer):
     temporary = path.with_suffix('.tmp')
-    torch.save(dict(format='joint-audio/planned-v1', model_config=asdict(model.config), model=model.state_dict(),
+    family = 'joint-audio/planned-profile-v1' if model.config.profile_count else 'joint-audio/planned-v1'
+    torch.save(dict(format=family, model_config=asdict(model.config), model=model.state_dict(),
         optimizer=optimizer.state_dict(), update=update, config=asdict(config), source_revision=source,
         manifest_sha256=config.manifest_sha256, protocol=protocol, transfer=transfer,
         torch_rng=torch.get_rng_state(), mps_rng=torch.mps.get_rng_state() if config.device == 'mps' else None), temporary)
     temporary.replace(path)
+
+
+def initialize_from_planned(model, config, norm):
+    """Copy every common tensor from a pinned unprofiled model, with fresh optimizer state."""
+    from .generation import load_model
+    baseline, metadata = load_model(config.initial_checkpoint_file, config.initial_checkpoint_sha256)
+    expected = asdict(model.config)
+    expected['profile_count'] = 0
+    if asdict(baseline.config) != expected or metadata['manifest_sha256'] != config.manifest_sha256:
+        raise ValueError('Planned initialization differs in architecture or training corpus')
+    for name, values in (('audio_mean', norm['mean']), ('audio_std', norm['std'])):
+        if not torch.equal(getattr(baseline, name), getattr(baseline, name).new_tensor(values)):
+            raise ValueError('Planned initialization uses different audio normalization')
+    source = baseline.state_dict()
+    missing, unexpected = model.load_state_dict(source, strict=False)
+    added = {'profile_values', 'profile_codes', 'profile_mean', 'profile_std',
+             'profile_condition.weight', 'profile_prior.weight', 'profile_prior.bias'} if model.config.profile_count else set()
+    if set(missing) != added or unexpected:
+        raise ValueError('Warm initialization did not copy exactly the common model')
+    return dict(initialization='planned_weights_fresh_optimizer', checkpoint_sha256=config.initial_checkpoint_sha256,
+                source_revision=metadata['source_revision'], copied=sorted(source), new=sorted(added))
 
 
 def train(config, *, resolved_yaml=''):
@@ -115,13 +154,25 @@ def train(config, *, resolved_yaml=''):
     by = {c.entry['source_sha256']: c for c in charts}
     norm, norm_identity = training_normalization(config, charts, norm)
     protocol, protocol_identity = freeze_protocol(charts, config)
+    bank, profiles = None, None
+    if config.profile_bank_file is not None:
+        if digest(config.profile_bank_file) != config.profile_bank_sha256:
+            raise ValueError('Arrangement profile bank differs from its pinned SHA-256')
+        bank = json.loads(Path(config.profile_bank_file).read_text())
+        if bank != build_profile_bank(charts, bank['count']):
+            raise ValueError('Profile bank does not reproduce from the current TRAIN corpus')
+        profiles = {sha: chart_assignment(c, bank) for sha, c in by.items()}
+        _json(directory / 'profile_bank.json', bank)
     model = PlannedAudioModel(PlannedModelConfig(bounded_head=config.bounded_head,
         head_bound=config.head_bound, head_decay_ms=config.head_decay_ms,
-        condition_full_holds=config.condition_full_holds))
-    transfer = initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256)
+        condition_full_holds=config.condition_full_holds, profile_count=0 if bank is None else bank['count']))
+    transfer = (initialize_from_planned(model, config, norm) if config.initial_checkpoint_file is not None else
+                initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256))
+    if bank is not None:
+        model.configure_profiles(bank)
     model.set_audio_normalization(torch.tensor(norm['mean']), torch.tensor(norm['std']))
     tracked_modules = tuple(name for name in ('head_temporal', 'head_condition', 'timing', 'release_clock',
-        'skeleton_temporal', 'row_consequence', 'head_base') if hasattr(model, name))
+        'skeleton_temporal', 'row_consequence', 'head_base', 'profile_condition', 'profile_prior') if hasattr(model, name))
     initial = {n: p.detach().cpu().clone() for n, p in model.named_parameters() if n.split('.')[0] in tracked_modules}
     model.to(config.device)
     groups = optimizer_groups(model, config)
@@ -148,7 +199,7 @@ def train(config, *, resolved_yaml=''):
                         break
                     model.train()
                     optimizer.zero_grad(set_to_none=True)
-                    averages, consumed = backward_update(model, protocol['updates'][update - 1], by, config.device)
+                    averages, consumed = backward_update(model, protocol['updates'][update - 1], by, config.device, profiles)
                     norm_value = torch.nn.utils.clip_grad_norm_(model.parameters(), config.max_grad_norm, error_if_nonfinite=True)
                     optimizer.step()
                     last = update
@@ -158,8 +209,7 @@ def train(config, *, resolved_yaml=''):
                     if update % 10 == 0 or update == config.updates:
                         means = np.mean(histories[-10:], axis=0)
                         record = dict(update=update, seconds=time.perf_counter() - started, **counts,
-                            **{name: float(v) for name, v in zip(
-                                ('head_nll_per_second', 'release_nll_per_second', 'row_nll_per_second', 'joint_nll_per_second'), means)},
+                            **{name: float(v) for name, v in zip(LOSS_NAMES, means)},
                             grad_norm=float(norm_value.cpu()), available_bytes=psutil.virtual_memory().available,
                             rss_bytes=psutil.Process().memory_info().rss,
                             mps_driver_bytes=torch.mps.driver_allocated_memory() if config.device == 'mps' else 0)
@@ -167,7 +217,7 @@ def train(config, *, resolved_yaml=''):
                         log.flush()
                         print(json.dumps(record), flush=True)
                 if update % config.validation_every == 0 or update == config.updates:
-                    latest = evaluate_intervals(model, validation, by, config.device)
+                    latest = evaluate_intervals(model, validation, by, config.device, profiles)
                     _json(directory / f'evaluation-{update}.json', dict(update=update, **latest))
                     print(json.dumps(dict(update=update, population=latest['population'], bos=latest['bos'])), flush=True)
                     save_checkpoint(directory / 'last.pt', model, optimizer, update, config, source, protocol_identity, transfer)

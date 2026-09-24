@@ -167,9 +167,10 @@ def _gather(module, encoded, indices):
     return torch.where((indices >= 0)[:, None, None], encoded[indices.clamp_min(0)], boundary)
 
 
-def score_interval(model, inputs, coarse):
+def score_interval(model, inputs, coarse, *, profile_index=None):
     x = inputs.base
     encoded = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
+    encoded = model.condition_audio(encoded, profile_index)
     row_history = model.temporal(x.raw, x.history_valid)[0] if x.raw.shape[1] else None
     skeleton_history = (model.skeleton_temporal(inputs.skeleton_raw, x.history_valid)[0]
                         if inputs.skeleton_raw.shape[1] else None)

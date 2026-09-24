@@ -148,6 +148,11 @@ startup, dense and long source-H workloads, settled coverage and virtual
 presentation deadlines. It separates demonstrated compute headroom from the
 remaining musical-distribution and control questions.
 
+The [shared arrangement-profile model](shared_arrangement_profiles.md) adds a
+small full-audio prior and one persistent condition shared by head, release and
+row factors. Its profile descriptors are separate from style and playability
+judgments; native benefit remains under evaluation.
+
 ## Generate and stream from an audio file
 
 The source-chart-free entrypoint accepts a planned-family checkpoint and audio
