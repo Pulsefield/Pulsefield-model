@@ -6,6 +6,11 @@ then interleaves LN releases and complete action rows. It implements the
 audio-to-row conditioning and candidate-action consequences. It is not an
 adopted V3 architecture or an established playable model.
 
+The [first long-form readout](head_wait_recovery.md) exposes long silent
+head-stream gaps despite valid completion and improved source likelihood.
+Head-only replay and a recency intervention locate a suppression path; the
+endpoint is not a playability candidate.
+
 ## Distribution and available information
 
 The head stream uses complete canonical Mel audio, a 127-head causal history
