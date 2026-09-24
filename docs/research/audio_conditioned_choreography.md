@@ -11,6 +11,11 @@ The immediate research question is which dependencies a model must preserve to
 turn complete music into varied, coherent timed actions under a playback deadline.
 Selecting a larger network or reducing timing error does not answer that question.
 
+The [full-audio and history-path comparison](audio_context_history.md) adds an
+optional coarse full-song branch, bounded timing modulation and shared-history
+interval likelihood. Its four matched cells separate the audio-context and
+history-path hypotheses; native playability remains an independent evaluation.
+
 ## Current bounded direction
 
 Fix the owner-confirmed repository music Mel representation and jointly learn

@@ -211,6 +211,8 @@ def collate(
 
 def score_batch(model: JointAudioModel, inputs: JointInputs) -> JointScores:
     """Evaluate timing and conditional row distributions without reading labels."""
+    if getattr(model.config, 'global_audio', False):
+        raise ContractError('Global audio queries require full-song context; use the context query scorer')
     encoded = model.encode_audio(inputs.mel, inputs.mel_valid)
     history = model.encode_history(inputs.raw, inputs.history_valid, inputs.truncated)
     timing_audio = interpolate_audio(encoded, inputs.timing_times_ms, inputs.mel_starts, inputs.mel_frame_counts)

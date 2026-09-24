@@ -184,7 +184,11 @@ def load_model(path, expected_sha256, *, device='cpu'):
     required = {'model_config', 'model', 'source_revision', 'manifest_sha256', 'config'}
     if not isinstance(payload, dict) or not required <= set(payload):
         raise ContractError('Joint checkpoint lacks model configuration or training provenance')
-    model = JointAudioModel(JointModelConfig(**payload['model_config']))
+    if payload.get('format') == 'joint-audio/context-v1':
+        from .context_model import ContextAudioModel, ContextModelConfig
+        model = ContextAudioModel(ContextModelConfig(**payload['model_config']))
+    else:
+        model = JointAudioModel(JointModelConfig(**payload['model_config']))
     model.load_state_dict(payload['model'], strict=True)
     if (any(not bool(torch.isfinite(value).all()) for value in model.state_dict().values()) or
             not bool((model.audio_std > 0).all())):
