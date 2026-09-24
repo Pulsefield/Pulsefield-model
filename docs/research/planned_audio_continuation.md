@@ -223,3 +223,17 @@ musical redline grid. A capped run saves its available rows and open LN state
 without exporting a completed chart. The total startup profile includes model
 loading and fresh audio preprocessing but excludes Python imports, Hydra/Git
 validation and output setup.
+
+At source 1c95f6914fd3fa390d8a46f1d267d5311def7078, nine actual CLI processes
+reproduce the preceding conditional-release baseline rows exactly. A separate
+consumer replays each stdout update as it arrives, verifies row/no-row coverage
+and LN state, and receives readiness before process exit. Stdout and the saved
+event stream match byte for byte. Playback-ready delivery takes 1.399–1.843 s
+from process launch, including each process's imports and model loading;
+producer-side readiness takes .545–.966 s under the narrower profile above.
+The nine-case verification takes 28.988 s. These unchanged charts retain their
+previously reported musical limitations.
+
+Local verification owner: artifacts/joint-audio/20260924-stream-entry-v1.
+Freeze: 752bfa3908a192a075af22a9c85233b0ff5d771313a2f0dd24ecf9b6c72af21a.
+Result: 2eef5f7b1d4ab6b71e9420b665512990424524aa3d397db6f7e6cc6bc33922b4.
