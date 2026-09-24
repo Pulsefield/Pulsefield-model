@@ -167,6 +167,51 @@ metrics count new material. Diagnostic startup means eight seconds beyond the
 observed clock and cannot be reported as audio-only startup latency. The
 source-free command continues to use BOS.
 
+### Conditional continuation result
+
+The observed-prefix study kept the candidate weights, complete audio, 500 ms
+queries and 27 ms decoder prior fixed. For four songs it compared the real
+prefix with each of two existing native prefixes at the same audio position,
+then drew two new suffixes per condition. Cutoffs were the complete reference
+row crossing 30 heads and the start of the reviewed mature episode. There were
+48 continuations, all complete, with no <=20 ms same-key head interval whose
+second head was newly generated. Supplied rows were excluded from suffix metrics.
+Two fresh death piano BOS runs reproduced the earlier row hashes exactly.
+Execution source was `965c70aa267027ef486cd98f560b926a9e441bbd`.
+
+| Mature episode | New LN/head fraction in first 8 s, reference prefix (two seeds) | Native prefixes (four suffixes) |
+| --- | ---: | ---: |
+| death piano | 3.33%, 0% | 86.57–96.43% |
+| Prom Queen | 0%, 0% | 67.86–89.42% |
+
+Every cell above generated at least 30 heads in the first eight seconds.
+Prom Queen's reference-conditioned continuations retained recurring presses
+inside changing chords: one seed starts with two `[0,2]` pairs followed by
+`[0,1,3]` and `[0,2,3]` chords, approximately 196–213 ms apart. Their reviewed
+scope contains 26/31 generated heads versus the reference's 29. In contrast,
+death piano has 14/15 single-note heads versus the reference's 23 heads with
+mixed chord sizes. Maintaining taps did not preserve that Tech episode's full
+structure. Lens inspected complete scoped actions and all time-view pages,
+including the Who? and Good Luck controls and two native-prefix contrasts.
+
+Longer continuation remains variable. After a real early 30-head prefix, both
+death piano suffixes become predominantly LN-based; the two Prom Queen seeds
+also diverge substantially. Mature reference priming delays the death piano
+shift but does not consistently prevent it. Prom Queen's mature-prefix suffixes
+stay mostly tap-based through the remainder. Early and mature cutoffs also
+change musical position, so their difference cannot identify history length as
+the cause. Reference versus native prefixes change the entire state, including
+occupancy and clocks, rather than isolating one learned feature.
+
+These results establish useful conditional continuation capacity and a remaining
+arrangement-selection/persistence question. They do not turn a supplied human
+prefix into an audio-only solution. Additional training on the repaired target
+set and a small persistent arrangement condition are distinct hypotheses; a
+matched control is needed before attributing improvement to extra structure.
+The local owner is `artifacts/joint-audio/20260924-expanded-v1/observed-prefix-v1`;
+result SHA-256 is
+`9e2496baa80346e1628f42df17ad708d0d60afe8c6a90263c6a06064d73a3521`.
+
 ## Actual prefix publication and runtime
 
 `rollout` now exposes immutable incremental rows and fixed-through coverage.
