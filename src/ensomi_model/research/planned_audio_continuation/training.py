@@ -116,24 +116,39 @@ def save_checkpoint(path, model, optimizer, update, config, source, protocol, tr
 
 
 def initialize_from_planned(model, config, norm):
-    """Copy every common tensor from a pinned unprofiled model, with fresh optimizer state."""
+    """Copy pinned weights with fresh optimizer state and optional profile routing.
+
+    A profiled source requires the same bank and preserves its learned prior.
+    An unprofiled source can initialize the common tensors of a profiled model.
+    The only permitted same-bank architecture change is downstream density use.
+    """
     from .generation import load_model
     baseline, metadata = load_model(config.initial_checkpoint_file, config.initial_checkpoint_sha256)
     expected = asdict(model.config)
-    expected['profile_count'] = 0
+    if baseline.config.profile_count not in (0, model.config.profile_count):
+        raise ValueError('Planned initialization differs in arrangement profile count')
+    expected['profile_count'] = baseline.config.profile_count
+    expected['profile_head_rate_downstream'] = baseline.config.profile_head_rate_downstream
     if asdict(baseline.config) != expected or metadata['manifest_sha256'] != config.manifest_sha256:
         raise ValueError('Planned initialization differs in architecture or training corpus')
     for name, values in (('audio_mean', norm['mean']), ('audio_std', norm['std'])):
         if not torch.equal(getattr(baseline, name), getattr(baseline, name).new_tensor(values)):
             raise ValueError('Planned initialization uses different audio normalization')
+    if baseline.config.profile_count:
+        for name in ('profile_values', 'profile_codes', 'profile_mean', 'profile_std'):
+            if not torch.equal(getattr(model, name), getattr(baseline, name)):
+                raise ValueError('Planned initialization uses a different arrangement profile bank')
     source = baseline.state_dict()
     missing, unexpected = model.load_state_dict(source, strict=False)
     added = {'profile_values', 'profile_codes', 'profile_mean', 'profile_std',
-             'profile_condition.weight', 'profile_prior.weight', 'profile_prior.bias'} if model.config.profile_count else set()
+             'profile_condition.weight', 'profile_prior.weight', 'profile_prior.bias'} if (
+                 model.config.profile_count and not baseline.config.profile_count) else set()
     if set(missing) != added or unexpected:
         raise ValueError('Warm initialization did not copy exactly the common model')
     return dict(initialization='planned_weights_fresh_optimizer', checkpoint_sha256=config.initial_checkpoint_sha256,
-                source_revision=metadata['source_revision'], copied=sorted(source), new=sorted(added))
+                source_revision=metadata['source_revision'], copied=sorted(source), new=sorted(added),
+                profile_head_rate_downstream=dict(source=baseline.config.profile_head_rate_downstream,
+                                                  target=model.config.profile_head_rate_downstream))
 
 
 def train(config, *, resolved_yaml=''):
@@ -165,11 +180,12 @@ def train(config, *, resolved_yaml=''):
         _json(directory / 'profile_bank.json', bank)
     model = PlannedAudioModel(PlannedModelConfig(bounded_head=config.bounded_head,
         head_bound=config.head_bound, head_decay_ms=config.head_decay_ms,
-        condition_full_holds=config.condition_full_holds, profile_count=0 if bank is None else bank['count']))
-    transfer = (initialize_from_planned(model, config, norm) if config.initial_checkpoint_file is not None else
-                initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256))
+        condition_full_holds=config.condition_full_holds, profile_count=0 if bank is None else bank['count'],
+        profile_head_rate_downstream=config.profile_head_rate_downstream))
     if bank is not None:
         model.configure_profiles(bank)
+    transfer = (initialize_from_planned(model, config, norm) if config.initial_checkpoint_file is not None else
+                initialize_from_r1(model, config.r1_checkpoint_file, config.r1_checkpoint_sha256))
     model.set_audio_normalization(torch.tensor(norm['mean']), torch.tensor(norm['std']))
     tracked_modules = tuple(name for name in ('head_temporal', 'head_condition', 'timing', 'release_clock',
         'skeleton_temporal', 'row_consequence', 'head_base', 'profile_condition', 'profile_prior') if hasattr(model, name))

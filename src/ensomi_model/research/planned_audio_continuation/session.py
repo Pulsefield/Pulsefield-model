@@ -78,9 +78,13 @@ class ContinuationSession:
         self.device, self.dtype = next(model.parameters()).device, next(model.parameters()).dtype
         _synchronize(self.device)
         self.started = time.perf_counter()
-        self.encoded, self.arrangement = model.encode_generation(
+        encoded, self.arrangement = model.encode_generation(
             torch.as_tensor(np.array(mel, copy=True), dtype=self.dtype, device=self.device)[None],
             seed=seed ^ 0x61F9, code=arrangement_profile)
+        profile_index = self.arrangement.get('arrangement_profile')
+        self.encoded = model.condition_audio(encoded, profile_index)
+        self.downstream_encoded = (self.encoded if model.config.profile_head_rate_downstream else
+                                   model.condition_audio(encoded, profile_index, downstream=True))
         _synchronize(self.device)
         self.audio_seconds = time.perf_counter() - self.started
         self.duration_ms, self.chunk_ms = duration_ms, chunk_ms
@@ -157,7 +161,7 @@ class ContinuationSession:
                 preview = self.planner.preview(self.cursor, self.model.config.lookahead)
                 previews, states = [preview] * len(bins), [projection] * len(bins)
                 clocks = release_clocks(states, [previous] * len(bins), anchors.cpu().numpy(), previews, self.duration_ms)
-                audio = interpolate_audio(self.encoded, anchors[None])[0]
+                audio = interpolate_audio(self.downstream_encoded, anchors[None])[0]
                 history = self.model.skeleton_temporal.read(self.skeleton_cache)[None].expand(len(bins), -1, -1)
                 logits = self.model.release_logits(audio, history, self.tensor(clocks)).flatten()
                 valid, forced = release_masks(states, native.cpu().numpy(), previews, self.duration_ms)
@@ -186,7 +190,7 @@ class ContinuationSession:
             legal = row_support([self.replay], [self.cursor], [head_role], [preview], self.duration_ms)
             context = preview_features([preview], [self.cursor], [head_role], self.duration_ms, self.model.config.lookahead)
             local, future = consequences([self.replay], [self.cursor], [preview], self.duration_ms)
-            audio = interpolate_audio(self.encoded, torch.tensor([self.cursor], device=self.device))
+            audio = interpolate_audio(self.downstream_encoded, torch.tensor([self.cursor], device=self.device))
             log_probs = self.model.planned_row_log_probs(audio, self.model.temporal.read(self.row_cache)[None],
                 self.tensor(exact_features([self.replay], [self.cursor])), self.tensor(legal, torch.bool),
                 self.tensor([self.replay.occupancy], torch.bool), self.tensor(context), self.tensor(local), self.tensor(future))[0]

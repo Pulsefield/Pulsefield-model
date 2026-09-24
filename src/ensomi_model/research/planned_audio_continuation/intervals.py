@@ -169,8 +169,10 @@ def _gather(module, encoded, indices):
 
 def score_interval(model, inputs, coarse, *, profile_index=None):
     x = inputs.base
-    encoded = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
-    encoded = model.condition_audio(encoded, profile_index)
+    raw_audio = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
+    encoded = model.condition_audio(raw_audio, profile_index)
+    downstream = (encoded if model.config.profile_head_rate_downstream else
+                  model.condition_audio(raw_audio, profile_index, downstream=True))
     row_history = model.temporal(x.raw, x.history_valid)[0] if x.raw.shape[1] else None
     skeleton_history = (model.skeleton_temporal(inputs.skeleton_raw, x.history_valid)[0]
                         if inputs.skeleton_raw.shape[1] else None)
@@ -178,15 +180,17 @@ def score_interval(model, inputs, coarse, *, profile_index=None):
                     if inputs.head_raw.shape[1] else None)
     audio = interpolate_audio(encoded, x.timing_times[None], x.mel_start, x.frame_count)[0]
     h = model.head_logits(audio, _gather(model.head_temporal, head_history, inputs.head_history), inputs.head_clock)
+    if not model.config.profile_head_rate_downstream:
+        audio = interpolate_audio(downstream, x.timing_times[None], x.mel_start, x.frame_count)[0]
     r = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, x.timing_history),
                              inputs.release_clock)
     for wait in inputs.release_waits:
-        audio = interpolate_audio(encoded, wait.times[None], x.mel_start, x.frame_count)[0]
+        audio = interpolate_audio(downstream, wait.times[None], x.mel_start, x.frame_count)[0]
         raw = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, wait.history), wait.clocks)
         conditional = conditioned_release_logits(raw.flatten()[wait.native_indices])
         r = r.flatten().index_copy(0, wait.destinations, conditional[wait.offsets]).reshape_as(r)
     if len(x.row_times):
-        audio = interpolate_audio(encoded, x.row_times[None], x.mel_start, x.frame_count)[0]
+        audio = interpolate_audio(downstream, x.row_times[None], x.mel_start, x.frame_count)[0]
         rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),
             x.row_exact, x.row_legal, x.occupancy, inputs.row_preview,
             inputs.consequence_local, inputs.consequence_timing)

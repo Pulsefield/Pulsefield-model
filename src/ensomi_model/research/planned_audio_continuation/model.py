@@ -30,6 +30,7 @@ class PlannedModelConfig(ContextModelConfig):
     head_decay_ms: float = 1000.
     condition_full_holds: bool = False
     profile_count: int = 0
+    profile_head_rate_downstream: bool = True
 
     def __post_init__(self):
         super().__post_init__()
@@ -46,6 +47,10 @@ class PlannedModelConfig(ContextModelConfig):
             raise ContractError('Full-hold conditioning mode must be boolean')
         if type(self.profile_count) is not int or self.profile_count < 0:
             raise ContractError('Profile count must be a nonnegative integer')
+        if type(self.profile_head_rate_downstream) is not bool:
+            raise ContractError('Downstream profile head-rate mode must be boolean')
+        if not self.profile_head_rate_downstream and not self.profile_count:
+            raise ContractError('Downstream profile routing requires arrangement profiles')
         if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
             raise ContractError('Head history bound and decay must be finite and positive')
 
@@ -112,16 +117,27 @@ class PlannedAudioModel(ContextAudioModel):
         pooled = (values * valid[..., None]).sum(1) / counts[:, None]
         return self.profile_prior(pooled).log_softmax(-1)
 
-    def condition_audio(self, encoded, profile_index=None):
-        """Add the same fixed chart condition to timing, release and row inputs."""
+    def condition_audio(self, encoded, profile_index=None, *, downstream=False):
+        """Condition unmodified audio for H or for the release/row factors.
+
+        Optional routing removes only the standardized density request from
+        downstream inputs. Actual H preview and other profile fields remain.
+        """
         if not self.config.profile_count and profile_index is None:
             return encoded
         if type(profile_index) is not int or not 0 <= profile_index < self.config.profile_count:
             raise ContractError('A profiled query requires an in-range arrangement profile index')
-        return encoded + self.profile_condition(self.profile_codes[profile_index])
+        code = self.profile_codes[profile_index]
+        if downstream and not self.config.profile_head_rate_downstream:
+            code = code * code.new_tensor((0., 1., 1.))
+        return encoded + self.profile_condition(code)
 
     def encode_generation(self, mel, *, seed, code=None):
-        """Encode once; choose a persistent profile without event-RNG consumption."""
+        """Return unconditioned audio and a profile choice without event-RNG use.
+
+        Callers form H and downstream views with condition_audio so excluded
+        attributes are never added and then subtracted in floating point.
+        """
         if not self.config.profile_count:
             if code is not None:
                 raise ContractError('This checkpoint has no arrangement profiles')
@@ -137,7 +153,6 @@ class PlannedAudioModel(ContextAudioModel):
             code = int(torch.multinomial(prior.detach().cpu().double(), 1, generator=rng))
         encoded = self.encode_crop(mel, valid, torch.zeros(1, dtype=torch.long, device=mel.device),
                                    valid.sum(-1), coarse)
-        encoded = self.condition_audio(encoded, code)
         return encoded, dict(arrangement_profile=code, arrangement_values=self.profile_values[code].tolist(),
             arrangement_seed=seed, arrangement_selection='audio_prior' if sampled else 'requested',
             arrangement_prior=prior.detach().cpu().tolist())

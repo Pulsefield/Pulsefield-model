@@ -67,6 +67,23 @@ The release factor retains its LN-only projection, and the pilot H stream
 retains its own history. Rows retain direct audio, future H preview, causal row
 history, exact replay and frontier2. No actual future LN endpoint is exposed.
 
+An optional architecture comparison sets `profile_head_rate_downstream=false`.
+H still receives all three profile fields. Release and row factors receive only
+width and LN fraction, with the standardized density coordinate set to zero
+before the same linear projection. Both views are formed from the unconditioned
+audio encoding; complete audio is encoded once. The change adds no parameters
+and applies equally to training, native queries and hypothetical full-held
+release waits. Existing checkpoints and configurations default to `true`.
+
+This tests whether direct requested density encourages unwanted chord-width
+response beyond the information in actual H timing. It does not impose
+statistical independence of generated density and width. Rows still read H
+preview, direct audio and history, and release timing retains its H preview
+and LN projection. Finite preview may omit information conveyed by the global
+request, so excluding that input is an approximation to evaluate, not an
+established improvement. A matched continuation fit with unchanged routing
+separates the architecture intervention from additional training.
+
 ## Supervision and interpretation of likelihood
 
 A chart's nearest representative supplies its fixed training assignment. This
@@ -89,10 +106,13 @@ conditional NLL cannot establish control or playable organization.
 ## Fitting and native use
 
 `PlannedTrainConfig` accepts paired `initial_checkpoint_file` and
-`initial_checkpoint_sha256` fields for a warm start from an unprofiled planned
-checkpoint. Every common tensor is copied; architecture, corpus identity and
-audio normalization must agree. Optimizer state starts fresh. This path replaces
-R1 weight transfer for that run; it is not optimizer resumption.
+`initial_checkpoint_sha256` fields for a warm start from a planned checkpoint.
+An unprofiled source initializes the common tensors of a profiled model; a
+profiled source requires the same profile bank and copies every tensor,
+including the learned prior. Bank validation does not reset that prior.
+Architecture, corpus identity and audio normalization must agree, except for
+the explicit `profile_head_rate_downstream` choice. Optimizer state starts fresh.
+This path replaces R1 weight transfer for that run; it is not optimizer resumption.
 
 Paired `profile_bank_file` and `profile_bank_sha256` enable the shared-condition
 model and require planned initialization. An otherwise matched warm-start run
