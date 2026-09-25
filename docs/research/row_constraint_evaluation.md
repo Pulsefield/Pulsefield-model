@@ -6,6 +6,11 @@ rejected proposals from six to three, within the same four-attempt publication
 budget. Runtime and descriptor regression checks pass. This is a bounded
 reliability improvement without fitting new weights.
 
+The [ranked 2–6-star calibration](ranked_2to6_action_reference.md) identifies
+two omitted checks: exactly-20-ms HH and an LN's own head-to-release duration.
+Both occur in these generated outputs. Zero screened pairs below therefore
+uses this study's original predicate and does not establish target playability.
+
 It is not a complete solution to expressive generation. Requested LN response
 remains weak, one inspected Hysteric context loses LN layering relative to
 current-only conditioning, and both policies fail the flat model's Zenithfall

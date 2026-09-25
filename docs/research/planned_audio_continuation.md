@@ -239,6 +239,11 @@ three. Both modes still fail one flat-model case because a fully occupied R
 event arrives too close to the next H. Expressive LN examples survive, but
 requested LN response and some paired contexts remain weaker than desired.
 
+The [ranked 2–6-star reference](ranked_2to6_action_reference.md) measures
+8,774 verified natural charts and rechecks these exports. It supports retaining
+same-column head/release constraints and exposes exactly-20-ms attacks and very
+short LN durations missed by the current predicates.
+
 ## Generate and stream from an audio file
 
 The source-chart-free entrypoint accepts a planned-family checkpoint and audio
