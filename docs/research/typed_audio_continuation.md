@@ -97,3 +97,62 @@ percentage: changed holds affect future timing and eligibility. Requests are
 proportions, with numerical endpoint clipping, not hard all-TAP/all-LN commands.
 Missing LN conditions retain the unconstrained learned law. Training and native
 sampling use the same factor.
+
+## Small joint-fit findings
+
+A local Apple M5/MPS pilot uses 614 TRAIN charts and 36 held-out VAL charts,
+retaining separate arrangements and full-song audio. A single TRAIN chart is
+outside the initial HH envelope; its three HH intervals below 37 ms are excluded.
+The row/audio initialization is the planned flat checkpoint `da080448`; the
+prototype has 3,895,879 parameters. The first joint fit took 1,200 updates and
+413 seconds. An additional 400-update fit of the explicit LN base took 147
+seconds, also mixing whole-song and 8/16/32-second control scopes. Because this
+second fit changes both factorization and sampling, its entire improvement is
+not attributable to factorization alone.
+
+Both candidates completed all 15 native cases: three previously unseen audios,
+each with low/high difficulty, low/high LN proportion and a 32-second mid-song
+change. Published rows remained fixed and all same-column HH intervals were at
+least 37 ms. The second candidate's maximum cached-Mel startup/window service was
+0.381/0.344 seconds on one CPU thread. This excludes waveform/Mel preprocessing
+and client rendering.
+
+At requested difficulty 3, measured LN-head fractions were:
+
+| Audio | Concatenated control: request 20% / 70% | Explicit LN base: request 20% / 70% |
+| --- | ---: | ---: |
+| Zenithfall | 14.3% / 17.3% | 8.5% / 74.8% |
+| Hysteric | 19.5% / 21.7% | 10.2% / 79.1% |
+| As It Was | 39.7% / 45.8% | 17.1% / 73.9% |
+
+The explicit-base 32-second high-control scopes yielded 70.3%, 83.5% and 75.2%
+LN heads. The following 32 seconds, after restoring the 20% request, yielded
+10.0%, 12.3% and 20.4%. These are three sampled trajectories, not confidence
+bounds or evidence of exact percentage control. Surviving LNs and history carry
+across the request boundary.
+
+Difficulty remains inadequately calibrated. With LN=20%, the first candidate's
+3/5-star requests yielded Hysteric 3.010/4.729, Zenithfall 4.625/5.080 and As It
+Was 2.574/2.972 stars. The second candidate's 3-star requests yielded
+4.097, 5.202 and 3.168 respectively. Thus better proportion control does not
+establish better playability or preserve difficulty automatically.
+
+A fixed-history VAL probe also found the first model's mark expectation changed
+only 1.3–1.9 percentage points for an LN request change from 20% to 70%.
+Changing the request scope from the whole song to 16 seconds moved this result
+by less than 0.5 points. Weak direct conditioning is therefore observable before
+free-running state feedback, although feedback can add further error.
+
+Lens inspection covers seven first-candidate contexts and all 14 pages, plus
+three high-LN peak contexts and all six pages for the second candidate, with
+complete action/articulation tables. Mixed chords, layered holds, subset releases
+and handoffs survive. Short 21/29/32-ms LN additions and dense low-request passages
+remain. In the second candidate's high-LN Zenithfall output, 173 of 3,005 LNs
+last at most 40 ms; its median LN duration is 120 ms. The explicit proportion
+factor has not solved release-demand quality. No listening or player test was
+performed.
+
+Only 11 TRAIN charts overlap the existing human style judgments. Five semantic
+input slots and their training path exist, but reliable style control is not
+established. These candidates are useful for investigating demand-conditioned
+planning and release behavior; neither is an accepted playable-system release.
