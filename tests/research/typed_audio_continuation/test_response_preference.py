@@ -31,3 +31,19 @@ def test_row_preference_reads_real_recovery_and_stops_reusing_an_old_release():
     assert after_tap[index((1, 0, 0, 0))] == 0
     assert np.all(preference.row_cost(replay, 160, np.nan) == 0)
     assert float(preference.cost(40, 3., 'hh')) > float(preference.cost(40, 5., 'hh'))
+
+
+def test_head_pressure_distinguishes_occupied_key_repeat_from_cross_column_burst():
+    preference = RecoveryPreference(head_pressure=4.)
+    # Native failure: two keys held throughout the lookback, then two heads
+    # occupy the remaining pair. A third head 45 ms later must reuse a key.
+    held = Resources(starts=(138619, 138772, 138346, None), free_at=(138809,))
+    history = ((138619, 1), (138772, 2))
+    assert preference.head_cost(held, history, 138817, 1, 3.) > 0
+    assert preference.head_cost(held, history, 138916, 1, 3.) == 0
+    # Four fast heads can use four distinct free columns, even 3 ms apart.
+    free = Resources()
+    assert preference.head_cost(free, ((1000, 2),), 1003, 2, 3.) == 0
+    assert preference.head_cost(free, ((1000, 2),), 1003, 3, 3.) > 0
+    assert preference.head_cost(held, history, 138817, 0, 3.) == 0
+    assert preference.head_cost(held, history, 138817, 1, np.nan) == 0

@@ -7,6 +7,7 @@ from ensomi_model.research.typed_audio_continuation.controls import ControlSched
 from ensomi_model.research.typed_audio_continuation.generation import TypedSession
 from ensomi_model.research.typed_audio_continuation.model import TypedAudioModel
 from ensomi_model.research.typed_audio_continuation.program import MARKS
+from ensomi_model.research.typed_audio_continuation.response_preference import RecoveryPreference
 
 
 def test_amount_ownership_ignores_other_fields_and_shadowed_boundaries():
@@ -31,7 +32,8 @@ def test_unpublished_plan_rolls_allocation_back_with_the_matching_prefix():
     model = TypedAudioModel(PlannedModelConfig(history_levels=2, skeleton_levels=2), ln_prior=.2).eval()
     schedule = ControlSchedule((ControlSpan(0, 6001, ln_fraction=.7),))
     session = TypedSession(model, np.zeros((600, 128), np.float32), 6000, schedule,
-                           seed=78, ln_feedback=LnFeedback())
+                           seed=78, ln_feedback=LnFeedback(),
+                           recovery_preference=RecoveryPreference(head_pressure=4.))
     session.publish_to(1000)
     rows = tuple(session.rows)
     # Some planned events are beyond the requested change and must be undone.
@@ -39,6 +41,7 @@ def test_unpublished_plan_rolls_allocation_back_with_the_matching_prefix():
     retained = session.published_point.allocation
     session.update_controls(ControlSpan(change, 4000, ln_fraction=.2))
     assert session.allocation == retained
+    assert session.recent_heads == session.published_point.recent_heads
     session.publish_to(4500)
     assert tuple(session.rows[:len(rows)]) == rows
     point = session.published_point.allocation
@@ -52,3 +55,5 @@ def test_unpublished_plan_rolls_allocation_back_with_the_matching_prefix():
     last = session.queue[-1][2].allocation if session.queue else point
     queued = [MARKS[q[0][1]] for q in session.queue]
     assert last.heads == point.heads+sum(t+l for t,l,_ in queued)
+    assert session.published_point.recent_heads == tuple(
+        (t, h) for t, h, _ in events if h and session.published_point.cursor-t < 169)

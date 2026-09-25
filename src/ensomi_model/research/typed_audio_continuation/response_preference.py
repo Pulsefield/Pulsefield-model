@@ -20,6 +20,30 @@ class RecoveryPreference:
     hr_ms: tuple = (89., 75., 53., 44., 43.)
     strength: float = 4.
     maximum_cost: float = 4.
+    head_pressure: float = 0.
+
+    def head_cost(self, state, recent_heads, times, counts, stars):
+        """Marginal cost of adding heads to a short occupied-key workload.
+
+        Holds older than the HH lookback occupy keys throughout that interval.
+        Other recent heads share the remaining keys. This coarse overload
+        potential cannot identify the actual repeated column or certify that
+        a particular candidate is comfortable; it reads no R1 column history.
+        """
+        times, counts = np.asarray(times), np.asarray(counts)
+        window = np.interp(stars, self.stars, self.hh_ms)
+        if self.head_pressure == 0:
+            return np.zeros_like(times+counts+window, dtype=float)
+        used = np.zeros_like(times+window, dtype=float)
+        for previous, heads in recent_heads:
+            used += heads*((times >= previous) & (times-previous < window))
+        ages = times[..., None]-np.asarray(state.starts, dtype=float)
+        occupied_throughout = (ages >= np.asarray(window)[..., None]).sum(-1)
+        capacity = 4-occupied_throughout
+        before = np.maximum(0., used-capacity)
+        after = np.maximum(0., used+counts-capacity)
+        marginal = self.head_pressure*(after**2-before**2)/np.maximum(capacity, 1)
+        return np.where(np.isfinite(window), np.minimum(marginal, self.maximum_cost), 0.)
 
     def cost(self, gap_ms, stars, kind):
         """Finite cost below the interpolated reference's first percentile.

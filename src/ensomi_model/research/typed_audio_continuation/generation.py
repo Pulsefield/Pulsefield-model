@@ -28,6 +28,7 @@ class PlanPoint:
     rng: torch.Tensor
     head_cache: object = None
     allocation: Allocation = Allocation()
+    recent_heads: tuple = ()
 
 
 class TypedSession:
@@ -39,6 +40,7 @@ class TypedSession:
         self.ln_feedback = ln_feedback
         self.recovery_preference = recovery_preference
         self.allocation = Allocation()
+        self.recent_heads = ()
         self.ln_scopes = ln_episodes(controls) if ln_feedback is not None else ()
         self.device = next(model.parameters()).device
         self.duration = duration_ms
@@ -61,7 +63,7 @@ class TypedSession:
 
     def point(self):
         return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state(), self.head_cache,
-                         self.allocation)
+                         self.allocation, self.recent_heads)
 
     def audio(self, times):
         return interpolate_audio(self.encoded, self.tensor(times, torch.long)[None],
@@ -92,6 +94,8 @@ class TypedSession:
                 cost = self.recovery_preference.release_clock_cost(
                     self.state, native, stars[:, None], self.recovery, self.duration)
                 lp[..., 2] -= self.tensor(cost)
+                lp[..., 1] -= self.tensor(self.recovery_preference.head_cost(
+                    self.state, self.recent_heads, native, 1, stars[:, None]))
                 lp = lp.log_softmax(-1)
             hazard = torch.logsumexp(lp[..., 1:], -1)-lp[..., 0]
             index, self.residual = sample_hazards(hazard.flatten(), self.tensor(valid.reshape(-1), torch.bool),
@@ -109,6 +113,7 @@ class TypedSession:
             if self.recovery_preference is not None:
                 stars = 2*control[0, 0]+4 if control[0, 2+len(self.model.style_names)] > 0 else np.nan
                 cost = self.recovery_preference.mark_cost(self.state, now, stars, self.duration)
+                cost += self.recovery_preference.head_cost(self.state, self.recent_heads, now, HEADS, stars)
                 logp = (logp-self.tensor(cost)).log_softmax(-1)
             if self.ln_feedback is not None:
                 span = next((s for s in self.ln_scopes if s.start_ms <= now < s.end_ms), None)
@@ -118,6 +123,11 @@ class TypedSession:
             mark = int(torch.multinomial(logp.exp().cpu(), 1, generator=self.rng))
             if self.ln_feedback is not None:
                 self.allocation = self.allocation.advance(*MARKS[mark][:2])
+            if self.recovery_preference is not None and self.recovery_preference.head_pressure:
+                window = max(self.recovery_preference.hh_ms)
+                self.recent_heads = tuple((t, h) for t, h in self.recent_heads if now-t < window)
+                if HEADS[mark]:
+                    self.recent_heads += ((now, int(HEADS[mark])),)
             previous = self.state.previous
             previous_head = self.state.last_head
             self.state, fresh = self.state.advance(now, mark, self.recovery)
@@ -199,6 +209,7 @@ class TypedSession:
         self.state, self.cache = point.state, point.cache
         self.head_cache = point.head_cache
         self.allocation = point.allocation
+        self.recent_heads = point.recent_heads
         self.rng.set_state(point.rng)
         self.residual = None
 

@@ -626,3 +626,28 @@ These failures cannot be repaired by selecting a different current row.
 The skeleton's head time/count decision must account for recent attacks and
 ongoing holds together. Hard recovery feasibility alone does not preserve the
 information needed for every softer gameplay response.
+
+The optional `RecoveryPreference(head_pressure=4)` adds a small skeleton-owned
+workload state for this case. At candidate time t, let tau be the requested
+difficulty's HH reference. Count recent heads in `(t-tau, t)` and subtract from
+four the LNs held throughout that interval. If n is the recent count and k the
+remaining key count, use the overload potential
+`Phi(n,k) = 4 * max(0, n-k)**2 / max(k,1)`.
+Adding h heads costs `min(4, Phi(n+h,k)-Phi(n,k))`. The head clock evaluates
+one new head; the mark scorer evaluates its actual count. Release-only events
+have zero added head cost. Setting `head_pressure=0` retains the earlier policy.
+
+This distinguishes the observed three-held-key repetition from a rapid
+four-column expansion. Two heads followed 3 ms later by two more need not
+overload four free keys. In the Hysteric failure, two keys are held throughout
+the lookback and two recent heads consume its remaining two-key capacity;
+adding another head 45 ms later has positive cost.
+
+The potential is a coarse workload preference. It cannot identify a column,
+separate all previous repetitions from new ones, or guarantee comfortable
+future realization. Released keys and detailed geometry still need their own
+responses. The implementation stores only recent skeleton head times/counts
+over the maximum reference horizon, 169 ms for this profile. Planner snapshots
+carry this history across rollback, and control changes preserve it while its
+contents expire by actual elapsed time. No R1 TAP-column history, hidden state,
+reference future or new neural parameter enters the planner.
