@@ -57,6 +57,9 @@ class FixedHeadPlan:
         future = tuple(t for t in self.queue if t > now)[:count]
         return HeadPreview(future, len(future) < count)
 
+    def pop(self):
+        return self.queue.pop(0)
+
 
 class ContinuationSession:
     """One exact H/R/row trajectory, forkable before publication.
@@ -73,7 +76,7 @@ class ContinuationSession:
     def __init__(self, model, mel, duration_ms, *, seed, planner_factory,
                  chunk_ms=500, head_chunk_ms=500, max_rows=30000, max_seconds=90.,
                  stop_callback=None, correct_short_attacks=False,
-                 arrangement_profile=None, head_times=None, row_constraint='none'):
+                 arrangement_profile=None, head_times=None, row_constraint='none', controls=None):
         if (type(duration_ms) is not int or duration_ms < 0 or
                 any(type(v) is not int or v <= 0 for v in (chunk_ms, head_chunk_ms, max_rows)) or
                 not np.isfinite(max_seconds) or max_seconds <= 0 or
@@ -91,6 +94,7 @@ class ContinuationSession:
         if model.config.minimum_action_gap_ms and head_times is not None:
             check_head_capacity(head_times, model.config.minimum_action_gap_ms)
         self.model = model
+        self.controls = controls
         self.device, self.dtype = next(model.parameters()).device, next(model.parameters()).dtype
         _synchronize(self.device)
         self.started = time.perf_counter()
@@ -116,7 +120,8 @@ class ContinuationSession:
         self.release_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x4E51)
         self.row_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0xA301)
         self.correction_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0x52C4) if correct_short_attacks else None
-        self.planner = (planner_factory(model, self.encoded, duration_ms, seed ^ 0x17AB, head_chunk_ms, self.guard)
+        options = {} if controls is None else dict(controls=controls)
+        self.planner = (planner_factory(model, self.encoded, duration_ms, seed ^ 0x17AB, head_chunk_ms, self.guard, **options)
                         if head_times is None else FixedHeadPlan(head_times, duration_ms, self.guard))
         self.release_bins = self.deadline_events = self.terminal_events = self.conditioned_waits = 0
 
@@ -142,6 +147,8 @@ class ContinuationSession:
         result.correction_rng = _fork_rng(self.correction_rng)
         result.planner = copy.copy(self.planner)
         result.planner.queue, result.planner.generated = list(self.planner.queue), list(self.planner.generated)
+        if hasattr(self.planner, 'points'):
+            result.planner.points = list(self.planner.points)
         result.planner.guard = result.guard
         if hasattr(self.planner, 'rng'):
             result.planner.rng = _fork_rng(self.planner.rng)
@@ -154,10 +161,25 @@ class ContinuationSession:
         return result
 
     @torch.inference_mode()
-    def step(self):
+    def row_options(self, now):
+        return {}
+
+    def prefer_rows(self, log_probs, legal, now):
+        return log_probs
+
+    def record_row(self, row):
+        pass
+
+    def control_at(self, times):
+        return ({} if self.controls is None else dict(control=self.tensor(
+            self.controls.at(times, encoding=self.model.control_encoding))))
+
+    @torch.inference_mode()
+    def step(self, *, stop_at=None):
         if self.cursor >= self.duration_ms:
             raise ContractError('Cannot advance a completed continuation')
         self.guard()
+        stop_at = self.duration_ms if stop_at is None else min(stop_at, self.duration_ms)
         observed_through = self.cursor
         self.planner.fill(self.model.config.lookahead + 1)
         next_h = self.planner.queue[0] if self.planner.queue else None
@@ -166,12 +188,12 @@ class ContinuationSession:
         event_time, head_role, forced_event = None, False, False
         previous = None if self.replay.last_row is None else self.replay.last_row.time_ms
         if not any(self.replay.occupancy):
-            if next_h is None:
-                self.cursor = self.duration_ms
+            if next_h is None or next_h > stop_at:
+                self.cursor = stop_at
             else:
                 event_time, head_role = next_h, True
         else:
-            gap = self.model.config.minimum_action_gap_ms
+            gap = getattr(self.model, 'recovery', self.model.config.minimum_action_gap_ms)
             if gap:
                 earliest, deadline = release_limits(LNProjection(self.replay.open_ln_start_ms, self.cursor),
                     self.planner.preview(self.cursor, self.model.config.lookahead), self.duration_ms, gap)
@@ -182,7 +204,7 @@ class ContinuationSession:
                 conditioned = self.model.config.condition_full_holds and all(self.replay.occupancy) and next_h is not None
                 deadline = next_h-1 if conditioned else None
             end = (deadline if conditioned else
-                   min(self.cursor + self.chunk_ms, self.duration_ms if next_h is None else next_h - 1))
+                   min(self.cursor + self.chunk_ms, stop_at, self.duration_ms if next_h is None else next_h - 1))
             if end > self.cursor:
                 bins = torch.arange((self.cursor + 1) // 10, end // 10 + 1, device=self.device)
                 anchors = bins * 10 + 9
@@ -193,7 +215,8 @@ class ContinuationSession:
                 clocks = release_clocks(states, [previous] * len(bins), anchors.cpu().numpy(), previews, self.duration_ms)
                 audio = interpolate_audio(self.downstream_encoded, anchors[None])[0]
                 history = self.model.skeleton_temporal.read(self.skeleton_cache)[None].expand(len(bins), -1, -1)
-                logits = self.model.release_logits(audio, history, self.tensor(clocks)).flatten()
+                logits = self.model.release_logits(audio, history, self.tensor(clocks),
+                    **self.control_at(anchors.cpu().numpy())).flatten()
                 valid, forced = release_masks(states, native.cpu().numpy(), previews, self.duration_ms,
                                                minimum_action_gap_ms=gap)
                 valid &= native.cpu().numpy() <= end
@@ -202,6 +225,8 @@ class ContinuationSession:
                     indices = torch.where(self.tensor(valid, torch.bool).flatten())[0]
                     logits = logits.index_copy(0, indices, conditioned_release_logits(logits[indices]))
                     self.conditioned_waits += 1
+                valid &= native.cpu().numpy() <= stop_at
+                forced &= valid
                 event, self.residual = sample_hazards(logits, self.tensor(valid, torch.bool).flatten(),
                     self.tensor(forced, torch.bool).flatten(), self.release_rng, self.residual)
                 self.release_bins += len(bins)
@@ -209,11 +234,13 @@ class ContinuationSession:
                     event_time = int(native.flatten()[event])
                     forced_event = bool(forced.reshape(-1)[event])
                 else:
-                    self.cursor = end
-            elif next_h is not None:
+                    self.cursor = min(end, stop_at)
+            elif next_h is not None and next_h <= stop_at:
                 if all(self.replay.occupancy):
                     raise ContractError('Planned head reached an all-held state without a release clock')
                 event_time, head_role = next_h, True
+            else:
+                self.cursor = stop_at
         published = None
         if event_time is not None:
             self.cursor = event_time
@@ -224,7 +251,7 @@ class ContinuationSession:
             counts = {}
             if self.model.config.minimum_action_gap_ms:
                 response = spaced_rows(self.replay, self.cursor, preview, self.duration_ms,
-                                       self.model.config.minimum_action_gap_ms)
+                                       getattr(self.model, 'recovery', self.model.config.minimum_action_gap_ms))
                 if not (response & legal[0]).any():
                     decision = dict(mode='joint_action_spacing', time_ms=self.cursor,
                         minimum_action_gap_ms=self.model.config.minimum_action_gap_ms,
@@ -243,8 +270,8 @@ class ContinuationSession:
             log_probs = self.model.planned_row_log_probs(audio, self.model.temporal.read(self.row_cache)[None],
                 self.tensor(exact_features([self.replay], [self.cursor])), self.tensor(legal, torch.bool),
                 self.tensor([self.replay.occupancy], torch.bool), self.tensor(context), self.tensor(local), self.tensor(future),
-                **counts)[0]
-            proposal_log_probs = log_probs.detach().cpu().double()
+                **counts, **self.control_at([self.cursor]), **self.row_options(self.cursor))[0]
+            proposal_log_probs = self.prefer_rows(log_probs.detach().cpu().double(), legal[0], self.cursor)
             decision = None
             if self.row_constraint != 'none':
                 try:
@@ -283,8 +310,9 @@ class ContinuationSession:
                 self.count_cache = self.model.row_counts.temporal.append(self.count_cache,
                     self.tensor(count_tokens([self.cursor], [previous], [published.actions])[0]))
             self.rows.append(published)
+            self.record_row(published)
             if head_role:
-                if not self.planner.queue or self.planner.queue.pop(0) != self.cursor:
+                if not self.planner.queue or self.planner.pop() != self.cursor:
                     raise ContractError('Committed head differs from the immutable head plan')
             if forced_event:
                 self.terminal_events += self.cursor == self.duration_ms

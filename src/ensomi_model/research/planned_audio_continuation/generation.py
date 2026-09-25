@@ -18,8 +18,12 @@ from .spacing import next_head_earliest
 
 
 class HeadPlanner:
-    """A pure head-stream sampler; row decisions never change its state or RNG."""
-    def __init__(self, model, encoded, duration_ms, seed, chunk_ms=500, guard=None):
+    """Head timing from audio, controls and H history, without row embeddings.
+
+    Row choices never alter its neural state or RNG. A control revision may
+    retain a short timing prefix already used by the row policy's lookahead.
+    """
+    def __init__(self, model, encoded, duration_ms, seed, chunk_ms=500, guard=None, *, controls=None):
         self.model, self.encoded, self.duration_ms = model, encoded, duration_ms
         self.device, self.dtype = encoded.device, encoded.dtype
         self.rng = torch.Generator(device='cpu').manual_seed(seed)
@@ -28,6 +32,31 @@ class HeadPlanner:
         self.cache = model.head_temporal.empty_cache()
         self.queue, self.generated = [], []
         self.bins = 0
+        self.controls = controls
+        self.points = []
+        self.published_point = self.point()
+
+    def point(self):
+        return self.cursor, self.last_head, self.cache, self.rng.get_state(), len(self.generated)
+
+    def pop(self):
+        value = self.queue.pop(0)
+        if self.controls is not None:
+            self.published_point = self.points.pop(0)
+        return value
+
+    def update_controls(self, controls, start_ms, coverage_ms, *, retain_through_ms=None):
+        """Keep prior queued heads and fixed no-head coverage when revising a suffix."""
+        cut = start_ms if retain_through_ms is None else max(start_ms, retain_through_ms+1)
+        kept = sum(t < cut for t in self.queue)
+        point = self.points[kept-1] if kept else self.published_point
+        old_cursor = self.cursor
+        self.cursor, self.last_head, self.cache, rng, count = point
+        self.cursor = max(self.cursor, coverage_ms, min(old_cursor, cut-1))
+        self.rng.set_state(rng)
+        self.generated = self.generated[:count]
+        self.queue, self.points = self.queue[:kept], self.points[:kept]
+        self.controls, self.residual = controls, None
 
     @property
     def finished(self):
@@ -45,7 +74,10 @@ class HeadPlanner:
             clocks = torch.as_tensor(head_clocks([self.last_head] * len(bins), anchors.cpu().numpy()),
                                      dtype=self.dtype, device=self.device)
             history = self.model.head_temporal.read(self.cache)[None].expand(len(bins), -1, -1)
-            logits = self.model.head_logits(audio, history, clocks).flatten()
+            options = ({} if self.controls is None else dict(control=torch.as_tensor(
+                self.controls.at(anchors.cpu().numpy(), encoding=self.model.control_encoding),
+                dtype=self.dtype, device=self.device)))
+            logits = self.model.head_logits(audio, history, clocks, **options).flatten()
             native = (bins[:, None] * 10 + torch.arange(10, device=self.device)).flatten()
             valid = (native > self.cursor) & (native <= end)
             if self.model.config.minimum_action_gap_ms:
@@ -61,6 +93,8 @@ class HeadPlanner:
             self.last_head, self.residual = self.cursor, None
             self.queue.append(self.cursor)
             self.generated.append(self.cursor)
+            if self.controls is not None:
+                self.points.append(self.point())
 
     def preview(self, now, count):
         future = tuple(t for t in self.queue if t > now)[:count]

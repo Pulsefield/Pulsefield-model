@@ -2,8 +2,10 @@
 
 This document fixes input requirements and a small candidate factorization.
 The [planned head/release prototype](planned_audio_continuation.md) implements
-that factorization; playability remains under evaluation. The earlier flat
-joint audio model remains a diagnostic baseline.
+that factorization; playability remains under evaluation. The
+[scoped complete-row restoration](controlled_audio_continuation.md) carries its
+decision ownership into the control-conditioned study. The earlier flat joint
+audio and typed resource models remain diagnostic baselines.
 
 ## Required information paths
 
@@ -23,6 +25,13 @@ actions change the responses to subsequent legal continuations. The
 owns that conceptual role; the finite evaluator and its training targets remain
 research choices. Incremental publication does not require deciding an LN
 endpoint when publishing its head.
+
+An H skeleton event requests a head-bearing row, not a head count, chord, LN
+count or column allocation. Those choices belong to R1's complete-row policy,
+which receives the controls directly. Release timing does not prescribe which
+held columns must close. An internal count/layout factorization may organize
+R1's probability law, but must not become an upstream typed-count requirement.
+Candidate frontier effects must survive normalization across count families.
 
 Let $A$ be audio, $C$ an optional external control, $K$ skeleton, $R$ rows and
 $S_i$ exact replay state. Define $O_i=\pi_{\mathrm{LN}}(S_i)$ explicitly:

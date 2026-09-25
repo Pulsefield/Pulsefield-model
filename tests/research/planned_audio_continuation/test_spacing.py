@@ -12,6 +12,7 @@ from ensomi_model.research.planned_audio_continuation.spacing import (
     allowed_rows, check_head_capacity, next_head_earliest, release_limits,
 )
 from ensomi_model.research.scoped_style_modeling.dataset import ContractError
+from ensomi_model.research.typed_audio_continuation.program import Recovery
 
 
 def replay(rows):
@@ -82,12 +83,13 @@ def oracle(state, now, actions, heads, end, gap):
     search on the small test grids; release timing is still explicitly chosen.
     """
     starts = tuple(state.open_ln_start_ms)
+    hh, rh, hr = (gap, gap, gap) if isinstance(gap, int) else (gap.hh, gap.rh, gap.hr)
     attacks = tuple(-10000 if t is None else int(t) for t in state.last_lane_attack_ms)
     releases = tuple(-10000 if t is None else int(t) for t in state.last_lane_release_ms)
     for lane, action in enumerate(actions):
-        if action in (1, 2) and (now-attacks[lane] < gap or now-releases[lane] < gap):
+        if action in (1, 2) and (now-attacks[lane] < hh or now-releases[lane] < rh):
             return False
-        if action == 3 and now-starts[lane] < gap:
+        if action == 3 and now-starts[lane] < hr:
             return False
     starts = tuple(None if a == 3 else now if a == 2 else s for a, s in zip(actions, starts))
     attacks = tuple(now if a in (1, 2) else t for a, t in zip(actions, attacks))
@@ -98,9 +100,9 @@ def oracle(state, now, actions, heads, end, gap):
     def visit(time, held, attack, release):
         if time > end:
             return not any(s is not None for s in held)
-        eligible = [i for i,s in enumerate(held) if s is not None and time-s >= gap]
+        eligible = [i for i,s in enumerate(held) if s is not None and time-s >= hr]
         press = ([i for i,s in enumerate(held) if s is None and
-                  time-attack[i] >= gap and time-release[i] >= gap] if time in head_set else [None])
+                  time-attack[i] >= hh and time-release[i] >= rh] if time in head_set else [None])
         for n in range(len(eligible)+1):
             for subset in combinations(eligible, n):
                 for lane in press:
@@ -156,7 +158,19 @@ def test_wait_deadline_preserves_an_available_next_event():
             assert earliest <= event or event == next_h
 
 
+def test_distinct_recovery_intervals_match_actual_release_and_repress_search():
+    profile = Recovery(3, 2, 2)
+    states = [ExactReplayState(), replay([(1, (2, 2, 2, 2))]),
+              replay([(1, (2, 2, 0, 0)), (8, (3, 0, 1, 0)), (9, (0, 0, 0, 2))])]
+    for state in states:
+        for heads in ((11, 12, 14, 15, 17), (12, 13, 14, 15), (13, 16, 18), ()):
+            preview = HeadPreview(heads, True)
+            actual = allowed_rows(state, 10, preview, 19, profile)
+            for actions in legal_rows(state):
+                assert actual[ROW_ACTIONS.index(actions)] == oracle(state, 10, actions, heads, 19, profile)
+
+
 def test_incomplete_preview_cannot_hide_future_capacity():
-    with pytest.raises(ContractError, match='two-gap horizon'):
+    with pytest.raises(ContractError, match='recovery horizon'):
         allowed(ExactReplayState(),0,(1,0,0,0),(22,),complete=False)
     assert allowed(ExactReplayState(),0,(1,0,0,0),(42,),complete=False)

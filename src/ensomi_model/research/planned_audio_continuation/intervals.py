@@ -15,7 +15,7 @@ from .features import (
 )
 from .release import conditioned_release_logits
 from .counts import count_state, count_tokens
-from .spacing import allowed_rows as spaced_rows, check_head_capacity, release_limits
+from .spacing import allowed_rows as spaced_rows, check_head_capacity, release_limits, recovery_values
 
 
 @dataclass(frozen=True)
@@ -65,7 +65,7 @@ class PlannedScores:
     row: torch.Tensor
 
 
-def collate_interval(example, config, device='cpu'):
+def collate_interval(example, config, device='cpu', *, recovery=None):
     """Keep teacher head plans distinct from future row/LN materialization."""
     base = collate_rows(example, config, 'cpu')
     x = base.inputs
@@ -74,7 +74,7 @@ def collate_interval(example, config, device='cpu'):
     roles = np.isin(source.rows['actions'], (1, 2)).any(-1)
     head_indices = np.flatnonzero(roles)
     heads = times[head_indices]
-    gap = config.minimum_action_gap_ms
+    gap = config.minimum_action_gap_ms if recovery is None else recovery
     if gap:
         check_head_capacity(heads, gap)
     first = int(np.searchsorted(times, example.start_ms))
@@ -104,7 +104,8 @@ def collate_interval(example, config, device='cpu'):
     r_forced &= r_valid
     h_valid = x.timing_valid.numpy().copy()
     if gap:
-        earliest_heads = np.asarray([heads[i-3]+gap if i >= 3 else 0 for i in query_head_positions])
+        hh = recovery_values(gap)[0]
+        earliest_heads = np.asarray([heads[i-3]+hh if i >= 3 else 0 for i in query_head_positions])
         h_valid &= native >= earliest_heads[:, None]
 
     def tensor(value, dtype=None):
@@ -205,26 +206,31 @@ def _gather(module, encoded, indices):
     return torch.where((indices >= 0)[:, None, None], encoded[indices.clamp_min(0)], boundary)
 
 
-def score_interval(model, inputs, coarse, *, profile_index=None):
+def score_interval(model, inputs, coarse, *, profile_index=None, controls=None):
     x = inputs.base
     raw_audio = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
     encoded = model.condition_audio(raw_audio, profile_index)
     downstream = (encoded if model.config.profile_head_rate_downstream else
                   model.condition_audio(raw_audio, profile_index, downstream=True))
+    def conditions(times):
+        return ({} if controls is None else dict(control=encoded.new_tensor(
+            controls.at(times.detach().cpu().numpy(), encoding=model.control_encoding))))
     row_history = model.temporal(x.raw, x.history_valid)[0] if x.raw.shape[1] else None
     skeleton_history = (model.skeleton_temporal(inputs.skeleton_raw, x.history_valid)[0]
                         if inputs.skeleton_raw.shape[1] else None)
     head_history = (model.head_temporal(inputs.head_raw, inputs.head_history_valid)[0]
                     if inputs.head_raw.shape[1] else None)
     audio = interpolate_audio(encoded, x.timing_times[None], x.mel_start, x.frame_count)[0]
-    h = model.head_logits(audio, _gather(model.head_temporal, head_history, inputs.head_history), inputs.head_clock)
+    h = model.head_logits(audio, _gather(model.head_temporal, head_history, inputs.head_history),
+                          inputs.head_clock, **conditions(x.timing_times))
     if not model.config.profile_head_rate_downstream:
         audio = interpolate_audio(downstream, x.timing_times[None], x.mel_start, x.frame_count)[0]
     r = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, x.timing_history),
-                             inputs.release_clock)
+                             inputs.release_clock, **conditions(x.timing_times))
     for wait in inputs.release_waits:
         audio = interpolate_audio(downstream, wait.times[None], x.mel_start, x.frame_count)[0]
-        raw = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, wait.history), wait.clocks)
+        raw = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, wait.history),
+                                   wait.clocks, **conditions(wait.times))
         conditional = conditioned_release_logits(raw.flatten()[wait.native_indices])
         r = r.flatten().index_copy(0, wait.destinations, conditional[wait.offsets]).reshape_as(r)
     if len(x.row_times):
@@ -239,7 +245,7 @@ def score_interval(model, inputs, coarse, *, profile_index=None):
             counts['response_allowed'] = inputs.response_allowed
         rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),
             x.row_exact, x.row_legal, x.occupancy, inputs.row_preview,
-            inputs.consequence_local, inputs.consequence_timing, **counts)
+            inputs.consequence_local, inputs.consequence_timing, **counts, **conditions(x.row_times))
     else:
         rows = h.new_empty((0, 256))
     return PlannedScores(h, r, rows)

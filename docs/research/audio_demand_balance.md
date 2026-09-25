@@ -219,10 +219,22 @@ the original and new peaks. The numeric improvements do not establish that the
 grouping problem is fixed, so clock-only routing is not the packaged recipe.
 
 A nominal head count cannot distinguish many small rows from fewer large chords.
-Predicting head-row activity and chord-size composition separately is a concrete
-next representation to investigate using the existing source beatmaps. It must
-preserve deliberate chordjack and dump while controlling sustained workload;
-a fixed ban on repeated chords would discard valid target arrangements.
+Their decision ownership must remain distinct: the skeleton proposes timing;
+R1 chooses chord size, TAP/LN allocation, release identity and column layout,
+conditioned directly on audio, scoped controls, timing and gameplay state. The
+typed prototype's upstream count contract removes those choices from R1. That
+restriction is an interface problem, not a reason to move more composition
+control into the skeleton. An onset-rate estimate can describe head-bearing
+rows, while composition predictors and responses belong inside R1.
+
+Restoring the complete-row choice also changes the training task. In a layout
+loss conditioned on an upstream count/release group, adding the same score to
+every member of that group cancels on normalization. Such a loss cannot
+calibrate relative mass across groups. A restored R1 must train those choices,
+and candidate frontier effects must survive a final normalization across full
+rows. Merely widening the inference mask does not supply the missing calibration.
+This repair must preserve deliberate chordjack and dump; a fixed ban on repeated
+chords would discard valid target arrangements.
 
 ### Bounded style response
 
