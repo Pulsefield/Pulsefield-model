@@ -14,7 +14,8 @@ from .program import CLOCK_DIM, MARKS, TOKEN_DIM, TIME_DIM
 
 class TypedAudioModel(nn.Module):
     def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5,
-                 ln_base=False, head_stream=False, bounded_clock=False, ln_prior=None):
+                 ln_base=False, head_stream=False, bounded_clock=False, ln_prior=None,
+                 coupled_ln_groups=False):
         super().__init__()
         self.config = body_config
         self.style_names = tuple(style_names)
@@ -22,6 +23,9 @@ class TypedAudioModel(nn.Module):
         if ln_prior is not None and not 0 < ln_prior < 1:
             raise ValueError('LN reference fraction must be strictly inside (0,1)')
         self.ln_prior = ln_prior
+        if coupled_ln_groups and ln_prior is None:
+            raise ValueError('Coupled LN groups require an LN odds reference')
+        self.coupled_ln_groups = coupled_ln_groups
         self.head_stream = False
         self.bounded_clock = False
         self.body = PlannedAudioModel(body_config)
@@ -125,14 +129,16 @@ class TypedAudioModel(nn.Module):
             residual_control[..., 1] = 0.
             residual_control[..., known_index] = 0.
         else:
-            # Unknown amount and a known reference amount are different
-            # conditions. Retain presence, but remove the varying amount from
-            # local preferences so the odds shift owns its direct effect.
+            # Reference conditioning preserves the explicit odds shift within
+            # each group. The optional group query below still receives the
+            # real amount when choosing head count and release subset.
             residual_control[..., 1] = torch.where(control[..., known_index] > 0,
                                                    2*self.ln_prior-1, 0.)
         raw = self.mark(self.plan_values(audio, history, clocks, residual_control))
+        group_raw = (self.mark(self.plan_values(audio, history, clocks, control))
+                     if self.coupled_ln_groups else None)
         controlled = (condition_ln_count(raw, support, (control[:, 1]+1)/2) if self.ln_prior is None else
-                      tilt_ln_count(raw, support, (control[:, 1]+1)/2, self.ln_prior))
+                      tilt_ln_count(raw, support, (control[:, 1]+1)/2, self.ln_prior, group_raw=group_raw))
         original = raw.masked_fill(~support, -torch.inf).log_softmax(-1)
         return torch.where(control[:, known_index, None] > 0, controlled, original)
 
@@ -140,7 +146,8 @@ class TypedAudioModel(nn.Module):
         """Constructor options actually consumed by the typed probability law."""
         return dict(style_names=list(self.style_names), plan_hidden=self.plan_temporal.config.hidden,
                     plan_levels=self.plan_temporal.config.levels, ln_base=self.ln_base,
-                    head_stream=self.head_stream, bounded_clock=self.bounded_clock, ln_prior=self.ln_prior)
+                    head_stream=self.head_stream, bounded_clock=self.bounded_clock, ln_prior=self.ln_prior,
+                    coupled_ln_groups=self.coupled_ln_groups)
 
     def row_log_probs(self, audio, history, exact, support, occupancy, plan, control, local, timing):
         body = self.body

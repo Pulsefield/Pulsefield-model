@@ -1,8 +1,8 @@
 """A semantic LN-count base that cannot be ignored by a history shortcut.
 
-The request sets the natural parameter of a conditional binomial family. At
-fixed history/support, its expected LN count increases with that parameter;
-head-count/release-mask group masses remain those of the learned mark law.
+The request sets a natural parameter for the conditional LN-count family.
+Within a fixed head-count/release-mask group, expected LN count increases with
+that parameter. Group masses may come from a separately conditioned mark law.
 """
 import math
 
@@ -14,12 +14,13 @@ GROUPS = tuple(sorted({(tap+ln, mask) for tap, ln, mask in MARKS}))
 GROUP_INDEX = tuple(GROUPS.index((tap+ln, mask)) for tap, ln, mask in MARKS)
 
 
-def tilt_ln_count(raw, support, fraction, reference_fraction):
+def tilt_ln_count(raw, support, fraction, reference_fraction, *, group_raw=None):
     """Shift scoped LN odds without capping local learned preferences.
 
-    The head-count/release-mask marginal is unchanged. Unlike the bounded
-    binomial base, sufficiently strong local evidence can concentrate on any
-    feasible LN count. This is a conditional prior, not an exact scope quota.
+    The head-count/release-mask marginal comes from ``group_raw`` when supplied,
+    otherwise from ``raw``. Within each group, ``raw`` supplies local preferences.
+    Unlike the bounded binomial base, sufficiently strong local evidence can
+    concentrate on any feasible LN count. This is not an exact scope quota.
     """
     group = torch.tensor(GROUP_INDEX, device=raw.device)
     membership = group[None] == torch.arange(len(GROUPS), device=raw.device)[:, None]
@@ -32,7 +33,7 @@ def tilt_ln_count(raw, support, fraction, reference_fraction):
         # unused logsumexp derivative from contaminating valid groups.
         return torch.logsumexp(torch.where(active[..., None], masked, 0.), -1)
 
-    original = raw.masked_fill(~support, -torch.inf).log_softmax(-1)
+    original = (raw if group_raw is None else group_raw).masked_fill(~support, -torch.inf).log_softmax(-1)
     mass = group_sum(original)
     rho = fraction.clamp(.0001, .9999)
     shift = torch.logit(rho) - math.log(reference_fraction/(1-reference_fraction))

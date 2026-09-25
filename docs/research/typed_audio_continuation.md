@@ -279,6 +279,33 @@ consumed by the typed model, separately from its inherited backbone settings.
 Neither repair is a playability certificate; native structure, control response
 and full-song behavior still decide its usefulness.
 
+### Coupling LN amount to head count and releases
+
+The original `ln_prior` implementation replaces the varying LN request by its
+reference value before querying the mark network. The odds tilt then preserves
+each head-count/release-mask group's probability. At a fixed audio/prefix/state,
+this makes those group probabilities independent of the requested LN amount.
+The clock and row factors do read the actual amount, so this is specifically
+a restriction of the mark factor. It prevents direct coordination of chord
+size and release subset with the additional workload implied by an LN request.
+
+The optional `coupled_ln_groups=True` removes that restriction while retaining
+the local-preference mechanism. For head count h, release mask r and new LN count
+l, the mark law factors as
+`p(h,r | audio,history,state,C_actual) * q(l | h,r,audio,history,state,C_reference;rho)`.
+The same mark network is queried under actual controls for group masses and
+reference LN amount for the within-group local preference; the explicit odds
+tilt supplies rho to the latter. No new parameters or conditioning information
+are added. A locally pure-TAP passage remains expressible within a high-LN scope.
+
+The option requires `ln_prior` and is recorded in `probability_options`.
+Its default is false, preserving existing checkpoint behavior. Unknown LN amount
+still uses the ordinary unmodified mark distribution. The conditional LN-count
+tilt remains monotone within a fixed (h,r), but total expected LN count need not
+increase if a higher requested fraction causes fewer total heads. The changed
+group-conditioning path needs training and native evaluation; enabling it on
+old weights alone is not an established quality improvement.
+
 ## Broader paired coverage and control response
 
 The repaired model has 3,947,227 parameters. A 1,200-update MPS fit on the
