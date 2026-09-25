@@ -55,7 +55,8 @@ def test_frontier2_is_actually_transferred_and_has_the_inherited_learning_rate(t
     assert rates['release_clock.0.weight'] == 3e-4
 
 
-def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_path, monkeypatch):
+@pytest.mark.parametrize('minimum_gap', [0, 1])
+def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_path, monkeypatch, minimum_gap):
     src = source()
     train = replace(src, entry=dict(src.entry, audio_sha256='b' * 64))
     val = replace(src, entry=dict(src.entry, source_sha256='c' * 64, group_id='val',
@@ -71,7 +72,8 @@ def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_pa
         normalization_file=str(norm_file), normalization_sha256=digest(norm_file),
         plan_updates=2, updates=2, songs_per_update=1, intervals_per_song=2,
         interval_ms=7, validation_every=2, device='cpu', max_seconds=60,
-        bounded_head=True, head_bound=3, head_decay_ms=400, condition_full_holds=True)
+        bounded_head=True, head_bound=3, head_decay_ms=400, condition_full_holds=True,
+        minimum_action_gap_ms=minimum_gap)
     monkeypatch.setattr(training, 'revision', lambda: 'f' * 40)
     monkeypatch.setattr(training, 'load_corpus', lambda root: (charts, norm))
     monkeypatch.setattr(training, 'initialize_from_r1', lambda *args: {'copied': []})
@@ -81,7 +83,9 @@ def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_pa
     def small_model(settings):
         model = PlannedAudioModel(replace(config(), bounded_head=settings.bounded_head,
             head_bound=settings.head_bound, head_decay_ms=settings.head_decay_ms,
-            condition_full_holds=settings.condition_full_holds))
+            condition_full_holds=settings.condition_full_holds,
+            minimum_action_gap_ms=settings.minimum_action_gap_ms,
+            lookahead=9 if settings.minimum_action_gap_ms else 2))
         model.context.register_forward_pre_hook(lambda module, args: lengths.append(int(args[1].sum())))
         return model
 
@@ -99,6 +103,7 @@ def test_runner_consumes_full_audio_plan_and_restores_the_native_endpoint(tmp_pa
     assert metadata['source_revision'] == 'f' * 40
     assert model.config.bounded_head and model.config.head_bound == 3 and model.config.head_decay_ms == 400
     assert model.config.condition_full_holds
+    assert model.config.minimum_action_gap_ms == minimum_gap
     generated = rollout(model, src.mel, src.duration_ms, seed=3, max_seconds=10)
     assert generated.completed and not any(generated.metrics['open_lanes'])
     with pytest.raises(FileExistsError):

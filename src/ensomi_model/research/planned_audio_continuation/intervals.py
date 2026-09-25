@@ -15,6 +15,7 @@ from .features import (
 )
 from .release import conditioned_release_logits
 from .counts import count_state, count_tokens
+from .spacing import allowed_rows as spaced_rows, check_head_capacity, release_limits
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,8 @@ class PlannedInputs:
     release_waits: tuple[ReleaseWaitInputs, ...]
     count_raw: torch.Tensor | None = None
     count_clock: torch.Tensor | None = None
+    head_valid: torch.Tensor | None = None
+    response_allowed: torch.Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,9 @@ def collate_interval(example, config, device='cpu'):
     roles = np.isin(source.rows['actions'], (1, 2)).any(-1)
     head_indices = np.flatnonzero(roles)
     heads = times[head_indices]
+    gap = config.minimum_action_gap_ms
+    if gap:
+        check_head_capacity(heads, gap)
     first = int(np.searchsorted(times, example.start_ms))
     stop = int(np.searchsorted(times, example.end_ms))
     row_start = max(0, first - (2 ** (config.history_levels + 1) - 1))
@@ -92,24 +98,37 @@ def collate_interval(example, config, device='cpu'):
     clocks = head_clocks([heads[i] if i >= 0 else None for i in query_head_positions], x.timing_times.numpy())
     r_clocks = release_clocks(ln, previous_skeleton, x.timing_times.numpy(), previews, example.chart.duration_ms)
     native = x.timing_times.numpy()[:, None] - 9 + np.arange(10)[None]
-    r_valid, r_forced = release_masks(ln, native, previews, example.chart.duration_ms)
+    r_valid, r_forced = release_masks(ln, native, previews, example.chart.duration_ms,
+                                    minimum_action_gap_ms=gap)
     r_valid &= x.timing_valid.numpy()
     r_forced &= r_valid
+    h_valid = x.timing_valid.numpy().copy()
+    if gap:
+        earliest_heads = np.asarray([heads[i-3]+gap if i >= 3 else 0 for i in query_head_positions])
+        h_valid &= native >= earliest_heads[:, None]
 
     def tensor(value, dtype=None):
         return torch.as_tensor(value, dtype=dtype, device=device)
 
     waits = []
     last_audio_query = int(x.timing_times.max())
-    if config.condition_full_holds:
-        # Each prefix defines a hypothetical unchanged LN state through H-1.
-        # Actual future releases only select scored targets, never this horizon.
+    if config.condition_full_holds or gap:
+        # Each prefix defines a hypothetical unchanged LN state through its
+        # deadline. Actual future tails select targets, never the waiting bound.
         for prefix in np.unique(query_indices[r_valid.any(-1)]):
             i = int(np.flatnonzero(query_indices == prefix)[0])
-            if not all(t is not None for t in ln[i].starts_ms) or not previews[i].times_ms:
-                continue
-            start, deadline = observed[i], previews[i].times_ms[0] - 1
-            bins = np.arange((start + 1) // 10, deadline // 10 + 1)
+            start = observed[i]
+            if gap:
+                earliest, deadline = release_limits(ln[i], previews[i], example.chart.duration_ms, gap)
+                if previews[i].times_ms and deadline >= previews[i].times_ms[0]:
+                    continue
+                begin = max(start+1, int(earliest))
+            else:
+                if not all(t is not None for t in ln[i].starts_ms) or not previews[i].times_ms:
+                    continue
+                deadline = previews[i].times_ms[0]-1
+                begin = start+1
+            bins = np.arange(begin // 10, deadline // 10 + 1)
             anchors = bins * 10 + 9
             padded = _pad_first(anchors, edge=True)
             clocks_r = release_clocks([ln[i]] * len(anchors), [previous_skeleton[i]] * len(anchors),
@@ -118,8 +137,8 @@ def collate_interval(example, config, device='cpu'):
             waits.append(ReleaseWaitInputs(tensor(padded),
                 tensor(np.full(len(padded), int(x.timing_history[i])), torch.long),
                 tensor(_pad_first(clocks_r, edge=True)),
-                tensor(np.arange(start + 1, deadline + 1) - bins[0] * 10, torch.long),
-                tensor(destinations, torch.long), tensor(native.reshape(-1)[destinations] - start - 1, torch.long)))
+                tensor(np.arange(begin, deadline + 1) - bins[0] * 10, torch.long),
+                tensor(destinations, torch.long), tensor(native.reshape(-1)[destinations] - begin, torch.long)))
             last_audio_query = max(last_audio_query, int(anchors[-1]))
 
     if waits:
@@ -138,6 +157,8 @@ def collate_interval(example, config, device='cpu'):
     target_head = np.asarray([bool(roles[i]) if i < len(roles) else False for i in query_indices])
     head_event = base.targets.timing_event.numpy() & target_head[:, None]
     release_event = base.targets.timing_event.numpy() & ~target_head[:, None]
+    if np.any(head_event & ~h_valid):
+        raise ContractError('Source head violates the minimum-spacing capacity')
     if np.any(release_event & ~r_valid) or np.any(r_forced & ~release_event):
         raise ContractError('Source release likelihood violates the planned head deadline or LN state')
 
@@ -149,6 +170,12 @@ def collate_interval(example, config, device='cpu'):
     support = row_support(row_states, row_times, row_roles, row_previews, example.chart.duration_ms)
     if any(not support[i, target] for i, target in enumerate(base.targets.row_index.tolist())):
         raise ContractError('Source row cannot realize its head plan')
+    response_allowed = None
+    if gap:
+        response_allowed = np.stack([spaced_rows(state, int(t), preview, example.chart.duration_ms, gap)
+            for state, t, preview in zip(row_states, row_times, row_previews)]) if len(row_states) else np.empty((0,256),bool)
+        if any(not response_allowed[i,target] for i,target in enumerate(base.targets.row_index.tolist())):
+            raise ContractError('Source row violates action spacing or its continuation support')
     row_preview = preview_features(row_previews, row_times, row_roles, example.chart.duration_ms, config.lookahead)
     local, future = consequences(row_states, row_times, row_previews, example.chart.duration_ms)
     count_raw = count_clock = None
@@ -165,7 +192,8 @@ def collate_interval(example, config, device='cpu'):
         tensor(_pad_first(np.ones(len(head_raw), np.bool_))[None]),
         tensor(query_head_positions - head_start, torch.long), tensor(clocks),
         tensor(_pad_first(skeleton_raw)[None]), tensor(r_clocks), tensor(r_valid), tensor(r_forced),
-        tensor(row_preview), tensor(local), tensor(future), tuple(waits), count_raw, count_clock)
+        tensor(row_preview), tensor(local), tensor(future), tuple(waits), count_raw, count_clock,
+        tensor(h_valid), None if response_allowed is None else tensor(response_allowed))
     return PlannedBatch(inputs, tensor(head_event), tensor(release_event), base.targets.row_index.to(device),
                         example.weight_per_second)
 
@@ -207,6 +235,8 @@ def score_interval(model, inputs, coarse, *, profile_index=None):
                     if inputs.count_raw.shape[1] else None)
             counts = dict(count_history=_gather(model.row_counts.temporal, past, x.row_history),
                           count_clock=inputs.count_clock)
+        if model.config.minimum_action_gap_ms:
+            counts['response_allowed'] = inputs.response_allowed
         rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),
             x.row_exact, x.row_legal, x.occupancy, inputs.row_preview,
             inputs.consequence_local, inputs.consequence_timing, **counts)
@@ -221,7 +251,8 @@ def interval_losses(scores, batch):
         active = torch.where(valid, logits, 0.)
         return torch.where(event, F.softplus(-active), F.softplus(active)).masked_select(valid).sum()
 
-    h = binary(scores.head, batch.head_event, batch.inputs.base.timing_valid)
+    h = binary(scores.head, batch.head_event,
+               batch.inputs.base.timing_valid if batch.inputs.head_valid is None else batch.inputs.head_valid)
     r = binary(scores.release, batch.release_event, batch.inputs.release_valid & ~batch.inputs.release_forced)
     row = (-scores.row[torch.arange(len(batch.row_index), device=h.device), batch.row_index].sum()
            if len(batch.row_index) else h * 0)

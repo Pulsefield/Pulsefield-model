@@ -33,6 +33,7 @@ class PlannedModelConfig(ContextModelConfig):
     profile_count: int = 0
     profile_head_rate_downstream: bool = True
     row_factorization: str = 'flat'
+    minimum_action_gap_ms: int = 0
 
     def __post_init__(self):
         super().__post_init__()
@@ -57,6 +58,12 @@ class PlannedModelConfig(ContextModelConfig):
             raise ContractError('Row factorization must be flat or count_layout')
         if self.row_factorization == 'count_layout' and self.history_levels < 4:
             raise ContractError('Count composition requires at least 31 rows of history')
+        if type(self.minimum_action_gap_ms) is not int or self.minimum_action_gap_ms < 0:
+            raise ContractError('Minimum action gap must be a nonnegative native-ms integer')
+        if self.minimum_action_gap_ms and self.lookahead < 9:
+            raise ContractError('Action spacing requires at least nine lookahead heads')
+        if self.minimum_action_gap_ms and not self.condition_full_holds:
+            raise ContractError('Action spacing requires conditional release waits')
         if any(not math.isfinite(v) or v <= 0 for v in (self.head_bound, self.head_decay_ms)):
             raise ContractError('Head history bound and decay must be finite and positive')
 
@@ -213,7 +220,7 @@ class PlannedAudioModel(ContextAudioModel):
         return pointwise(self.release_clock, torch.cat((history, clocks, paired_audio), -1)).mean(-2)
 
     def planned_row_log_probs(self, audio, history, exact, legal, occupancy, preview, local, timing,
-                              *, count_history=None, count_clock=None):
+                              *, count_history=None, count_clock=None, response_allowed=None):
         if legal.dtype != torch.bool or not bool(legal.any(-1).all()):
             raise ContractError('Planned row support must contain a legal complete row')
         hands = self.condition(history, exact, audio) + self.preview_condition(preview).unsqueeze(-2)
@@ -225,8 +232,17 @@ class PlannedAudioModel(ContextAudioModel):
             if count_history is None or count_clock is None:
                 raise ContractError('Count/layout rows require a separate count history and LN projection')
             marks = self.row_counts.logits(audio, count_history, preview, count_clock)
-            return self.row_counts.compose(scores, marks, legal)
-        return scores.masked_fill(~legal, -torch.inf).log_softmax(-1)
+            result = self.row_counts.compose(scores, marks, legal)
+        else:
+            result = scores.masked_fill(~legal, -torch.inf).log_softmax(-1)
+        if self.config.minimum_action_gap_ms:
+            if (response_allowed is None or response_allowed.dtype != torch.bool or
+                    response_allowed.shape != legal.shape or not bool((response_allowed & legal).any(-1).all())):
+                raise ContractError('Action spacing requires nonempty complete-row response support')
+            result = result.masked_fill(~response_allowed, -torch.inf).log_softmax(-1)
+        elif response_allowed is not None:
+            raise ContractError('Unconfigured action-spacing support would be unused')
+        return result
 
 
 @torch.no_grad()

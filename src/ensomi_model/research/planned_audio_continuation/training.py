@@ -156,6 +156,7 @@ def initialize_from_planned(model, config, norm):
     expected['profile_count'] = baseline.config.profile_count
     expected['profile_head_rate_downstream'] = baseline.config.profile_head_rate_downstream
     expected['row_factorization'] = baseline.config.row_factorization
+    expected['minimum_action_gap_ms'] = baseline.config.minimum_action_gap_ms
     if asdict(baseline.config) != expected or metadata['manifest_sha256'] != config.manifest_sha256:
         raise ValueError('Planned initialization differs in architecture or training corpus')
     for name, values in (('audio_mean', norm['mean']), ('audio_std', norm['std'])):
@@ -178,7 +179,9 @@ def initialize_from_planned(model, config, norm):
                 source_revision=metadata['source_revision'], copied=sorted(source), new=sorted(added),
                 profile_head_rate_downstream=dict(source=baseline.config.profile_head_rate_downstream,
                                                   target=model.config.profile_head_rate_downstream),
-                row_factorization=dict(source=baseline.config.row_factorization, target=model.config.row_factorization))
+                row_factorization=dict(source=baseline.config.row_factorization, target=model.config.row_factorization),
+                minimum_action_gap_ms=dict(source=baseline.config.minimum_action_gap_ms,
+                                           target=model.config.minimum_action_gap_ms))
 
 
 def train(config, *, resolved_yaml=''):
@@ -211,7 +214,8 @@ def train(config, *, resolved_yaml=''):
     model = PlannedAudioModel(PlannedModelConfig(bounded_head=config.bounded_head,
         head_bound=config.head_bound, head_decay_ms=config.head_decay_ms,
         condition_full_holds=config.condition_full_holds, profile_count=0 if bank is None else bank['count'],
-        profile_head_rate_downstream=config.profile_head_rate_downstream, row_factorization=config.row_factorization))
+        profile_head_rate_downstream=config.profile_head_rate_downstream, row_factorization=config.row_factorization,
+        minimum_action_gap_ms=config.minimum_action_gap_ms))
     if bank is not None:
         model.configure_profiles(bank)
     transfer = (initialize_from_planned(model, config, norm) if config.initial_checkpoint_file is not None else

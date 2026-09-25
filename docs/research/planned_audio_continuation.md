@@ -62,6 +62,12 @@ work scales with the wait length. Partial occupancy and true audio-end closure
 retain the original law. A row cannot leave all lanes occupied when the next H
 is one millisecond away. These are feasibility conditions, not comfort guarantees.
 
+An optional [joint action-spacing law](joint_action_spacing.md) applies
+`minimum_action_gap_ms` consistently to H capacity, actual release bounds and
+complete-row continuation support in training and generation. A positive value
+requires conditional release waits; zero preserves the laws above. It adds no
+weights and remains a research option pending whole-chart quality evaluation.
+
 ## Audio, row state and consequences
 
 The audio path reuses the local Mel TCN and bidirectional 2 Hz full-song branch.

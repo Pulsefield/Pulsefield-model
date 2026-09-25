@@ -91,6 +91,7 @@ def scripted_session(always_bad=False, held_prefix=False):
     """
     class Scripted:
         def __init__(self, model, mel, duration_ms, **kwargs):
+            self.model = model
             self.started, self.duration_ms = time.perf_counter(), duration_ms
             self.device, self.audio_seconds, self.arrangement = torch.device('cpu'), 0., {}
             self.rows, self.response_decisions = [], []
@@ -135,7 +136,8 @@ def test_halo_rejection_restores_boundary_and_never_publishes_rejected_future(mo
         assert events == []
         rejected.append((metadata, tuple(fork.rows)))
 
-    result = buffering.rollout_buffered(None, None, 50, seed=17, window_ms=1,
+    model = SimpleNamespace(config=SimpleNamespace(minimum_action_gap_ms=0))
+    result = buffering.rollout_buffered(model, None, 50, seed=17, window_ms=1,
                                        on_update=events.append, on_rejected=reject)
     assert result.completed and len(rejected) == 1
     assert rejected[0][0]['cut_ms'] == 0
@@ -149,7 +151,8 @@ def test_halo_rejection_restores_boundary_and_never_publishes_rejected_future(mo
 def test_attempt_exhaustion_keeps_only_published_prefix_with_open_ln(monkeypatch):
     monkeypatch.setattr(buffering, 'ContinuationSession', scripted_session(always_bad=True, held_prefix=True))
     events = []
-    result = buffering.rollout_buffered(None, None, 100, seed=17, window_ms=1,
+    model = SimpleNamespace(config=SimpleNamespace(minimum_action_gap_ms=0))
+    result = buffering.rollout_buffered(model, None, 100, seed=17, window_ms=1,
                                        max_attempts=2, on_update=events.append)
     assert not result.completed and result.stop_reason == 'planning_attempt_limit'
     assert result.coverage_ms == 0 and result.rows == (CompleteRow(0, (2, 0, 0, 0)),)

@@ -14,6 +14,7 @@ from .features import HeadPreview, head_clocks, skeleton_tokens
 from .model import PlannedAudioModel, PlannedModelConfig
 from .session import ContinuationSession, PublicationLog, _BudgetStop
 from .row_constraints import NoRowContinuation
+from .spacing import next_head_earliest
 
 
 class HeadPlanner:
@@ -47,6 +48,8 @@ class HeadPlanner:
             logits = self.model.head_logits(audio, history, clocks).flatten()
             native = (bins[:, None] * 10 + torch.arange(10, device=self.device)).flatten()
             valid = (native > self.cursor) & (native <= end)
+            if self.model.config.minimum_action_gap_ms:
+                valid &= native >= next_head_earliest(self.generated, self.model.config.minimum_action_gap_ms)
             event, self.residual = sample_hazards(logits, valid, torch.zeros_like(valid), self.rng, self.residual)
             self.bins += len(bins)
             if event is None:

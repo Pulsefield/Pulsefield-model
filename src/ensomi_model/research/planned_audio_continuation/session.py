@@ -25,6 +25,7 @@ from .features import (HeadPreview, LNProjection, consequences, preview_features
                        release_clocks, release_masks, row_support, skeleton_tokens)
 from .release import conditioned_release_logits
 from .row_constraints import NoRowContinuation, condition_rows
+from .spacing import allowed_rows as spaced_rows, check_head_capacity, release_limits
 
 
 class _BudgetStop(Exception):
@@ -85,6 +86,10 @@ class ContinuationSession:
             raise ContractError('Row constraints cannot be combined with response correction')
         if row_constraint == 'preview' and model.config.lookahead < 5:
             raise ContractError('Preview row constraint requires at least five lookahead heads')
+        if model.config.minimum_action_gap_ms and (correct_short_attacks or row_constraint != 'none'):
+            raise ContractError('Joint action spacing cannot combine with a separate row correction or constraint')
+        if model.config.minimum_action_gap_ms and head_times is not None:
+            check_head_capacity(head_times, model.config.minimum_action_gap_ms)
         self.model = model
         self.device, self.dtype = next(model.parameters()).device, next(model.parameters()).dtype
         _synchronize(self.device)
@@ -166,8 +171,17 @@ class ContinuationSession:
             else:
                 event_time, head_role = next_h, True
         else:
-            conditioned = self.model.config.condition_full_holds and all(self.replay.occupancy) and next_h is not None
-            end = (next_h - 1 if conditioned else
+            gap = self.model.config.minimum_action_gap_ms
+            if gap:
+                earliest, deadline = release_limits(LNProjection(self.replay.open_ln_start_ms, self.cursor),
+                    self.planner.preview(self.cursor, self.model.config.lookahead), self.duration_ms, gap)
+                conditioned = next_h is None or deadline < next_h
+                if conditioned and earliest > deadline:
+                    raise ContractError('Action spacing has no eligible release before its deadline')
+            else:
+                conditioned = self.model.config.condition_full_holds and all(self.replay.occupancy) and next_h is not None
+                deadline = next_h-1 if conditioned else None
+            end = (deadline if conditioned else
                    min(self.cursor + self.chunk_ms, self.duration_ms if next_h is None else next_h - 1))
             if end > self.cursor:
                 bins = torch.arange((self.cursor + 1) // 10, end // 10 + 1, device=self.device)
@@ -180,7 +194,8 @@ class ContinuationSession:
                 audio = interpolate_audio(self.downstream_encoded, anchors[None])[0]
                 history = self.model.skeleton_temporal.read(self.skeleton_cache)[None].expand(len(bins), -1, -1)
                 logits = self.model.release_logits(audio, history, self.tensor(clocks)).flatten()
-                valid, forced = release_masks(states, native.cpu().numpy(), previews, self.duration_ms)
+                valid, forced = release_masks(states, native.cpu().numpy(), previews, self.duration_ms,
+                                               minimum_action_gap_ms=gap)
                 valid &= native.cpu().numpy() <= end
                 forced &= valid
                 if conditioned:
@@ -207,8 +222,22 @@ class ContinuationSession:
             context = preview_features([preview], [self.cursor], [head_role], self.duration_ms, self.model.config.lookahead)
             local, future = consequences([self.replay], [self.cursor], [preview], self.duration_ms)
             counts = {}
+            if self.model.config.minimum_action_gap_ms:
+                response = spaced_rows(self.replay, self.cursor, preview, self.duration_ms,
+                                       self.model.config.minimum_action_gap_ms)
+                if not (response & legal[0]).any():
+                    decision = dict(mode='joint_action_spacing', time_ms=self.cursor,
+                        minimum_action_gap_ms=self.model.config.minimum_action_gap_ms,
+                        last_attacks=list(self.replay.last_lane_attack_ms),
+                        last_releases=list(self.replay.last_lane_release_ms),
+                        ln_starts=list(self.replay.open_ln_start_ms), future_heads=list(preview.times_ms),
+                        preview_complete=preview.complete, observed_through_ms=observed_through)
+                    self.constraint_decisions.append(decision)
+                    self.cursor = observed_through
+                    raise NoRowContinuation(decision)
+                counts['response_allowed'] = self.tensor(response[None], torch.bool)
             if self.model.config.row_factorization == 'count_layout':
-                counts = dict(count_history=self.model.row_counts.temporal.read(self.count_cache)[None],
+                counts.update(count_history=self.model.row_counts.temporal.read(self.count_cache)[None],
                     count_clock=self.tensor(count_state([self.replay.open_ln_start_ms], [previous], [self.cursor])))
             audio = interpolate_audio(self.downstream_encoded, torch.tensor([self.cursor], device=self.device))
             log_probs = self.model.planned_row_log_probs(audio, self.model.temporal.read(self.row_cache)[None],
@@ -307,5 +336,6 @@ class PublicationLog:
             response_decisions=session.response_decisions, **session.arrangement,
             row_constraint=session.row_constraint, constraint_decisions=session.constraint_decisions,
             planned_heads=len(session.planner.generated), coverage=self.coverage,
+            minimum_action_gap_ms=session.model.config.minimum_action_gap_ms,
             latency_scope='cached canonical Mel through published coverage; excludes waveform decode and Mel computation',
             **extra))

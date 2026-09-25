@@ -18,14 +18,18 @@ from .session import ContinuationSession, PublicationLog, _BudgetStop
 from .row_constraints import NoRowContinuation
 
 
-def close_pairs(prefix, rows, through_ms, *, screen_release_heads):
+def close_pairs(prefix, rows, through_ms, *, screen_release_heads, minimum_action_gap_ms=0):
     """Inspect a continuation against actual prior lane clocks, including entry.
 
     Only the first attack after a release forms an RH pair. Exactly 20 ms is
     excluded from HH and included in the optional RH screen. Later speculative
     rows do not enter a bounded halo's predicate.
+
+    A positive minimum_action_gap_ms instead checks all three HH/HR/RH
+    relations strictly below that bound, including an LN's own duration.
     """
     heads = list(prefix.last_lane_attack_ms)
+    starts = list(prefix.open_ln_start_ms)
     releases = [r if r is not None and (h is None or r > h) else None
                 for r, h in zip(prefix.last_lane_release_ms, heads)]
     result = []
@@ -36,15 +40,21 @@ def close_pairs(prefix, rows, through_ms, *, screen_release_heads):
         for lane, action in enumerate(row.actions):
             if action in (1, 2):
                 for kind, previous in (('HH', heads[lane]), ('RH', releases[lane])):
-                    qualifies = (previous is not None and
-                                 (t - previous < 20 if kind == 'HH' else
-                                  screen_release_heads and t - previous <= 20))
+                    qualifies = (previous is not None and (t-previous < minimum_action_gap_ms
+                        if minimum_action_gap_ms else (t-previous < 20 if kind == 'HH' else
+                                                       screen_release_heads and t-previous <= 20)))
                     if qualifies:
                         result.append(dict(kind=kind, lane=lane, previous_ms=previous,
                                            time_ms=t, gap_ms=t-previous))
                 heads[lane], releases[lane] = t, None
+                if action == 2:
+                    starts[lane] = t
             elif action == 3:
+                if minimum_action_gap_ms and starts[lane] is not None and t-starts[lane] < minimum_action_gap_ms:
+                    result.append(dict(kind='HR', lane=lane, previous_ms=starts[lane],
+                                       time_ms=t, gap_ms=t-starts[lane]))
                 releases[lane] = t
+                starts[lane] = None
     return result
 
 
@@ -81,7 +91,7 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
     if (any(type(v) is not int or v <= 0 for v in (window_ms, max_attempts)) or
             type(screen_release_heads) is not bool):
         raise ContractError('Buffered generation requires positive window/attempt bounds and a boolean RH screen')
-    if row_constraint != 'none' and not screen_release_heads:
+    if (row_constraint != 'none' or model.config.minimum_action_gap_ms) and not screen_release_heads:
         raise ContractError('Joint row constraints require the RH publication screen')
     accepted = ContinuationSession(model, mel, duration_ms, seed=seed, planner_factory=HeadPlanner,
         chunk_ms=chunk_ms, head_chunk_ms=head_chunk_ms, max_rows=max_rows, max_seconds=max_seconds,
@@ -89,6 +99,7 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
         row_constraint=row_constraint)
     publication = PublicationLog(accepted.started, duration_ms, on_update)
     windows, reason = [], 'completed'
+    halo_ms = max(20, model.config.minimum_action_gap_ms-1)
     evaluated_rows = max_unpublished = 0
     try:
         while accepted.cursor < duration_ms:
@@ -108,13 +119,14 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
                     while trial.cursor < target:
                         trial.step()
                     cut = trial.fork()
-                    through = min(duration_ms, cut.cursor + 20)
+                    through = min(duration_ms, cut.cursor + halo_ms)
                     observation.update(cut_ms=cut.cursor, checked_through_ms=through)
                     while trial.cursor < through:
                         trial.step()
                     _synchronize(trial.device)
                     pairs = close_pairs(begin.replay, trial.rows[count:], through,
-                                        screen_release_heads=screen_release_heads)
+                                        screen_release_heads=screen_release_heads,
+                                        minimum_action_gap_ms=model.config.minimum_action_gap_ms)
                     observation.update(pairs=pairs, accepted=not pairs,
                                        status='rejected' if pairs else 'accepted')
                 except _BudgetStop as error:
@@ -149,7 +161,7 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
         if windows:
             windows[-1]['service_seconds'] = time.perf_counter() - tick
     return publication.result(accepted, reason, publication_policy='unpublished-continuation-screen-v1',
-        window_ms=window_ms, max_attempts=max_attempts, screen_release_heads=screen_release_heads,
+        window_ms=window_ms, max_attempts=max_attempts, screen_release_heads=screen_release_heads, halo_ms=halo_ms,
         windows=windows, evaluated_speculative_rows=evaluated_rows, max_unpublished_rows=max_unpublished,
         rejected_proposals=sum(a['status'] == 'rejected' for w in windows for a in w['attempts']),
         step_latency_scope='Window validation service is charged once at batch delivery; use windows for sampling cost')

@@ -29,6 +29,7 @@ class PlannedTrainConfig(ContextTrainConfig):
     profile_head_rate_downstream: bool = True
     row_factorization: str = 'flat'
     train_scope: str = 'all'
+    minimum_action_gap_ms: int = 0
 
     def validate(self):
         super().validate()
@@ -57,3 +58,7 @@ class PlannedTrainConfig(ContextTrainConfig):
             raise ValueError('Training scope must be all or materializer')
         if self.train_scope == 'materializer' and self.initial_checkpoint_file is None:
             raise ValueError('Materializer-only fitting requires a pinned planned checkpoint')
+        if type(self.minimum_action_gap_ms) is not int or self.minimum_action_gap_ms < 0:
+            raise ValueError('Minimum action gap must be a nonnegative native-ms integer')
+        if self.minimum_action_gap_ms and not self.condition_full_holds:
+            raise ValueError('Action spacing requires conditional release waits')

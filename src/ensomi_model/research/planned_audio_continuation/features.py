@@ -92,7 +92,7 @@ def release_clocks(states, previous_skeleton_times, times, previews, duration_ms
     return result
 
 
-def release_masks(states, native_times, previews, duration_ms):
+def release_masks(states, native_times, previews, duration_ms, *, minimum_action_gap_ms=0):
     """Mark physical support and certain last hazards, never a crop-edge closure.
 
     A full-hold wait's earlier hazards determine whether its final event mass
@@ -110,9 +110,16 @@ def release_masks(states, native_times, previews, duration_ms):
         valid[i] = (native_times[i] > state.observed_through_ms) & (native_times[i] <= duration_ms)
         if next_h is not None:
             valid[i] &= native_times[i] < next_h
-        deadline = next_h - 1 if held == 4 and next_h is not None else duration_ms
-        if held == 4 and next_h is not None and deadline <= state.observed_through_ms:
-            raise ContractError('All-held state has no release clock before the planned head')
+        if minimum_action_gap_ms:
+            from .spacing import release_limits
+            earliest, deadline = release_limits(state, preview, duration_ms, minimum_action_gap_ms)
+            valid[i] &= (native_times[i] >= earliest) & (native_times[i] <= deadline)
+            if (next_h is None or deadline < next_h) and earliest > deadline:
+                raise ContractError('Action spacing has no eligible release before its deadline')
+        else:
+            deadline = next_h - 1 if held == 4 and next_h is not None else duration_ms
+            if held == 4 and next_h is not None and deadline <= state.observed_through_ms:
+                raise ContractError('All-held state has no release clock before the planned head')
         forced[i] = valid[i] & (native_times[i] == deadline)
     return valid, forced
 
