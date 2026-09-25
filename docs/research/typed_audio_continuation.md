@@ -193,3 +193,8 @@ LN-head proportion while keeping attack count fixed generally increases total
 press/release actions. Those actions need not have equal gameplay cost. Difficulty
 control must account for their joint organization instead of equating a desired
 star value with a universal note-rate target.
+
+The [scoped demand investigation](scoped_demand_frontier.md) reports the matched
+head-clock comparison, fixed-program R1 counterfactuals, guided decoding, and
+two remaining representation constraints. Neither experimental clock variant
+is accepted as the final playable-system architecture.
