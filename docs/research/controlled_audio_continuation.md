@@ -76,6 +76,21 @@ or remaining-time input. Learned local all-TAP and LN passages remain possible.
 Training uses the learned law; this controller is an explicit sampling policy
 whose quality must be assessed on generated, separately reported ranges.
 
+R1 can additionally receive an audio/control prediction of mean head objects per
+second. Its optional finite demand feedback compares that mean with its own
+recent committed head count and softly changes complete-row probabilities by
+candidate head count. It neither supplies counts to the skeleton nor changes
+H timing. At fixed head count, all LN/release/layout odds remain unchanged by
+this particular tilt; the subsequent LN feedback preserves the resulting
+head/release-count mass. Both mechanisms act inside R1's joint decision.
+
+The nominal mean is not a plan or a difficulty measure. Every H still requires
+at least one head, so an overly active skeleton can make a lower head-object
+reference unattainable. A timing-rate model would instead need onset-row targets.
+The retained demand readout requires the full-audio encoder and per-field control
+encoding on which it was fitted. Control revisions rebuild its future reference
+while retaining actual count history; there is no expiry quota.
+
 The training distinction matters. A layout loss conditioned on a supplied count
 group is invariant to an additive group score and cannot calibrate group mass.
 The restored joint likelihood supervises R1's count and layout choices together.

@@ -11,6 +11,7 @@ from ..planned_audio_continuation.session import ContinuationSession, _BudgetSto
 from ..planned_audio_continuation.spacing import row_release_window
 from ..typed_audio_continuation.allocation import ln_episodes
 from ..typed_audio_continuation.controls import ControlSchedule
+from ..typed_audio_continuation.demand import DemandBalance, DemandCurve, DemandFeedback
 from ..typed_audio_continuation.program import ACTIONS, Resources
 from ..typed_audio_continuation.response_preference import RecoveryPreference
 from .allocation import LnAmountFeedback, LnAmountState
@@ -19,7 +20,8 @@ from .allocation import LnAmountFeedback, LnAmountState
 class ControlledSession(ContinuationSession):
     def __init__(self, model, mel, duration_ms, controls, *, seed=260926,
                  ln_feedback=LnAmountFeedback(), recovery_preference=RecoveryPreference(head_pressure=4.),
-                 max_seconds=120., head_times=None):
+                 max_seconds=120., head_times=None, row_demand_model=None,
+                 row_demand_feedback=DemandFeedback()):
         controls = ControlSchedule(controls.spans, model.style_names)
         super().__init__(model, mel, duration_ms, seed=seed, planner_factory=HeadPlanner,
                          controls=controls, max_seconds=max_seconds, head_times=head_times)
@@ -27,6 +29,15 @@ class ControlledSession(ContinuationSession):
         self.ln_feedback, self.recovery_preference = ln_feedback, recovery_preference
         self.ln_scopes = ln_episodes(controls)
         self.recent_heads = ()
+        self.row_demand_model, self.row_demand_feedback = row_demand_model, row_demand_feedback
+        self.row_demand = DemandBalance()
+        started = time.perf_counter()
+        self.row_demand_curve = self.demand_curve(controls)
+        self.audio_seconds += time.perf_counter()-started
+
+    def demand_curve(self, controls):
+        return (DemandCurve.build(self.row_demand_model, self.downstream_encoded[0], controls,
+            self.duration_ms, self.row_demand_feedback.memory_ms) if self.row_demand_model is not None else None)
 
     @property
     def coverage(self):
@@ -53,12 +64,18 @@ class ControlledSession(ContinuationSession):
             cost += preference.head_cost(Resources(starts=self.replay.open_ln_start_ms),
                                           self.recent_heads, now, counts, stars)
             log_probs = (log_probs-torch.as_tensor(cost, dtype=log_probs.dtype)).log_softmax(-1)
+        if self.row_demand_curve is not None:
+            shift = self.row_demand_feedback.shift(self.row_demand, self.row_demand_curve, now)
+            counts = torch.as_tensor(np.isin(ACTIONS, (1, 2)).sum(-1), dtype=log_probs.dtype)
+            log_probs = (log_probs+float(shift)*counts).log_softmax(-1)
         return self.ln_feedback.scores(log_probs, self.allocation) if self.ln_feedback else log_probs
 
     def record_row(self, row):
         tap, ln = row.actions.count(1), row.actions.count(2)
         if self.ln_feedback is not None:
             self.allocation = self.ln_feedback.advance(self.allocation, tap, ln)
+        if self.row_demand_curve is not None:
+            self.row_demand = self.row_demand.advance(row.time_ms, tap+ln, self.row_demand_feedback.memory_ms)
         if self.recovery_preference is not None:
             horizon = max(self.recovery_preference.hh_ms)
             self.recent_heads = tuple((t, h) for t, h in self.recent_heads if row.time_ms-t < horizon)
@@ -83,15 +100,16 @@ class ControlledSession(ContinuationSession):
         retain = min(self.duration_ms, self.cursor+max(recovery.hh, recovery.hr+recovery.rh, 1+recovery.rh))
         self.planner.update_controls(controls, span.start_ms, self.cursor, retain_through_ms=retain)
         self.controls, self.ln_scopes = controls, ln_episodes(controls)
+        self.row_demand_curve = self.demand_curve(controls)
         self.residual = None
 
 
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, controls, *, seed=260926, max_seconds=120.,
-            on_window=None, head_times=None):
+            on_window=None, head_times=None, row_demand_model=None):
     started = time.perf_counter()
     session = ControlledSession(model, mel, duration_ms, controls, seed=seed,
-                                max_seconds=max_seconds, head_times=head_times)
+                                max_seconds=max_seconds, head_times=head_times, row_demand_model=row_demand_model)
     windows = []
     reason = 'complete'
     try:
@@ -113,5 +131,7 @@ def rollout(model, mel, duration_ms, controls, *, seed=260926, max_seconds=120.,
             sampling_contract='r1-release-window-v1',
             ln_feedback=asdict(session.ln_feedback) if session.ln_feedback else None,
             recovery_preference=asdict(session.recovery_preference) if session.recovery_preference else None,
+            row_demand_feedback=asdict(session.row_demand_feedback) if row_demand_model is not None else None,
+            row_demand_model=row_demand_model.config if row_demand_model is not None else None,
             head_source='fixed-diagnostic' if head_times is not None else 'generated-audio',
             forced_deadline_releases=session.deadline_events))

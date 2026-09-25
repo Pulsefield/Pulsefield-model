@@ -11,6 +11,7 @@ from ensomi_model.research.planned_audio_continuation.counts import COUNT_MARKS
 from ensomi_model.research.planned_audio_continuation.intervals import collate_interval, score_interval, interval_losses
 from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan
 from ensomi_model.research.typed_audio_continuation.program import Recovery
+from ensomi_model.research.typed_audio_continuation.demand import AudioDemand
 from planned_audio_continuation.test_distribution import chart, config
 
 
@@ -107,3 +108,30 @@ def test_scoped_control_update_retains_rows_and_finishes_open_holds():
             if action in (1, 2):
                 assert last[lane] is None or row.time_ms-last[lane] >= 60
                 last[lane] = row.time_ms
+
+
+def test_object_demand_changes_r1_choices_without_changing_h_times():
+    torch.set_num_threads(1)
+    torch.manual_seed(203)
+    net = model().eval()
+    controls = ControlSchedule((ControlSpan(0, 2501, stars=3, ln_fraction=.2),), net.style_names)
+    demand = AudioDemand(net.config.conditioned_audio_width,
+        controls.width_for(net.control_encoding), 2+len(net.style_names), control_encoding=net.control_encoding)
+    # An unusually low nominal rate makes the row-policy effect visible while
+    # still requiring R1 to realize every H supplied by the unchanged planner.
+    with torch.no_grad():
+        demand.query[-1].bias[0] = -3
+    sessions = [ControlledSession(net, np.zeros((250, 128), np.float32), 2500, controls,
+        seed=177, row_demand_model=choice) for choice in (None, demand)]
+    for session in sessions:
+        session.publish_to(1000)
+        prefix = tuple(session.rows)
+        session.update_controls(ControlSpan(1400, 2100, stars=5))
+        session.publish_to(2500)
+        assert tuple(session.rows[:len(prefix)]) == prefix
+        assert not any(session.replay.occupancy)
+    heads = lambda s: [r.time_ms for r in s.rows if any(a in (1, 2) for a in r.actions)]
+    assert heads(sessions[0]) == heads(sessions[1])
+    assert sessions[0].rows != sessions[1].rows
+    assert sum(a in (1, 2) for r in sessions[1].rows for a in r.actions) < sum(
+        a in (1, 2) for r in sessions[0].rows for a in r.actions)
