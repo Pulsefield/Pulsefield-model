@@ -116,7 +116,9 @@ not establish their musical alignment. No listening or player test was performed
 
 ## Representation issues exposed by the comparison
 
-Two concrete constraints need correction before expanding this prototype.
+The compared checkpoints expose two concrete representation constraints. The
+[typed-model repair](typed_audio_continuation.md#timing-base-and-local-preference-repair)
+implements the changes below and reports their subsequent native results.
 
 First, `TypedAudioModel` reuses an inherited configuration containing
 `bounded_head=True`, but its typed clock computes an audio affine plus an

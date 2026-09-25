@@ -254,3 +254,67 @@ Checkpoints record `probability_options`, the constructor settings actually
 consumed by the typed model, separately from its inherited backbone settings.
 Neither repair is a playability certificate; native structure, control response
 and full-song behavior still decide its usefulness.
+
+## Broader paired coverage and control response
+
+The repaired model has 3,947,227 parameters. A 1,200-update MPS fit on the
+614-TRAIN/36-VAL corpus took 451 seconds. A broader admitted corpus contains
+6,923 ranked 2–6-star TRAIN charts from 2,573 groups and retains the same 36 VAL
+charts. It supplies canonical full-song Mel and overlaps 112 human-annotated
+TRAIN charts, compared with 11 in the smaller paired corpus. Missing style
+assessments remain unspecified; the 289 human cells are not quality labels.
+
+The broader fit samples song group, chart and clock interval for 75% of draws,
+with a separately declared human-annotated interval objective for 25%. It also
+corrects the population interval weight: uniform interval sampling uses
+`1000 * interval_count / audio_duration_ms`, so a short final interval does not
+receive an oversized weight. Audio normalization and the LN reference prior
+remain fixed. The comparison therefore changes coverage, weighting and training
+duration together; it does not isolate the effect of more data alone.
+
+On the same three-audio panel, each checkpoint completes 15 native cases:
+12 static combinations of difficulty 3/5 and LN fraction 0.2/0.7, plus three
+32-second mid-song changes. Static results are:
+
+| Measurement | Repaired small corpus | After 800 broader updates |
+| --- | ---: | ---: |
+| Mean absolute whole-chart star error | 0.739 | 0.588 |
+| Mean absolute LN-head fraction error | 0.0745 | 0.0911 |
+| LNs lasting at most 40 ms | 649 / 15,120 | 345 / 17,309 |
+| Fraction of LNs lasting at most 40 ms | 4.29% | 1.99% |
+
+The shorter-tail improvement is not uniform. Hysteric at requested difficulty 3
+and 70% LN increases from 24 to 55 LNs of at most 40 ms; its median hold duration
+falls from 170 to 127 ms. The higher request produces 78.5–82.5% LN heads across
+the three 32-second switched scopes after broader fitting; the following
+32 seconds produce 14–17% after restoring the 20% request. Published prefixes
+remain unchanged. These are sampled responses, not exact quota fulfillment.
+
+Lens review covers four small-corpus contexts and eight pages, then two broader
+peak contexts and four pages, including every action and articulation table.
+Layering, subset releases, mixed TAP/LN groups and short cross-column events
+remain. In the small-corpus As It Was example, an LN from 88937 to 89106 ms
+survives the control expiry at 89000 ms. The broader Zenithfall peak contains
+fewer isolated microholds but retains a 34-ms LN; Hysteric still has short
+release-to-head recovery in an outer-column repeated figure. Neither candidate
+is an accepted playable-system release. No listening or player test was done.
+
+A separate small-corpus style probe holds difficulty 4 and LN fraction 0.2
+fixed on Hysteric. Four conditions share the same 32-second update procedure,
+including an unspecified-style baseline. Over that scope, adjacent-head
+same-column reuse is 17.8% for baseline, 27.6% for prominent jack, 14.9% for
+prominent stream and 13.3% for prominent tech. This primitive is not the style
+readout. Eight inspected contexts and 16 pages show weak immediate differences
+and do not establish the requested prominent organizations. Semantic style
+control remains a learning and native-evaluation question.
+
+To examine the LN/difficulty coupling, a fixed-prefix probe uses one middle
+8-second interval from each of the 36 existing VAL charts. Audio, teacher
+history, physical state, scope and requested difficulty 3 stay fixed; only the
+LN request changes from 0.2 to 0.7. Mean conditional head-event probability
+increases by 2.18% in the small-corpus model and 1.34% after broader fitting.
+In contrast, the latter's autonomous head counts increase from 2,102 to 3,327
+on Zenithfall and 1,900 to 2,998 on Hysteric. These are different operating
+distributions: the comparison identifies generated-state feedback as an
+investigation target, but does not assign a causal percentage to history,
+occupation, release decisions or R1.
