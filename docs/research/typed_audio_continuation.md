@@ -156,3 +156,40 @@ Only 11 TRAIN charts overlap the existing human style judgments. Five semantic
 input slots and their training path exist, but reliable style control is not
 established. These candidates are useful for investigating demand-conditioned
 planning and release behavior; neither is an accepted playable-system release.
+
+## Owning the head clock
+
+The optional `head_stream` experiment keeps a separate 63-head temporal history
+of head gaps, TAP counts and new-LN counts. Release-only events do not advance
+that history. Its exact phase clock is time since the last head; active LNs and
+resource recovery still condition the prediction. Releases and marks retain the
+complete typed-event history. Both paths consume direct full-song audio and
+scoped controls. The model has 4,301,393 parameters with this option.
+
+At each native position, the clock law is `P(H)=h`, `P(R-only)=(1-h)*r`, and
+`P(none)=(1-h)*(1-r)`, after applying support. This keeps a changed release logit
+from directly renormalizing head probability. It does not make future heads
+independent of the actual LN occupation created by earlier choices.
+
+The resource abstraction deliberately forgets which already-eligible free
+resource had which old recovery deadline. In this experiment its neural feature
+therefore reports remaining wait, clipped to zero when eligible. Signed past
+deadlines would expose an arbitrary canonicalization age as apparent recovery
+information. Head-stream caches are preserved when a scoped-control revision
+rolls the unpublished planner back.
+
+A broader TRAIN-only reference contains 6,924 ranked charts and 252,167 nonempty
+8-second windows with 4-second hop. Weighting gives equal mass to song groups,
+then charts and windows. In charts rated 2.5–3.5 stars, windows with at least
+50% LN heads have median head/action rates 7.25/11.875 per second and median
+within-window LN-release duration 196 ms. The high-LN generated examples above
+have median action rates 20.75/19.062/15.625 and release durations
+120/128.25/175 ms. These are distribution comparisons, not local star ratings
+or physiological limits.
+
+There is an exact constraint behind the coupling: over any scope, releases equal
+new LN heads plus entering held keys minus exiting held keys. Hence increasing
+LN-head proportion while keeping attack count fixed generally increases total
+press/release actions. Those actions need not have equal gameplay cost. Difficulty
+control must account for their joint organization instead of equating a desired
+star value with a universal note-rate target.

@@ -15,7 +15,7 @@ from ..oracle_time_continuation.replay import ExactReplayState, commit
 from ..oracle_time_continuation.schema import CompleteRow
 from ..planned_audio_continuation.features import HeadPreview, consequences
 from .controls import ControlSchedule
-from .program import HEADS, Resources, Recovery, bind_row, preview, row_support, tokens
+from .program import HEADS, Resources, Recovery, bind_row, head_tokens, preview, row_support, tokens
 
 
 @dataclass
@@ -24,6 +24,7 @@ class PlanPoint:
     state: Resources
     cache: object
     rng: torch.Tensor
+    head_cache: object = None
 
 
 class TypedSession:
@@ -40,6 +41,7 @@ class TypedSession:
         self.row_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0xA301)
         self.state, self.cursor, self.residual = Resources(), -1, None
         self.cache = model.plan_temporal.empty_cache()
+        self.head_cache = model.head_temporal.empty_cache() if model.head_stream else None
         self.row_cache = model.body.temporal.empty_cache()
         self.replay, self.bindings = ExactReplayState(), (None,)*4
         self.rows, self.queue = [], []
@@ -50,7 +52,7 @@ class TypedSession:
         return torch.as_tensor(a, dtype=dtype, device=self.device)
 
     def point(self):
-        return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state())
+        return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state(), self.head_cache)
 
     def audio(self, times):
         return interpolate_audio(self.encoded, self.tensor(times, torch.long)[None],
@@ -65,9 +67,14 @@ class TypedSession:
             valid = (native > self.cursor) & (native <= end)
             support = self.state.type_support(native, self.duration, self.recovery)
             history = self.model.plan_temporal.read(self.cache)[None].expand(len(anchors), -1, -1)
+            extra = {}
+            if self.model.head_stream:
+                extra = dict(head_history=self.model.head_temporal.read(self.head_cache)[None].expand(len(anchors), -1, -1),
+                             head_clocks=self.tensor(self.state.clocks(anchors, self.duration,
+                                 remaining_availability=True, head_phase=True)))
             lp = self.model.clock_log_probs(self.audio(anchors), history,
-                self.tensor(self.state.clocks(anchors, self.duration)),
-                self.tensor(self.controls.at(anchors)), self.tensor(support, torch.bool))
+                self.tensor(self.state.clocks(anchors, self.duration, remaining_availability=self.model.head_stream)),
+                self.tensor(self.controls.at(anchors)), self.tensor(support, torch.bool), **extra)
             hazard = torch.logsumexp(lp[..., 1:], -1)-lp[..., 0]
             index, self.residual = sample_hazards(hazard.flatten(), self.tensor(valid.reshape(-1), torch.bool),
                 self.tensor((~support[..., 0]).reshape(-1), torch.bool), self.rng, self.residual)
@@ -78,13 +85,17 @@ class TypedSession:
             kind = 1+int(torch.multinomial(lp.reshape(-1, 3)[index, 1:].softmax(-1).cpu(), 1, generator=self.rng))
             allowed = self.state.support(now, self.duration, self.recovery) & ((HEADS > 0) == (kind == 1))
             logp = self.model.mark_log_probs(self.audio([now]), self.model.plan_temporal.read(self.cache)[None],
-                self.tensor(self.state.clocks(np.array([now]), self.duration)),
+                self.tensor(self.state.clocks(np.array([now]), self.duration, remaining_availability=self.model.head_stream)),
                 self.tensor(self.controls.at([now])), self.tensor(allowed[None], torch.bool))[0]
             mark = int(torch.multinomial(logp.exp().cpu(), 1, generator=self.rng))
             previous = self.state.previous
+            previous_head = self.state.last_head
             self.state, fresh = self.state.advance(now, mark, self.recovery)
             raw = tokens([now], [mark], [previous])[0]
             self.cache = self.model.plan_temporal.append(self.cache, self.tensor(raw))
+            if self.model.head_stream and HEADS[mark]:
+                self.head_cache = self.model.head_temporal.append(self.head_cache,
+                    self.tensor(head_tokens([now], [mark], [previous_head])[0]))
             self.cursor, self.residual = now, None
             self.queue.append(((now, mark), fresh, self.point()))
             return
@@ -150,6 +161,7 @@ class TypedSession:
         point = self.queue[-1][2] if self.queue else self.published_point
         self.cursor = max(point.cursor, self.coverage, min(old_cursor, span.start_ms-1))
         self.state, self.cache = point.state, point.cache
+        self.head_cache = point.head_cache
         self.rng.set_state(point.rng)
         self.residual = None
 

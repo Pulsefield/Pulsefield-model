@@ -34,6 +34,7 @@ class Resources:
     starts: tuple = (None, None, None, None)
     free_at: tuple = (-1000000,)*4
     previous: int | None = None
+    last_head: int | None = None
 
     def support(self, now, duration, recovery):
         occupied = np.array([s is not None for s in self.starts])
@@ -69,14 +70,17 @@ class Resources:
         for i in fresh:
             starts[i] = now
         free.extend([now + recovery.hh]*tap)
-        return Resources(tuple(starts), tuple(sorted(free)), now), tuple(fresh)
+        return Resources(tuple(starts), tuple(sorted(free)), now,
+                         now if tap+ln else self.last_head), tuple(fresh)
 
-    def clocks(self, times, duration):
+    def clocks(self, times, duration, *, remaining_availability=False, head_phase=False):
         times = np.asarray(times, dtype=np.float64)
         free = list(sorted(self.free_at)) + [None]*(4-len(self.free_at))
         values = np.stack((*(times-t if t is not None else np.full_like(times, np.nan) for t in self.starts),
-                           *(t-times if t is not None else np.full_like(times, np.nan) for t in free),
-                           times-self.previous if self.previous is not None else np.full_like(times, np.nan),
+                           *((np.maximum(t-times, 0) if remaining_availability else t-times)
+                             if t is not None else np.full_like(times, np.nan) for t in free),
+                           times-(self.last_head if head_phase else self.previous)
+                           if (self.last_head if head_phase else self.previous) is not None else np.full_like(times, np.nan),
                            duration-times), -1)
         clocks = time_features(values).reshape(*times.shape, 10*TIME_DIM)
         held = np.broadcast_to([s is not None for s in self.starts], (*times.shape, 4))
@@ -88,6 +92,13 @@ def tokens(times, marks, previous):
     bits = RELEASE_BITS[np.asarray(marks, int)]
     raw = np.concatenate((time_features(np.asarray(times)-np.asarray(previous, float)), counts, bits), -1)
     return np.repeat(raw[:, None, :], 2, axis=1).astype(np.float32)
+
+
+def head_tokens(times, marks, previous):
+    """Only head gaps/counts enter musical head memory; tails have their own path."""
+    raw = tokens(times, marks, previous)
+    raw[..., -4:] = 0
+    return raw
 
 
 def preview(events, now, count, bindings):

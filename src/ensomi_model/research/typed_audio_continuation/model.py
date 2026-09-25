@@ -1,8 +1,10 @@
 """One resource score planner and an R1-derived column arranger."""
 import math
+import copy
 
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from ..bounded_typed_continuation.temporal import FiniteTemporal, TemporalConfig, pointwise
 from ..planned_audio_continuation.model import PlannedAudioModel, PlannedModelConfig
@@ -11,11 +13,12 @@ from .program import CLOCK_DIM, MARKS, TOKEN_DIM
 
 
 class TypedAudioModel(nn.Module):
-    def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5, ln_base=False):
+    def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5, ln_base=False, head_stream=False):
         super().__init__()
         self.config = body_config
         self.style_names = tuple(style_names)
         self.ln_base = ln_base
+        self.head_stream = False
         self.body = PlannedAudioModel(body_config)
         self.plan_temporal = FiniteTemporal(TemporalConfig(TOKEN_DIM, plan_hidden, plan_levels, 4))
         width = ControlSchedule(style_names=self.style_names).width
@@ -39,12 +42,35 @@ class TypedAudioModel(nn.Module):
                      'preview_condition'):
             if hasattr(self.body, name):
                 delattr(self.body, name)
+        if head_stream:
+            self.enable_head_stream()
+
+    def enable_head_stream(self):
+        """Initialize head ownership from the currently loaded shared weights."""
+        self.head_temporal = copy.deepcopy(self.plan_temporal)
+        self.head_query = copy.deepcopy(self.plan_query)
+        self.head_clock = nn.Linear(128, 10).to(self.clock.weight.device)
+        with torch.no_grad():
+            self.head_clock.weight.copy_(self.clock.weight[::2])
+            self.head_clock.bias.copy_(self.clock.bias[::2])
+        self.head_stream = True
 
     def plan_values(self, audio, history, clocks, control):
         return pointwise(self.plan_query, torch.cat((audio, history.mean(-2), clocks, control), -1))
 
-    def clock_log_probs(self, audio, history, clocks, control, support):
+    def clock_log_probs(self, audio, history, clocks, control, support, *, head_history=None, head_clocks=None):
         logits = (self.clock_audio(audio) + self.clock(self.plan_values(audio, history, clocks, control))).reshape(-1, 10, 2)
+        if self.head_stream:
+            head = self.head_query(torch.cat((audio, head_history.mean(-2), head_clocks, control), -1))
+            h = self.clock_audio(audio)[:, ::2] + self.head_clock(head)
+            r = logits[..., 1]
+            log_h = F.logsigmoid(h).masked_fill(~support[..., 1], -torch.inf)
+            log_no_h = torch.where(support[..., 1], F.logsigmoid(-h), 0.)
+            # At true EOS an outstanding LN forces an event, not a new head.
+            forced_release = ~support[..., 0]
+            log_r = torch.where(forced_release, 0., F.logsigmoid(r)).masked_fill(~support[..., 2], -torch.inf)
+            log_no_r = torch.where(support[..., 2], F.logsigmoid(-r), 0.).masked_fill(forced_release, -torch.inf)
+            return torch.stack((log_no_h+log_no_r, log_h, log_no_h+log_r), -1)
         logits = torch.cat((torch.zeros_like(logits[..., :1]), logits), -1)
         return logits.masked_fill(~support, -torch.inf).log_softmax(-1)
 
