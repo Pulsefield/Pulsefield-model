@@ -233,6 +233,12 @@ exclude `correct_short_attacks`; buffered use also requires the RH screen.
 They are Python research options, not packaged inference settings or adopted
 playability guarantees.
 
+The [whole-chart comparison](row_constraint_evaluation.md) completes all 16
+count/layout cases under both modes; preview reduces rejections from six to
+three. Both modes still fail one flat-model case because a fully occupied R
+event arrives too close to the next H. Expressive LN examples survive, but
+requested LN response and some paired contexts remain weaker than desired.
+
 ## Generate and stream from an audio file
 
 The source-chart-free entrypoint accepts a planned-family checkpoint and audio
