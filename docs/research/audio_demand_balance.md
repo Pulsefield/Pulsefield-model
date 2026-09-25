@@ -170,3 +170,15 @@ row count above is a publication-buffer request, not privileged context for the
 model. `TypedAudioSystem.generate` provides the same factors for offline export.
 A serialization check compares the loaded and direct components through native
 generation, a future control change, restoration and terminal LN closure.
+
+A provisional combined bundle contains 3,984,093 parameters in 16.05 MB, with
+both models and the tested 60/50/50-ms recipe. Loading the trained bundle
+reproduces the full 736-row Take comparison sequence exactly on the same cached
+Mel, CPU thread setting and seed. A fresh-process test recomputes YomiYori's
+498989-ms waveform/Mel and publishes 8000 ms, 67 rows and two open LNs in 2.380
+seconds from child entry, or 2.519 seconds including process roundtrip. OS caches
+are not flushed; client rendering and player reading are excluded. Across the
+40-case panel, the largest observed cached-Mel publication-window service is
+0.603 seconds for an 8-second step. These are measured service observations,
+not worst-case guarantees or player validation. A local three-chart playtest
+archive preserves the generated note objects and includes their audio.
