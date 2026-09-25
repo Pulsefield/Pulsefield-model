@@ -232,11 +232,11 @@ Copying old weights requires compatible input semantics, not just compatible
 tensor shapes, and does not establish policy parity.
 
 Hypothetical queries do not mutate committed state or consume publication RNG.
-After one row is chosen, only its actual LN projection feeds skeleton generation.
-Using the full-history consequence score to resample or reject skeleton plans
-would violate the stated skeleton independence and requires a separate design
-change. This places the first consequence module in row selection without
-silently reintroducing the removed row-content-to-timing path.
+After one row is chosen, its actual LN projection feeds release preferences.
+The scoped scheduler also supplies the required release window from R1's exact
+feasibility response. This is distinct from feeding learned row-content features
+or using a full-history quality score to resample H plans; those changes require
+a separate design. Candidate consequence scoring remains inside row selection.
 
 The prototype trains the residual jointly with the row likelihood on the same
 inputs available at inference, including explicitly marked finite lookahead.
@@ -249,8 +249,9 @@ playability answer different questions.
 ## Feasibility, lookahead and publication
 
 The head plan is available before rows depending on it are committed. The
-release clock reads only already-committed LN state, never a future actual
-occupancy trajectory. Row materialization receives a bounded head preview.
+release preference network reads already-committed LN state. Its feasibility
+window derives from the same committed prefix and proposed H path, never an
+actual future occupancy trajectory. Row materialization receives a bounded head preview.
 An exhausted lookahead queue is unknown future, not EOS.
 
 Every committed head must remain realizable. Four active holds leave no free
