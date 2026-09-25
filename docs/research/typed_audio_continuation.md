@@ -692,3 +692,68 @@ apply after the guided model scores. Since every conditional is normalized
 at its own generated prefix, neither variant is exact global chart-level
 guidance. Native range calibration and articulation must decide whether the
 more selective control operator is useful.
+
+### Control-stratified native comparison
+
+At source `f9ac4e63d3d0c03f51c751606b44d0350319cfb8`, the retained ranked
+2,400-update weights were compared with selective guidance at strength one
+(identity) and two. Both policies retain amount feedback, empirical recovery
+preferences and occupied-head pressure four. Eight fixed audio files each have
+four static conditions and one mid-song change: all 40 cases per policy finish.
+The first three songs informed development; the additional five broaden the
+check but do not constitute an untouched test set. Seeds are paired, although
+the generated histories diverge.
+
+The following cells each contain eight full-song generations at one fixed
+request. Star MAE averages absolute whole-chart rating error over those songs.
+Short-LN prevalence pools LN objects only within the same control cell. These
+two aggregations have different denominators; neither replaces individual
+chart inspection.
+
+| Request: stars, LN fraction | Star MAE, identity → guided | LN-fraction MAE, identity → guided | LNs at most 40 ms, identity → guided |
+| --- | ---: | ---: | ---: |
+| 3, 0.2 | 0.635 → 0.555 | 0.0277 → 0.0313 | 1/1,987 → 0/1,614 |
+| 3, 0.7 | 0.475 → 0.304 | 0.0345 → 0.0304 | 1/9,423 → 1/7,820 |
+| 5, 0.2 | 0.333 → 0.311 | 0.0312 → 0.0328 | 6/3,574 → 8/4,609 |
+| 5, 0.7 | 0.619 → 0.398 | 0.0506 → 0.0603 | 164/15,603 → 287/18,063 |
+
+The short-tail regression concentrates in the difficulty-five, high-LN cell:
+1.05% becomes 1.59%. Pooling easier conditions would dilute it. Guidance also
+leaves individual calibration failures: Take requested at 5 stars and 0.2 LN
+fraction reaches 6.083, while Revenge requested at 3 and 0.2 reaches 1.932.
+The identity policy's static charts all remain within 2–6 stars, but some still
+miss their particular request substantially.
+
+Changed-control cases are evaluated separately before, within and after the
+fixed 105000–137000 ms override, from difficulty 3/LN fraction 0.2 to 5/0.7.
+In the five additional songs, guided override strain proxies are 3.288, 4.540,
+3.934, 3.924 and 3.459 for FoolMoon, Goodbye, Revenge, Take and YomiYori. These
+are the full-prefix scoped proxy, not official local star ratings. YomiYori's
+override proxy falls from 3.691 without guidance to 3.459 with it. Take's
+restored final range lasts only 7.237 seconds and contains two new heads, one
+LN: its observed fraction 0.5 has a very different denominator from a populated
+32-second scope. Entering holds and their releases remain in the physical
+evaluation, without adding their heads to that range's LN-fraction denominator.
+
+Four selected Lens contexts are fully inspected, including all eight pages and
+all action/articulation tables. Hysteric's difficulty-three, high-LN peak at
+84396–88397 ms contains coordinated handoffs, TAP interleaving and 334–463 ms
+layers; its shortest new LN is 80 ms. Zenithfall's difficulty-five, high-LN peak
+at 72347–76348 ms still contains 30–39 ms LNs and a 31-ms release-to-head pair.
+Revenge's 150679–154680 ms peak preserves a TAP passage between LN layers, but
+also contains 26/37-ms tails and a 39-ms release-to-head pair. Cross-column
+14–24-ms staggers are distinct from these same-column relations.
+
+Take's 127738–131739 ms difficulty-five/low-LN peak exposes a different issue:
+six consecutive four-key TAP rows at 130025, 130119, 130227, 130323, 130408 and
+130504 ms have gaps of 94, 108, 96, 85 and 96 ms. This sustained chord repetition
+is not a short-tail failure. It illustrates why individual recovery preferences
+and a maximum 169-ms workload history do not characterize sustained demand.
+The observation does not establish that chordjacks are generally undesirable
+or that this passage alone explains the chart's rating.
+
+These outcomes support separate range and control-cell evaluation, while leaving
+range calibration, high-LN articulation and semantic style adherence unresolved.
+No player test or listening assessment was performed. The inference policies
+remain optional research settings; these results do not select a playable
+release or a new set of trained weights.

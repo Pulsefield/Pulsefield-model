@@ -192,3 +192,34 @@ upstream responses. They do not establish that either mechanism alone will
 fix native release quality. Scoped adherence, real articulation and coherent
 audio-responsive variation remain the joint target; a lower loss or a better
 single difficulty proxy is insufficient for selecting a playable system.
+
+## Sustained workload and short gameplay memory
+
+The [control-stratified native comparison](typed_audio_continuation.md#control-stratified-native-comparison)
+adds a second limitation to single-action recovery. A difficulty-five request
+can produce six consecutive four-key TAP chords roughly 85–108 ms apart even
+when the immediate interval preference is mostly satisfied. High-LN requests
+also add release actions according to the conservation relation above. The
+physical state used for demand decisions therefore needs a time span beyond
+the current maximum 169-ms head-pressure lookback.
+
+A candidate extension is a small, explicit history of head and release counts
+at several elapsed-time scales. This is recent gameplay workload, independent
+of the deferred long musical-pattern memory. The skeleton can read this state
+without receiving R1's TAP-column choices: over an interval, keys held throughout
+cannot execute its other actions. If k keys remain and the interval contains
+a attacks and r releases, at least one of those keys carries at least
+`(a+r)/k` actions when k is positive. This is a lower bound on action count,
+not a difficulty score; it neither identifies the busiest key nor equates a
+press with a release in physiological cost. R1 has the actual column history
+and can evaluate the distribution of that burden when choosing a row.
+
+Such a response should influence head timing/count decisions before they become
+an immutable skeleton, and retain earlier workload across a control boundary.
+Requested controls change the desired future; they do not erase accumulated
+physical history. Mandatory releases must remain executable, rather than being
+delayed to make an action-rate counter look better. A finite preference could
+preserve a short expressive burst while discouraging sustained overload, with
+ranked examples informing its scale. Its usefulness still requires native
+generation and inspection: a rate ceiling can otherwise flatten legitimate
+chordjack or dump organization without fixing musical or style coherence.
