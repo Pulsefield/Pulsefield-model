@@ -515,3 +515,31 @@ cache and RNG. It never reads materialized TAP columns or R1 hidden state.
 The runtime records the policy parameters in generation metrics. Native range
 calibration, release articulation and style organization determine whether this
 optional sampling policy is useful; no benefit follows from the interface alone.
+
+On the retained 2,400-update model, one fixed feedback setting completes the
+three-audio, 15-case panel without retraining. The 12 static cases improve
+LN-fraction error from 0.0777 to 0.0380. Star error changes from 0.488 to 0.580,
+and short LNs change from 256/12,515 (2.05%) to 236/12,217 (1.93%). This is a
+useful amount-calibration result, not a general playability improvement.
+
+The fixed 105000–137000-ms 70%-LN overrides remain heterogeneous. Zenithfall
+changes from 89.8% to 74.8%; Hysteric from 74.5% to 81.4%; As It Was from
+77.4% to 79.9%. After restoring the 20% request, the remaining ranges yield
+15.1%, 15.5% and 13.7%. These ranges retain their own action and difficulty
+observations rather than being pooled into a successful average.
+
+Two native Lens contexts and all four pages retain LN layering, simultaneous
+and subset releases, mixed rows and a pure-TAP passage. The Zenithfall high-
+control peak still has 27–38-ms holds and an avoidable 25-ms same-column
+release/head transition. Counter feedback controls how often LNs are introduced;
+it cannot by itself establish good lifetimes or recovery geometry.
+
+An explicit absent/prominent Jack comparison at difficulty 4/LN 20% also remains
+inconclusive. In the 32-second style range, LN fractions change from
+16.4%/6.4% without feedback to 17.8%/12.9% with it. Adjacent-head column reuse
+changes from 18.2%/30.3% to 21.8%/25.5%, but that primitive is not a semantic
+readout. Four inspected contexts and eight pages show chordal TAP movement
+without feedback and longer LN anchors with feedback; neither establishes
+reliable requested Jack strength. Occupation couples amount and organization,
+so a better LN percentage does not prove preservation of every other control.
+The policy remains optional research functionality.
