@@ -242,11 +242,11 @@ class TypedSession:
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120., on_window=None,
             ln_feedback=None, recovery_preference=None, star_guidance=None,
-            demand_model=None, demand_feedback=DemandFeedback()):
+            demand_model=None, demand_feedback=DemandFeedback(), recovery=Recovery()):
     started = time.perf_counter()
     session = TypedSession(model, mel, duration_ms, controls, seed=seed, ln_feedback=ln_feedback,
                            recovery_preference=recovery_preference, star_guidance=star_guidance,
-                           demand_model=demand_model, demand_feedback=demand_feedback)
+                           demand_model=demand_model, demand_feedback=demand_feedback, recovery=recovery)
     windows, first30 = [], None
     while session.coverage < duration_ms:
         before = time.perf_counter()
@@ -264,6 +264,7 @@ def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120.,
     metrics = dict(audio_seconds=session.audio_seconds, generation_seconds=time.perf_counter()-started,
         startup_seconds=windows[0]['service_seconds']+session.audio_seconds, first30_rows_seconds=first30,
         windows=windows, row_count=len(session.rows), controls=[vars(s) for s in session.controls.spans],
+        recovery=asdict(recovery),
         ln_feedback=asdict(ln_feedback) if ln_feedback is not None else None,
         recovery_preference=asdict(recovery_preference) if recovery_preference is not None else None,
         star_guidance=asdict(star_guidance) if star_guidance is not None else None,

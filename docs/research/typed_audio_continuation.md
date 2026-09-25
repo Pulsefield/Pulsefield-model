@@ -36,6 +36,30 @@ column order, and IDs can be reused after their previous releases. This is a
 lossless source convention under the resource envelope, not an assertion that
 identity labels are invariant under column permutations.
 
+### Session recovery profile
+
+`TypedSession` and `rollout` accept an explicit `Recovery(hh, rh, hr)` in native
+milliseconds. The same profile determines resource readiness, event/mark support
+and complete-row realization; rollout metrics record the actual values. The
+default remains 37/25/21 ms. Requested difficulty, LN fraction and style can
+change within a session, while this execution profile remains fixed. Changing
+its constants mid-session is not part of the control-update interface.
+
+A trial profile for the initial 2–6-star target uses 60/50/50 ms. It requires
+at least 60 ms between same-column attacks and at least 50 ms for both LN holding
+and release-to-next-head recovery, so a same-column LN/release/repress cycle
+takes at least 100 ms. Cross-column event timing retains native-ms resolution.
+The ranked TRAIN reference has no HH below 60 ms in the difficulty-two/three
+bands; corresponding weighted fractions are 0.0052% at five and 0.1338% at six.
+The HR restriction excludes more observed tails: about 1.69% at five and 2.06%
+at six. This is a task-specific trial envelope, not exact source support or a
+physiological law. Its effect on generated organization still needs evaluation.
+
+Under that trial profile, absence of LNs at most 40 ms follows from support and
+cannot count as a learned-quality improvement. Review must instead inspect
+concentration near the new floor, articulation, repeated-key recovery, density
+and control adherence, including crossing holds and different requested ranges.
+
 ## Scoped conditions
 
 `ControlSchedule` contains half-open intervals with independently optional
