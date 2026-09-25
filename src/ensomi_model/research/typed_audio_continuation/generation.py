@@ -33,10 +33,11 @@ class PlanPoint:
 class TypedSession:
     @torch.inference_mode()
     def __init__(self, model, mel, duration_ms, controls, *, seed=251925, recovery=Recovery(),
-                 ln_feedback=None):
+                 ln_feedback=None, recovery_preference=None):
         model.eval()
         self.model, self.controls, self.recovery = model, controls, recovery
         self.ln_feedback = ln_feedback
+        self.recovery_preference = recovery_preference
         self.allocation = Allocation()
         self.ln_scopes = ln_episodes(controls) if ln_feedback is not None else ()
         self.device = next(model.parameters()).device
@@ -82,9 +83,16 @@ class TypedSession:
                 extra = dict(head_history=self.model.head_temporal.read(self.head_cache)[None].expand(len(anchors), -1, -1),
                              head_clocks=self.tensor(self.state.clocks(anchors, self.duration,
                                  remaining_availability=True, head_phase=True)))
+            control = self.controls.at(anchors)
             lp = self.model.clock_log_probs(self.audio(anchors), history,
                 self.tensor(self.state.clocks(anchors, self.duration, remaining_availability=self.model.head_stream)),
-                self.tensor(self.controls.at(anchors)), self.tensor(support, torch.bool), **extra)
+                self.tensor(control), self.tensor(support, torch.bool), **extra)
+            if self.recovery_preference is not None:
+                stars = np.where(control[:, 2+len(self.model.style_names)] > 0, 2*control[:, 0]+4, np.nan)
+                cost = self.recovery_preference.release_clock_cost(
+                    self.state, native, stars[:, None], self.recovery, self.duration)
+                lp[..., 2] -= self.tensor(cost)
+                lp = lp.log_softmax(-1)
             hazard = torch.logsumexp(lp[..., 1:], -1)-lp[..., 0]
             index, self.residual = sample_hazards(hazard.flatten(), self.tensor(valid.reshape(-1), torch.bool),
                 self.tensor((~support[..., 0]).reshape(-1), torch.bool), self.rng, self.residual)
@@ -94,9 +102,14 @@ class TypedSession:
             now = int(native.reshape(-1)[index])
             kind = 1+int(torch.multinomial(lp.reshape(-1, 3)[index, 1:].softmax(-1).cpu(), 1, generator=self.rng))
             allowed = self.state.support(now, self.duration, self.recovery) & ((HEADS > 0) == (kind == 1))
+            control = self.controls.at([now])
             logp = self.model.mark_log_probs(self.audio([now]), self.model.plan_temporal.read(self.cache)[None],
                 self.tensor(self.state.clocks(np.array([now]), self.duration, remaining_availability=self.model.head_stream)),
-                self.tensor(self.controls.at([now])), self.tensor(allowed[None], torch.bool))[0]
+                self.tensor(control), self.tensor(allowed[None], torch.bool))[0]
+            if self.recovery_preference is not None:
+                stars = 2*control[0, 0]+4 if control[0, 2+len(self.model.style_names)] > 0 else np.nan
+                cost = self.recovery_preference.mark_cost(self.state, now, stars, self.duration)
+                logp = (logp-self.tensor(cost)).log_softmax(-1)
             if self.ln_feedback is not None:
                 span = next((s for s in self.ln_scopes if s.start_ms <= now < s.end_ms), None)
                 self.allocation = self.allocation.in_scope(span)
@@ -134,11 +147,15 @@ class TypedSession:
         future_h = tuple(t for t, m in events[1:] if HEADS[m])
         local, timing = consequences([self.replay], [now],
             [HeadPreview(future_h, self.cursor == self.duration)], self.duration)
+        control = self.controls.at([now])
         logp = self.model.row_log_probs(self.audio([now]), self.model.body.temporal.read(self.row_cache)[None],
             self.tensor(exact_features([self.replay], [now])), self.tensor(support[None], torch.bool),
             self.tensor([self.replay.occupancy], torch.bool),
             self.tensor(preview(events, now, self.model.config.lookahead, self.bindings)[None]),
-            self.tensor(self.controls.at([now])), self.tensor(local), self.tensor(timing))[0]
+            self.tensor(control), self.tensor(local), self.tensor(timing))[0]
+        if self.recovery_preference is not None:
+            stars = 2*control[0, 0]+4 if control[0, 2+len(self.model.style_names)] > 0 else np.nan
+            logp = (logp-self.tensor(self.recovery_preference.row_cost(self.replay, now, stars))).log_softmax(-1)
         choice = int(torch.multinomial(logp.exp().cpu(), 1, generator=self.row_rng))
         row = CompleteRow(now, ROW_ACTIONS[choice])
         previous = None if self.replay.last_row is None else self.replay.last_row.time_ms
@@ -188,9 +205,10 @@ class TypedSession:
 
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120., on_window=None,
-            ln_feedback=None):
+            ln_feedback=None, recovery_preference=None):
     started = time.perf_counter()
-    session = TypedSession(model, mel, duration_ms, controls, seed=seed, ln_feedback=ln_feedback)
+    session = TypedSession(model, mel, duration_ms, controls, seed=seed, ln_feedback=ln_feedback,
+                           recovery_preference=recovery_preference)
     windows, first30 = [], None
     while session.coverage < duration_ms:
         before = time.perf_counter()
@@ -208,5 +226,6 @@ def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120.,
     metrics = dict(audio_seconds=session.audio_seconds, generation_seconds=time.perf_counter()-started,
         startup_seconds=windows[0]['service_seconds']+session.audio_seconds, first30_rows_seconds=first30,
         windows=windows, row_count=len(session.rows), controls=[vars(s) for s in session.controls.spans],
-        ln_feedback=asdict(ln_feedback) if ln_feedback is not None else None)
+        ln_feedback=asdict(ln_feedback) if ln_feedback is not None else None,
+        recovery_preference=asdict(recovery_preference) if recovery_preference is not None else None)
     return NativeGeneration(tuple(session.rows), completed, 'complete' if completed else 'budget', session.coverage, metrics)

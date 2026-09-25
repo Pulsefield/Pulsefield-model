@@ -543,3 +543,56 @@ without feedback and longer LN anchors with feedback; neither establishes
 reliable requested Jack strength. Occupation couples amount and organization,
 so a better LN percentage does not prove preservation of every other control.
 The policy remains optional research functionality.
+
+## Empirical recovery preferences
+
+`RecoveryPreference` is a separate optional inference policy for decisions whose
+consequences the amount counter cannot repair. It uses the first percentile of
+same-column head/head (HH), release/next-head (RH), and LN head/release (HR)
+intervals in 6,923 native ranked TRAIN charts from 2,573 song groups. Each
+transition receives weight `1 / (charts_in_group * audio_seconds)`, matching the
+population objective's exposure measure up to a constant. Stars below identify
+whole-chart reference bands, rounded to the nearest integer within 2–6.
+
+| Reference star band | HH first percentile | RH first percentile | HR first percentile |
+| --- | ---: | ---: | ---: |
+| 2 | 169 ms | 107 ms | 89 ms |
+| 3 | 143 ms | 83 ms | 75 ms |
+| 4 | 107 ms | 65 ms | 53 ms |
+| 5 | 89 ms | 55 ms | 44 ms |
+| 6 | 83 ms | 49 ms | 43 ms |
+
+These are soft reference points, not new support limits or universal BAD labels.
+The 3-star band's weighted fraction of LN durations at most 40 ms is 0.0217%;
+the 5-star band's is 0.498%. Their very different tail distributions motivate a
+difficulty-dependent preference rather than a single hard duration floor.
+The reference calculation took 14.3 seconds; no VAL or TEST charts entered it.
+
+For a proposed interval `delta` and interpolated reference `tau`, the cost is
+`min(4, 4 * max(0, log(tau / delta)))`. Intervals at or above the reference have
+zero cost. Missing requests or historical intervals have zero preference;
+out-of-range difficulty requests use the nearest reference endpoint. Subtracting
+a finite cost from categorical log scores and renormalizing preserves legal
+support and permits strong learned local evidence to override the preference.
+
+The skeleton's release-only clock uses the minimum cost among currently eligible
+held identities. This is an optimistic approximation to the still-unselected
+subset's burden, not an expected player response. The mark scorer then charges
+each identity it proposes to release. An old LN can keep the release clock open
+while the mark preference discourages also closing a very young LN. True audio-
+end closure receives no delaying cost. Counts, subset releases and native-time
+support remain available, including short cross-column events.
+
+R1 applies the larger of HH and RH costs to each proposed attack column, then
+sums across the complete row. RH applies only to the first head after a release;
+the maximum avoids charging the same attack twice. This can prefer an available
+column over one released 25 ms earlier. The joint row model and typed feasibility
+still govern the coupled choice. LN lifetime preferences belong upstream because
+row assignment cannot move a tail that the skeleton has already fixed.
+
+The implementation composes with `LnFeedback` and records both policies in runtime
+metrics. It reads only generated resource/column state, candidate times and current
+controls. It has no reference-tail leakage or new neural parameters, and does not
+change training likelihood. Native evaluation must establish whether fewer extreme
+intervals are accompanied by preserved musical organization, range control and
+style; rarity alone is insufficient evidence of quality.
