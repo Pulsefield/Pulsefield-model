@@ -95,6 +95,30 @@ one pair of scope clocks from the last active span. Attribute values resolve
 independently, but separate deadlines for overlapping partial requests are not
 encoded. Exact per-attribute quota tracking would need that additional state.
 
+The intended control behavior is approximate, scoped and jointly playable.
+Difficulty should stay reasonably close to the request; exact star or LN-count
+fulfillment is not an acceptance requirement. Local variety and coherent
+transitions remain desirable. A control value is a requested tendency within
+its range, subject to existing physical obligations.
+
+`evaluation.describe_control_ranges` partitions observations at every declared
+control boundary using `ControlSchedule.resolved_ranges`. Each range retains its
+effective difficulty, LN request and independently optional style values.
+Observation windows never cross a control boundary. Recovery clocks still read
+the real prefix, and crossing holds retain their original heads and endpoints.
+Reports distinguish new heads, entering/leaving holds and releases of entering
+holds. LN proportion counts only heads inside the range; release burden includes
+all releases experienced there.
+
+Assess each range against its own request, with boundary context and appropriate
+ranked examples. A whole-chart star value is useful when the complete chart has
+one static request. It does not measure the adherence of a shorter high-difficulty
+override inside a longer easy chart. Range reports therefore expose action load,
+recovery, hold articulation and organization descriptors without inventing a
+fragment star rating. A single pooled score across differently controlled ranges
+cannot determine whether those controls succeeded. The aggregate pilot metrics
+below describe experiments, not a replacement for this scoped evaluation.
+
 ## Learning and evidence limits
 
 The probability law factors native-clock event type, feasible mark, and matching

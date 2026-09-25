@@ -52,6 +52,32 @@ class ControlSchedule:
                                             None if end is None else end-t]).reshape(-1)
         return result
 
+    def resolved_ranges(self, start_ms, end_ms):
+        """Partition an observation range at every declared control boundary.
+
+        Values use the same partial-override semantics as ``at``. Boundaries
+        remain separate even when adjacent values match: a requested scope is
+        an evaluation unit, not an instruction to pool its observations.
+        """
+        edges = sorted({start_ms, end_ms, *(t for s in self.spans
+            for t in (s.start_ms, s.end_ms) if start_ms < t < end_ms)})
+        result = []
+        for begin, end in zip(edges, edges[1:]):
+            stars = fraction = None
+            style = {}
+            for span in self.spans:
+                if span.start_ms <= begin < span.end_ms:
+                    unknown = span.style.keys() - set(self.style_names)
+                    if unknown:
+                        raise ValueError(f'Style has no trained vocabulary slot: {unknown}')
+                    if span.stars is not None:
+                        stars = span.stars
+                    if span.ln_fraction is not None:
+                        fraction = span.ln_fraction
+                    style.update({k: v for k, v in span.style.items() if v is not None})
+            result.append(ControlSpan(begin, end, stars, fraction, style))
+        return tuple(result)
+
 
 def source_schedule(rows, duration, stars, width_ms=16000, offset_ms=0, *, style_names=()):
     """Separate-chart scoped LN targets; no union of alternative arrangements."""
