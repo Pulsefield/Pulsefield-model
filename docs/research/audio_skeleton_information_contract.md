@@ -15,9 +15,11 @@ is an arrangement, not acoustic onset detection: one sound may support many
 heads, and irregular placement must remain possible. Reference note placement
 provides supervision; redlines are not timing truth.
 
-Skeleton reads its own history and an explicit projection of committed LN
-state. It does not read learned row-content history or a generic replay object
-that exposes unrelated history. Row materialization reads audio, skeleton,
+Skeleton preference networks read their own history and an explicit projection
+of committed LN state. They do not read learned row-content history or a generic
+replay object that exposes unrelated history. The scoped sampler additionally
+receives R1's required release window from an execution-feasibility response.
+Row materialization reads audio, skeleton,
 its own row history and exact physical state. It chooses columns, chords,
 tap/LN kinds and releases. Its design must also account for how candidate
 actions change the responses to subsequent legal continuations. The
@@ -39,18 +41,29 @@ occupied columns, active-LN start times and the observation clock. Ages derive
 from those times. Tap layouts, cumulative row/head counts, learned row embeddings
 and unrelated action clocks are excluded.
 
-At fixed model parameters, the required independence is
+At fixed model parameters, the preference-network independence is
 
 $$
-p(K_i\mid A,C,K_{<i},O_i,R_{<i})
-=p(K_i\mid A,C,K_{<i},O_i).
+f_{\rm timing}(A,C,K_{<i},O_i,R_{<i})
+=f_{\rm timing}(A,C,K_{<i},O_i).
 $$
 
-Changing tap placement while preserving the listed inputs must leave skeleton
-prediction unchanged. Changing actual LN state may change it. Row prediction
-remains sensitive to row history. Joint gradients through a shared audio encoder
-are compatible with this runtime independence. A shared sampling RNG is not:
-row draws must not advance the skeleton generator's random stream.
+Changing TAP count or placement while preserving the listed inputs leaves the
+timing-network outputs unchanged. Changing actual LN state may change them.
+Row prediction remains sensitive to row history. Joint gradients through a shared
+audio encoder are compatible with this independence. Row draws must not advance
+the head or release generator's random stream.
+
+The complete release distribution also depends on its admissible waiting window.
+R1/scheduler computes that response from committed recovery clocks and the
+proposed H continuation, then supplies only earliest/latest release bounds to
+the sampler. In the scoped prototype, HH=60 ms and RH=50 ms mean that an old held
+key can release/repress before a newly tapped key recovers. LN occupancy alone
+cannot determine the required deadline. Consequently, the earlier independence
+claim for the entire skeleton distribution is too strong: effective release
+sampling intentionally responds to R1's feasibility constraint. H prediction
+and release preferences retain the restricted neural information paths above;
+head count and release identity remain R1 decisions.
 
 ## Dependencies in the earlier flat joint model
 

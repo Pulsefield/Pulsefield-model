@@ -13,13 +13,16 @@ the [V3 generation contract](../formulation/notation.md).
 | H timing | Complete audio, previous H times, scoped controls | Next head-bearing row time |
 | Release timing | Complete audio, H/R timing history, H preview, committed LN ages/occupancy, controls | Release-only event time |
 | R1 | Direct audio, full row history, exact replay, timing-only preview, scoped controls, candidate consequences | Complete simultaneous row: head count, TAP/LN kinds, release identities and columns |
-| Scheduler | Published prefix, head lookahead and response-support profile | Query order, feasible provisional timing, publication and future-control revision |
+| Scheduler | Published prefix, head lookahead and R1 feasibility responses | Query order, constrained release timing, publication and future-control revision |
 
 H requires at least one head; it never specifies a chord size. Release-only
 events require a nonempty release row. H rows may also close existing holds.
-Only actual LN projection feeds release timing. Changing TAP count or layout
-while preserving H/R times and LN state leaves both skeleton network inputs
-unchanged. There is no typed future count or source-tail input to R1.
+Only actual LN projection feeds the release preference network. Changing TAP
+count or layout while preserving H/R times and LN state leaves both skeleton
+network inputs unchanged. R1's execution-feasibility response additionally
+constrains the release sampler, as described below. The effective release law
+therefore need not remain unchanged. There is no typed future count or
+source-tail input to R1.
 
 The shared encoder retains the canonical fine Mel branch and full-song coarse
 context. Complete audio is available in training and inference. Generated head
@@ -73,10 +76,24 @@ law. R1 checks candidate transitions against this profile and a finite future
 H horizon. The optimistic continuation may close existing LNs and use one TAP per
 future H; it verifies existence, not the probability or comfort of that future.
 
-Only LN projection and planned H times determine release deadlines. A necessary
-release wait is normalized conditionally on an event by its deadline in both
-training and inference. A publication window does not truncate that normalizer,
-force a tail or pretend the song ended. All holds close at true audio termination.
+R1/scheduler derives a release window from exact replay and proposed H times.
+Simulating one TAP per H on currently closed keys identifies the first H that
+requires another key. Its time minus RH is a necessary release deadline; actual
+LN ages determine the earliest release. These two bounds constrain the release
+sampler without selecting a release identity or a chord. The preference network
+still reads only audio, timing history, LN projection and controls.
+
+This coupling is necessary under distinct recovery intervals. Closed keys can
+still be recovering from TAPs. An old held key may become usable after an earlier
+release, before those TAP keys recover. Counting only unoccupied keys loses that
+distinction and can let the sampler wait beyond the last viable release time.
+The response is an execution-feasibility projection for this continuation family,
+not the full V3 gameplay frontier.
+
+A necessary release wait is normalized conditionally on an event by its deadline
+in both training and inference. A publication window does not truncate that
+normalizer, force a tail or pretend the song ended. All holds close at true audio
+termination.
 
 A future control update keeps published rows, fixed empty time and open holds.
 Queued H times before its start remain. Timing is also retained through the

@@ -61,6 +61,32 @@ def release_limits(state, preview, duration_ms, gap_ms):
     return earliest, deadline
 
 
+def row_release_window(replay, observed_through_ms, preview, duration_ms, profile):
+    """R1's necessary release window from exact recovery and a proposed H path.
+
+    Simulate one TAP per future H using only currently closed columns. The first
+    H that cannot be served needs a prior LN release. This does not choose its
+    identity or any future chord. A scheduler sends these two bounds to release
+    timing; the timing network itself receives no TAP history or row embedding.
+    """
+    hh, rh, hr = recovery_values(profile)
+    starts = replay.open_ln_start_ms
+    if not any(t is not None for t in starts):
+        return None, None
+    ready = [max(-np.inf if h is None else h+hh, -np.inf if r is None else r+rh)
+             for h, r, s in zip(replay.last_lane_attack_ms, replay.last_lane_release_ms, starts)
+             if s is None]
+    earliest = max(observed_through_ms+1, min(t for t in starts if t is not None)+hr)
+    deadline = duration_ms
+    for head in preview.times_ms:
+        if not ready or min(ready) > head:
+            deadline = min(duration_ms, head-rh)
+            break
+        lane = int(np.argmin(ready))
+        ready[lane] = head+hh
+    return int(earliest), int(deadline)
+
+
 def allowed_rows(state, now, preview, duration_ms, gap_ms, *, actions=None):
     """Admit current-clean rows whose post-state has a spaced future realization.
 

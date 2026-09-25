@@ -15,7 +15,7 @@ from .features import (
 )
 from .release import conditioned_release_logits
 from .counts import count_state, count_tokens
-from .spacing import allowed_rows as spaced_rows, check_head_capacity, release_limits, recovery_values
+from .spacing import allowed_rows as spaced_rows, check_head_capacity, release_limits, recovery_values, row_release_window
 
 
 @dataclass(frozen=True)
@@ -97,9 +97,11 @@ def collate_interval(example, config, device='cpu', *, recovery=None):
     query_head_positions = np.searchsorted(head_indices, query_indices) - 1
     clocks = head_clocks([heads[i] if i >= 0 else None for i in query_head_positions], x.timing_times.numpy())
     r_clocks = release_clocks(ln, previous_skeleton, x.timing_times.numpy(), previews, example.chart.duration_ms)
+    windows = (None if recovery is None else [row_release_window(state, t, preview,
+        example.chart.duration_ms, recovery) for state, t, preview in zip(replays, observed, previews)])
     native = x.timing_times.numpy()[:, None] - 9 + np.arange(10)[None]
     r_valid, r_forced = release_masks(ln, native, previews, example.chart.duration_ms,
-                                    minimum_action_gap_ms=gap)
+                                    minimum_action_gap_ms=gap, windows=windows)
     r_valid &= x.timing_valid.numpy()
     r_forced &= r_valid
     h_valid = x.timing_valid.numpy().copy()
@@ -120,7 +122,8 @@ def collate_interval(example, config, device='cpu', *, recovery=None):
             i = int(np.flatnonzero(query_indices == prefix)[0])
             start = observed[i]
             if gap:
-                earliest, deadline = release_limits(ln[i], previews[i], example.chart.duration_ms, gap)
+                earliest, deadline = (release_limits(ln[i], previews[i], example.chart.duration_ms, gap)
+                                      if windows is None else windows[i])
                 if previews[i].times_ms and deadline >= previews[i].times_ms[0]:
                     continue
                 begin = max(start+1, int(earliest))

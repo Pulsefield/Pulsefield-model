@@ -174,6 +174,10 @@ class ContinuationSession:
         return ({} if self.controls is None else dict(control=self.tensor(
             self.controls.at(times, encoding=self.model.control_encoding))))
 
+    def release_window(self, preview, profile):
+        return release_limits(LNProjection(self.replay.open_ln_start_ms, self.cursor),
+                              preview, self.duration_ms, profile)
+
     @torch.inference_mode()
     def step(self, *, stop_at=None):
         if self.cursor >= self.duration_ms:
@@ -195,8 +199,8 @@ class ContinuationSession:
         else:
             gap = getattr(self.model, 'recovery', self.model.config.minimum_action_gap_ms)
             if gap:
-                earliest, deadline = release_limits(LNProjection(self.replay.open_ln_start_ms, self.cursor),
-                    self.planner.preview(self.cursor, self.model.config.lookahead), self.duration_ms, gap)
+                earliest, deadline = self.release_window(
+                    self.planner.preview(self.cursor, self.model.config.lookahead), gap)
                 conditioned = next_h is None or deadline < next_h
                 if conditioned and earliest > deadline:
                     raise ContractError('Action spacing has no eligible release before its deadline')
@@ -218,7 +222,7 @@ class ContinuationSession:
                 logits = self.model.release_logits(audio, history, self.tensor(clocks),
                     **self.control_at(anchors.cpu().numpy())).flatten()
                 valid, forced = release_masks(states, native.cpu().numpy(), previews, self.duration_ms,
-                                               minimum_action_gap_ms=gap)
+                    minimum_action_gap_ms=gap, windows=[(earliest, deadline)]*len(bins) if gap else None)
                 valid &= native.cpu().numpy() <= end
                 forced &= valid
                 if conditioned:

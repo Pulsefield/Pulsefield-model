@@ -8,6 +8,7 @@ import torch
 from ..joint_audio_continuation.generation import NativeGeneration
 from ..planned_audio_continuation.generation import HeadPlanner
 from ..planned_audio_continuation.session import ContinuationSession, _BudgetStop
+from ..planned_audio_continuation.spacing import row_release_window
 from ..typed_audio_continuation.allocation import Allocation, LnFeedback, ln_episodes
 from ..typed_audio_continuation.controls import ControlSchedule
 from ..typed_audio_continuation.program import ACTIONS, Resources
@@ -34,6 +35,9 @@ class ControlledSession(ContinuationSession):
         span = next((s for s in self.ln_scopes if s.start_ms <= now < s.end_ms), None)
         self.allocation = self.allocation.in_scope(span)
         return dict(ln_shift=self.ln_feedback.log_odds_shift(self.allocation) if self.ln_feedback else 0.)
+
+    def release_window(self, preview, profile):
+        return row_release_window(self.replay, self.cursor, preview, self.duration_ms, profile)
 
     def prefer_rows(self, log_probs, legal, now):
         preference = self.recovery_preference
@@ -104,6 +108,7 @@ def rollout(model, mel, duration_ms, controls, *, seed=260926, max_seconds=120.,
             audio_seconds=session.audio_seconds, windows=windows,
             startup_seconds=windows[0]['service_seconds']+session.audio_seconds if windows else None,
             controls=[asdict(s) for s in session.controls.spans], recovery=asdict(model.recovery),
+            sampling_contract='r1-release-window-v1',
             ln_feedback=asdict(session.ln_feedback), recovery_preference=asdict(session.recovery_preference),
             head_source='fixed-diagnostic' if head_times is not None else 'generated-audio',
             forced_deadline_releases=session.deadline_events))

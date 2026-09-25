@@ -70,6 +70,22 @@ def test_tap_count_and_layout_do_not_enter_skeleton_network_inputs():
     assert not torch.equal(batches[0].inputs.base.raw, batches[1].inputs.base.raw)
 
 
+def test_release_preference_is_ln_only_but_its_feasible_wait_uses_r1_response():
+    torch.manual_seed(26)
+    net = model()
+    controls = ControlSchedule((ControlSpan(0, 501, stars=3, ln_fraction=.2),), net.style_names)
+    actions = [(0, 0, 0, 2), (0, 1, 1, 0), (0, 0, 0, 3), (1, 0, 0, 0), (0, 0, 0, 1)]
+    a = chart([0, 364, 366, 383, 417], actions, 500)
+    b = chart([0, 364, 366, 383, 417], [actions[0], (0, 1, 0, 0), *actions[2:]], 500)
+    ba, bb = [collate_interval(IntervalExample(c, 0, 501), net.config, recovery=net.recovery) for c in (a, b)]
+    torch.testing.assert_close(ba.inputs.release_clock, bb.inputs.release_clock, rtol=0, atol=0)
+    torch.testing.assert_close(ba.inputs.skeleton_raw, bb.inputs.skeleton_raw, rtol=0, atol=0)
+    coarse = net.encode_coarse(torch.from_numpy(a.mel)[None])
+    sa, sb = [score_interval(net, v.inputs, coarse, controls=controls) for v in (ba, bb)]
+    torch.testing.assert_close(sa.head, sb.head, rtol=0, atol=0)
+    assert not torch.equal(sa.release, sb.release)
+
+
 def test_scoped_control_update_retains_rows_and_finishes_open_holds():
     torch.manual_seed(18)
     net = model().eval()

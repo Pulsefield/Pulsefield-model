@@ -10,6 +10,7 @@ from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
 from ensomi_model.research.planned_audio_continuation.features import HeadPreview, LNProjection
 from ensomi_model.research.planned_audio_continuation.spacing import (
     allowed_rows, check_head_capacity, next_head_earliest, release_limits,
+    row_release_window,
 )
 from ensomi_model.research.scoped_style_modeling.dataset import ContractError
 from ensomi_model.research.typed_audio_continuation.program import Recovery
@@ -168,6 +169,39 @@ def test_distinct_recovery_intervals_match_actual_release_and_repress_search():
             actual = allowed_rows(state, 10, preview, 19, profile)
             for actions in legal_rows(state):
                 assert actual[ROW_ACTIONS.index(actions)] == oracle(state, 10, actions, heads, 19, profile)
+
+
+def test_release_window_accounts_for_taps_that_leave_closed_keys_recovering():
+    profile = Recovery(60, 50, 50)
+    state = replay([(0, (0, 0, 0, 2)), (364, (0, 1, 1, 0))])
+    preview = HeadPreview((383, 417), True)
+    assert allowed(state, 364, (0, 0, 0, 0), preview.times_ms, end=500, gap=profile)
+    assert release_limits(LNProjection(state.open_ln_start_ms, 364), preview, 500, profile) == (365, 500)
+    assert row_release_window(state, 364, preview, 500, profile) == (365, 367)
+    for now in (365, 366, 367):
+        assert allowed(state, now, (0, 0, 0, 3), preview.times_ms, end=500, gap=profile)
+    assert not allowed(state, 368, (0, 0, 0, 3), preview.times_ms, end=500, gap=profile)
+
+
+def test_row_release_window_keeps_a_continuation_through_its_wait():
+    profile = Recovery(4, 2, 2)
+    histories = [[(1, (2, 2, 2, 2))], [(1, (0, 0, 0, 2)), (10, (1, 1, 1, 0))],
+                 [(1, (2, 2, 0, 0)), (9, (0, 0, 1, 1))]]
+    for history in histories:
+        state = replay(history)
+        for heads in ((13,), (12, 13, 14), (13, 14, 15, 16, 17), (14, 18), ()):
+            preview = HeadPreview(heads, True)
+            if not allowed(state, 10, (0, 0, 0, 0), heads, 22, profile):
+                continue
+            earliest, deadline = row_release_window(state, 10, preview, 22, profile)
+            first = heads[0] if heads else None
+            event = min(deadline, first) if first is not None else deadline
+            for silent in range(11, event):
+                assert allowed(state, silent, (0, 0, 0, 0), heads, 22, profile)
+            after = tuple(t for t in heads if t > event)
+            candidates = [a for a in legal_rows(state) if any(v in (1,2) for v in a) == (event == first)]
+            assert earliest <= event or event == first
+            assert any(allowed(state, event, a, after, 22, profile) for a in candidates)
 
 
 def test_incomplete_preview_cannot_hide_future_capacity():

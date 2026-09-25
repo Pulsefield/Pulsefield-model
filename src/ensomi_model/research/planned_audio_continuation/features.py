@@ -1,8 +1,9 @@
 """Explicit timing/LN inputs and candidate transitions on the native-ms clock.
 
 Skeleton feature builders accept timestamps, roles and LN projections, never
-row-content embeddings or generic replay state. Only row consequence/support
-builders receive the complete replay. A release opportunity is not a tail plan.
+row-content embeddings or generic replay state. Row consequence/support builders
+receive complete replay and may send a release window to the sampler. A release
+opportunity is not a tail plan.
 """
 from dataclasses import dataclass
 
@@ -92,11 +93,13 @@ def release_clocks(states, previous_skeleton_times, times, previews, duration_ms
     return result
 
 
-def release_masks(states, native_times, previews, duration_ms, *, minimum_action_gap_ms=0):
+def release_masks(states, native_times, previews, duration_ms, *, minimum_action_gap_ms=0, windows=None):
     """Mark physical support and certain last hazards, never a crop-edge closure.
 
     A full-hold wait's earlier hazards determine whether its final event mass
     follows the raw deadline-atom law or the conditionally normalized law.
+    Optional windows are earliest/latest bounds supplied by R1 feasibility;
+    they contain neither row embeddings nor future release identities.
     """
     valid = np.zeros_like(native_times, dtype=np.bool_)
     forced = np.zeros_like(valid)
@@ -112,7 +115,8 @@ def release_masks(states, native_times, previews, duration_ms, *, minimum_action
             valid[i] &= native_times[i] < next_h
         if minimum_action_gap_ms:
             from .spacing import release_limits
-            earliest, deadline = release_limits(state, preview, duration_ms, minimum_action_gap_ms)
+            earliest, deadline = (release_limits(state, preview, duration_ms, minimum_action_gap_ms)
+                                  if windows is None else windows[i])
             valid[i] &= (native_times[i] >= earliest) & (native_times[i] <= deadline)
             if (next_h is None or deadline < next_h) and earliest > deadline:
                 raise ContractError('Action spacing has no eligible release before its deadline')
