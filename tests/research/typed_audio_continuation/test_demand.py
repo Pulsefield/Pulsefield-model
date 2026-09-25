@@ -22,9 +22,12 @@ def test_discounted_target_and_count_balance_preserve_elapsed_time():
 
 
 def test_future_partial_cell_control_update_does_not_rewrite_past_demand():
+    torch.manual_seed(761)
     model = AudioDemand(3, ControlSchedule().width, 2)
-    audio = torch.ones(503, 3)
-    pooled = pool_audio(audio)
+    with torch.no_grad():
+        model.query[-1].weight.normal_(std=.05)
+    audio = torch.linspace(0, 1, 503)[:, None].expand(-1, 3)
+    pooled = pool_audio(torch.ones_like(audio))
     torch.testing.assert_close(pooled, torch.ones(11, 3))
     before = ControlSchedule((ControlSpan(0, 5031, stars=3),))
     after = ControlSchedule((*before.spans, ControlSpan(1763, 3221, stars=5)))
@@ -32,7 +35,9 @@ def test_future_partial_cell_control_update_does_not_rewrite_past_demand():
     right = DemandCurve.build(model, audio, after, 5030, 4000)
     times = np.arange(0, 1764)
     np.testing.assert_allclose(left.mass_at(times), right.mass_at(times))
-    assert right.mass_at(3000) > left.mass_at(3000)
+    assert not np.isclose(right.mass_at(3000), left.mass_at(3000))
+    low = torch.tensor(before.at([250]));high = low.clone();high[:, 0] += 1
+    assert model(audio[:1], high).item() > model(audio[:1], low).item()
 
 
 def test_native_rollback_restores_the_actual_head_ledger():
