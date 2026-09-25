@@ -342,3 +342,95 @@ on Zenithfall and 1,900 to 2,998 on Hysteric. These are different operating
 distributions: the comparison identifies generated-state feedback as an
 investigation target, but does not assign a causal percentage to history,
 occupation, release decisions or R1.
+
+The broader run finishes 6,000 updates in 2,813 seconds, having sampled 4,641
+distinct TRAIN charts. Both the 2,400- and 6,000-update checkpoints complete
+40 full-song cases on eight audios. The 32 static cases share whole-song
+requests; the other eight have a temporary override and are evaluated by range.
+
+| Static-case measurement | 2,400 updates | 6,000 updates |
+| --- | ---: | ---: |
+| Mean absolute whole-chart star error | 0.553 | 0.959 |
+| Mean absolute LN-head fraction error | 0.0770 | 0.0838 |
+| LNs lasting at most 40 ms | 544 / 31,671 | 1,430 / 44,899 |
+| Fraction of LNs lasting at most 40 ms | 1.72% | 3.18% |
+
+The later fit is not selected despite its lower teacher-forced losses. In its
+Zenithfall 3-star/70%-LN case, the chart measures 6.110 stars. Lens inspection
+of 74050–78051 ms finds 78 head rows, repeated 24–39-ms holds and rapid release
+activity. A subsequent pure-TAP passage survives, so expressive support alone
+does not explain or solve the excessive burden. The earlier checkpoint is a
+retained research baseline, not an accepted playable release. Its inspected
+Fool Moon passage has coherent layered holds, while its Revenge high-control
+peak still contains a 26-ms LN followed 30 ms later by another same-column head.
+
+Effective-range reports cover 87 completed cases and 133 ranges across native
+and style cohorts. For example, the earlier Hysteric override at
+105000–137000 ms requests difficulty 5 and 70% LN, producing 85.4% LN heads
+and 15 press/release actions per second. After restoring difficulty 3 and
+20% LN, the remaining range produces 13.0% LN heads and 5.40 actions per second,
+including two releases of inherited holds. These ranges remain distinct.
+The older switch procedure chooses its start relative to publication coverage,
+which may differ between checkpoints; those switched trajectories are not
+identical-time paired interventions.
+
+A seven-case style probe at 6,000 updates compares explicit absent versus
+prominent jack, stream or tech, retaining the same known bit, difficulty 4,
+20% LN request and 105000–137000-ms scope. Other concepts remain unspecified.
+Jack's identical adjacent masks increase from 3 to 12; a fully inspected
+four-second context also shows a repeated-column figure under sustained holds.
+Stream changes toward more moving handoffs. Tech remains inconclusive. These
+facts show conditional structural response, not reliable strength calibration
+or mutually exclusive styles. The six paired contexts, all 12 pages and their
+complete tables were inspected; no whole-scope semantic labels or player-test
+claims are inferred from them.
+
+The retained model has 3.947M parameters and a 15.9-MB standalone weights file.
+For 499 seconds of actual audio on one M5 CPU thread, a fresh Python process
+takes 2.12 seconds from process entry through decoding, Mel extraction, full-song
+encoding and publication of 61 rows covering the first eight seconds. One LN
+remains open. OS caches were not flushed, and client rendering/reading time is
+excluded. This is an initial service measurement, not a cold-machine guarantee.
+
+## Scoped difficulty supervision
+
+`difficulty_targets.ScopeStrainTrace` provides an optional offline supervision
+proxy. A 5-star chart can contain a quiet passage; assigning 5 to every sampled
+scope confounds whole-chart capacity with the demand inside a requested range.
+This is a semantic reason to revise targets without increasing model capacity.
+
+The trace reuses the repository's 20241007 mania strain calculation on complete
+native-1.0x objects, retaining earlier state and real LN endpoints. Inside each
+requested half-open range, it takes the maximum of inherited decaying strain
+and new-object strain in cells of at most 400 ms. Cells begin at the scope start;
+the last partial cell is retained. No future head or earlier peak is assigned
+to the range. For descending peaks `p[0], ..., p[n-1]`, the readout is
+`0.018 * sum(0.9**i * p[i]) / (1 - 0.9**n)`.
+The denominator removes finite-cell truncation of the weight sum: constant
+peaks have the same level for different scope lengths. The scale approaches
+the existing whole-chart scale for long ranges, with differences from boundary
+alignment and the declared observation endpoint.
+
+`source_schedule(..., difficulty_trace=trace)` uses this value and the observed
+LN fraction over the same scope. Both model factors consume the resulting
+condition. The default remains whole-chart supervision; checkpoints trained
+with the new target must record `full-prefix-mania-strain-scope-v1`. This is a
+proposed learning target in approximate star units, not an official local star
+rating, a physiology model or an independent quality metric. It does not measure
+release execution adequately and cannot replace the articulation observations.
+
+This adapts the achieved-goal relabeling idea in
+[Hindsight Experience Replay](https://arxiv.org/abs/1707.01495): pair an observed
+trajectory with the result it actually achieves. Here the trajectories are
+ranked beatmaps, the targets are scoped descriptions, and learning remains
+supervised joint likelihood; there is no reinforcement-learning reward dataset.
+The analogy motivates consistent conditioning, not a claim that this scalar
+establishes playability.
+
+The trace is deliberately offline. The underlying strain algorithm reads LN
+endpoints, including tails not yet decided at an incremental head. Source-derived
+control targets may summarize the complete target scope; generated-state
+features may not use undecided future objects. This readout is therefore not
+inserted into the causal skeleton or substituted for `frontier2`. Native
+generation must still be assessed for approximate range adherence, musical
+variation and release quality together.

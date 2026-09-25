@@ -79,13 +79,21 @@ class ControlSchedule:
         return tuple(result)
 
 
-def source_schedule(rows, duration, stars, width_ms=16000, offset_ms=0, *, style_names=()):
-    """Separate-chart scoped LN targets; no union of alternative arrangements."""
+def source_schedule(rows, duration, stars, width_ms=16000, offset_ms=0, *, style_names=(),
+                    difficulty_trace=None):
+    """Separate-chart scoped targets; no union of alternative arrangements.
+
+    An optional complete-source strain trace replaces the whole-chart star
+    condition inside each sampled scope with its declared difficulty proxy.
+    Its specification must accompany trained checkpoints. Omitting it retains
+    the original whole-chart supervision.
+    """
     spans = [ControlSpan(0, duration+1, stars=stars)]
     for start in range(-offset_ms, duration+1, width_ms):
         stop = min(duration+1, start+width_ms)
         actions = rows['actions'][(rows['time'] >= max(0, start)) & (rows['time'] < stop)]
         heads = int(np.isin(actions, (1, 2)).sum())
         fraction = float((actions == 2).sum()/heads) if heads else None
-        spans.append(ControlSpan(max(0, start), stop, ln_fraction=fraction))
+        level = None if difficulty_trace is None else difficulty_trace.level(max(0, start), stop)
+        spans.append(ControlSpan(max(0, start), stop, stars=level, ln_fraction=fraction))
     return ControlSchedule(tuple(spans), style_names)
