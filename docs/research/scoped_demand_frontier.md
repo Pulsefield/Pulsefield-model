@@ -223,3 +223,34 @@ preserve a short expressive burst while discouraging sustained overload, with
 ranked examples informing its scale. Its usefulness still requires native
 generation and inspection: a rate ceiling can otherwise flatten legitimate
 chordjack or dump organization without fixing musical or style coherence.
+
+A causal workload audit covers 6,923 ranked TRAIN charts from 2,573 song groups.
+It samples elapsed audio time every 100 ms, including silence, with equal group
+mass and uniform chart/time sampling within each group. Counts use `(t-w,t]`
+after actions at t; source endpoints only reconstruct whether a hold has already
+released. The reported rates are counts divided by available keys and seconds.
+Difficulty bands use the nearest whole-chart integer rating. Composition groups
+below use whole-chart LN-head fraction, not a local style label.
+
+| Source group | Charts | 99th-percentile action-rate lower bound, 1 s / 4 s |
+| --- | ---: | ---: |
+| Difficulty 3, LN below 0.25 | 1,944 | 4.25 / 3.75 |
+| Difficulty 3, LN at least 0.75 | 14 | 6.50 / 5.875 |
+| Difficulty 5, LN below 0.25 | 675 | 6.75 / 6.125 |
+| Difficulty 5, LN at least 0.75 | 9 | 9.25 / 8.4375 |
+
+Thus one action-rate ceiling per star level would suppress legitimate differences
+between TAP and LN arrangements. High-LN reference support is also small. In the
+guided Take example, the maximum one-second head-rate lower bound is 9.75 against
+the difficulty-five all-composition 99th percentile of 6.0. Zenithfall's high-LN
+chart never crosses that head reference, but spends 17.9 seconds above the
+corresponding action-rate reference of 8.0. Multiple workload channels expose
+different structures; neither count is a complete player-response model.
+
+Before adding such a runtime preference, the mark law has a separate information
+restriction to address: its fixed-reference LN conditioning removes the direct
+effect of requested amount on head-count/release-mask probabilities. The
+[coupled group option](typed_audio_continuation.md#coupling-ln-amount-to-head-count-and-releases)
+allows those choices to respond jointly while preserving locally free LN/TAP
+preference. This is an architectural correction to the conditional family;
+its native quality still needs comparison with continued training of the old law.
