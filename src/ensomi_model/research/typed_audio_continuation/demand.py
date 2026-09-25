@@ -11,6 +11,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from .controls import SHARED_SCOPE
+
 
 def pool_audio(encoded, frames=None):
     """Pool the cached audio-only frame representation into 500-ms cells.
@@ -32,10 +34,12 @@ class AudioDemand(nn.Module):
 For fixed audio and other controls, known stars have a nonnegative effect on
 log mean demand. This constrains the nominal mean, not individual arrangements.
 """
-    def __init__(self, audio_width, control_width, star_known_index, hidden=96):
+    def __init__(self, audio_width, control_width, star_known_index, hidden=96,
+                 control_encoding=SHARED_SCOPE):
         super().__init__()
         self.config = dict(audio_width=audio_width, control_width=control_width,
-                           star_known_index=star_known_index, hidden=hidden)
+                           star_known_index=star_known_index, hidden=hidden,
+                           control_encoding=control_encoding)
         self.register_buffer('audio_mean', torch.zeros(audio_width))
         self.register_buffer('audio_std', torch.ones(audio_width))
         self.query = nn.Sequential(nn.Linear(audio_width+control_width, hidden), nn.GELU(),
@@ -78,7 +82,7 @@ class DemandCurve:
         device = next(model.parameters()).device
         index = torch.as_tensor(np.minimum(edges[:-1]//500, len(features)-1), device=features.device)
         audio = features[index].to(device)
-        condition = torch.as_tensor(controls.at(edges[:-1]), device=device)
+        condition = torch.as_tensor(controls.at(edges[:-1], encoding=model.config['control_encoding']), device=device)
         rates = model(audio, condition).exp().cpu().numpy()
         return cls.from_rates(edges, rates, memory_ms)
 

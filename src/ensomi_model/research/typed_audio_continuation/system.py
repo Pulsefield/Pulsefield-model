@@ -60,7 +60,7 @@ silently drops demand feedback or substitutes a different recovery profile.
     model.load_state_dict(saved['model'])
     demand = AudioDemand(**saved['demand_config'])
     demand.load_state_dict(saved['demand'])
-    width = ControlSchedule(style_names=model.style_names).width
+    width = ControlSchedule(style_names=model.style_names).width_for(demand.config['control_encoding'])
     if (demand.config['audio_width'] != model.config.conditioned_audio_width or
             demand.config['control_width'] != width or
             demand.config['star_known_index'] != 2+len(model.style_names)):

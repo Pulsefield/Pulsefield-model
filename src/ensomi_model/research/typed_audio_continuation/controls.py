@@ -10,6 +10,9 @@ import numpy as np
 
 from ..bounded_typed_continuation.features import TIME_DIM, time_features
 
+SHARED_SCOPE = 'shared-scope-v1'
+PER_FIELD_SCOPE = 'per-field-scope-v1'
+
 
 @dataclass(frozen=True)
 class ControlSpan:
@@ -27,13 +30,29 @@ class ControlSchedule:
 
     @property
     def width(self):
-        return 2*(2+len(self.style_names)) + 2*TIME_DIM
+        return self.width_for(SHARED_SCOPE)
 
-    def at(self, times):
-        result = np.zeros((len(times), self.width), np.float32)
+    def width_for(self, encoding):
+        n = 2+len(self.style_names)
+        if encoding == SHARED_SCOPE:
+            return 2*n + 2*TIME_DIM
+        if encoding == PER_FIELD_SCOPE:
+            return 2*n + 2*n*TIME_DIM
+        raise ValueError(f'Unknown control encoding: {encoding}')
+
+    def at(self, times, *, encoding=SHARED_SCOPE):
+        """Resolve values with either shared or independently owned scope clocks.
+
+        Values and known bits have the same prefix in both encodings. Per-field
+        clocks follow the last nonmissing assignment to each attribute. After
+        an override expires, the earlier assignment and its original extent
+        resume; this does not reset physical history or create a new quota.
+        """
+        result = np.zeros((len(times), self.width_for(encoding)), np.float32)
         n = 2 + len(self.style_names)
         for j, t in enumerate(times):
             begin = end = None
+            clocks = [None]*(2*n)
             for span in self.spans:
                 if not span.start_ms <= t < span.end_ms:
                     continue
@@ -47,9 +66,11 @@ class ControlSchedule:
                     if value is not None:
                         result[j, k] = value
                         result[j, n+k] = 1
+                        clocks[2*k:2*k+2] = (t-span.start_ms, span.end_ms-t)
                 begin, end = span.start_ms, span.end_ms
-            result[j, 2*n:] = time_features([None if begin is None else t-begin,
-                                            None if end is None else end-t]).reshape(-1)
+            if encoding == SHARED_SCOPE:
+                clocks = [None if begin is None else t-begin, None if end is None else end-t]
+            result[j, 2*n:] = time_features(clocks).reshape(-1)
         return result
 
     def resolved_ranges(self, start_ms, end_ms):

@@ -25,6 +25,23 @@ frozen for the initial bounded demand fit because unconstrained continued
 training recently degraded native behavior; freezing is not a final system
 requirement.
 
+The optional `per-field-scope-v1` demand input assigns a separate start/end clock
+pair to difficulty, LN fraction and each known style attribute. Partial overrides
+replace only the supplied attributes and their owning spans. On expiry, the
+earlier values and original extents resume. This distinguishes, for example, a
+whole-song difficulty request with a short style override from a short difficulty
+request under the same style value. The shared-clock encoding collapses those
+inputs. Neither encoding creates an exact count budget or resets generated state.
+The checkpoint declares its encoding; existing demand weights use
+`shared-scope-v1`. The frozen core's control representation is unchanged.
+
+This input can be paired with the existing full-prefix source strain proxy over
+the difficulty control's own range. Such labels describe observed arrangements;
+they are not online strain inputs or official fragment ratings. Source LN
+fractions and human style judgments retain their respective scopes. Matching
+the range of a label to its condition is a supervision contract; it does not
+establish that the resulting demand will calibrate the complete generator.
+
 ## Feedback and decision ownership
 
 Let the nominal head rate be `nu(t)`, and let generated skeleton event i introduce

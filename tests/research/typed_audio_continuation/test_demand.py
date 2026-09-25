@@ -1,8 +1,9 @@
 import numpy as np
+import pytest
 import torch
 
 from ensomi_model.research.planned_audio_continuation.model import PlannedModelConfig
-from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan
+from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan, SHARED_SCOPE, PER_FIELD_SCOPE
 from ensomi_model.research.typed_audio_continuation.demand import AudioDemand, DemandBalance, DemandCurve, DemandFeedback, pool_audio
 from ensomi_model.research.typed_audio_continuation.generation import TypedSession
 from ensomi_model.research.typed_audio_continuation.model import TypedAudioModel
@@ -21,9 +22,10 @@ def test_discounted_target_and_count_balance_preserve_elapsed_time():
     assert abs(feedback.shift(DemandBalance(1000, 5000), curve, 1000)) <= 2
 
 
-def test_future_partial_cell_control_update_does_not_rewrite_past_demand():
+@pytest.mark.parametrize('encoding', [SHARED_SCOPE, PER_FIELD_SCOPE])
+def test_future_partial_cell_control_update_does_not_rewrite_past_demand(encoding):
     torch.manual_seed(761)
-    model = AudioDemand(3, ControlSchedule().width, 2)
+    model = AudioDemand(3, ControlSchedule().width_for(encoding), 2, control_encoding=encoding)
     with torch.no_grad():
         model.query[-1].weight.normal_(std=.05)
     audio = torch.linspace(0, 1, 503)[:, None].expand(-1, 3)
@@ -36,7 +38,7 @@ def test_future_partial_cell_control_update_does_not_rewrite_past_demand():
     times = np.arange(0, 1764)
     np.testing.assert_allclose(left.mass_at(times), right.mass_at(times))
     assert not np.isclose(right.mass_at(3000), left.mass_at(3000))
-    low = torch.tensor(before.at([250]));high = low.clone();high[:, 0] += 1
+    low = torch.tensor(before.at([250], encoding=encoding));high = low.clone();high[:, 0] += 1
     assert model(audio[:1], high).item() > model(audio[:1], low).item()
 
 

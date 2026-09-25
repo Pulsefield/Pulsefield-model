@@ -6,7 +6,7 @@ import torch
 
 from ensomi_model.research.planned_audio_continuation.model import PlannedModelConfig
 from ensomi_model.research.typed_audio_continuation.allocation import LnFeedback
-from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan
+from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan, SHARED_SCOPE, PER_FIELD_SCOPE
 from ensomi_model.research.typed_audio_continuation.demand import AudioDemand, DemandFeedback
 from ensomi_model.research.typed_audio_continuation.generation import TypedSession
 from ensomi_model.research.typed_audio_continuation.guidance import StarGuidance
@@ -16,14 +16,16 @@ from ensomi_model.research.typed_audio_continuation.response_preference import R
 from ensomi_model.research.typed_audio_continuation.system import FORMAT, load_system
 
 
-def test_bundle_roundtrip_keeps_both_models_and_the_actual_sampling_recipe(tmp_path):
+@pytest.mark.parametrize('encoding', [SHARED_SCOPE, PER_FIELD_SCOPE])
+def test_bundle_roundtrip_keeps_both_models_and_the_actual_sampling_recipe(tmp_path, encoding):
     torch.manual_seed(176)
     torch.set_num_threads(1)
     model = TypedAudioModel(PlannedModelConfig(history_levels=2, skeleton_levels=2),
                             style_names=('tech',), ln_prior=.2).eval()
     schedule = ControlSchedule((ControlSpan(0, 6001, stars=3., ln_fraction=.7, style={'tech': 1.}),),
                                model.style_names)
-    demand = AudioDemand(model.config.conditioned_audio_width, schedule.width, 3).eval()
+    demand = AudioDemand(model.config.conditioned_audio_width, schedule.width_for(encoding), 3,
+                         control_encoding=encoding).eval()
     policy = dict(recovery=asdict(Recovery(60, 50, 50)), ln_feedback=asdict(LnFeedback(strength=.6)),
         recovery_preference=asdict(RecoveryPreference(head_pressure=3)),
         star_guidance=asdict(StarGuidance(1.6)),

@@ -1,5 +1,8 @@
+import numpy as np
+
+from ensomi_model.research.bounded_typed_continuation.features import TIME_DIM, time_features
 from ensomi_model.research.oracle_time_continuation.schema import CompleteRow
-from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan
+from ensomi_model.research.typed_audio_continuation.controls import ControlSchedule, ControlSpan, PER_FIELD_SCOPE
 from ensomi_model.research.typed_audio_continuation.evaluation import describe_control_ranges
 
 
@@ -11,6 +14,24 @@ def test_partial_controls_resolve_into_separate_restored_ranges():
         (0, 200, 3., .2, {}), (200, 400, 3., .2, {'tech': 1.}),
         (400, 600, 5., .2, {'tech': 1.}), (600, 700, 3., .2, {'tech': 1.}),
         (700, 1000, 3., .2, {})]
+
+
+def test_each_condition_retains_its_scope_through_partial_override_and_restoration():
+    schedule = ControlSchedule((ControlSpan(0, 1000, stars=3., ln_fraction=.2),
+        ControlSpan(200, 700, style={'tech': 1.}), ControlSpan(400, 600, stars=5.)), ('tech',))
+    encoded = schedule.at([300, 500, 650, 750], encoding=PER_FIELD_SCOPE)
+    np.testing.assert_array_equal(encoded[:, :6], schedule.at([300, 500, 650, 750])[:, :6])
+    clocks = encoded[:, 6:].reshape(4, 3, 2*TIME_DIM)
+    expected = [((300, 700), (300, 700), (100, 400)),
+                ((100, 100), (500, 500), (300, 200)),
+                ((650, 350), (650, 350), (450, 50)),
+                ((750, 250), (750, 250), (None, None))]
+    np.testing.assert_array_equal(clocks, time_features(expected).reshape(clocks.shape))
+    other = ControlSchedule((ControlSpan(250, 350, stars=3., ln_fraction=.2),
+                              ControlSpan(200, 700, style={'tech': 1.})), ('tech',))
+    # Shared clocks collapse two different difficulty/LN scopes at this point.
+    np.testing.assert_array_equal(schedule.at([300]), other.at([300]))
+    assert not np.array_equal(encoded[:1], other.at([300], encoding=PER_FIELD_SCOPE))
 
 
 def test_range_metrics_keep_crossing_holds_without_inventing_boundary_heads():
