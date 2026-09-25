@@ -1,5 +1,6 @@
 """Scoped publication with timing-only lookahead and R1-owned complete rows."""
 from dataclasses import asdict
+from functools import partial
 import time
 
 import numpy as np
@@ -21,10 +22,13 @@ class ControlledSession(ContinuationSession):
     def __init__(self, model, mel, duration_ms, controls, *, seed=260926,
                  ln_feedback=LnAmountFeedback(), recovery_preference=RecoveryPreference(head_pressure=4.),
                  max_seconds=120., head_times=None, row_demand_model=None,
-                 row_demand_feedback=DemandFeedback()):
+                 row_demand_feedback=DemandFeedback(), onset_rate_model=None,
+                 onset_rate_feedback=DemandFeedback()):
         controls = ControlSchedule(controls.spans, model.style_names)
-        super().__init__(model, mel, duration_ms, seed=seed, planner_factory=HeadPlanner,
+        planner = partial(HeadPlanner, onset_rate_model=onset_rate_model, onset_rate_feedback=onset_rate_feedback)
+        super().__init__(model, mel, duration_ms, seed=seed, planner_factory=planner,
                          controls=controls, max_seconds=max_seconds, head_times=head_times)
+        self.audio_seconds += getattr(self.planner, 'activity_seconds', 0.)
         self.allocation = LnAmountState()
         self.ln_feedback, self.recovery_preference = ln_feedback, recovery_preference
         self.ln_scopes = ln_episodes(controls)
@@ -106,10 +110,11 @@ class ControlledSession(ContinuationSession):
 
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, controls, *, seed=260926, max_seconds=120.,
-            on_window=None, head_times=None, row_demand_model=None):
+            on_window=None, head_times=None, row_demand_model=None, onset_rate_model=None):
     started = time.perf_counter()
     session = ControlledSession(model, mel, duration_ms, controls, seed=seed,
-                                max_seconds=max_seconds, head_times=head_times, row_demand_model=row_demand_model)
+                                max_seconds=max_seconds, head_times=head_times,
+                                row_demand_model=row_demand_model, onset_rate_model=onset_rate_model)
     windows = []
     reason = 'complete'
     try:
@@ -133,5 +138,7 @@ def rollout(model, mel, duration_ms, controls, *, seed=260926, max_seconds=120.,
             recovery_preference=asdict(session.recovery_preference) if session.recovery_preference else None,
             row_demand_feedback=asdict(session.row_demand_feedback) if row_demand_model is not None else None,
             row_demand_model=row_demand_model.config if row_demand_model is not None else None,
+            onset_rate_feedback=asdict(session.planner.onset_rate_feedback) if onset_rate_model is not None and head_times is None else None,
+            onset_rate_model=onset_rate_model.config if onset_rate_model is not None and head_times is None else None,
             head_source='fixed-diagnostic' if head_times is not None else 'generated-audio',
             forced_deadline_releases=session.deadline_events))

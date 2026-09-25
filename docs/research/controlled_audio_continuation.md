@@ -91,6 +91,24 @@ The retained demand readout requires the full-audio encoder and per-field contro
 encoding on which it was fitted. Control revisions rebuild its future reference
 while retaining actual count history; there is no expiry quota.
 
+An independent optional H activity readout estimates head-bearing chart rows per
+second from the same audio/control representation. It must be fitted to H-row
+counts: simultaneous chord members count once and release-only rows count zero.
+The object-demand weights are not interchangeable with this readout. Neither
+readout identifies acoustic transients; one sound may still support many chart
+events, including a sustained jack construction.
+
+The H sampler can compare its own exponentially discounted onset count with the
+integrated mean activity and apply a finite native-logit correction. The current
+research policy uses a four-second decay, a four-onset pseudocount, gain two and
+a correction bounded to `[-2, 2]`. Millisecond timing, the learned local history
+modulation and all supported timing patterns remain available. This is a mean
+calibration hypothesis, not an exact density target or a stability theorem.
+Its sampling ledger counts every provisional H once; scoped lookahead revision
+restores that ledger with its timing cache and RNG. R1 materialization never
+updates it. The low-rate readout's 500-ms pooling sets its context resolution,
+not the output timestamp grid.
+
 The training distinction matters. A layout loss conditioned on a supplied count
 group is invariant to an additive group score and cannot calibrate group mass.
 The restored joint likelihood supervises R1's count and layout choices together.

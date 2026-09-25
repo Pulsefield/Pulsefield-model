@@ -1,11 +1,13 @@
 from dataclasses import replace
 
 import numpy as np
+import pytest
 import torch
 
 from ensomi_model.research.bounded_typed_continuation.contract import ROW_ACTIONS
 from ensomi_model.research.controlled_audio_continuation.model import ControlledAudioModel
 from ensomi_model.research.controlled_audio_continuation.generation import ControlledSession
+from ensomi_model.research.controlled_audio_continuation.onset_rate import OnsetRate
 from ensomi_model.research.joint_audio_continuation.intervals import IntervalExample
 from ensomi_model.research.planned_audio_continuation.counts import COUNT_MARKS
 from ensomi_model.research.planned_audio_continuation.intervals import collate_interval, score_interval, interval_losses
@@ -110,7 +112,8 @@ def test_scoped_control_update_retains_rows_and_finishes_open_holds():
                 last[lane] = row.time_ms
 
 
-def test_object_demand_changes_r1_choices_without_changing_h_times():
+@pytest.mark.parametrize('with_activity', [False, True])
+def test_object_demand_changes_r1_choices_without_changing_h_times(with_activity):
     torch.set_num_threads(1)
     torch.manual_seed(203)
     net = model().eval()
@@ -121,8 +124,10 @@ def test_object_demand_changes_r1_choices_without_changing_h_times():
     # still requiring R1 to realize every H supplied by the unchanged planner.
     with torch.no_grad():
         demand.query[-1].bias[0] = -3
+    rate = OnsetRate(net.config.conditioned_audio_width, controls.width_for(net.control_encoding),
+                    2+len(net.style_names)).eval() if with_activity else None
     sessions = [ControlledSession(net, np.zeros((250, 128), np.float32), 2500, controls,
-        seed=177, row_demand_model=choice) for choice in (None, demand)]
+        seed=177, row_demand_model=choice, onset_rate_model=rate) for choice in (None, demand)]
     for session in sessions:
         session.publish_to(1000)
         prefix = tuple(session.rows)

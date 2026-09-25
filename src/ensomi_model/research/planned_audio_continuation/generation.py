@@ -10,6 +10,7 @@ from ..joint_audio_continuation.batching import interpolate_audio
 from ..joint_audio_continuation.generation import _synchronize
 from ..joint_audio_continuation.timing import sample_hazards
 from ..scoped_style_modeling.dataset import ContractError
+from ..typed_audio_continuation.demand import DemandBalance, DemandCurve, DemandFeedback
 from .features import HeadPreview, head_clocks, skeleton_tokens
 from .model import PlannedAudioModel, PlannedModelConfig
 from .session import ContinuationSession, PublicationLog, _BudgetStop
@@ -23,7 +24,8 @@ class HeadPlanner:
     Row choices never alter its neural state or RNG. A control revision may
     retain a short timing prefix already used by the row policy's lookahead.
     """
-    def __init__(self, model, encoded, duration_ms, seed, chunk_ms=500, guard=None, *, controls=None):
+    def __init__(self, model, encoded, duration_ms, seed, chunk_ms=500, guard=None, *, controls=None,
+                 onset_rate_model=None, onset_rate_feedback=DemandFeedback()):
         self.model, self.encoded, self.duration_ms = model, encoded, duration_ms
         self.device, self.dtype = encoded.device, encoded.dtype
         self.rng = torch.Generator(device='cpu').manual_seed(seed)
@@ -33,11 +35,20 @@ class HeadPlanner:
         self.queue, self.generated = [], []
         self.bins = 0
         self.controls = controls
+        self.onset_rate_model, self.onset_rate_feedback = onset_rate_model, onset_rate_feedback
+        self.onset_balance = DemandBalance()
+        started = time.perf_counter()
+        self.onset_curve = self.activity_curve(controls)
+        self.activity_seconds = time.perf_counter()-started
         self.points = []
         self.published_point = self.point()
 
+    def activity_curve(self, controls):
+        return (DemandCurve.build(self.onset_rate_model, self.encoded[0], controls, self.duration_ms,
+            self.onset_rate_feedback.memory_ms) if self.onset_rate_model is not None else None)
+
     def point(self):
-        return self.cursor, self.last_head, self.cache, self.rng.get_state(), len(self.generated)
+        return self.cursor, self.last_head, self.cache, self.rng.get_state(), len(self.generated), self.onset_balance
 
     def pop(self):
         value = self.queue.pop(0)
@@ -51,12 +62,13 @@ class HeadPlanner:
         kept = sum(t < cut for t in self.queue)
         point = self.points[kept-1] if kept else self.published_point
         old_cursor = self.cursor
-        self.cursor, self.last_head, self.cache, rng, count = point
+        self.cursor, self.last_head, self.cache, rng, count, self.onset_balance = point
         self.cursor = max(self.cursor, coverage_ms, min(old_cursor, cut-1))
         self.rng.set_state(rng)
         self.generated = self.generated[:count]
         self.queue, self.points = self.queue[:kept], self.points[:kept]
         self.controls, self.residual = controls, None
+        self.onset_curve = self.activity_curve(controls)
 
     @property
     def finished(self):
@@ -79,6 +91,9 @@ class HeadPlanner:
                 dtype=self.dtype, device=self.device)))
             logits = self.model.head_logits(audio, history, clocks, **options).flatten()
             native = (bins[:, None] * 10 + torch.arange(10, device=self.device)).flatten()
+            if self.onset_curve is not None:
+                shift = self.onset_rate_feedback.shift(self.onset_balance, self.onset_curve, native.cpu().numpy())
+                logits = logits+torch.as_tensor(shift, dtype=self.dtype, device=self.device)
             valid = (native > self.cursor) & (native <= end)
             if self.model.config.minimum_action_gap_ms:
                 valid &= native >= next_head_earliest(self.generated, self.model.config.minimum_action_gap_ms)
@@ -93,6 +108,8 @@ class HeadPlanner:
             self.last_head, self.residual = self.cursor, None
             self.queue.append(self.cursor)
             self.generated.append(self.cursor)
+            if self.onset_curve is not None:
+                self.onset_balance = self.onset_balance.advance(self.cursor, 1, self.onset_rate_feedback.memory_ms)
             if self.controls is not None:
                 self.points.append(self.point())
 
