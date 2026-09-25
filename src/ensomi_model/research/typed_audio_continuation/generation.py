@@ -34,11 +34,12 @@ class PlanPoint:
 class TypedSession:
     @torch.inference_mode()
     def __init__(self, model, mel, duration_ms, controls, *, seed=251925, recovery=Recovery(),
-                 ln_feedback=None, recovery_preference=None):
+                 ln_feedback=None, recovery_preference=None, star_guidance=None):
         model.eval()
         self.model, self.controls, self.recovery = model, controls, recovery
         self.ln_feedback = ln_feedback
         self.recovery_preference = recovery_preference
+        self.star_guidance = star_guidance
         self.allocation = Allocation()
         self.recent_heads = ()
         self.ln_scopes = ln_episodes(controls) if ln_feedback is not None else ()
@@ -60,6 +61,11 @@ class TypedSession:
 
     def tensor(self, a, dtype=torch.float32):
         return torch.as_tensor(a, dtype=dtype, device=self.device)
+
+    def scores(self, factor, *args, **kwargs):
+        if self.star_guidance is not None:
+            return self.star_guidance.scores(self.model, factor, *args, **kwargs)
+        return getattr(self.model, factor+'_log_probs')(*args, **kwargs)
 
     def point(self):
         return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state(), self.head_cache,
@@ -86,7 +92,7 @@ class TypedSession:
                              head_clocks=self.tensor(self.state.clocks(anchors, self.duration,
                                  remaining_availability=True, head_phase=True)))
             control = self.controls.at(anchors)
-            lp = self.model.clock_log_probs(self.audio(anchors), history,
+            lp = self.scores('clock', self.audio(anchors), history,
                 self.tensor(self.state.clocks(anchors, self.duration, remaining_availability=self.model.head_stream)),
                 self.tensor(control), self.tensor(support, torch.bool), **extra)
             if self.recovery_preference is not None:
@@ -107,7 +113,7 @@ class TypedSession:
             kind = 1+int(torch.multinomial(lp.reshape(-1, 3)[index, 1:].softmax(-1).cpu(), 1, generator=self.rng))
             allowed = self.state.support(now, self.duration, self.recovery) & ((HEADS > 0) == (kind == 1))
             control = self.controls.at([now])
-            logp = self.model.mark_log_probs(self.audio([now]), self.model.plan_temporal.read(self.cache)[None],
+            logp = self.scores('mark', self.audio([now]), self.model.plan_temporal.read(self.cache)[None],
                 self.tensor(self.state.clocks(np.array([now]), self.duration, remaining_availability=self.model.head_stream)),
                 self.tensor(control), self.tensor(allowed[None], torch.bool))[0]
             if self.recovery_preference is not None:
@@ -158,7 +164,7 @@ class TypedSession:
         local, timing = consequences([self.replay], [now],
             [HeadPreview(future_h, self.cursor == self.duration)], self.duration)
         control = self.controls.at([now])
-        logp = self.model.row_log_probs(self.audio([now]), self.model.body.temporal.read(self.row_cache)[None],
+        logp = self.scores('row', self.audio([now]), self.model.body.temporal.read(self.row_cache)[None],
             self.tensor(exact_features([self.replay], [now])), self.tensor(support[None], torch.bool),
             self.tensor([self.replay.occupancy], torch.bool),
             self.tensor(preview(events, now, self.model.config.lookahead, self.bindings)[None]),
@@ -216,10 +222,10 @@ class TypedSession:
 
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120., on_window=None,
-            ln_feedback=None, recovery_preference=None):
+            ln_feedback=None, recovery_preference=None, star_guidance=None):
     started = time.perf_counter()
     session = TypedSession(model, mel, duration_ms, controls, seed=seed, ln_feedback=ln_feedback,
-                           recovery_preference=recovery_preference)
+                           recovery_preference=recovery_preference, star_guidance=star_guidance)
     windows, first30 = [], None
     while session.coverage < duration_ms:
         before = time.perf_counter()
@@ -238,5 +244,6 @@ def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120.,
         startup_seconds=windows[0]['service_seconds']+session.audio_seconds, first30_rows_seconds=first30,
         windows=windows, row_count=len(session.rows), controls=[vars(s) for s in session.controls.spans],
         ln_feedback=asdict(ln_feedback) if ln_feedback is not None else None,
-        recovery_preference=asdict(recovery_preference) if recovery_preference is not None else None)
+        recovery_preference=asdict(recovery_preference) if recovery_preference is not None else None,
+        star_guidance=asdict(star_guidance) if star_guidance is not None else None)
     return NativeGeneration(tuple(session.rows), completed, 'complete' if completed else 'budget', session.coverage, metrics)

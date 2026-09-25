@@ -651,3 +651,44 @@ over the maximum reference horizon, 169 ms for this profile. Planner snapshots
 carry this history across rollback, and control changes preserve it while its
 contents expire by actual elapsed time. No R1 TAP-column history, hidden state,
 reference future or new neural parameter enters the planner.
+
+On the same 15-case panel, occupied-head pressure completes every case and the
+six static difficulty-3 cases have minimum same-column head intervals
+97/98/120/102/108/122 ms. None retains a head interval below 60 ms. Static star
+error is 0.506, LN-fraction error 0.0321 and short-LN prevalence 81/11,975
+(0.68%); the preceding recovery policy's values were 0.435, 0.0377 and 0.59%.
+Thus the targeted repeated-key failures improve without a uniform metric win.
+Relative head counts have median 0.978 and minimum 0.897. Two fully inspected
+Lens contexts, all four pages and their tables preserve layering, TAP interleaving
+and cross-column timing; their shortest LNs are 50 and 96 ms. No player test was
+performed. Short-range difficulty and semantic style control remain unresolved.
+
+## Selecting the factors for difficulty guidance
+
+The model's 15% optional star-condition dropout supplies a no-star comparison
+distribution with the same audio, prefix, other controls and physical support.
+Full categorical guidance locally normalizes
+`2 * log(p_requested) - log(p_stars_unspecified)` at clock, mark and row queries.
+On the retained model with both recovery and head-pressure preferences, all
+15 cases complete. Static star error becomes 0.348 and LN error 0.0316, but
+short LNs increase to 147/12,223 (1.20%), exceeding the initial 1% review bound.
+The difficulty-5 override levels rise from 4.085/2.971/3.496 to
+4.571/3.827/3.692. This is a control-versus-release-quality tradeoff, not a
+selected improvement to the whole system.
+
+`StarGuidance` makes the amplified factors explicit. With
+`guide_releases=False`, it guides the binary head probability and preserves
+`P(release-only | no head)` from the model conditioned on the actual request.
+For marks it guides head-count mass while preserving the joint LN-count/release-
+subset distribution conditional on that count. Complete-row geometry uses
+the ordinary categorical contrast. Releases still consume difficulty and
+audio; their conditional contrast is simply not amplified. The default
+`strength=2` is an inference setting, not a change to the fitted model.
+
+`guide_releases=True` selects the full categorical comparison. Both variants
+preserve physical support and retain LN, style and scope inputs when omitting
+stars from the contrast. Empirical recovery preferences and allocation feedback
+apply after the guided model scores. Since every conditional is normalized
+at its own generated prefix, neither variant is exact global chart-level
+guidance. Native range calibration and articulation must decide whether the
+more selective control operator is useful.
