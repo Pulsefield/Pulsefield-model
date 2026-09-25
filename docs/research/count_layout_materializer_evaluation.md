@@ -234,6 +234,11 @@ LN floor or a current-row HH mask alone would not resolve the demonstrated
 dependency. A proposed solution still needs whole-chart coverage and LN/tap
 organization checks under the same runtime budget.
 
+The [fixed-prefix continuation audit](count_continuation_mass.md) measures
+substantial future failure mass even when the current row is clean. It separates
+mechanically impossible futures from possible futures the sampler rarely
+chooses; sequential current-only conditioning remains an untested alternative.
+
 ## Reproduction identities
 
 Implementation source is `4567d87732320f27c01b40b15f74846865219934`.
