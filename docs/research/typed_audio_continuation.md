@@ -306,6 +306,66 @@ increase if a higher requested fraction causes fewer total heads. The changed
 group-conditioning path needs training and native evaluation; enabling it on
 old weights alone is not an established quality improvement.
 
+### Paired continuation result
+
+At source `54adf6b599a06044a4029f6f4ec7e9377c855538`, the ranked 2,400-update
+checkpoint receives 1,000 further updates with either the original mark law or
+coupled groups. Both use the same 2,000 sampled TRAIN intervals, seed 251928,
+optimizer restart, full-audio encoding, whole-chart difficulty labels and
+existing human-style objective. The sampled identities and objective weights
+match exactly across arms. AdamW rates are 3e-5 for the inherited body and 3e-4
+for other parameters. Parameter count remains 3,947,227. Training plus validation
+takes 483 and 513 seconds on MPS; neither reaches its 900-second bound.
+
+Native evaluation uses Zenithfall, Hysteric and Take, each at four static
+conditions and one fixed 105000–137000 ms override. The retained checkpoint and
+both continued models share amount feedback, empirical recovery preferences,
+head pressure four and selective star guidance two. All 15 cases per model
+complete. Each table cell below averages only the three songs with that request.
+
+| Request: stars, LN fraction | Retained star MAE | Original-law continuation | Coupled-group continuation |
+| --- | ---: | ---: | ---: |
+| 3, 0.2 | 0.463 | 0.720 | 1.063 |
+| 3, 0.7 | 0.291 | 2.000 | 2.097 |
+| 5, 0.2 | 0.446 | 1.067 | 1.075 |
+| 5, 0.7 | 0.378 | 1.552 | 1.572 |
+
+In the difficulty-five/high-LN cell, LNs lasting at most 40 ms increase from
+135/6,712 (2.01%) to 505/10,052 (5.02%) and 472/9,943 (4.75%). This three-song
+cell is distinct from the eight-song comparison below. Both continued fits also
+miss the restored difficulty-three scope: Zenithfall's post-override strain
+proxy rises from 2.912 to 4.877/4.917, and Hysteric's from 2.247 to 4.489/4.578.
+Their physical histories are retained across the control change. These proxies
+are not official local star ratings.
+
+Teacher-forced validation does not select the better generator here. On the
+24 validation charts inside 2–6 stars, mean summed interval NLL per second falls
+from 50.917 to 50.095/50.091, approximately 1.6%. Clock and mark terms improve,
+while the row term increases from 7.351 to about 7.471. These source-prefix
+conditionals and their sum do not bound generated-trajectory difficulty or
+articulation. The shared degradation also means that the newly allowed LN
+group dependence is not sufficient to explain or repair the continuation failure.
+This comparison does not isolate history feedback, optimizer restart, weak scope
+labels or shared-encoder adaptation as its sole cause.
+
+Four matched Lens contexts cover both continued models, all eight pages and all
+action/articulation tables. At Zenithfall 72347–76348 ms, the original law retains
+36–40-ms LNs and 33/34-ms release-to-head relations. Coupled groups retain
+30/31/35-ms LNs, including a 35-ms LN whose release at 75135 ms is followed by
+a new head in the same column at 75160 ms. Both preserve longer layers and
+subset releases, so lower short-tail prevalence alone would not describe their
+organization. At Take 127738–131739 ms, both replace the retained full-chord
+repetition with faster single/pair motion. The coupled sample adds 32/36-ms LNs
+and a 45-ms same-column attack at 130548 ms while retaining a 371-ms layer.
+Changing pattern form does not establish a quality improvement. No listening
+or player test was performed.
+
+Neither continued checkpoint is selected. The coupled-group option remains an
+available conditional family with its default disabled; the retained weights
+remain unchanged. Further adaptation needs evidence from generated histories
+and range-level outcomes alongside source likelihood, rather than additional
+teacher-forced updates selected only by their loss.
+
 ## Broader paired coverage and control response
 
 The repaired model has 3,947,227 parameters. A 1,200-update MPS fit on the
@@ -784,3 +844,34 @@ range calibration, high-LN articulation and semantic style adherence unresolved.
 No player test or listening assessment was performed. The inference policies
 remain optional research settings; these results do not select a playable
 release or a new set of trained weights.
+
+### Seed variation and controlled startup
+
+With the retained weights and the same selective-guidance/physical policies,
+four seeds (251702–251705) are sampled from BOS on complete Zenithfall audio.
+Each request is assessed separately. Difficulty 3/LN fraction 0.2 yields
+2.363, 3.422, 1.911 and 2.943 stars; difficulty 3/LN fraction 0.7 yields
+3.417, 4.038, 3.531 and 3.056. The respective spans are 1.511 and 0.982 stars.
+This small check demonstrates calibration variation, not a population failure
+rate. Low-LN realized fractions remain 0.169–0.185 and high-LN fractions
+0.711–0.727. Only one of these eight charts contains any LN at most 40 ms,
+at a fraction of 0.178%.
+
+The high-LN 4.038-star sample's 253531–257532 ms peak is fully inspected in Lens,
+including both pages and complete tables. It retains moving LN handoffs, TAP
+interleaving, 219–296-ms layers and a 456-ms hold extending beyond the scope.
+The minimum new LN is 49 ms, with no at-most-40-ms LN inside this selected scope.
+Its difficulty deviation does not by itself establish a collapsed local pattern.
+No player or listening assessment is included.
+
+A separate fresh-process startup measurement uses the retained standalone
+checkpoint, these same policies, complete 498989-ms YomiYori audio, difficulty
+5/LN fraction 0.7, and one CPU thread on the Apple M5. Waveform decoding, canonical
+Mel and full-audio encoding are recomputed. Publishing the first 8 seconds with
+at least 30 rows produces 69 rows and two open LNs. Child entry to publication
+takes 2.228 seconds; process roundtrip takes 2.356 seconds. Within the child,
+imports take 0.652 s, model load 0.025 s, decode 0.719 s, Mel 0.202 s, encoding
+0.337 s and row generation 0.292 s. OS caches are not flushed and client rendering
+and player reading are excluded. This is one startup observation, not a latency
+distribution; it does not establish dense-window worst-case service or justify
+additional speculative-decoding machinery by itself.
