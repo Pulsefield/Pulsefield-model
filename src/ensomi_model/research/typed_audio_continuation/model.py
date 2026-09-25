@@ -11,10 +11,11 @@ from .program import CLOCK_DIM, MARKS, TOKEN_DIM
 
 
 class TypedAudioModel(nn.Module):
-    def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5):
+    def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5, ln_base=False):
         super().__init__()
         self.config = body_config
         self.style_names = tuple(style_names)
+        self.ln_base = ln_base
         self.body = PlannedAudioModel(body_config)
         self.plan_temporal = FiniteTemporal(TemporalConfig(TOKEN_DIM, plan_hidden, plan_levels, 4))
         width = ControlSchedule(style_names=self.style_names).width
@@ -48,7 +49,17 @@ class TypedAudioModel(nn.Module):
         return logits.masked_fill(~support, -torch.inf).log_softmax(-1)
 
     def mark_log_probs(self, audio, history, clocks, control, support):
-        return self.mark(self.plan_values(audio, history, clocks, control)).masked_fill(~support, -torch.inf).log_softmax(-1)
+        if not self.ln_base:
+            return self.mark(self.plan_values(audio, history, clocks, control)).masked_fill(~support, -torch.inf).log_softmax(-1)
+        from .proportions import condition_ln_count
+        known_index = 3 + len(self.style_names)
+        residual_control = control.clone()
+        residual_control[..., 1] = 0.
+        residual_control[..., known_index] = 0.
+        raw = self.mark(self.plan_values(audio, history, clocks, residual_control))
+        controlled = condition_ln_count(raw, support, (control[:, 1]+1)/2)
+        original = raw.masked_fill(~support, -torch.inf).log_softmax(-1)
+        return torch.where(control[:, known_index, None] > 0, controlled, original)
 
     def row_log_probs(self, audio, history, exact, support, occupancy, plan, control, local, timing):
         body = self.body

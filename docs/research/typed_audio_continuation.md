@@ -79,3 +79,21 @@ approximation; the new resource support is exact only for the declared recovery
 law. Neither component is yet a calibrated player-specific response model.
 Scoped control effects, generated structure and runtime require native rollouts
 and Lens review. NLL is a learning diagnostic, not the acceptance criterion.
+
+## Explicit LN proportion experiment
+
+The optional `ln_base` factor separates a mark's head-count/release-mask group
+from its LN count. Group probability remains the learned distribution. Within a
+group with `h` heads, LN count `l` has probability proportional to
+`binomial(h,l) * rho**l * (1-rho)**(h-l) * exp(residual[l])` on feasible counts.
+The learned residual is centered within the group and bounded by one logit in
+either direction. The LN request is masked from its residual-network inputs;
+audio, event history, other controls and scope remain available.
+
+At fixed audio/history/support and scope, increasing `rho` increases expected LN
+count without changing the head-count/release-mask marginal. This is a local
+conditional property, not a guarantee that a sampled scope attains its requested
+percentage: changed holds affect future timing and eligibility. Requests are
+proportions, with numerical endpoint clipping, not hard all-TAP/all-LN commands.
+Missing LN conditions retain the unconstrained learned law. Training and native
+sampling use the same factor.
