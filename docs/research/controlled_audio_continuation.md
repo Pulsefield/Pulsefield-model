@@ -165,3 +165,36 @@ native audio generation, separately evaluated control ranges, actual timing and
 action organization, LN articulation, expressive coverage and service latency.
 A fixed audio-generated H trace can isolate R1's restored choices, but cannot
 replace native qualification of the complete system.
+
+The 2,500-update research checkpoint was evaluated on Zenithfall, Hysteric and
+Take with separate whole-song 3-star requests at LN fractions .2 and .7. The
+following errors are means over three fixed audio/seed pairs per control cell;
+they are not population uncertainty estimates.
+
+| R1 sampling policy | Requested LN fraction | Absolute LN-fraction error | Absolute star error |
+| --- | ---: | ---: | ---: |
+| Proportional amount feedback | .2 | .0548 | 1.1451 |
+| Projected integral amount feedback | .2 | .0017 | 1.0559 |
+| Integral feedback plus R1 mean-head reference | .2 | .0017 | .8527 |
+| Proportional amount feedback | .7 | .1185 | 1.5868 |
+| Projected integral amount feedback | .7 | .0089 | 1.4433 |
+
+The weights, audio and H times were fixed across these sampling comparisons.
+Later row/release states differed after changed choices. The checkpoint identity
+is SHA-256 `0f1ddfa5b351988fca04246ec080be106855f49b50fb493370c2d5afee1febb8`;
+the optional mean-head readout is the separately fitted scoped 2,000-update
+demand predictor. These checkpoints and generated maps are local research assets.
+
+Three additional 32-second difficulty/LN overrides produced LN fractions
+.7410/.7225/.7126 for requested .7 with integral feedback. They were evaluated
+separately from the preceding and restored ranges. A short restored Take range
+contained only 34 heads and produced .2941 for requested .2. Longer-range amount
+calibration therefore does not establish precise short-range control.
+
+Lens inspection retained overlapping holds, differing release times, TAP passages
+and changing chords. Low-difficulty calibration still fails: a dense Zenithfall
+crop already contains mostly single-head rows, whereas a Take peak remains
+predominantly repeated double groups. An aggregate head count cannot distinguish
+these demands. The R1 mean-head reference improved the tested star error by only
+.2032, below its .25 expansion criterion, and remains optional. Neither policy
+establishes musical alignment, broad style control or final playable quality.
