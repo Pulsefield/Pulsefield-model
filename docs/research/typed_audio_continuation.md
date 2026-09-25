@@ -596,3 +596,33 @@ controls. It has no reference-tail leakage or new neural parameters, and does no
 change training likelihood. Native evaluation must establish whether fewer extreme
 intervals are accompanied by preserved musical organization, range control and
 style; rarity alone is insufficient evidence of quality.
+
+With the retained weights and amount feedback, the fixed recovery preference
+completes the 15-case three-audio panel. On the 12 static cases, star error
+changes from 0.580 to 0.435, LN-fraction error from 0.0380 to 0.0377, and short
+LNs from 236/12,217 (1.93%) to 73/12,371 (0.59%). The initial sub-0.5% target
+is not met. Head-count ratios relative to amount feedback have
+minimum/median/maximum 0.910/1.009/1.050, so the improvement is not explained by
+overall sparsification. Maximum cached startup/window service is 0.427/0.432 s.
+
+The 32-second overrides still do not reliably realize difficulty 5. Their
+approximate levels are 3.863, 3.256 and 3.496 for Zenithfall, Hysteric and
+As It Was; the later restored difficulty-3 ranges are 3.122, 3.270 and 3.417.
+Each range retains its own requested LN proportion and physical boundary facts.
+Improved static averages do not establish short-range difficulty control.
+
+Two Lens contexts and all four pages were read with complete tables. Mixed
+TAP/LN groups, sustained layers, subset releases and short cross-column timing
+remain. The Zenithfall high-control peak still contains 25/30/31/39-ms holds;
+two heads at 297227 ms end 1 ms apart. The Hysteric high-LN peak has varied
+107–279-ms holds with 362/472-ms layers and no LN at most 40 ms inside that
+four-second witness. No listening or player test was performed.
+
+A residual 45-ms same-column attack at Hysteric 138817 ms has exactly one legal
+row realization: the other three columns are held. The previous head on its only
+free column was at 138772 ms. A 57-ms Zenithfall attack at 287306 ms likewise
+has only one realization for its requested two heads and fixed release subset.
+These failures cannot be repaired by selecting a different current row.
+The skeleton's head time/count decision must account for recent attacks and
+ongoing holds together. Hard recovery feasibility alone does not preserve the
+information needed for every softer gameplay response.
