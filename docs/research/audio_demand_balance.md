@@ -157,6 +157,92 @@ Nominal head demand is not an inverse model of the complete generator's
 difficulty response. Whole-chart difficulty labels and the shared scope-clock
 input also remain imperfect descriptions of independently scoped requests.
 
+## Independent scope targets and native qualification
+
+A 63,362-parameter demand fit uses per-attribute scope clocks and the existing
+full-prefix strain proxy over each source difficulty range. The retained core
+and all sampling coefficients stay fixed. The fit takes 89 seconds on one CPU
+thread and uses exactly the same 16,000 TRAIN draw identities as the earlier
+2,000-update demand fit. This comparison changes encoding and supervision
+together; it does not attribute their effects separately.
+
+All 40 cases on the same eight development audios complete. Static results are
+stratified by the complete request, with eight charts per cell:
+
+| Request: stars, LN fraction | Shared-scope demand star MAE | Independent-scope demand star MAE | New LN-fraction MAE |
+| --- | ---: | ---: | ---: |
+| 3, 0.2 | 0.200 | 0.141 | 0.0363 |
+| 3, 0.7 | 0.357 | 0.316 | 0.0290 |
+| 5, 0.2 | 0.238 | 0.210 | 0.0334 |
+| 5, 0.7 | 0.501 | 0.533 | 0.0661 |
+
+For the eight 105000–137000-ms difficulty-five/high-LN overrides, median absolute
+proxy error falls from 1.159 to 0.639. Individual new proxies remain disparate:
+Zenithfall 4.131, Hysteric 4.519, Take 4.684, FoolMoon 3.513, Goodbye 4.534,
+Revenge 4.267, As It Was 3.590 and YomiYori 4.455. These are scoped strain proxies,
+not official local stars. Before and restored ranges remain separate; Take's
+restored range is only 7.237 seconds. Whole-chart high-LN requests also remain
+weak on FoolMoon and As It Was, yielding 3.930 and 4.118 for five requested stars.
+
+Lens inspection of Hysteric's entry, dense override and restoration covers six
+pages and complete action/articulation tables. Entry includes paired releases
+over an 829-ms layer and a later 1,444-ms hold. The peak retains independent
+tails and 420/666/463-ms layers, alongside a repeated 65/54/51/75-ms LN sequence
+that remains a playability concern. Three holds crossing the override's end
+release separately at 137037, 137097 and 137265 ms; subsequent TAP motion and a
+1,210-ms layer retain continuity without a boundary reset.
+
+Eight additional requests cover difficulty two and six at both LN fractions on
+Hysteric and Take. Their absolute whole-star deviations are at most 0.528, but
+the Take six-star/low-LN peak exposes a grouping failure: 124 heads in 39 rows
+over four seconds, including five consecutive all-TAP quads 101–123 ms apart.
+A pattern-specific retrieval over 6,923 admitted ranked TRAIN charts in 2–6
+stars finds only one run of at least five consecutive TAP quads with every gap
+at most 125 ms. That source, Hold On Tight [Tetris], has five chords 125 ms apart
+at 107715–108215 ms and a whole-chart rating of 5.1007. This establishes
+rarity in that corpus, not a universal BAD cutoff or a ban on chordjack.
+
+### Count feedback does not specify grouping
+
+In the generated Take peak, predicted demand is 25.3–34.5 heads/second and the
+feedback shift remains positive, 0.088–0.472. Applying it to every extra head
+favors a four-head mark over a one-head mark by `exp(3*shift)`. The clock and
+cardinality decisions therefore both respond to the same accumulated deficit.
+R1 cannot reduce a four-key count that the skeleton has already committed.
+
+A three-case routing probe removes the mark contribution while retaining clock
+feedback and every learned weight. Take moves from 6.417 to 6.008 stars, its
+original peak drops to 84 heads in 36 rows, and Hysteric's override proxy remains
+4.571 with LN fraction 0.744. However, inspecting the new Take peak reveals eight
+consecutive quads 126–153 ms apart. Four pages and complete tables cover both
+the original and new peaks. The numeric improvements do not establish that the
+grouping problem is fixed, so clock-only routing is not the packaged recipe.
+
+A nominal head count cannot distinguish many small rows from fewer large chords.
+Predicting head-row activity and chord-size composition separately is a concrete
+next representation to investigate using the existing source beatmaps. It must
+preserve deliberate chordjack and dump while controlling sustained workload;
+a fixed ban on repeated chords would discard valid target arrangements.
+
+### Bounded style response
+
+One Hysteric comparison holds difficulty four and LN fraction 0.2 while requesting
+unspecified, absent or prominent Jack organization in 105000–137000 ms. The
+prominent output has more persistent shared-column chord figures near the end
+than the absent output. The latter still contains a local repeated-chord passage.
+Their respective scope LN fractions are 0.157/0.259/0.162, exposing coupling to
+an independently requested quantity.
+
+Complete head timelines and LN endpoints were read for both specified requests,
+with eight time-proportional pages covering matched 126000–130000 and
+133000–137000-ms contexts. Human High-confidence examples supply a contrast:
+Prom Queen [Lin's Insane], 75838–78338 ms, is prominent Jack with shared columns
+through changing chords; Catalinesie [Catalyst of Amnesia], 113311–117485 ms, is
+Jack absent despite an isolated repeated pair within flowing motion. Both source
+review contexts and all five pages were inspected. The generated comparison
+supports a directional response, not reliable whole-scope salience control or
+generalization to the other four concepts. No listening or player test was done.
+
 ## Loading one complete system recipe
 
 `system.load_system` loads a `typed-audio-system-v1` bundle containing the core,
