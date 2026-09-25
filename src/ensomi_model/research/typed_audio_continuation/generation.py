@@ -16,6 +16,7 @@ from ..oracle_time_continuation.schema import CompleteRow
 from ..planned_audio_continuation.features import HeadPreview, consequences
 from .controls import ControlSchedule
 from .allocation import Allocation, ln_episodes
+from .demand import DemandBalance, DemandCurve, DemandFeedback
 from .program import HEADS, MARKS, Resources, Recovery, bind_row, head_tokens, preview, row_support, tokens
 from .proportions import tilt_ln_count
 
@@ -29,17 +30,21 @@ class PlanPoint:
     head_cache: object = None
     allocation: Allocation = Allocation()
     recent_heads: tuple = ()
+    demand: DemandBalance = DemandBalance()
 
 
 class TypedSession:
     @torch.inference_mode()
     def __init__(self, model, mel, duration_ms, controls, *, seed=251925, recovery=Recovery(),
-                 ln_feedback=None, recovery_preference=None, star_guidance=None):
+                 ln_feedback=None, recovery_preference=None, star_guidance=None,
+                 demand_model=None, demand_feedback=DemandFeedback()):
         model.eval()
         self.model, self.controls, self.recovery = model, controls, recovery
         self.ln_feedback = ln_feedback
         self.recovery_preference = recovery_preference
         self.star_guidance = star_guidance
+        self.demand_model, self.demand_feedback = demand_model, demand_feedback
+        self.demand = DemandBalance()
         self.allocation = Allocation()
         self.recent_heads = ()
         self.ln_scopes = ln_episodes(controls) if ln_feedback is not None else ()
@@ -47,6 +52,8 @@ class TypedSession:
         self.duration = duration_ms
         started = time.perf_counter()
         self.encoded = model.body.encode_audio(self.tensor(np.array(mel, copy=True))[None])
+        self.demand_curve = (DemandCurve.build(demand_model, self.encoded[0], controls, duration_ms,
+                                              demand_feedback.memory_ms) if demand_model is not None else None)
         self.audio_seconds = time.perf_counter()-started
         self.rng = torch.Generator(device='cpu').manual_seed(seed)
         self.row_rng = torch.Generator(device='cpu').manual_seed(seed ^ 0xA301)
@@ -69,7 +76,7 @@ class TypedSession:
 
     def point(self):
         return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state(), self.head_cache,
-                         self.allocation, self.recent_heads)
+                         self.allocation, self.recent_heads, self.demand)
 
     def audio(self, times):
         return interpolate_audio(self.encoded, self.tensor(times, torch.long)[None],
@@ -103,6 +110,9 @@ class TypedSession:
                 lp[..., 1] -= self.tensor(self.recovery_preference.head_cost(
                     self.state, self.recent_heads, native, 1, stars[:, None]))
                 lp = lp.log_softmax(-1)
+            if self.demand_curve is not None:
+                lp[..., 1] += self.tensor(self.demand_feedback.shift(self.demand, self.demand_curve, native))
+                lp = lp.log_softmax(-1)
             hazard = torch.logsumexp(lp[..., 1:], -1)-lp[..., 0]
             index, self.residual = sample_hazards(hazard.flatten(), self.tensor(valid.reshape(-1), torch.bool),
                 self.tensor((~support[..., 0]).reshape(-1), torch.bool), self.rng, self.residual)
@@ -121,12 +131,17 @@ class TypedSession:
                 cost = self.recovery_preference.mark_cost(self.state, now, stars, self.duration)
                 cost += self.recovery_preference.head_cost(self.state, self.recent_heads, now, HEADS, stars)
                 logp = (logp-self.tensor(cost)).log_softmax(-1)
+            if self.demand_curve is not None:
+                shift = self.demand_feedback.shift(self.demand, self.demand_curve, now)
+                logp = (logp+self.tensor(shift*np.maximum(HEADS-1, 0))).log_softmax(-1)
             if self.ln_feedback is not None:
                 span = next((s for s in self.ln_scopes if s.start_ms <= now < s.end_ms), None)
                 self.allocation = self.allocation.in_scope(span)
                 shift = self.tensor([self.ln_feedback.log_odds_shift(self.allocation)])
                 logp = tilt_ln_count(logp[None], self.tensor(allowed[None], torch.bool), shift.sigmoid(), .5)[0]
             mark = int(torch.multinomial(logp.exp().cpu(), 1, generator=self.rng))
+            if self.demand_curve is not None:
+                self.demand = self.demand.advance(now, int(HEADS[mark]), self.demand_feedback.memory_ms)
             if self.ln_feedback is not None:
                 self.allocation = self.allocation.advance(*MARKS[mark][:2])
             if self.recovery_preference is not None and self.recovery_preference.head_pressure:
@@ -206,6 +221,9 @@ class TypedSession:
         if span.start_ms <= self.coverage:
             raise ValueError('A control update must start after published coverage')
         self.controls = ControlSchedule((*self.controls.spans, span), self.controls.style_names)
+        if self.demand_model is not None:
+            self.demand_curve = DemandCurve.build(self.demand_model, self.encoded[0], self.controls,
+                                                  self.duration, self.demand_feedback.memory_ms)
         if self.ln_feedback is not None:
             self.ln_scopes = ln_episodes(self.controls)
         old_cursor = self.cursor
@@ -216,16 +234,19 @@ class TypedSession:
         self.head_cache = point.head_cache
         self.allocation = point.allocation
         self.recent_heads = point.recent_heads
+        self.demand = point.demand
         self.rng.set_state(point.rng)
         self.residual = None
 
 
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120., on_window=None,
-            ln_feedback=None, recovery_preference=None, star_guidance=None):
+            ln_feedback=None, recovery_preference=None, star_guidance=None,
+            demand_model=None, demand_feedback=DemandFeedback()):
     started = time.perf_counter()
     session = TypedSession(model, mel, duration_ms, controls, seed=seed, ln_feedback=ln_feedback,
-                           recovery_preference=recovery_preference, star_guidance=star_guidance)
+                           recovery_preference=recovery_preference, star_guidance=star_guidance,
+                           demand_model=demand_model, demand_feedback=demand_feedback)
     windows, first30 = [], None
     while session.coverage < duration_ms:
         before = time.perf_counter()
@@ -245,5 +266,7 @@ def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120.,
         windows=windows, row_count=len(session.rows), controls=[vars(s) for s in session.controls.spans],
         ln_feedback=asdict(ln_feedback) if ln_feedback is not None else None,
         recovery_preference=asdict(recovery_preference) if recovery_preference is not None else None,
-        star_guidance=asdict(star_guidance) if star_guidance is not None else None)
+        star_guidance=asdict(star_guidance) if star_guidance is not None else None,
+        demand_feedback=asdict(demand_feedback) if demand_model is not None else None,
+        demand_model=demand_model.config if demand_model is not None else None)
     return NativeGeneration(tuple(session.rows), completed, 'complete' if completed else 'budget', session.coverage, metrics)

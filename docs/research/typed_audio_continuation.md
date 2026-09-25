@@ -366,6 +366,11 @@ remain unchanged. Further adaptation needs evidence from generated histories
 and range-level outcomes alongside source likelihood, rather than additional
 teacher-forced updates selected only by their loss.
 
+The [audio-demand feedback prototype](audio_demand_balance.md) separates a
+nominal audio/control head rate from recent generated activity. Its small learned
+mean and finite feedback are an optional system intervention, not a replacement
+for release/geometry assessment or a selected playable model.
+
 ## Broader paired coverage and control response
 
 The repaired model has 3,947,227 parameters. A 1,200-update MPS fit on the
