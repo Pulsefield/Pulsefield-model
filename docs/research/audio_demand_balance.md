@@ -274,7 +274,7 @@ model. `TypedAudioSystem.generate` provides the same factors for offline export.
 A serialization check compares the loaded and direct components through native
 generation, a future control change, restoration and terminal LN closure.
 
-A provisional combined bundle contains 3,984,093 parameters in 16.05 MB, with
+A shared-scope demand bundle contains 3,984,093 parameters in 16.05 MB, with
 both models and the tested 60/50/50-ms recipe. Loading the trained bundle
 reproduces the full 736-row Take comparison sequence exactly on the same cached
 Mel, CPU thread setting and seed. A fresh-process test recomputes YomiYori's
@@ -285,3 +285,13 @@ are not flushed; client rendering and player reading are excluded. Across the
 0.603 seconds for an 8-second step. These are measured service observations,
 not worst-case guarantees or player validation. A local three-chart playtest
 archive preserves the generated note objects and includes their audio.
+
+An independent-scope demand bundle contains 4,010,589 parameters in 16.16 MB.
+It retains clock-and-mark feedback; the exploratory clock-only routing is not
+included. Loading this trained bundle reproduces its 735-row Take reference
+exactly. A fresh-process YomiYori observation publishes 8000 ms, 73 rows and one
+open LN in 2.707 seconds from child entry, or 2.862 seconds including process
+roundtrip, with the same cache/client exclusions above. Its five-chart Hysteric
+archive adds the paired Jack requests to the static and difficulty-switching
+examples. The documented dense-chord failure, high-LN calibration error and
+limited style evidence remain properties of this candidate.
