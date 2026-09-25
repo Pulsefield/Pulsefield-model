@@ -44,6 +44,13 @@ override supplied fields; other fields retain their earlier values. At the end
 of a span the earlier condition resumes. Each attribute has an explicit known
 bit, so unknown and explicitly absent style judgments remain different.
 
+LN fraction means `LN heads / (TAP heads + LN heads)` inside the requested
+interval. A hold entering the interval affects occupancy and release workload,
+but its earlier head does not count toward that interval's requested fraction.
+The request allows local variation: a high-LN interval may contain a pure-TAP
+chordjack passage. A style request may name several simultaneous organizations;
+it does not select one mutually exclusive chart category.
+
 The initial style vocabulary is the existing five scoped concepts: jack,
 stream and trill organization, tech, and LN coordination. Their training values
 are absent, supporting and prominent. These are organization judgments, not
@@ -63,6 +70,30 @@ empty time, retains queued events before the changed scope, and regenerates the
 remaining unpublished plan. A hold crossing the scope remains an obligation;
 a lower LN-fraction request cannot erase its head. This session is an in-memory
 research implementation, not a durable client scheduler or crash-recovery API.
+
+For example, this starts with difficulty 4 and 20% LN heads, then requests
+prominent tech for 32 seconds while retaining those other conditions:
+
+```python
+controls = ControlSchedule(
+    (ControlSpan(0, duration_ms + 1, stars=4., ln_fraction=.2),),
+    model.style_names,
+)
+session = TypedSession(model, mel, duration_ms, controls)
+session.publish_to(8000, minimum_rows=30)
+start = session.coverage + 1000
+session.update_controls(
+    ControlSpan(start, start + 32000, style={"tech": 1.}),
+)
+```
+
+The same update can supply `stars` and `ln_fraction`. Its start must be later
+than published coverage. After its end, the earlier requested values resume;
+the generated history and crossing holds remain, so later sampled rows need
+not match a run that never received the update. The model currently receives
+one pair of scope clocks from the last active span. Attribute values resolve
+independently, but separate deadlines for overlapping partial requests are not
+encoded. Exact per-attribute quota tracking would need that additional state.
 
 ## Learning and evidence limits
 
