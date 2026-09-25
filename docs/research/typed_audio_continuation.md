@@ -483,3 +483,35 @@ with coherent 717/477/493-ms layered holds and a real incoming release at
 105057 ms. That short positive witness does not establish the remaining scope's
 quality. No listening or player test was performed. The scoped readout remains
 an optional research tool; these weights do not replace the retained baseline.
+
+## Bounded amount feedback
+
+`TypedSession(..., ln_feedback=LnFeedback())` and `rollout` optionally apply a
+small inference correction to LN allocation. The fitted probability model and
+its default sampling remain unchanged. This policy addresses observed requests
+for 70% LN that drift toward 90%, increasing the release workload identified by
+the scope conservation law. It is not a difficulty controller or a claim that
+LN percentage alone determines playability.
+
+For the active LN request episode, let H and L count generated skeleton heads
+and LN heads. With requested proportion rho and pseudocount k=32, the smoothed
+realized proportion is `(L + k*rho) / (H + k)`. The policy applies the difference
+between requested and realized log odds, multiplied by strength 1 and clipped
+to [-1, 1], as an additional within-group LN-count tilt. The head-count/release-
+mask marginal of that mark query is preserved. Future occupation and timing
+can still change as a consequence of choosing different head types.
+
+The finite correction leaves local learned preferences unbounded, so an
+intentional pure-TAP passage remains possible. There is no end-of-scope quota
+or forced repayment. The episode follows the effective LN field's owner:
+difficulty/style-only changes do not restart it, fully shadowed boundaries
+do not interrupt it, and returning to an earlier amount request begins a new
+episode. Future revisions do not discard counts before their actual start.
+Physical holds continue across every boundary.
+
+Allocation is stored with each planner snapshot. Invalidating an unpublished
+suffix restores its matching counters along with resource state, temporal
+cache and RNG. It never reads materialized TAP columns or R1 hidden state.
+The runtime records the policy parameters in generation metrics. Native range
+calibration, release articulation and style organization determine whether this
+optional sampling policy is useful; no benefit follows from the interface alone.

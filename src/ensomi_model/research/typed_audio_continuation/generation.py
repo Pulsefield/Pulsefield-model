@@ -1,5 +1,5 @@
 """Generate a typed score ahead of R1; revise only unpublished control scopes."""
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import time
 
 import numpy as np
@@ -15,7 +15,9 @@ from ..oracle_time_continuation.replay import ExactReplayState, commit
 from ..oracle_time_continuation.schema import CompleteRow
 from ..planned_audio_continuation.features import HeadPreview, consequences
 from .controls import ControlSchedule
-from .program import HEADS, Resources, Recovery, bind_row, head_tokens, preview, row_support, tokens
+from .allocation import Allocation, ln_episodes
+from .program import HEADS, MARKS, Resources, Recovery, bind_row, head_tokens, preview, row_support, tokens
+from .proportions import tilt_ln_count
 
 
 @dataclass
@@ -25,13 +27,18 @@ class PlanPoint:
     cache: object
     rng: torch.Tensor
     head_cache: object = None
+    allocation: Allocation = Allocation()
 
 
 class TypedSession:
     @torch.inference_mode()
-    def __init__(self, model, mel, duration_ms, controls, *, seed=251925, recovery=Recovery()):
+    def __init__(self, model, mel, duration_ms, controls, *, seed=251925, recovery=Recovery(),
+                 ln_feedback=None):
         model.eval()
         self.model, self.controls, self.recovery = model, controls, recovery
+        self.ln_feedback = ln_feedback
+        self.allocation = Allocation()
+        self.ln_scopes = ln_episodes(controls) if ln_feedback is not None else ()
         self.device = next(model.parameters()).device
         self.duration = duration_ms
         started = time.perf_counter()
@@ -52,7 +59,8 @@ class TypedSession:
         return torch.as_tensor(a, dtype=dtype, device=self.device)
 
     def point(self):
-        return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state(), self.head_cache)
+        return PlanPoint(self.cursor, self.state, self.cache, self.rng.get_state(), self.head_cache,
+                         self.allocation)
 
     def audio(self, times):
         return interpolate_audio(self.encoded, self.tensor(times, torch.long)[None],
@@ -89,7 +97,14 @@ class TypedSession:
             logp = self.model.mark_log_probs(self.audio([now]), self.model.plan_temporal.read(self.cache)[None],
                 self.tensor(self.state.clocks(np.array([now]), self.duration, remaining_availability=self.model.head_stream)),
                 self.tensor(self.controls.at([now])), self.tensor(allowed[None], torch.bool))[0]
+            if self.ln_feedback is not None:
+                span = next((s for s in self.ln_scopes if s.start_ms <= now < s.end_ms), None)
+                self.allocation = self.allocation.in_scope(span)
+                shift = self.tensor([self.ln_feedback.log_odds_shift(self.allocation)])
+                logp = tilt_ln_count(logp[None], self.tensor(allowed[None], torch.bool), shift.sigmoid(), .5)[0]
             mark = int(torch.multinomial(logp.exp().cpu(), 1, generator=self.rng))
+            if self.ln_feedback is not None:
+                self.allocation = self.allocation.advance(*MARKS[mark][:2])
             previous = self.state.previous
             previous_head = self.state.last_head
             self.state, fresh = self.state.advance(now, mark, self.recovery)
@@ -158,20 +173,24 @@ class TypedSession:
         if span.start_ms <= self.coverage:
             raise ValueError('A control update must start after published coverage')
         self.controls = ControlSchedule((*self.controls.spans, span), self.controls.style_names)
+        if self.ln_feedback is not None:
+            self.ln_scopes = ln_episodes(self.controls)
         old_cursor = self.cursor
         self.queue = [q for q in self.queue if q[0][0] < span.start_ms]
         point = self.queue[-1][2] if self.queue else self.published_point
         self.cursor = max(point.cursor, self.coverage, min(old_cursor, span.start_ms-1))
         self.state, self.cache = point.state, point.cache
         self.head_cache = point.head_cache
+        self.allocation = point.allocation
         self.rng.set_state(point.rng)
         self.residual = None
 
 
 @torch.inference_mode()
-def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120., on_window=None):
+def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120., on_window=None,
+            ln_feedback=None):
     started = time.perf_counter()
-    session = TypedSession(model, mel, duration_ms, controls, seed=seed)
+    session = TypedSession(model, mel, duration_ms, controls, seed=seed, ln_feedback=ln_feedback)
     windows, first30 = [], None
     while session.coverage < duration_ms:
         before = time.perf_counter()
@@ -188,5 +207,6 @@ def rollout(model, mel, duration_ms, controls, *, seed=251925, max_seconds=120.,
     completed = session.coverage == duration_ms and not any(session.replay.occupancy)
     metrics = dict(audio_seconds=session.audio_seconds, generation_seconds=time.perf_counter()-started,
         startup_seconds=windows[0]['service_seconds']+session.audio_seconds, first30_rows_seconds=first30,
-        windows=windows, row_count=len(session.rows), controls=[vars(s) for s in session.controls.spans])
+        windows=windows, row_count=len(session.rows), controls=[vars(s) for s in session.controls.spans],
+        ln_feedback=asdict(ln_feedback) if ln_feedback is not None else None)
     return NativeGeneration(tuple(session.rows), completed, 'complete' if completed else 'budget', session.coverage, metrics)
