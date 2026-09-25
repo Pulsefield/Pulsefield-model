@@ -434,3 +434,52 @@ features may not use undecided future objects. This readout is therefore not
 inserted into the causal skeleton or substituted for `frontier2`. Native
 generation must still be assessed for approximate range adherence, musical
 variation and release quality together.
+
+### Bounded scoped-target result
+
+A TRAIN-only sample of 256 song groups, one random chart per group, supplies
+2,940 consecutive 16-second scopes. With equal group mass and equal scope mass
+within each chart, the local-minus-whole-chart proxy difference has
+5th/50th/95th percentiles -2.647/-0.538/-0.131. About 24.3% of scopes are more
+than one unit below their chart label. Full-song proxy values agree closely with
+the existing rating: their median difference is effectively zero. This supports
+distinguishing the two target meanings; it does not validate the proxy as a
+complete difficulty measure.
+
+A 1,000-update joint adaptation starts from the retained 2,400-update weights,
+keeps the 6,923-TRAIN/36-VAL corpus and 3.947M architecture, and replaces only
+the scoped difficulty labels. The optimizer restarts with seed 251928 and the
+same 3e-5/3e-4 body/planner learning rates. It takes 512 seconds on MPS and sees
+1,395 distinct TRAIN charts. This comparison includes additional optimization
+and a new sample sequence; it does not isolate the causal effect of relabeling.
+
+All 15 native cases complete, but the adapted weights are not selected. Across
+the same 12 static cases, mean star error rises from 0.488 to 1.644, LN-fraction
+error from 0.0777 to 0.1018, and LNs lasting at most 40 ms from 256/12,515
+(2.05%) to 2,239/23,866 (9.38%).
+
+Three additional matched comparisons use the same absolute 105000–137000-ms
+override, requested at the first publication reaching 96000 ms. All begin with
+difficulty 3/LN 20%, override with difficulty 5/LN 70%, then restore the original
+conditions. The approximate strain readout is reported separately for each
+range:
+
+| Audio | Baseline before / override / after | Adapted before / override / after |
+| --- | --- | --- |
+| Zenithfall | 1.638 / 4.432 / 3.973 | 4.013 / 5.145 / 5.250 |
+| Hysteric | 2.961 / 2.788 / 2.775 | 4.279 / 5.056 / 5.083 |
+| As It Was | 3.457 / 3.054 / 3.228 | 4.045 / 4.987 / 4.291 |
+
+The overrides approach their requested scalar while the surrounding 3-star
+ranges become harder. Elevated difficulty is already present before the
+override, so the result cannot be attributed only to carryover from the changed
+control. Pooling those ranges, or selecting on the override proxy alone, would
+misrepresent the outcome.
+
+Lens review covers two contexts, all four pages and every action/articulation
+table. The adapted Zenithfall 3-star/high-LN peak contains 80 head rows in
+4.001 seconds and repeated 25–39-ms LN additions. Its Hysteric override begins
+with coherent 717/477/493-ms layered holds and a real incoming release at
+105057 ms. That short positive witness does not establish the remaining scope's
+quality. No listening or player test was performed. The scoped readout remains
+an optional research tool; these weights do not replace the retained baseline.
