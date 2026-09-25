@@ -24,6 +24,7 @@ from .counts import count_state, count_tokens
 from .features import (HeadPreview, LNProjection, consequences, preview_features,
                        release_clocks, release_masks, row_support, skeleton_tokens)
 from .release import conditioned_release_logits
+from .row_constraints import NoRowContinuation, condition_rows
 
 
 class _BudgetStop(Exception):
@@ -63,18 +64,27 @@ class ContinuationSession:
     A retry changes release/row RNGs only; the H and arrangement choices remain
     fixed. Observed empty coverage is preserved even when its release-survival
     threshold is resampled using the conditional exponential memoryless law.
+    NoRowContinuation preserves prior rows/replay/coverage, but may have consumed
+    release randomness or extended H lookahead. Discard that failed proposal;
+    retry by forking the saved publication boundary, not the failed session.
     """
     @torch.inference_mode()
     def __init__(self, model, mel, duration_ms, *, seed, planner_factory,
                  chunk_ms=500, head_chunk_ms=500, max_rows=30000, max_seconds=90.,
                  stop_callback=None, correct_short_attacks=False,
-                 arrangement_profile=None, head_times=None):
+                 arrangement_profile=None, head_times=None, row_constraint='none'):
         if (type(duration_ms) is not int or duration_ms < 0 or
                 any(type(v) is not int or v <= 0 for v in (chunk_ms, head_chunk_ms, max_rows)) or
                 not np.isfinite(max_seconds) or max_seconds <= 0 or
                 type(correct_short_attacks) is not bool):
             raise ContractError('Planned rollout requires a finite audio clock and positive resource bounds')
         model.eval()
+        if row_constraint not in ('none', 'current', 'preview'):
+            raise ContractError('Row constraint must be none, current or preview')
+        if row_constraint != 'none' and correct_short_attacks:
+            raise ContractError('Row constraints cannot be combined with response correction')
+        if row_constraint == 'preview' and model.config.lookahead < 5:
+            raise ContractError('Preview row constraint requires at least five lookahead heads')
         self.model = model
         self.device, self.dtype = next(model.parameters()).device, next(model.parameters()).dtype
         _synchronize(self.device)
@@ -91,6 +101,7 @@ class ContinuationSession:
         self.duration_ms, self.chunk_ms = duration_ms, chunk_ms
         self.max_rows, self.max_seconds, self.stop_callback = max_rows, max_seconds, stop_callback
         self.correct_short_attacks = correct_short_attacks
+        self.row_constraint, self.constraint_decisions = row_constraint, []
         self.rows, self.response_decisions = [], []
         self.cursor, self.residual = -1, None
         self.replay = ExactReplayState()
@@ -121,6 +132,7 @@ class ContinuationSession:
     def fork(self, *, retry_seed=None):
         result = copy.copy(self)
         result.rows, result.response_decisions = list(self.rows), list(self.response_decisions)
+        result.constraint_decisions = list(self.constraint_decisions)
         result.release_rng, result.row_rng = _fork_rng(self.release_rng), _fork_rng(self.row_rng)
         result.correction_rng = _fork_rng(self.correction_rng)
         result.planner = copy.copy(self.planner)
@@ -141,6 +153,7 @@ class ContinuationSession:
         if self.cursor >= self.duration_ms:
             raise ContractError('Cannot advance a completed continuation')
         self.guard()
+        observed_through = self.cursor
         self.planner.fill(self.model.config.lookahead + 1)
         next_h = self.planner.queue[0] if self.planner.queue else None
         if next_h is None and not self.planner.finished:
@@ -203,7 +216,20 @@ class ContinuationSession:
                 self.tensor([self.replay.occupancy], torch.bool), self.tensor(context), self.tensor(local), self.tensor(future),
                 **counts)[0]
             proposal_log_probs = log_probs.detach().cpu().double()
+            decision = None
+            if self.row_constraint != 'none':
+                try:
+                    proposal_log_probs, decision = condition_rows(proposal_log_probs, self.replay,
+                        self.cursor, preview, self.row_constraint)
+                except NoRowContinuation as error:
+                    error.decision['observed_through_ms'] = observed_through
+                    self.constraint_decisions.append(error.decision)
+                    self.cursor = observed_through
+                    raise
             index = int(torch.multinomial(proposal_log_probs.exp(), 1, generator=self.row_rng))
+            if decision is not None:
+                decision['selected_actions'] = list(ROW_ACTIONS[index])
+                self.constraint_decisions.append(decision)
             if self.correct_short_attacks:
                 costs = short_attack_costs(self.replay, self.cursor, preview)
                 minimum = float(costs[legal[0]].min())
@@ -279,6 +305,7 @@ class PublicationLog:
             forced_terminal_releases=session.terminal_events, conditioned_release_waits=session.conditioned_waits,
             correct_short_attacks=session.correct_short_attacks, short_attack_pairs=short_attack_pairs(session.rows),
             response_decisions=session.response_decisions, **session.arrangement,
+            row_constraint=session.row_constraint, constraint_decisions=session.constraint_decisions,
             planned_heads=len(session.planner.generated), coverage=self.coverage,
             latency_scope='cached canonical Mel through published coverage; excludes waveform decode and Mel computation',
             **extra))

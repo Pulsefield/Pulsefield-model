@@ -98,6 +98,7 @@ def scripted_session(always_bad=False, held_prefix=False):
             self.planner = SimpleNamespace(bins=0, generated=[0, 30, 31] if held_prefix else [0, 10])
             self.release_bins = self.deadline_events = self.terminal_events = self.conditioned_waits = 0
             self.correct_short_attacks = False
+            self.row_constraint, self.constraint_decisions = 'none', []
 
         def fork(self, retry_seed=None):
             result = copy.copy(self)

@@ -15,6 +15,7 @@ from ..joint_audio_continuation.generation import GenerationUpdate, _synchronize
 from ..scoped_style_modeling.dataset import ContractError
 from .generation import HeadPlanner
 from .session import ContinuationSession, PublicationLog, _BudgetStop
+from .row_constraints import NoRowContinuation
 
 
 def close_pairs(prefix, rows, through_ms, *, screen_release_heads):
@@ -56,7 +57,8 @@ def _retry_seed(seed, window, attempt):
 def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attempts=4,
                      screen_release_heads=True, chunk_ms=500, head_chunk_ms=500,
                      max_rows=30000, max_seconds=90., on_update=None, stop_callback=None,
-                     arrangement_profile=None, head_times=None, on_rejected=None):
+                     arrangement_profile=None, head_times=None, on_rejected=None,
+                     row_constraint='none'):
     """Publish only a screened window; keep the last published prefix on a cap.
 
     Every first proposal restores the accepted boundary's exact RNG/cache state.
@@ -70,13 +72,21 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
     audio; its work counts toward the time budget. Observer/consumer exceptions
     propagate. Exhaustion returns an incomplete result with original open holds.
     The packaged inference entrypoint selects this policy only when requested.
+
+    The Python-only row_constraint option conditions each complete-row draw.
+    Empty allowed support rejects that unpublished proposal and consumes one
+    attempt, rather than publishing the event or changing the R/H clocks.
+    Its joint HH/RH predicate requires screen_release_heads=True.
     """
     if (any(type(v) is not int or v <= 0 for v in (window_ms, max_attempts)) or
             type(screen_release_heads) is not bool):
         raise ContractError('Buffered generation requires positive window/attempt bounds and a boolean RH screen')
+    if row_constraint != 'none' and not screen_release_heads:
+        raise ContractError('Joint row constraints require the RH publication screen')
     accepted = ContinuationSession(model, mel, duration_ms, seed=seed, planner_factory=HeadPlanner,
         chunk_ms=chunk_ms, head_chunk_ms=head_chunk_ms, max_rows=max_rows, max_seconds=max_seconds,
-        stop_callback=stop_callback, arrangement_profile=arrangement_profile, head_times=head_times)
+        stop_callback=stop_callback, arrangement_profile=arrangement_profile, head_times=head_times,
+        row_constraint=row_constraint)
     publication = PublicationLog(accepted.started, duration_ms, on_update)
     windows, reason = [], 'completed'
     evaluated_rows = max_unpublished = 0
@@ -110,12 +120,14 @@ def rollout_buffered(model, mel, duration_ms, *, seed, window_ms=8000, max_attem
                 except _BudgetStop as error:
                     observation.update(status='capped', stop_reason=str(error))
                     raise
+                except NoRowContinuation as error:
+                    observation.update(status='rejected', constraint_failure=error.decision)
                 finally:
                     proposed_rows = len(trial.rows) - count
                     evaluated_rows += proposed_rows
                     max_unpublished = max(max_unpublished, proposed_rows)
                     observation.update(speculative_coverage_ms=trial.cursor, proposed_rows=proposed_rows)
-                if not pairs:
+                if observation['accepted']:
                     chosen = cut
                     break
                 if on_rejected is not None:

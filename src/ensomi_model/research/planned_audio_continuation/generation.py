@@ -13,6 +13,7 @@ from ..scoped_style_modeling.dataset import ContractError
 from .features import HeadPreview, head_clocks, skeleton_tokens
 from .model import PlannedAudioModel, PlannedModelConfig
 from .session import ContinuationSession, PublicationLog, _BudgetStop
+from .row_constraints import NoRowContinuation
 
 
 class HeadPlanner:
@@ -66,17 +67,21 @@ class HeadPlanner:
 @torch.inference_mode()
 def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
             max_rows=30000, max_seconds=90., on_update=None, stop_callback=None,
-            correct_short_attacks=False, arrangement_profile=None, head_times=None):
+            correct_short_attacks=False, arrangement_profile=None, head_times=None,
+            row_constraint='none'):
     """Generate one trajectory from full audio and BOS, publishing each step.
 
     A resource cap returns the materialized prefix with open holds preserved.
     Consumer exceptions propagate. Optional fixed native H times support
     research comparisons; they contain no future row actions or LN endpoints.
+    Optional row constraints condition the complete row law on HH/RH checks;
+    empty support returns row_constraint_empty without advancing coverage past
+    the unmaterialized event. They cannot combine with response correction.
     """
     session = ContinuationSession(model, mel, duration_ms, seed=seed, planner_factory=HeadPlanner,
         chunk_ms=chunk_ms, head_chunk_ms=head_chunk_ms, max_rows=max_rows, max_seconds=max_seconds,
         stop_callback=stop_callback, correct_short_attacks=correct_short_attacks,
-        arrangement_profile=arrangement_profile, head_times=head_times)
+        arrangement_profile=arrangement_profile, head_times=head_times, row_constraint=row_constraint)
     publication = PublicationLog(session.started, duration_ms, on_update)
     reason = 'completed'
     try:
@@ -85,7 +90,7 @@ def rollout(model, mel, duration_ms, *, seed, chunk_ms=500, head_chunk_ms=500,
             update = session.step()
             _synchronize(session.device)
             publication.publish(update, time.perf_counter()-tick)
-    except _BudgetStop as error:
+    except (_BudgetStop, NoRowContinuation) as error:
         reason = str(error)
     return publication.result(session, reason)
 

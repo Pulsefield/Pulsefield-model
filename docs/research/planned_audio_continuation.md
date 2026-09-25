@@ -200,6 +200,39 @@ small full-audio prior and one persistent condition shared by head, release and
 row factors. Its profile descriptors are separate from style and playability
 judgments; native benefit remains under evaluation.
 
+## Optional row constraints
+
+The Python research rollouts accept `row_constraint="none"` (default),
+`"current"` or `"preview"`. These options condition the complete 256-way row
+distribution after any count/layout normalization. They do not change model
+weights, training support, H times or the R waiting-time distribution.
+
+Both active modes remove current same-column HH gaps strictly below 20 ms and
+the separate experimental RH gaps at most 20 ms. Preview mode also preserves
+the existence of a one-TAP-per-H continuation through the next 20 ms, including
+that boundary. These future H events need distinct columns. A held column cannot
+be released later and become RH-eligible inside that horizon, while the remaining
+columns become available monotonically as their clocks advance. At the jth
+future H, at least j eligible columns must exist. This exact short-horizon check
+requires five or more configured lookahead heads; it is not a forecast of actual
+releases or a guarantee of later continuation probability.
+
+Neither mode sets an LN-duration floor or a minimum H interval. Full LN chords
+remain possible when the nearby H plan permits them. The joint predicate is
+an experimental policy; RH is not a universal human BAD label. The
+[conditional audit](count_continuation_mass.md) distinguishes current validity,
+possible continuation and likely continuation.
+
+An empty allowed distribution raises `NoRowContinuation` before a row draw.
+The direct rollout returns `row_constraint_empty` with its previously observed
+coverage and open holds. Buffered rollout discards that unpublished proposal
+and uses its existing retry budget. A failed event never becomes a published
+row or settled coverage. Diagnostics record the failing clock, actual LN and
+attack/release state, preview, and retained base probability. Both active modes
+exclude `correct_short_attacks`; buffered use also requires the RH screen.
+They are Python research options, not packaged inference settings or adopted
+playability guarantees.
+
 ## Generate and stream from an audio file
 
 The source-chart-free entrypoint accepts a planned-family checkpoint and audio
