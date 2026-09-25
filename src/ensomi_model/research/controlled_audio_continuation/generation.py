@@ -9,20 +9,21 @@ from ..joint_audio_continuation.generation import NativeGeneration
 from ..planned_audio_continuation.generation import HeadPlanner
 from ..planned_audio_continuation.session import ContinuationSession, _BudgetStop
 from ..planned_audio_continuation.spacing import row_release_window
-from ..typed_audio_continuation.allocation import Allocation, LnFeedback, ln_episodes
+from ..typed_audio_continuation.allocation import ln_episodes
 from ..typed_audio_continuation.controls import ControlSchedule
 from ..typed_audio_continuation.program import ACTIONS, Resources
 from ..typed_audio_continuation.response_preference import RecoveryPreference
+from .allocation import LnAmountFeedback, LnAmountState
 
 
 class ControlledSession(ContinuationSession):
     def __init__(self, model, mel, duration_ms, controls, *, seed=260926,
-                 ln_feedback=LnFeedback(), recovery_preference=RecoveryPreference(head_pressure=4.),
+                 ln_feedback=LnAmountFeedback(), recovery_preference=RecoveryPreference(head_pressure=4.),
                  max_seconds=120., head_times=None):
         controls = ControlSchedule(controls.spans, model.style_names)
         super().__init__(model, mel, duration_ms, seed=seed, planner_factory=HeadPlanner,
                          controls=controls, max_seconds=max_seconds, head_times=head_times)
-        self.allocation = Allocation()
+        self.allocation = LnAmountState()
         self.ln_feedback, self.recovery_preference = ln_feedback, recovery_preference
         self.ln_scopes = ln_episodes(controls)
         self.recent_heads = ()
@@ -34,29 +35,30 @@ class ControlledSession(ContinuationSession):
     def row_options(self, now):
         span = next((s for s in self.ln_scopes if s.start_ms <= now < s.end_ms), None)
         self.allocation = self.allocation.in_scope(span)
-        return dict(ln_shift=self.ln_feedback.log_odds_shift(self.allocation) if self.ln_feedback else 0.)
+        return {}
 
     def release_window(self, preview, profile):
         return row_release_window(self.replay, self.cursor, preview, self.duration_ms, profile)
 
     def prefer_rows(self, log_probs, legal, now):
         preference = self.recovery_preference
-        if preference is None:
-            return log_probs
-        control = self.controls.at([now])
-        stars = 2*control[0, 0]+4 if control[0, 2+len(self.model.style_names)] > 0 else np.nan
-        cost = preference.row_cost(self.replay, now, stars)
-        if now != self.duration_ms:
-            ages = now-np.asarray(self.replay.open_ln_start_ms, float)
-            cost += (ACTIONS == 3) @ preference.cost(ages, stars, 'hr')
-        counts = np.isin(ACTIONS, (1, 2)).sum(-1)
-        cost += preference.head_cost(Resources(starts=self.replay.open_ln_start_ms),
-                                      self.recent_heads, now, counts, stars)
-        return (log_probs-torch.as_tensor(cost, dtype=log_probs.dtype)).log_softmax(-1)
+        if preference is not None:
+            control = self.controls.at([now])
+            stars = 2*control[0, 0]+4 if control[0, 2+len(self.model.style_names)] > 0 else np.nan
+            cost = preference.row_cost(self.replay, now, stars)
+            if now != self.duration_ms:
+                ages = now-np.asarray(self.replay.open_ln_start_ms, float)
+                cost += (ACTIONS == 3) @ preference.cost(ages, stars, 'hr')
+            counts = np.isin(ACTIONS, (1, 2)).sum(-1)
+            cost += preference.head_cost(Resources(starts=self.replay.open_ln_start_ms),
+                                          self.recent_heads, now, counts, stars)
+            log_probs = (log_probs-torch.as_tensor(cost, dtype=log_probs.dtype)).log_softmax(-1)
+        return self.ln_feedback.scores(log_probs, self.allocation) if self.ln_feedback else log_probs
 
     def record_row(self, row):
         tap, ln = row.actions.count(1), row.actions.count(2)
-        self.allocation = self.allocation.advance(tap, ln)
+        if self.ln_feedback is not None:
+            self.allocation = self.ln_feedback.advance(self.allocation, tap, ln)
         if self.recovery_preference is not None:
             horizon = max(self.recovery_preference.hh_ms)
             self.recent_heads = tuple((t, h) for t, h in self.recent_heads if row.time_ms-t < horizon)
@@ -109,6 +111,7 @@ def rollout(model, mel, duration_ms, controls, *, seed=260926, max_seconds=120.,
             startup_seconds=windows[0]['service_seconds']+session.audio_seconds if windows else None,
             controls=[asdict(s) for s in session.controls.spans], recovery=asdict(model.recovery),
             sampling_contract='r1-release-window-v1',
-            ln_feedback=asdict(session.ln_feedback), recovery_preference=asdict(session.recovery_preference),
+            ln_feedback=asdict(session.ln_feedback) if session.ln_feedback else None,
+            recovery_preference=asdict(session.recovery_preference) if session.recovery_preference else None,
             head_source='fixed-diagnostic' if head_times is not None else 'generated-audio',
             forced_deadline_releases=session.deadline_events))

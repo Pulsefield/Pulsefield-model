@@ -58,10 +58,23 @@ complete or calibrated V3 gameplay frontier.
 The LN proportion uses unbounded learned local preferences and a scoped log-odds
 shift within a fixed head-count/release-count group. The group's mass reads the
 actual controls. Local all-TAP passages remain possible under a high-LN request.
-Optional finite LN-amount feedback is applied inside R1 and is not a per-row or
-end-of-scope quota. Empirical head/release recovery preferences also compare R1's
-complete candidates. The old scalar object-count correction is not applied to
-the timing skeleton.
+Empirical head/release recovery preferences compare R1's complete candidates.
+Optional LN-amount feedback then tilts the resulting distribution inside each
+fixed `(head count, release count)` family. It preserves that family's probability
+mass and conditional layout odds at fixed new-LN count. The old scalar
+object-count correction is not applied to the timing skeleton.
+
+The amount controller remembers a bounded log-odds correction. After committing
+`h` heads with `l` new LNs, it updates that correction by `(rho*h-l)/8` and clips
+it to `[-2, 2]`. A finite integral state can compensate a persistent preference
+bias without requiring persistent proportion error. Projection discards further
+accumulated debt at the bound. Its effect is not guaranteed when contextual
+preferences exceed the finite correction or a scope contains few heads.
+Each effective LN request episode starts with zero correction; difficulty/style
+boundaries alone do not reset it. There is no per-row quota, scope-expiry catch-up
+or remaining-time input. Learned local all-TAP and LN passages remain possible.
+Training uses the learned law; this controller is an explicit sampling policy
+whose quality must be assessed on generated, separately reported ranges.
 
 The training distinction matters. A layout loss conditioned on a supplied count
 group is invariant to an additive group score and cannot calibrate group mass.
