@@ -137,3 +137,58 @@ support for the pattern is not enough to model its intended conditional
 probability. Scope-level allocation and local preference must therefore remain
 distinct; a count target must not become an unintended per-head independence
 assumption.
+
+## Range control and ownership of consequences
+
+A scoped request describes a family of acceptable arrangements over its range:
+approximate difficulty, independently specified style strengths and an LN-head
+proportion. It allows local variation and does not impose a quota on every
+row or subwindow. Changing the request preserves the physical history and any
+crossing LN obligations. Evaluation partitions the actual effective schedule;
+separate ranges cannot cancel one another's control errors.
+
+The [scoped target implementation](typed_audio_continuation.md#scoped-difficulty-supervision)
+addresses one supervision mismatch: every interval previously inherited its
+chart's whole-song rating. Its full-prefix strain proxy provides a consistent
+range description for a bounded joint adaptation. It is still incomplete for
+release execution and does not define the full gameplay frontier.
+
+The factors own different opportunities to change demand:
+
+| Decision owner | Decisions it can change | Information required |
+| --- | --- | --- |
+| Skeleton | Event time, head count/type, release subset and LN lifetime | Direct audio, past skeleton, exact resource/hold state, scoped conditions and responses relevant to those choices |
+| R1-derived arranger | Column organization among complete rows realizing the plan | Direct audio, typed preview, own row history, exact column state, scoped conditions and row consequences |
+| Publication scheduler | How much uncommitted work to prepare or revise before publication | Playback horizon, measured service cost, control ranges and persistent physical obligations |
+
+This division explains why the next quality change must reach the decision
+that creates the observed problem. A 26-ms LN followed by a 30-ms same-column
+recovery involves both a fixed lifetime and a column choice. R1 can sometimes
+improve the latter; the skeleton owns the former. A useful upstream response
+must distinguish the consequences of holding, releasing and introducing a new
+head. Release counts also obey the scope conservation law above, so a high-LN
+request changes workload even if attack count stays constant.
+
+One small structural candidate is an explicit audio query at each active LN's
+head, combined with audio at the proposed release and its exact age. The current
+planner retains at most 63 event tokens and LN start clocks; a long hold can
+outlive the token containing its initiation. Four keyed birth-audio references
+would give the release decision direct access to the musical relation between
+the two endpoints. This is per-object context, bounded by four open holds; it
+does not require a song-level motif memory or named musical sections. Joint
+subset-release scoring remains available for coordinated tails.
+
+That candidate needs paired endpoint queries in training's local Mel crops and
+inference's full-song audio cache. Its inputs are already generated head times,
+current candidate times and the available full audio. Source future tail times
+may supervise the output but cannot enter its conditioning state. The same
+restriction applies to using the offline strain trace as runtime feedback:
+that trace reads completed LN endpoints. A causal response model must instead
+use committed history plus explicitly proposed futures, as required by the
+[gameplay formulation](../formulation/gameplay-state.md#target-response-and-frontier).
+
+These are architectural reasons for investigating endpoint context and
+upstream responses. They do not establish that either mechanism alone will
+fix native release quality. Scoped adherence, real articulation and coherent
+audio-responsive variation remain the joint target; a lower loss or a better
+single difficulty proxy is insufficient for selecting a playable system.
