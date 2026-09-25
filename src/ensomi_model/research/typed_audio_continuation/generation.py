@@ -68,6 +68,8 @@ class TypedSession:
             support = self.state.type_support(native, self.duration, self.recovery)
             history = self.model.plan_temporal.read(self.cache)[None].expand(len(anchors), -1, -1)
             extra = {}
+            if self.model.bounded_clock:
+                extra['head_clocks'] = self.tensor(self.state.clocks(anchors, self.duration, head_phase=True))
             if self.model.head_stream:
                 extra = dict(head_history=self.model.head_temporal.read(self.head_cache)[None].expand(len(anchors), -1, -1),
                              head_clocks=self.tensor(self.state.clocks(anchors, self.duration,

@@ -14,6 +14,34 @@ GROUPS = tuple(sorted({(tap+ln, mask) for tap, ln, mask in MARKS}))
 GROUP_INDEX = tuple(GROUPS.index((tap+ln, mask)) for tap, ln, mask in MARKS)
 
 
+def tilt_ln_count(raw, support, fraction, reference_fraction):
+    """Shift scoped LN odds without capping local learned preferences.
+
+    The head-count/release-mask marginal is unchanged. Unlike the bounded
+    binomial base, sufficiently strong local evidence can concentrate on any
+    feasible LN count. This is a conditional prior, not an exact scope quota.
+    """
+    group = torch.tensor(GROUP_INDEX, device=raw.device)
+    membership = group[None] == torch.arange(len(GROUPS), device=raw.device)[:, None]
+    allowed = support[:, None] & membership[None]
+    active = allowed.any(-1)
+
+    def group_sum(values):
+        masked = values[:, None].masked_fill(~allowed, -torch.inf)
+        # Empty groups have no selected mark; a finite dummy keeps their
+        # unused logsumexp derivative from contaminating valid groups.
+        return torch.logsumexp(torch.where(active[..., None], masked, 0.), -1)
+
+    original = raw.masked_fill(~support, -torch.inf).log_softmax(-1)
+    mass = group_sum(original)
+    rho = fraction.clamp(.0001, .9999)
+    shift = torch.logit(rho) - math.log(reference_fraction/(1-reference_fraction))
+    ln = raw.new_tensor([m[1] for m in MARKS])
+    scores = raw + shift[:, None]*ln
+    conditional = scores - group_sum(scores)[:, group]
+    return (mass[:, group]+conditional).masked_fill(~support, -torch.inf)
+
+
 def condition_ln_count(raw, support, fraction, *, residual_bound=1.):
     group = torch.tensor(GROUP_INDEX, device=raw.device)
     membership = group[None] == torch.arange(len(GROUPS), device=raw.device)[:, None]

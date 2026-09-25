@@ -9,16 +9,21 @@ from torch.nn import functional as F
 from ..bounded_typed_continuation.temporal import FiniteTemporal, TemporalConfig, pointwise
 from ..planned_audio_continuation.model import PlannedAudioModel, PlannedModelConfig
 from .controls import ControlSchedule
-from .program import CLOCK_DIM, MARKS, TOKEN_DIM
+from .program import CLOCK_DIM, MARKS, TOKEN_DIM, TIME_DIM
 
 
 class TypedAudioModel(nn.Module):
-    def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5, ln_base=False, head_stream=False):
+    def __init__(self, body_config, *, style_names=(), plan_hidden=64, plan_levels=5,
+                 ln_base=False, head_stream=False, bounded_clock=False, ln_prior=None):
         super().__init__()
         self.config = body_config
         self.style_names = tuple(style_names)
         self.ln_base = ln_base
+        if ln_prior is not None and not 0 < ln_prior < 1:
+            raise ValueError('LN reference fraction must be strictly inside (0,1)')
+        self.ln_prior = ln_prior
         self.head_stream = False
+        self.bounded_clock = False
         self.body = PlannedAudioModel(body_config)
         self.plan_temporal = FiniteTemporal(TemporalConfig(TOKEN_DIM, plan_hidden, plan_levels, 4))
         width = ControlSchedule(style_names=self.style_names).width
@@ -44,9 +49,13 @@ class TypedAudioModel(nn.Module):
                 delattr(self.body, name)
         if head_stream:
             self.enable_head_stream()
+        if bounded_clock:
+            self.enable_bounded_clock()
 
     def enable_head_stream(self):
         """Initialize head ownership from the currently loaded shared weights."""
+        if self.bounded_clock:
+            raise ValueError('Bounded shared and head-owned clocks are separate experiments')
         self.head_temporal = copy.deepcopy(self.plan_temporal)
         self.head_query = copy.deepcopy(self.plan_query)
         self.head_clock = nn.Linear(128, 10).to(self.clock.weight.device)
@@ -55,11 +64,43 @@ class TypedAudioModel(nn.Module):
             self.head_clock.bias.copy_(self.clock.bias[::2])
         self.head_stream = True
 
+    def enable_bounded_clock(self):
+        """Keep controls and real LN obligations outside fading history."""
+        if self.head_stream:
+            raise ValueError('Bounded shared and head-owned clocks are separate experiments')
+        width = ControlSchedule(style_names=self.style_names).width
+        self.clock_base = nn.Sequential(nn.Linear(self.config.conditioned_audio_width+width+4*TIME_DIM+4, 128),
+                                        nn.GELU(), nn.Linear(128, 20)).to(self.clock.weight.device)
+        nn.init.zeros_(self.clock_base[-1].weight)
+        nn.init.zeros_(self.clock_base[-1].bias)
+        self.bounded_clock = True
+
+    def clock_parts(self, audio, history, clocks, control, head_clocks):
+        """Base, bounded modulation and H/R gates on the bin query clock.
+
+        Only audio, declared controls, active-LN ages and occupation enter the
+        base. Exact physical support remains external and never fades.
+        """
+        holds = torch.cat((clocks[..., :4*TIME_DIM], clocks[..., -4:]), -1)
+        base = self.clock_audio(audio) + self.clock_base(torch.cat((audio, control, holds), -1))
+        def gate(values):
+            age = 1000*values[..., 8*TIME_DIM+1].sinh().clamp_min(0)
+            present = values[..., 9*TIME_DIM-1]
+            return present*torch.exp(-age/self.config.head_decay_ms)
+        gates = torch.stack((gate(head_clocks), gate(clocks)), -1).repeat(1, 10)
+        raw = self.clock(self.plan_values(audio, history, clocks, control))
+        bound = self.config.head_bound
+        return base, bound*gates*torch.tanh(raw/bound), gates
+
     def plan_values(self, audio, history, clocks, control):
         return pointwise(self.plan_query, torch.cat((audio, history.mean(-2), clocks, control), -1))
 
     def clock_log_probs(self, audio, history, clocks, control, support, *, head_history=None, head_clocks=None):
-        logits = (self.clock_audio(audio) + self.clock(self.plan_values(audio, history, clocks, control))).reshape(-1, 10, 2)
+        if self.bounded_clock:
+            base, modulation, _ = self.clock_parts(audio, history, clocks, control, head_clocks)
+            logits = (base+modulation).reshape(-1, 10, 2)
+        else:
+            logits = (self.clock_audio(audio) + self.clock(self.plan_values(audio, history, clocks, control))).reshape(-1, 10, 2)
         if self.head_stream:
             head = self.head_query(torch.cat((audio, head_history.mean(-2), head_clocks, control), -1))
             h = self.clock_audio(audio)[:, ::2] + self.head_clock(head)
@@ -75,17 +116,31 @@ class TypedAudioModel(nn.Module):
         return logits.masked_fill(~support, -torch.inf).log_softmax(-1)
 
     def mark_log_probs(self, audio, history, clocks, control, support):
-        if not self.ln_base:
+        if not self.ln_base and self.ln_prior is None:
             return self.mark(self.plan_values(audio, history, clocks, control)).masked_fill(~support, -torch.inf).log_softmax(-1)
-        from .proportions import condition_ln_count
+        from .proportions import condition_ln_count, tilt_ln_count
         known_index = 3 + len(self.style_names)
         residual_control = control.clone()
-        residual_control[..., 1] = 0.
-        residual_control[..., known_index] = 0.
+        if self.ln_prior is None:
+            residual_control[..., 1] = 0.
+            residual_control[..., known_index] = 0.
+        else:
+            # Unknown amount and a known reference amount are different
+            # conditions. Retain presence, but remove the varying amount from
+            # local preferences so the odds shift owns its direct effect.
+            residual_control[..., 1] = torch.where(control[..., known_index] > 0,
+                                                   2*self.ln_prior-1, 0.)
         raw = self.mark(self.plan_values(audio, history, clocks, residual_control))
-        controlled = condition_ln_count(raw, support, (control[:, 1]+1)/2)
+        controlled = (condition_ln_count(raw, support, (control[:, 1]+1)/2) if self.ln_prior is None else
+                      tilt_ln_count(raw, support, (control[:, 1]+1)/2, self.ln_prior))
         original = raw.masked_fill(~support, -torch.inf).log_softmax(-1)
         return torch.where(control[:, known_index, None] > 0, controlled, original)
+
+    def probability_options(self):
+        """Constructor options actually consumed by the typed probability law."""
+        return dict(style_names=list(self.style_names), plan_hidden=self.plan_temporal.config.hidden,
+                    plan_levels=self.plan_temporal.config.levels, ln_base=self.ln_base,
+                    head_stream=self.head_stream, bounded_clock=self.bounded_clock, ln_prior=self.ln_prior)
 
     def row_log_probs(self, audio, history, exact, support, occupancy, plan, control, local, timing):
         body = self.body

@@ -198,3 +198,28 @@ The [scoped demand investigation](scoped_demand_frontier.md) reports the matched
 head-clock comparison, fixed-program R1 counterfactuals, guided decoding, and
 two remaining representation constraints. Neither experimental clock variant
 is accepted as the final playable-system architecture.
+
+## Timing-base and local-preference repair
+
+`bounded_clock` is an explicit typed-model option. Its base reads full audio,
+current controls and active-LN ages/occupation. It does not read learned event
+history or chart counters. A separate history contribution is bounded by
+`head_bound * exp(-age/head_decay_ms)`: head modulation uses last-head age,
+release modulation uses last-event age. BOS contributes no historical
+modulation. Support remains exact, and LN obligations stay in the base while
+history fades. This option is separate from the head-owned experiment; inherited
+`bounded_head` settings alone do not select it.
+
+`ln_prior` selects a different amount mechanism from the bounded binomial base.
+Within each head-count/release-mask group, it shifts learned LN-count logits by
+`LN_count * (logit(request) - logit(reference_fraction))`. Group masses remain
+unchanged and local learned preferences are unbounded. A locally pure-TAP chord
+can therefore remain nearly certain inside a globally high-LN request. Known
+reference-amount and unspecified-amount inputs retain different presence bits.
+The reference fraction comes from TRAIN; this conditional prior does not enforce
+an exact realized scope quota.
+
+Checkpoints record `probability_options`, the constructor settings actually
+consumed by the typed model, separately from its inherited backbone settings.
+Neither repair is a playability certificate; native structure, control response
+and full-song behavior still decide its usefulness.

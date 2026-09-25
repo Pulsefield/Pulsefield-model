@@ -50,6 +50,9 @@ def collate(example, model, program, controls, recovery, device):
         a = np.asarray(a)
         return torch.as_tensor(a, dtype=torch.float32 if dtype is None and a.dtype.kind == 'f' else dtype, device=device)
     extra = {}
+    if model.bounded_clock:
+        extra['head_clocks'] = tensor(np.stack([program.states[i].clocks(t, duration, head_phase=True)
+                                    for i,t in zip(indices, x.timing_times.numpy())]))
     if model.head_stream:
         hi = np.flatnonzero(HEADS[marks] > 0)
         hfirst = max(0, int(np.searchsorted(hi, first))-model.head_temporal.config.receptive_tokens)
@@ -76,7 +79,7 @@ def losses(model, batch, coarse):
     encoded = body.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
     ph = model.plan_temporal(b['raw'], x.history_valid)[0] if b['raw'].shape[1] else None
     audio = interpolate_audio(encoded, x.timing_times[None], x.mel_start, x.frame_count)[0]
-    extra = {}
+    extra = dict(head_clocks=b['head_clocks']) if model.bounded_clock else {}
     if model.head_stream:
         hh = model.head_temporal(b['head_raw'], b['head_valid'])[0] if b['head_raw'].shape[1] else None
         extra = dict(head_history=_gather(model.head_temporal, hh, b['head_indices']), head_clocks=b['head_clocks'])
