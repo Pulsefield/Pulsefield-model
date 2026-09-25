@@ -90,6 +90,13 @@ distinction and can let the sampler wait beyond the last viable release time.
 The response is an execution-feasibility projection for this continuation family,
 not the full V3 gameplay frontier.
 
+For example, after a row taps two columns, suppose one other column is ready and
+the fourth has an older LN. Upcoming H times are 19 and 53 ms later. The ready
+column can serve the first; the tapped columns recover only after 60 ms. Releasing
+the LN 1–3 ms after the current row makes it usable by the second H under RH=50.
+The release window is therefore real despite three columns being unoccupied.
+This case occurred in native generation and cannot be repaired by a lower NLL.
+
 A necessary release wait is normalized conditionally on an event by its deadline
 in both training and inference. A publication window does not truncate that
 normalizer, force a tail or pretend the song ended. All holds close at true audio
