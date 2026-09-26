@@ -34,6 +34,12 @@ Difficulty, LN fraction and each style attribute use independently owned control
 scopes. Their values and known bits reach R1's composition and geometry paths
 directly, as well as both timing factors. Missing style remains unspecified.
 
+The inherited main layout head is affine after additive condition injection.
+Its [condition–history interaction limit](row_condition_interactions.md) prevents
+that path from changing reflected-candidate odds through current audio or
+controls alone. Nonlinear routing, composition and frontier paths remain present;
+direct input availability does not establish adequate conditional expressiveness.
+
 An experimental `hold_audio_width` adds a shared representation of active LN
 origins. Each occupied column retrieves fine and coarse audio at its committed
 start, combines it with current audio and `asinh(age_ms/1000)`, and passes those
