@@ -114,6 +114,22 @@ group is invariant to an additive group score and cannot calibrate group mass.
 The restored joint likelihood supervises R1's count and layout choices together.
 Widening the old inference mask alone would leave those scores uncalibrated.
 
+An experimental `count_history_bound` adds a directly supervised prior over
+`(head count, release count)`. It reads full audio, timing preview, active LN ages
+and scoped controls. The existing full-context composition logits supply a
+centered, bounded correction. With bound `B`, this direct correction changes
+pairwise group log odds by at most `2B`; a common additive logit offset has no
+meaning. Local LN allocation and conditional layout remain expressive and retain
+their original history inputs. The prior receives an additional source group
+cross-entropy loss; its weight is an explicit training choice.
+
+In this variant, consequence context retains encoded chart history, exact replay,
+controls and hypothetical head timing, while removing the direct audio residual.
+Audio still conditions the prior, composition and layout. The consequence score
+remains a learned preference, not an independently calibrated canonical response.
+Its interaction with conditional layouts can change final group mass, so the
+composition bound is not a bound on every historical effect in the final row law.
+
 ## Feasibility and scoped publication
 
 The research response profile retains HH/RH/HR intervals of 60/50/50 ms. It is an
