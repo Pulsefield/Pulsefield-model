@@ -72,7 +72,7 @@ class ControlledAudioModel(PlannedAudioModel):
     control_encoding = PER_FIELD_SCOPE
 
     def __init__(self, config, *, style_names=(), ln_reference=.17, recovery=Recovery(60, 50, 50),
-                 count_history_bound=None, hold_audio_width=0):
+                 count_history_bound=None, hold_audio_width=0, layout_modulation=False):
         super().__init__(config)
         self.style_names = tuple(style_names)
         self.ln_reference, self.recovery = ln_reference, recovery
@@ -95,6 +95,12 @@ class ControlledAudioModel(PlannedAudioModel):
         self.hold_audio_width = hold_audio_width
         self.hold_cues = (HoldAudioCues(config.conditioned_audio_width, hold_audio_width, config.hidden)
                          if hold_audio_width else None)
+        if type(layout_modulation) is not bool:
+            raise ValueError('Layout modulation must be boolean')
+        self.layout_modulation = (nn.Linear(config.hidden, config.hidden, bias=False)
+                                  if layout_modulation else None)
+        if self.layout_modulation is not None:
+            nn.init.zeros_(self.layout_modulation.weight)
 
     @property
     def requires_full_audio_queries(self):
@@ -117,7 +123,8 @@ class ControlledAudioModel(PlannedAudioModel):
     def probability_options(self):
         return dict(style_names=list(self.style_names), ln_reference=self.ln_reference,
                     recovery=asdict(self.recovery), count_history_bound=self.count_history_bound,
-                    hold_audio_width=self.hold_audio_width)
+                    hold_audio_width=self.hold_audio_width,
+                    layout_modulation=self.layout_modulation is not None)
 
     def head_logits(self, audio, history, clocks, *, control):
         return super().head_logits(audio+self.head_control(control), history, clocks)
@@ -130,11 +137,22 @@ class ControlledAudioModel(PlannedAudioModel):
     def planned_row_log_probs(self, audio, history, exact, legal, occupancy, preview, local, timing,
                               *, control, response_allowed=None, ln_shift=0., hold_audio=None):
         allowed = legal if response_allowed is None else legal & response_allowed
-        base = self.condition(history, exact, audio)+self.preview_condition(preview).unsqueeze(-2)
+        preview_value, control_value = self.preview_condition(preview), self.row_control(control)
+        base = self.condition(history, exact, audio)+preview_value.unsqueeze(-2)
         if self.hold_cues is not None:
             base = base+self.hold_cues.row_values(audio, hold_audio)
-        hands = base+self.row_control(control).unsqueeze(-2)
-        layout = self.joint(hands)
+        hands = base+control_value.unsqueeze(-2)
+        layout_hands = hands
+        if self.layout_modulation is not None:
+            # Shared additive conditions cancel from the affine main head's
+            # reflected-row odds. Scaling distinct hand histories allows their
+            # relative preference to depend on music, preview and controls.
+            condition = (self.audio_residual(audio[..., :self.config.audio_width])
+                + self.context_condition(audio[..., self.config.audio_width:])
+                + preview_value + control_value)
+            scale = 1+self.layout_modulation(condition).tanh()
+            layout_hands = hands*scale.unsqueeze(-2)
+        layout = self.joint(layout_hands)
         layout = layout+torch.where(self.has_head[None], self.route_residual(hands,
             torch.ones(len(audio), dtype=torch.bool, device=audio.device)), 0.)
         layout = layout+self.release_residual(hands, occupancy.any(-1))

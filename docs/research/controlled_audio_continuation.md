@@ -40,6 +40,12 @@ that path from changing reflected-candidate odds through current audio or
 controls alone. Nonlinear routing, composition and frontier paths remain present;
 direct input availability does not establish adequate conditional expressiveness.
 
+Experimental `layout_modulation=True` adds a shared feature scale before the
+main layout head. It is driven by the existing audio, preview and control
+projections and starts at the identity. The other R1 readouts and the two timing
+factors retain their existing contexts. The option and its weights are stored
+in the checkpoint; it is disabled for older checkpoints and by default.
+
 An experimental `hold_audio_width` adds a shared representation of active LN
 origins. Each occupied column retrieves fine and coarse audio at its committed
 start, combines it with current audio and `asinh(age_ms/1000)`, and passes those

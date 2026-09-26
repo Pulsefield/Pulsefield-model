@@ -1,6 +1,6 @@
 # Condition–history interactions in R1 placement
 
-The main R1 row head cannot make its response to a shared additive condition
+Without layout modulation, the main R1 row head cannot make its response to a shared additive condition
 depend on the current history. In particular, that condition cannot change its
 relative score for a row and its four-column reflection. Other nonlinear paths
 in the complete policy remain capable of such interactions. This is a limitation
@@ -85,6 +85,29 @@ affine transformations. Applying it here would be an adaptation, not a new
 general conditioning method. An alternative is a small nonlinear residual fusion
 before the readout. Either belongs inside R1. Count ownership, H/R interfaces,
 physical replay, scoped controls and the candidate frontier remain intact.
+
+The experimental `layout_modulation=True` option implements a bias-free
+hidden-by-hidden matrix $W$, shared across hands and initialized to zero. Using
+the existing projected audio, preview and control sum $d$, only the main row
+head receives
+
+$$
+\widetilde z_h=z_h\odot\left(1+\tanh(Wd)\right).
+$$
+
+The scale is bounded between zero and two and starts at one. The 128-wide model
+adds 16,384 parameters. Routing, release routing, count composition, the
+actual/reference LN condition branches and frontier continue to read their
+existing contexts. In particular, count-family normalization still precedes the
+frontier; this is not a new skeleton count plan or player-response cost.
+
+The option is disabled by default. Checkpoints record it in probability options;
+older checkpoints without the field load the unmodulated architecture. A new
+modulated architecture can import the existing tensors with only the zero
+modulation matrix absent. Once saved, loading remains strict. Focused CPU/MPS
+tests verify initial probability identity, learnable condition/history coupling,
+reflection symmetry and cached-generation/scoring agreement. These properties
+do not establish a generation-quality benefit.
 
 Such a change still needs actual continuation learning and generated-chart
 evaluation. More expressive conditional logits do not themselves establish stable
