@@ -300,3 +300,8 @@ the source; 14.9% of its holds last at most 80 ms, against none in the source.
 Overlapping holds remain, but short isolated tails replace many longer cross-row
 relationships. Near-target stars in that case do not establish equivalent LN
 organization or playability.
+
+The subsequent [causal response control study](causal_response_control.md)
+compares fixed penalties with a probability projection on R1's actual generated
+press history. It improves the tested low-LN difficulty errors, while exposing
+remaining high-LN, timing-floor and short-scope control failures.
