@@ -42,8 +42,9 @@ before its hidden activation, allowing interactions with its existing controls;
 R1 reads ordered relative-hand views before its composition and layout readouts.
 The release projection cannot choose a release subset. H receives no new input.
 Absent slots are zero, and zero-initialized output projections preserve the
-initial policy. Width zero keeps this branch disabled; generation quality is
-still under investigation.
+initial policy. Width zero keeps this branch disabled. A
+[matched continuation study](active_ln_audio_cues.md) found a local improvement
+in release organization but insufficient overall evidence to select the branch.
 
 Training this branch requires `score_interval(..., encoded_full=...)` with an
 explicit complete-song encoding. A held head may precede the local training crop;
