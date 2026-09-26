@@ -117,6 +117,26 @@ The [whole-chart outcome comparison](outcome_learning_and_control_response.md)
 establishes this scoring path and records its unsuccessful initial control fit
 and the measured sensitivity to history and difficulty inputs.
 
+For a diagnostic fit restricted to difficulty conditioning,
+`difficulty_tuning.tune_difficulty` freezes all parameters except the value,
+known bit and independently owned difficulty-clock columns in R1's row-control
+projection and first composition affine. Training uses a column parametrization
+so weight decay cannot modify the remaining columns. `folded_state_dict` exports
+ordinary effective weights through the existing checkpoint schema; inference
+gains no module or parameter. Audio, timing and history-cache parameters remain
+fixed. A missing difficulty condition supplies zero to all selected features.
+This restriction isolates conditional learning; it does not establish adequate
+control capacity or chart quality.
+
+`outcomes.scoped_difficulty` reads all complete objects whose heads precede a
+scope's exclusive end, retaining the full earlier history and real LN tails.
+It returns the existing strain proxy and an exclusive dependency boundary after
+the last relevant tail. Later unrelated heads cannot change this readout. This
+permits conditional outcome gradients to omit decisions after that boundary;
+whole-song objectives, such as a global LN request, retain their own horizon.
+Neither the proxy nor its future endpoints are causal generator inputs. A
+training scope does not create synthetic LN closures.
+
 R1 can additionally receive an audio/control prediction of mean head objects per
 second. Its optional finite demand feedback compares that mean with its own
 recent committed head count and softly changes complete-row probabilities by
