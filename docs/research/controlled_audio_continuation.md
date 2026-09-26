@@ -232,3 +232,71 @@ predominantly repeated double groups. An aggregate head count cannot distinguish
 these demands. The R1 mean-head reference improved the tested star error by only
 .2032, below its .25 expansion criterion, and remains optional. Neither policy
 establishes musical alignment, broad style control or final playable quality.
+
+### R1 errors with reference onset times
+
+Supplying only a ranked chart's H timestamps can distinguish an arrangement
+failure from a requirement to repair those timestamps. R1 still starts from BOS
+and chooses every head, hold, release and column. Three TRAIN charts near 3 stars
+were selected for mostly single-head flow, slower chords and LN organization.
+Whole-chart source stars and LN fraction supplied controls; style was unspecified.
+Every source H was preserved, with native release generation still active.
+
+| Source organization | Source stars | R1 with source H | Full audio-generated H and R1 |
+| --- | ---: | ---: | ---: |
+| Mostly single heads | 2.999 | 4.852 | 4.374 |
+| Slower chords | 3.103 | 2.907 | 2.391 |
+| LN organization | 3.005 | 3.492 | 2.990 |
+
+These use the 2,500-update checkpoint and integral LN feedback above. The first
+case adds 498 heads to the same 783 onsets: mean heads per H rises from 1.100 to
+1.736. This establishes an R1 failure at a valid reference cadence. The mixed
+other outcomes do not assign a general percentage of system error to either
+module. Sources are identified by SHA-256
+`258b3ab4648838b33bfd54de0fd07facc88bccbc81ac81a44220a600bffc1e48`,
+`720da64ee70d5fd538522bbd9f429a9be8f8a6f198d67b11a2d9b9e70a99eefc` and
+`10a65062594dd828bc3533fa43937f0fc99b00da76d65401fdf45ef1347e9207`, respectively.
+
+The bounded composition-prior variant was compared with ordinary continuation
+training from those same weights. Both received the identical 2,000 accepted
+eight-second draws from 1,399 TRAIN charts over 1,000 updates. Audio and H/release
+timing weights remained bitwise unchanged. R1's source row likelihood trained
+both arms; the prior arm additionally received group cross-entropy with weight
+.25 and used count-history bound one. Model sizes were 4.584M and 4.720M.
+
+For the single-head source, three paired seeds produced 4.635–4.828 stars after
+ordinary continuation and 4.333–4.482 with the prior. Mean absolute errors were
+1.724 and 1.412; the .312 improvement fell short of the .4 comparison threshold
+and .6 absolute-error bound. Chord/LN cases were closer to target, but the prior
+was not selected for broader native qualification. Its optional mode remains
+disabled by default. The two terminal checkpoint SHA-256 identities are
+`3f90dd80c190695e40886ce7c4151177d8d482f2ba8f5fbb214a99e82a20fc80` and
+`e1674f8aab1875e293a0522409d500b181b4ff190130ae57e4cd9eb6ee5b6be3`.
+Executable source is `b7a6c88e5634b14855410b7af64225848d6b936e`.
+
+The following probability decomposition uses each trajectory's genuine prefix
+and exact state at the same reference H times. Values are expected heads per H
+for the prior arm's first seed. Source labels are never attached to generated
+alternative histories.
+
+| History | Prior alone | After composition | After consequence comparison | After recovery preference |
+| --- | ---: | ---: | ---: | ---: |
+| Source, realized 1.100 | 1.498 | 1.341 | 1.324 | 1.320 |
+| Generated, realized 1.610 | 1.500 | 1.637 | 1.637 | 1.611 |
+
+The baseline distribution is already too wide for this source. The bounded
+history correction lowers its mean on source history and raises it on generated
+history. Consequence comparison does not account for that increase in this case.
+The probe separates probability stages, not content-memory effects from every
+physical-state effect. A bounded log-odds correction alone therefore does not
+establish a suitable generated count distribution.
+
+Lens action tables and time-proportional images show the practical difference:
+77–78-ms single-note flow becomes frequent doubles and triples. Ordinary
+continuation also sustains alternating two-key groups through a dense passage.
+The chord source still yields changing chords and single-note transitions.
+For the LN source, the prior's median hold duration is 146 ms against 222 ms in
+the source; 14.9% of its holds last at most 80 ms, against none in the source.
+Overlapping holds remain, but short isolated tails replace many longer cross-row
+relationships. Near-target stars in that case do not establish equivalent LN
+organization or playability.
