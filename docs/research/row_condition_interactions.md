@@ -69,7 +69,7 @@ most $2.98\times10^{-6}$. The nonlinear routing contribution changed by as much
 as .00902 on those synthetic inputs. These measurements verify the algebra;
 they do not estimate generated quality or typical control strength.
 
-## Consequence for the next architecture comparison
+## Shared conditional feature modulation
 
 A small multiplicative interaction can remove this limitation without adding
 skeleton decisions or a pattern vocabulary. For example, apply a shared,
@@ -109,10 +109,9 @@ tests verify initial probability identity, learnable condition/history coupling,
 reflection symmetry and cached-generation/scoring agreement. These properties
 do not establish a generation-quality benefit.
 
-Such a change still needs actual continuation learning and generated-chart
-evaluation. More expressive conditional logits do not themselves establish stable
-trill, jack, Tech or LN organization. An objective comparison should hold the
-architecture fixed; changing conditioning requires a separate comparison.
+The controlled comparison below tests this capacity with actual continuation
+learning. More expressive conditional logits do not themselves establish stable
+trill, jack, Tech or LN organization.
 
 Executable source audited: `3cf169cda06c09b3487f12f6dcdacf81b4fc74da`.
 Checkpoint SHA-256:
@@ -120,3 +119,134 @@ Checkpoint SHA-256:
 Numerical probe: `conditioning-probe.json` in artifact owner
 `20260926-trajectory-kernel-r1-v1`, seed 261580. The source argument applies to
 the code's affine main head, independently of these checkpoint values.
+
+## Continuation learning and scoped control
+
+Adding modulation improved the measured continuation distributions and scoped
+difficulty response, but did not establish reliable style or LN-amount control.
+The candidate remains experimental; it does not replace the selected core model.
+
+The comparison repeated the 128-update
+[physical trajectory study](physical_trajectory_matching.md#paired-rr1-learning-result)
+with only the zero-initialized modulation matrix added. Both models started from
+the same aligned-1200 weights. All 128 target scopes and 384 genuine source
+examples, rollout seeds, three independent trajectories per update, loss weights
+and optimizer settings matched. Audio and H stayed frozen; R/R1 trained, with
+the new matrix using the existing condition-path learning rate. A four-update
+unmodulated reproduction matched all twelve sampled trajectory hashes and
+kernel objectives. Reordering the shared projections caused at most
+$1.12\times10^{-6}$ source-NLL and $3.85\times10^{-6}$ final-weight differences;
+the reused full comparator is not a bitwise reproduction.
+
+Qualification generated thirty scoped difficulty continuations, twelve style
+charts, nine LN charts and six native charts for the new endpoint. The source-H
+comparisons use three seeds per request; the native panel uses three audios with
+one static and one switched request each. Style and LN distances are empirical
+short-block kernel U-statistics, not semantic accuracy or playability scores.
+
+| Measurement | Unmodulated trajectory learning | With modulation |
+| --- | ---: | ---: |
+| Mean distance across four reserved style scopes | .06534 | .04953 |
+| Mean scoped difficulty absolute error | .85922 | .73150 |
+| Mean distance across three LN scopes | .03087 | .03248 |
+
+The style improvement was .01581, exceeding the predeclared .005 absolute and
+15% relative gates. Scoped control and restored-range regression checks also
+passed. Those checks allowed bounded regressions against continued factual
+learning; they were not absolute acceptance criteria for the playable system.
+In particular, the native gate checked difficulty regression, not LN accuracy.
+
+### What the generated charts retained and missed
+
+Focused Lens inspection covered complete-row action relationships, true LN
+endpoints and time-proportional context. In the Tech example, irregular source
+timing survived, but much of the viewed placement became regular complementary
+pairs. The stream example had moving singles with chord accents. The jack view
+retained overlapping chord attacks with changing groups and occasional LNs.
+Starry Jet gained sustained hold roles; Shippaisaku still contained many
+independently staggered releases. These are local visual observations, not new
+human annotations or a full-song playtest.
+
+For Miraie, median LN durations were 157/107/106 ms in the three draws, compared
+with 183/183/183 ms in the unmodulated trajectory candidate. The pooled style
+gain therefore does not imply improvement in every physical relationship.
+The source-H trill guard had no exact repeated full group in its target passage,
+but also failed to sustain its source's fixed complementary-group exchange.
+Removing repetition alone did not recover trill organization.
+
+A separate control intervention froze one generated 3,336-row prefix and its
+H plan, then forked trill absent/prominent requests on [288156,290040) ms under
+three matched future seeds. Difficulty and LN requests were identical across
+each pair; other styles were unspecified. Endpoint-specific caches were rebuilt
+from the same committed rows, with no entering hold at the override.
+
+In one modulated draw, the prominent request increased exact repeated-group
+transitions below 100 ms from 7 to 13. The full action sequence showed groups of
+three to five repeated `[01]` or `[23]` rows followed by group changes, rather
+than sustained A/B exchange. Both requests shared the first eight target rows.
+This supports condition sensitivity, but not correct semantic control. It is
+not evidence that every repetition is unplayable: other style fields were
+unspecified. R receives controls too, so the full continuation contrast is an
+R/R1 experiment even though H is fixed.
+
+### Native controls and service time
+
+For static difficulty 3 and LN fraction .2, native results were:
+
+| Audio | Difficulty readout | Realized LN head fraction |
+| --- | ---: | ---: |
+| Zenithfall | 3.796 | .112 |
+| Hysteric | 3.818 | .148 |
+| Take | 4.308 | .163 |
+
+Switched requests were difficulty 4.5 and LN fraction .6 on [64000,96000) ms,
+with difficulty 3 and fraction .2 before and after. Zenithfall realized LN
+fractions .095/.444/.085 across those three separately measured ranges;
+Hysteric .190/.623/.167 and Take .161/.605/.180. The override does not erase
+committed rows or close pre-existing holds. Static and switched modes used
+different seeds, so their difference is not a pure control effect.
+
+All six native H sequences exactly matched their unmodulated counterparts.
+The observed differences therefore arise downstream of the frozen H policy.
+Replaying the deployed bounded LN feedback from committed rows found it at
+its upper correction limit before 46.2% of Zenithfall's static H choices and
+60.4% of its restored-range choices. A binding cap can limit correction, but
+does not identify why the learned distribution underproduces LNs or establish
+that raising the cap would preserve appropriate articulation.
+
+On the 24 GiB M5 Mac, the new fit took 1,209 seconds. Peak sampled footprint was
+9.59 GiB and MPS driver allocation 3.50 GiB. Native first-thirty-row publication
+took .240–.542 seconds; the slowest measured eight-second service window took
+.327 seconds. These timings start from cached canonical Mel with a loaded model;
+they exclude waveform decoding, Mel preparation and model loading. This panel
+provides substantial generation-ahead margin, not a production deadline guarantee.
+
+## Implication for supplementary style learning
+
+Difficulty-stratified style exposure can reduce sampling imbalance where real
+examples exist. It cannot supply missing combinations. In the frozen eligible
+human pool, prominent Tech had three local 3–4 examples and none in the other
+2–6 bins; prominent trill had 2/3/2/0 examples in the four bins. Prominent stream
+had 3/7/4/3 and jack 1/5/2/1. These counts describe this filtered fitting pool,
+not the complete ranked corpus.
+
+A style label applies to its annotated range, which may contain several different
+figures. Inspection of the five prominent trill actor targets found clear
+exchange episodes embedded in broader motion, holds or repeated groups. Training
+every row as a positive trill instance would change that supervision. Missing
+labels also remain unknown, not absent. Human confirmation of a label does not
+turn inherited machine evidence masks into trusted episode localization.
+
+The modulation result supports keeping a condition/history interaction inside
+R1. The remaining question is whether explicit factual style-condition
+discrimination can use that capacity more directly than short-block matching,
+and whether the distinction survives a shared generated prefix. An appropriate
+comparison holds difficulty-balanced exposure fixed, changes only the learning
+signal, and evaluates the actual scoped continuations. Source likelihood alone
+cannot decide that question.
+
+Learning source: `24fc4f1f724137787758ff50a5b5750d09d96a48`. Artifact owner:
+`20260926-layout-modulation-r1-v1`. Candidate checkpoint SHA-256:
+`b8aecd3e1f43339d2c1e3aff6d245a41e32a12008ddc20fd47e9eccb99544546`.
+Qualification and native results, common-prefix style forks and the read-only
+`review-audit` retain the complete measured scopes and generated exports.
