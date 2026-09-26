@@ -37,7 +37,8 @@ directly, as well as both timing factors. Missing style remains unspecified.
 An experimental `hold_audio_width` adds a shared representation of active LN
 origins. Each occupied column retrieves fine and coarse audio at its committed
 start, combines it with current audio and `asinh(age_ms/1000)`, and passes those
-values through a small shared MLP. The release clock reads a pooled projection;
+values through a small shared MLP. The release clock receives a pooled projection
+before its hidden activation, allowing interactions with its existing controls;
 R1 reads ordered relative-hand views before its composition and layout readouts.
 The release projection cannot choose a release subset. H receives no new input.
 Absent slots are zero, and zero-initialized output projections preserve the

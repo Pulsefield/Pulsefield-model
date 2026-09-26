@@ -12,7 +12,7 @@ class HoldAudioCues(nn.Module):
         self.audio_width = audio_width
         self.slots = nn.Sequential(nn.Linear(2*audio_width+1, hidden), nn.GELU(),
                                    nn.Linear(hidden, hidden), nn.GELU())
-        self.release = nn.Linear(hidden, 10, bias=False)
+        self.release = nn.Linear(hidden, row_width, bias=False)
         self.row = nn.Linear(4*hidden, row_width, bias=False)
         nn.init.zeros_(self.release.weight)
         nn.init.zeros_(self.row.weight)

@@ -219,13 +219,19 @@ class PlannedAudioModel(ContextAudioModel):
         base, residual, _ = self.head_parts(audio, history, clocks)
         return base + residual
 
-    def release_logits(self, audio, history, clocks):
+    def release_logits(self, audio, history, clocks, *, context_addition=None):
         if (audio.shape[:-1] != history.shape[:-2] or
                 history.shape[-2:] != (2, self.config.skeleton_hidden) or
                 clocks.shape != (*audio.shape[:-1], 2, RELEASE_CLOCK_DIM)):
             raise ContractError('Release queries require skeleton history and LN-only clocks')
         paired_audio = audio.unsqueeze(-2).expand(*history.shape[:-1], audio.shape[-1])
-        return pointwise(self.release_clock, torch.cat((history, clocks, paired_audio), -1)).mean(-2)
+        inputs = torch.cat((history, clocks, paired_audio), -1)
+        if context_addition is None:
+            return pointwise(self.release_clock, inputs).mean(-2)
+        if context_addition.shape != (*audio.shape[:-1], self.config.hidden):
+            raise ContractError('Release context addition must match the hidden query width')
+        hidden = pointwise(self.release_clock[0], inputs)+context_addition.unsqueeze(-2)
+        return pointwise(self.release_clock[2], self.release_clock[1](hidden)).mean(-2)
 
     def planned_row_log_probs(self, audio, history, exact, legal, occupancy, preview, local, timing,
                               *, count_history=None, count_clock=None, response_allowed=None):

@@ -123,8 +123,9 @@ class ControlledAudioModel(PlannedAudioModel):
         return super().head_logits(audio+self.head_control(control), history, clocks)
 
     def release_logits(self, audio, history, clocks, *, control, hold_audio=None):
-        values = super().release_logits(audio+self.release_control(control), history, clocks)
-        return values if self.hold_cues is None else values+self.hold_cues.release_values(audio, hold_audio)
+        context = None if self.hold_cues is None else self.hold_cues.release_values(audio, hold_audio)
+        return super().release_logits(audio+self.release_control(control), history, clocks,
+                                       context_addition=context)
 
     def planned_row_log_probs(self, audio, history, exact, legal, occupancy, preview, local, timing,
                               *, control, response_allowed=None, ln_shift=0., hold_audio=None):
