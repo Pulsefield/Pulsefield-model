@@ -88,8 +88,8 @@ physical replay, scoped controls and the candidate frontier remain intact.
 
 Such a change still needs actual continuation learning and generated-chart
 evaluation. More expressive conditional logits do not themselves establish stable
-trill, jack, Tech or LN organization. The ongoing physical-trajectory objective
-comparison retains its original architecture and is not modified by this audit.
+trill, jack, Tech or LN organization. An objective comparison should hold the
+architecture fixed; changing conditioning requires a separate comparison.
 
 Executable source audited: `3cf169cda06c09b3487f12f6dcdacf81b4fc74da`.
 Checkpoint SHA-256:
