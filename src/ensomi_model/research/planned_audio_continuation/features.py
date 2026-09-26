@@ -33,6 +33,12 @@ class LNProjection:
             raise ContractError('LN projection requires four committed starts and an observed clock')
 
 
+def ln_start_times(starts):
+    """Pack committed native-ms start tuples; -1 denotes an unoccupied slot."""
+    return np.asarray([[-1 if t is None else int(t) for t in row] for row in starts],
+                      dtype=np.int64).reshape(-1, 4)
+
+
 @dataclass(frozen=True)
 class HeadPreview:
     times_ms: tuple

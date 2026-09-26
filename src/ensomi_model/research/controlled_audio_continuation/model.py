@@ -11,9 +11,12 @@ from torch import nn
 
 from ..planned_audio_continuation.counts import COUNT_MARKS, ROW_COUNTS
 from ..planned_audio_continuation.model import PlannedAudioModel, PlannedModelConfig
+from ..joint_audio_continuation.batching import interpolate_audio
+from ..scoped_style_modeling.dataset import ContractError
 from ..typed_audio_continuation.controls import ControlSchedule, PER_FIELD_SCOPE
 from ..typed_audio_continuation.program import Recovery
 from .composition_prior import CompositionPrior
+from .hold_audio import HoldAudioCues
 
 
 class RowComposition(nn.Module):
@@ -69,7 +72,7 @@ class ControlledAudioModel(PlannedAudioModel):
     control_encoding = PER_FIELD_SCOPE
 
     def __init__(self, config, *, style_names=(), ln_reference=.17, recovery=Recovery(60, 50, 50),
-                 count_history_bound=None):
+                 count_history_bound=None, hold_audio_width=0):
         super().__init__(config)
         self.style_names = tuple(style_names)
         self.ln_reference, self.recovery = ln_reference, recovery
@@ -87,21 +90,48 @@ class ControlledAudioModel(PlannedAudioModel):
         self.count_prior = (None if count_history_bound is None else CompositionPrior(
             config.conditioned_audio_width, self.preview_condition.in_features, width,
             len(self.composition.group_members)))
+        if type(hold_audio_width) is not int or hold_audio_width < 0:
+            raise ValueError('Active-LN audio width must be a nonnegative integer')
+        self.hold_audio_width = hold_audio_width
+        self.hold_cues = (HoldAudioCues(config.conditioned_audio_width, hold_audio_width, config.hidden)
+                         if hold_audio_width else None)
+
+    @property
+    def requires_full_audio_queries(self):
+        return self.hold_cues is not None
+
+    def hold_audio_options(self, encoded, starts, times, *, audio_starts=None, frame_counts=None):
+        if self.hold_cues is None:
+            return {}
+        if (starts is None or starts.shape != (len(times), 4) or starts.dtype != torch.long or
+                len(encoded) != 1 or bool(((starts >= 0) & (starts > times[:, None])).any())):
+            raise ContractError('LN audio retrieval requires committed native starts for one complete song')
+        active = starts >= 0
+        origins = interpolate_audio(encoded, starts.clamp_min(0).reshape(1, -1),
+                                    audio_starts, frame_counts).reshape(len(times), 4, encoded.shape[-1])
+        age = torch.asinh((times[:, None]-starts).to(encoded.dtype)/1000)*active
+        holds = torch.cat((origins*active[..., None], age[..., None],
+                           active.to(encoded.dtype)[..., None]), -1)
+        return dict(hold_audio=holds)
 
     def probability_options(self):
         return dict(style_names=list(self.style_names), ln_reference=self.ln_reference,
-                    recovery=asdict(self.recovery), count_history_bound=self.count_history_bound)
+                    recovery=asdict(self.recovery), count_history_bound=self.count_history_bound,
+                    hold_audio_width=self.hold_audio_width)
 
     def head_logits(self, audio, history, clocks, *, control):
         return super().head_logits(audio+self.head_control(control), history, clocks)
 
-    def release_logits(self, audio, history, clocks, *, control):
-        return super().release_logits(audio+self.release_control(control), history, clocks)
+    def release_logits(self, audio, history, clocks, *, control, hold_audio=None):
+        values = super().release_logits(audio+self.release_control(control), history, clocks)
+        return values if self.hold_cues is None else values+self.hold_cues.release_values(audio, hold_audio)
 
     def planned_row_log_probs(self, audio, history, exact, legal, occupancy, preview, local, timing,
-                              *, control, response_allowed=None, ln_shift=0.):
+                              *, control, response_allowed=None, ln_shift=0., hold_audio=None):
         allowed = legal if response_allowed is None else legal & response_allowed
         base = self.condition(history, exact, audio)+self.preview_condition(preview).unsqueeze(-2)
+        if self.hold_cues is not None:
+            base = base+self.hold_cues.row_values(audio, hold_audio)
         hands = base+self.row_control(control).unsqueeze(-2)
         layout = self.joint(hands)
         layout = layout+torch.where(self.has_head[None], self.route_residual(hands,

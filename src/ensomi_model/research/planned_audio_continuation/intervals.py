@@ -11,7 +11,7 @@ from ..joint_audio_continuation.intervals import IntervalInputs, _pad_first, col
 from ..scoped_style_modeling.dataset import ContractError
 from .features import (
     LNProjection, consequences, head_clocks, preview_after, preview_features,
-    release_clocks, release_masks, row_support, skeleton_tokens,
+    release_clocks, release_masks, row_support, skeleton_tokens, ln_start_times,
 )
 from .release import conditioned_release_logits
 from .counts import count_state, count_tokens
@@ -26,6 +26,7 @@ class ReleaseWaitInputs:
     native_indices: torch.Tensor
     destinations: torch.Tensor
     offsets: torch.Tensor
+    hold_starts: torch.Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,8 @@ class PlannedInputs:
     count_clock: torch.Tensor | None = None
     head_valid: torch.Tensor | None = None
     response_allowed: torch.Tensor | None = None
+    release_hold_starts: torch.Tensor | None = None
+    row_hold_starts: torch.Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -142,7 +145,8 @@ def collate_interval(example, config, device='cpu', *, recovery=None):
                 tensor(np.full(len(padded), int(x.timing_history[i])), torch.long),
                 tensor(_pad_first(clocks_r, edge=True)),
                 tensor(np.arange(begin, deadline + 1) - bins[0] * 10, torch.long),
-                tensor(destinations, torch.long), tensor(native.reshape(-1)[destinations] - begin, torch.long)))
+                tensor(destinations, torch.long), tensor(native.reshape(-1)[destinations] - begin, torch.long),
+                tensor(ln_start_times([ln[i].starts_ms]*len(padded)), torch.long)))
             last_audio_query = max(last_audio_query, int(anchors[-1]))
 
     if waits:
@@ -197,7 +201,9 @@ def collate_interval(example, config, device='cpu', *, recovery=None):
         tensor(query_head_positions - head_start, torch.long), tensor(clocks),
         tensor(_pad_first(skeleton_raw)[None]), tensor(r_clocks), tensor(r_valid), tensor(r_forced),
         tensor(row_preview), tensor(local), tensor(future), tuple(waits), count_raw, count_clock,
-        tensor(h_valid), None if response_allowed is None else tensor(response_allowed))
+        tensor(h_valid), None if response_allowed is None else tensor(response_allowed),
+        tensor(ln_start_times([s.open_ln_start_ms for s in replays]), torch.long),
+        tensor(ln_start_times([s.open_ln_start_ms for s in row_states]), torch.long))
     return PlannedBatch(inputs, tensor(head_event), tensor(release_event), base.targets.row_index.to(device),
                         example.weight_per_second)
 
@@ -209,35 +215,54 @@ def _gather(module, encoded, indices):
     return torch.where((indices >= 0)[:, None, None], encoded[indices.clamp_min(0)], boundary)
 
 
-def score_interval(model, inputs, coarse, *, profile_index=None, controls=None):
+def score_interval(model, inputs, coarse, *, profile_index=None, controls=None, encoded_full=None):
+    """Score true prefixes, optionally reusing a differentiable full-song encoding.
+
+    LN-origin models require encoded_full so an old hold cannot read a clipped
+    local crop. Caller-owned encodings may be cached only while audio weights
+    remain frozen. Their real frame count still comes from the complete song.
+    """
     x = inputs.base
-    raw_audio = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
+    if encoded_full is None:
+        if model.requires_full_audio_queries:
+            raise ContractError('Active-LN audio queries require an explicit full-song encoding')
+        raw_audio = model.encode_crop(x.mel, x.mel_valid, x.mel_start, x.frame_count, coarse)
+        audio_starts = x.mel_start
+    else:
+        if encoded_full.ndim != 3 or len(encoded_full) != 1 or encoded_full.shape[1] < int(x.frame_count[0]):
+            raise ContractError('Full-song encoding must cover every real audio frame')
+        raw_audio = encoded_full
+        audio_starts = torch.zeros_like(x.mel_start)
     encoded = model.condition_audio(raw_audio, profile_index)
     downstream = (encoded if model.config.profile_head_rate_downstream else
                   model.condition_audio(raw_audio, profile_index, downstream=True))
     def conditions(times):
         return ({} if controls is None else dict(control=encoded.new_tensor(
             controls.at(times.detach().cpu().numpy(), encoding=model.control_encoding))))
+    def holds(starts, times):
+        return model.hold_audio_options(downstream, starts, times, audio_starts=audio_starts,
+                                        frame_counts=x.frame_count)
     row_history = model.temporal(x.raw, x.history_valid)[0] if x.raw.shape[1] else None
     skeleton_history = (model.skeleton_temporal(inputs.skeleton_raw, x.history_valid)[0]
                         if inputs.skeleton_raw.shape[1] else None)
     head_history = (model.head_temporal(inputs.head_raw, inputs.head_history_valid)[0]
                     if inputs.head_raw.shape[1] else None)
-    audio = interpolate_audio(encoded, x.timing_times[None], x.mel_start, x.frame_count)[0]
+    audio = interpolate_audio(encoded, x.timing_times[None], audio_starts, x.frame_count)[0]
     h = model.head_logits(audio, _gather(model.head_temporal, head_history, inputs.head_history),
                           inputs.head_clock, **conditions(x.timing_times))
     if not model.config.profile_head_rate_downstream:
-        audio = interpolate_audio(downstream, x.timing_times[None], x.mel_start, x.frame_count)[0]
+        audio = interpolate_audio(downstream, x.timing_times[None], audio_starts, x.frame_count)[0]
     r = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, x.timing_history),
-                             inputs.release_clock, **conditions(x.timing_times))
+                             inputs.release_clock, **conditions(x.timing_times),
+                             **holds(inputs.release_hold_starts, x.timing_times))
     for wait in inputs.release_waits:
-        audio = interpolate_audio(downstream, wait.times[None], x.mel_start, x.frame_count)[0]
+        audio = interpolate_audio(downstream, wait.times[None], audio_starts, x.frame_count)[0]
         raw = model.release_logits(audio, _gather(model.skeleton_temporal, skeleton_history, wait.history),
-                                   wait.clocks, **conditions(wait.times))
+                                   wait.clocks, **conditions(wait.times), **holds(wait.hold_starts, wait.times))
         conditional = conditioned_release_logits(raw.flatten()[wait.native_indices])
         r = r.flatten().index_copy(0, wait.destinations, conditional[wait.offsets]).reshape_as(r)
     if len(x.row_times):
-        audio = interpolate_audio(downstream, x.row_times[None], x.mel_start, x.frame_count)[0]
+        audio = interpolate_audio(downstream, x.row_times[None], audio_starts, x.frame_count)[0]
         counts = {}
         if model.config.row_factorization == 'count_layout':
             past = (model.row_counts.temporal(inputs.count_raw, x.history_valid)[0]
@@ -248,7 +273,8 @@ def score_interval(model, inputs, coarse, *, profile_index=None, controls=None):
             counts['response_allowed'] = inputs.response_allowed
         rows = model.planned_row_log_probs(audio, _gather(model.temporal, row_history, x.row_history),
             x.row_exact, x.row_legal, x.occupancy, inputs.row_preview,
-            inputs.consequence_local, inputs.consequence_timing, **counts, **conditions(x.row_times))
+            inputs.consequence_local, inputs.consequence_timing, **counts, **conditions(x.row_times),
+            **holds(inputs.row_hold_starts, x.row_times))
     else:
         rows = h.new_empty((0, 256))
     return PlannedScores(h, r, rows)

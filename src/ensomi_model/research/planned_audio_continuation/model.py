@@ -176,6 +176,14 @@ class PlannedAudioModel(ContextAudioModel):
     def timing_logits(self, *args, **kwargs):
         raise ContractError('Planned model requires separate head and release probability queries')
 
+    @property
+    def requires_full_audio_queries(self):
+        return False
+
+    def hold_audio_options(self, encoded, starts, times, *, audio_starts=None, frame_counts=None):
+        """Optional LN-origin observations for release and row factors, never H."""
+        return {}
+
     def row_log_probs(self, *args, **kwargs):
         raise ContractError('Planned rows require head preview and candidate consequences')
 

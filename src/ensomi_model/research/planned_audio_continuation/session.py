@@ -21,7 +21,7 @@ from ..oracle_time_continuation.schema import CompleteRow
 from ..scoped_style_modeling.dataset import ContractError
 from .attack_response import short_attack_costs, short_attack_pairs, select_response_row
 from .counts import count_state, count_tokens
-from .features import (HeadPreview, LNProjection, consequences, preview_features,
+from .features import (HeadPreview, LNProjection, consequences, preview_features, ln_start_times,
                        release_clocks, release_masks, row_support, skeleton_tokens)
 from .release import conditioned_release_logits
 from .row_constraints import NoRowContinuation, condition_rows
@@ -220,7 +220,10 @@ class ContinuationSession:
                 audio = interpolate_audio(self.downstream_encoded, anchors[None])[0]
                 history = self.model.skeleton_temporal.read(self.skeleton_cache)[None].expand(len(bins), -1, -1)
                 logits = self.model.release_logits(audio, history, self.tensor(clocks),
-                    **self.control_at(anchors.cpu().numpy())).flatten()
+                    **self.control_at(anchors.cpu().numpy()),
+                    **self.model.hold_audio_options(self.downstream_encoded,
+                        self.tensor(ln_start_times([self.replay.open_ln_start_ms]*len(bins)), torch.long),
+                        anchors)).flatten()
                 valid, forced = release_masks(states, native.cpu().numpy(), previews, self.duration_ms,
                     minimum_action_gap_ms=gap, windows=[(earliest, deadline)]*len(bins) if gap else None)
                 valid &= native.cpu().numpy() <= end
@@ -274,7 +277,10 @@ class ContinuationSession:
             log_probs = self.model.planned_row_log_probs(audio, self.model.temporal.read(self.row_cache)[None],
                 self.tensor(exact_features([self.replay], [self.cursor])), self.tensor(legal, torch.bool),
                 self.tensor([self.replay.occupancy], torch.bool), self.tensor(context), self.tensor(local), self.tensor(future),
-                **counts, **self.control_at([self.cursor]), **self.row_options(self.cursor))[0]
+                **counts, **self.control_at([self.cursor]), **self.row_options(self.cursor),
+                **self.model.hold_audio_options(self.downstream_encoded,
+                    self.tensor(ln_start_times([self.replay.open_ln_start_ms]), torch.long),
+                    self.tensor([self.cursor], torch.long)))[0]
             proposal_log_probs = self.prefer_rows(log_probs.detach().cpu().double(), legal[0], self.cursor)
             decision = None
             if self.row_constraint != 'none':

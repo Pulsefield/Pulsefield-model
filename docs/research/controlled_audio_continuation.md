@@ -34,6 +34,25 @@ Difficulty, LN fraction and each style attribute use independently owned control
 scopes. Their values and known bits reach R1's composition and geometry paths
 directly, as well as both timing factors. Missing style remains unspecified.
 
+An experimental `hold_audio_width` adds a shared representation of active LN
+origins. Each occupied column retrieves fine and coarse audio at its committed
+start, combines it with current audio and `asinh(age_ms/1000)`, and passes those
+values through a small shared MLP. The release clock reads a pooled projection;
+R1 reads ordered relative-hand views before its composition and layout readouts.
+The release projection cannot choose a release subset. H receives no new input.
+Absent slots are zero, and zero-initialized output projections preserve the
+initial policy. Width zero keeps this branch disabled; generation quality is
+still under investigation.
+
+Training this branch requires `score_interval(..., encoded_full=...)` with an
+explicit complete-song encoding. A held head may precede the local training crop;
+clamping its address to that crop would create a training/inference mismatch.
+The encoding stays differentiable, and callers may cache it only while its
+encoder weights remain frozen. Ordinary queries and hypothetical release waits
+both retrieve from actual active starts. Runtime reconstructs the same cues from
+full audio and committed LN state, so no future source tail or extra mutable
+memory is carried across a fork or control update.
+
 ## Complete-row probability and the frontier
 
 R1 internally groups candidates by `(head count, new LN count, release count)`.
