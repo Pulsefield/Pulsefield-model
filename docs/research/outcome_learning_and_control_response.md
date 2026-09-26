@@ -200,6 +200,9 @@ single request, so it does not isolate that intervention. More training, richer
 inputs and alternative estimators remain possible contributors; the current
 result does not establish which one alone would solve playability.
 
+The subsequent [paired scoped-control study](paired_scope_control_learning.md)
+tests that shared-prefix intervention and reports its generated results.
+
 ## Provenance and resources
 
 Executable source: `c3befb2fa397a6149e0f3090419e1210764d33b4`.
