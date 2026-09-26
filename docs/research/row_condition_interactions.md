@@ -238,12 +238,12 @@ labels also remain unknown, not absent. Human confirmation of a label does not
 turn inherited machine evidence masks into trusted episode localization.
 
 The modulation result supports keeping a condition/history interaction inside
-R1. The remaining question is whether explicit factual style-condition
-discrimination can use that capacity more directly than short-block matching,
-and whether the distinction survives a shared generated prefix. An appropriate
-comparison holds difficulty-balanced exposure fixed, changes only the learning
-signal, and evaluates the actual scoped continuations. Source likelihood alone
-cannot decide that question.
+R1. A matched test of
+[explicit factual style-condition discrimination](scoped_style_discrimination.md)
+improved a source-only comparator but did not establish reliable control from
+a shared generated prefix. It also corrected a mismatch between whole-chart
+requests and local style references in the inherited kernel evaluation. Source
+likelihood and kernel improvement alone cannot decide the quality question.
 
 Learning source: `24fc4f1f724137787758ff50a5b5750d09d96a48`. Artifact owner:
 `20260926-layout-modulation-r1-v1`. Candidate checkpoint SHA-256:
