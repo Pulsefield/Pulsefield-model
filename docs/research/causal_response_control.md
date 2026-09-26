@@ -241,3 +241,19 @@ can supply limited control supervision. Source next-row labels cannot simply be
 attached to a changed prefix. Source imitation, musical fit, style organization
 and LN articulation still need independent qualification. The attack-only policy
 is not adopted as a general replacement for that work.
+
+Training only the projected likelihood has a further limitation. While the
+constraint is active, adding a common offset to all raw logits in either tier
+leaves the projected distribution unchanged. That objective cannot calibrate the
+raw probability mass between the tiers. Distillation into the unprojected policy,
+using detached projected targets on the same genuine generated states, would
+provide that missing signal. Exact teacher matching also requires access to its
+response and control-episode state, or an explicit approximation of information
+the student does not observe.
+
+This upper-tail teacher supplies no correction for an underfilled scope. For
+example, Zenithfall's requested 5-star override remains at scoped level 3.787.
+Distilling the unchanged probabilities there would preserve the error. Full
+control learning therefore needs an outcome defined over the requested range;
+forcing a lower response at every individual row would erase legitimate rests
+and local variation.
