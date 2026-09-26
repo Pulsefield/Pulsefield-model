@@ -97,6 +97,23 @@ or remaining-time input. Learned local all-TAP and LN passages remain possible.
 Training uses the learned law; this controller is an explicit sampling policy
 whose quality must be assessed on generated, separately reported ranges.
 
+`sampling.replay_row_scores` reconstructs the default deployed row distribution
+for learning from a completed generated trajectory. It replays recovery and LN
+feedback from the complete actual prefix, then scores only the requested clock
+interval. A scoring partition does not reset feedback or open holds. Callers
+remove collator padding before passing neural row scores. The returned CPU
+float64 probabilities preserve the native sampler's arithmetic and remain
+differentiable back to model weights, including MPS weights. Empty count groups
+use finite unused normalizers to avoid undefined backward derivatives.
+
+This reconstruction covers the default recovery/LN policy. Optional object-rate
+or response-projection policies need their own reconstruction. Its row-score
+gradient is the full parameter-dependent trajectory score only when audio and
+both timing factors are frozen and share no trainable parameters with R1.
+Unfreezing those factors requires their timing/survival derivatives too. A
+generated prefix must be scored with its own actions and state; source next-row
+labels do not define a valid target after changing that prefix.
+
 R1 can additionally receive an audio/control prediction of mean head objects per
 second. Its optional finite demand feedback compares that mean with its own
 recent committed head count and softly changes complete-row probabilities by

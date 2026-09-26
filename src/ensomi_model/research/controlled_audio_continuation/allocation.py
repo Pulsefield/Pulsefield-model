@@ -53,9 +53,14 @@ class LnAmountFeedback:
         members = _MEMBERS.to(log_probs.device)
         group = _GROUP.to(log_probs.device)
         longs = _COUNTS[:, 1].to(log_probs)
-        before = log_probs[None].masked_fill(~members, -torch.inf).logsumexp(-1)
+        active = (members & torch.isfinite(log_probs)[None]).any(-1)
+        def normalizer(values):
+            masked = values[None].masked_fill(~members, -torch.inf)
+            # Empty groups have no effect on the distribution. Keep their
+            # unused normalizers finite so backward never evaluates 0 * NaN.
+            return torch.where(active[:, None], masked, 0.).logsumexp(-1)
+        before = normalizer(log_probs)
         tilted = log_probs+state.offset*longs
-        after = tilted[None].masked_fill(~members, -torch.inf).logsumexp(-1)
-        active = torch.isfinite(before)
-        delta = torch.where(active, after, 0.)-torch.where(active, before, 0.)
+        after = normalizer(tilted)
+        delta = after-before
         return tilted-delta[group]

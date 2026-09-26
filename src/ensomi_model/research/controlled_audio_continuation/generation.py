@@ -13,9 +13,10 @@ from ..planned_audio_continuation.spacing import row_release_window
 from ..typed_audio_continuation.allocation import ln_episodes
 from ..typed_audio_continuation.controls import ControlSchedule
 from ..typed_audio_continuation.demand import DemandBalance, DemandCurve, DemandFeedback
-from ..typed_audio_continuation.program import ACTIONS, Resources
+from ..typed_audio_continuation.program import ACTIONS
 from ..typed_audio_continuation.response_preference import RecoveryPreference
 from .allocation import LnAmountFeedback, LnAmountState
+from .sampling import recovery_cost, advance_recent_heads
 
 
 class ControlledSession(ContinuationSession):
@@ -58,15 +59,8 @@ class ControlledSession(ContinuationSession):
     def prefer_rows(self, log_probs, legal, now):
         preference = self.recovery_preference
         if preference is not None:
-            control = self.controls.at([now])
-            stars = 2*control[0, 0]+4 if control[0, 2+len(self.model.style_names)] > 0 else np.nan
-            cost = preference.row_cost(self.replay, now, stars)
-            if now != self.duration_ms:
-                ages = now-np.asarray(self.replay.open_ln_start_ms, float)
-                cost += (ACTIONS == 3) @ preference.cost(ages, stars, 'hr')
-            counts = np.isin(ACTIONS, (1, 2)).sum(-1)
-            cost += preference.head_cost(Resources(starts=self.replay.open_ln_start_ms),
-                                          self.recent_heads, now, counts, stars)
+            cost = recovery_cost(self.replay, self.recent_heads, now, self.duration_ms,
+                                 self.controls, preference)
             log_probs = (log_probs-torch.as_tensor(cost, dtype=log_probs.dtype)).log_softmax(-1)
         if self.row_demand_curve is not None:
             shift = self.row_demand_feedback.shift(self.row_demand, self.row_demand_curve, now)
@@ -81,10 +75,7 @@ class ControlledSession(ContinuationSession):
         if self.row_demand_curve is not None:
             self.row_demand = self.row_demand.advance(row.time_ms, tap+ln, self.row_demand_feedback.memory_ms)
         if self.recovery_preference is not None:
-            horizon = max(self.recovery_preference.hh_ms)
-            self.recent_heads = tuple((t, h) for t, h in self.recent_heads if row.time_ms-t < horizon)
-            if tap+ln:
-                self.recent_heads += ((row.time_ms, tap+ln),)
+            self.recent_heads = advance_recent_heads(self.recent_heads, row, self.recovery_preference)
 
     def publish_to(self, end_ms, *, minimum_rows=0):
         while self.cursor < self.duration_ms and (self.cursor < end_ms or len(self.rows) < minimum_rows):
