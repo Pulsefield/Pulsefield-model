@@ -6,6 +6,12 @@ condition-sensitive objective changes whether it must use the supplied request
 to explain them. The current corpus supports testing both without adding an
 inference network or assigning source labels to generated histories.
 
+The subsequent [balanced learning comparison](balanced_condition_alignment.md)
+completed matched source-only and condition-aligned fits. Correct-condition
+ranking improved to 20/24 genuine scopes, but generated difficulty error improved
+by only .068 and LN organization remained inadequate. Its generated-history
+diagnosis distinguishes conditional fit from sustained row behavior.
+
 The [paired-outcome pilot](paired_scope_control_learning.md) improved difficulty
 control too little. It trained only existing difficulty-input columns on twelve
 charts. Its failure does not establish that a larger network, more policy-gradient
