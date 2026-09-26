@@ -113,6 +113,9 @@ both timing factors are frozen and share no trainable parameters with R1.
 Unfreezing those factors requires their timing/survival derivatives too. A
 generated prefix must be scored with its own actions and state; source next-row
 labels do not define a valid target after changing that prefix.
+The [whole-chart outcome comparison](outcome_learning_and_control_response.md)
+establishes this scoring path and records its unsuccessful initial control fit
+and the measured sensitivity to history and difficulty inputs.
 
 R1 can additionally receive an audio/control prediction of mean head objects per
 second. Its optional finite demand feedback compares that mean with its own
