@@ -12,7 +12,7 @@ canonical player-response cost.
 
 One cell spans consecutive H times. For each of four columns it records the
 action at the first H, occupancy before and after that action, committed LN age,
-time since the last attack/release with availability bits, and any release
+decaying recency of the last attack/release, and any release
 strictly inside the interval. An interior release has a presence flag and its
 fractional native-time position. With no new heads between consecutive H events,
 a column can release at most once there.
@@ -22,7 +22,10 @@ invented. A release at the right H belongs to the next cell. Only cells fully
 inside the requested scope are compared. Prior committed actions may supply
 state, but actions outside the right boundary do not enter the representation.
 
-Elapsed lane clocks use `elapsed / (elapsed + H_gap)`. The interval length uses
+Active LN age uses `elapsed / (elapsed + H_gap)`. Inactive attack/release recency
+uses `H_gap / (elapsed + H_gap)`, zero with no predecessor. Thus ancient and absent
+inactive events converge instead of preserving a global "has ever released LN"
+bit that can overwhelm a local pure-tap comparison. The interval length uses
 `H_gap / (H_gap + 250 ms)`. These bounded coordinates preserve native timing;
 they are not beat quantization or physiological limits. Consecutive blocks of
 1, 2, 4 and 8 cells retain progressively longer action and occupancy relations.

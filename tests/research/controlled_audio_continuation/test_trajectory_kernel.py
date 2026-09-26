@@ -80,3 +80,13 @@ def test_u_statistic_gradient_matches_expected_distribution_distance():
         exact_gradient = 2*(mean-embeddings[2])@(embeddings[1]-embeddings[0])
         assert expected_value == pytest.approx(expected)
         assert derivative == pytest.approx(exact_gradient)
+
+
+def test_ancient_closed_ln_does_not_dominate_a_local_tap_comparison():
+    local = [(100000+i*100, (1, 0, 0, 0) if i % 2 == 0 else (0, 0, 0, 1))
+             for i in range(20)]
+    absent = rows([(0, (0, 1, 0, 0)), *local])
+    ancient = rows([(0, (0, 2, 0, 0)), (100, (0, 3, 0, 0)), *local])
+    a = interval_cells(absent, 100000, 101900).values
+    b = interval_cells(ancient, 100000, 101900).values
+    assert squared_distance(kernel_matrix([a, b])) < 1e-4

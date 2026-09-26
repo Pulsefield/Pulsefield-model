@@ -11,7 +11,7 @@ import numpy as np
 
 CELL_FIELDS = (
     'idle', 'tap', 'ln_start', 'ln_release', 'occupied_before', 'occupied_after',
-    'ln_age', 'attack_age', 'attack_known', 'release_age', 'release_known',
+    'ln_age', 'attack_recency', 'release_recency',
     'interior_release', 'release_fraction', 'interval_length',
 )
 BLOCK_LENGTHS = (1, 2, 4, 8)
@@ -58,6 +58,10 @@ def interval_cells(rows, start_ms, end_ms):
         elapsed = now-times[np.maximum(past, 0)]
         return np.where(past >= 0, elapsed/(elapsed+gap), 0.)
 
+    def recency(past):
+        elapsed = now-times[np.maximum(past, 0)]
+        return np.where(past >= 0, gap/(elapsed+gap), 0.)
+
     present = actions[left]
     after = np.where(present == 3, False, np.where(present == 2, True, occupied))
     following_release = np.minimum.accumulate(
@@ -67,7 +71,7 @@ def interval_cells(rows, start_ms, end_ms):
     tail = times[np.minimum(tail_index, len(rows)-1)]
     fraction = np.where(interior, (tail-now)/gap, 0.)
     scalar = np.stack((occupied, after, age(np.where(occupied, origin, -1)),
-        age(attack), attack >= 0, age(release), release >= 0,
+        recency(attack), recency(release),
         interior, fraction, np.broadcast_to(gap/(gap+250.), present.shape)), -1)
     values = np.concatenate((np.eye(4)[present], scalar), -1)
     return TrajectoryCells(times[left].copy(), values)
