@@ -128,6 +128,16 @@ fixed. A missing difficulty condition supplies zero to all selected features.
 This restriction isolates conditional learning; it does not establish adequate
 control capacity or chart quality.
 
+`condition_alignment.condition_alignment` compares summed neural row-factor
+scores for the same genuine source scope under observed and mismatched controls.
+It detaches frozen-reference scores and applies symmetric softplus terms to the
+positive and negative relative log probabilities. At initialization its value is
+`2 * log(2)`; a shared increase or decrease of both relative scores cannot reduce
+it. Callers exclude padding, select compatible negative conditions and retain
+each source's own history. The helper adds no inference model. It is a training
+proxy described in the [condition-learning investigation](control_condition_learning.md),
+not a generated playability score or a guarantee of guidance equivalence.
+
 `outcomes.scoped_difficulty` reads all complete objects whose heads precede a
 scope's exclusive end, retaining the full earlier history and real LN tails.
 It returns the existing strain proxy and an exclusive dependency boundary after
